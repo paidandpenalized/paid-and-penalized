@@ -316,7 +316,7 @@ test('every internal link on the built pages lands on a file, and every fragment
 });
 
 test('the Readmissions site has a page for every hospital the hub marks for Readmissions, so the hub\'s links never 404', () => {
-  const have = new Set(loadHrrp().hospitals.map((h) => hrrpHospitalPath(h.id)));
+  const have = new Set(HRRP_DATA.hospitals.map((h) => hrrpHospitalPath(h.id)));
   const missing = [...loadHub().tdr.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
   assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
 });
@@ -340,7 +340,8 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
   const seen = new Set();
   const shared = new Set();
-  const own = { hacrp: new Set(), hrrp: new Set(), hub: new Set() };
+  const siteIds = [...Object.keys(SITE.sites), 'hub'];
+  const own = Object.fromEntries(siteIds.map((id) => [id, new Set()]));
   for (const file of htmlPages(out)) {
     const type = pageType(addressOf(file));
     const links = sheetsOf(file);
@@ -351,13 +352,12 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   }
   for (const type of [...PROGRAM_TYPES, 'hub', 'policy', 'coming', 'hubHospital', 'notFound']) assert.ok(seen.has(type), `the slice built a ${type} page`);
   assert.equal(shared.size, 1, 'one shared stylesheet');
-  assert.deepEqual([own.hacrp.size, own.hrrp.size, own.hub.size], [1, 1, 1], 'one stylesheet for each site');
+  assert.deepEqual(siteIds.map((id) => own[id].size), siteIds.map(() => 1), 'one stylesheet for each site');
   const [site] = shared;
-  const [[hacrp], [hrrp], [hub]] = [[...own.hacrp], [...own.hrrp], [...own.hub]];
+  const sheetOf = Object.fromEntries(siteIds.map((id) => [id, [...own[id]][0]]));
+  const { hacrp, hrrp, hub } = sheetOf;
   assert.match(site, /^\/assets\/site\.[0-9a-f]{8}\.css$/);
-  assert.match(hacrp, /^\/assets\/hacrp\.[0-9a-f]{8}\.css$/);
-  assert.match(hrrp, /^\/assets\/hrrp\.[0-9a-f]{8}\.css$/);
-  assert.match(hub, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
+  for (const id of siteIds) assert.match(sheetOf[id], new RegExp(`^/assets/${id}\\.[0-9a-f]{8}\\.css$`), id);
   // (Each check is a yes or no: a failing match would print the whole stylesheet.)
   const css = (href) => readFileSync(join(out, href), 'utf8');
   assert.equal(HUB_RULE.exec(css(site))?.[0] ?? null, null, 'the shared stylesheet holds no hub page\'s rule');

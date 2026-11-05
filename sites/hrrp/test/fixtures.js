@@ -1,8 +1,14 @@
 // Synthetic hospitals for the Readmissions page tests: invented names, CCNs 990001-990099 (no real hospital), a
 // made-up fiscal year and peer medians of 1 (so an excess readmission ratio of 1.1 is 0.1 over its median).
 import { testAssets } from '../../../pipeline/test/helpers.js';
+import { loadHrrp } from '../web/data.js';
 import { buildPlaces } from '../web/places.js';
 import { areaContext, hospitalContext } from '../web/view.js';
+
+// The default data (the emitted file), read once for the test files that only read it. Tests of the loader itself call
+// loadHrrp() for each path they exercise.
+let loaded;
+export const loadHrrpOnce = () => (loaded ??= loadHrrp());
 
 export const NAME = 'EXAMPLE GENERAL HOSPITAL';
 export const ASSETS = testAssets();

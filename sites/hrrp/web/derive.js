@@ -2,7 +2,6 @@
 // Values derived from the data file: the edition's phrases, each hospital's derived fields, the cap's steps, the
 // program's mean cut by year and the example hospital. Pure.
 import { CONDS, contrib, cutPct } from '../../../engine/js/hrrp/formula.js';
-import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { mean } from '../../../engine/js/stats.js';
 import { capitalize, placeText, spelled } from '../../../web/render/format.js';
 import { fill } from './copy.js';
@@ -74,4 +73,3 @@ export function exampleHospital(list) {
   return fits[Math.floor(fits.length / 2)] ?? list[0];
 }
 
-export const nationOf = summarize;

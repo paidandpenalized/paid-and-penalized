@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { COPY } from '../web/copy.js';
 import {
-  plural, upFirst, ordinal, inSentence, noneMeasured, penalizedOfMeasured, vsLabel, noEstimateNote, rankLine,
+  plural, hospitals, inSentence, noneMeasured, penalizedOfMeasured, vsLabel, noEstimateNote, rankContext, rankLine,
   summarySentence, inactiveSentence, deckLead, penalizedNote,
 } from '../web/wording.js';
 
@@ -28,12 +28,12 @@ test('copy has no digit characters', () => {
   for (const [key, { text }] of Object.entries(COPY)) assert.doesNotMatch(text, /\d/, key);
 });
 
-test('plural, upFirst, ordinal', () => {
+test('plural and hospitals', () => {
   assert.equal(plural(1, 'hospital'), '1 hospital');
   assert.equal(plural(2912, 'hospital'), '2,912 hospitals');
   assert.equal(plural(1, 'hospital has', 'hospitals have'), '1 hospital has');
-  assert.equal(upFirst('heart failure'), 'Heart failure');
-  assert.deepEqual([1, 2, 3, 4, 11, 12, 13, 21, 22, 101].map(ordinal), ['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '21st', '22nd', '101st']);
+  assert.equal(hospitals(1), '1 hospital');
+  assert.equal(hospitals(2912), '2,912 hospitals');
 });
 
 test('inSentence keeps acronyms and lowercases words', () => {
@@ -82,21 +82,17 @@ test('scope KPI: an all-unmeasured area shows no share and skips the comparison 
 });
 
 test('rankLine: the share of hospitals with a smaller cut, nationally, in the state and in the peer group', () => {
-  const hospitals = Array.from({ length: 10 }, (_, i) => hosp({ id: String(990001 + i), red: i / 10, peer: i % 2 ? 2 : 1, st: i < 5 ? 'ZZ' : 'YY' }));
-  const ctx = {
-    hospitals,
-    sortedRed: hospitals.map((y) => y.red).sort((a, b) => a - b),
-    byState: new Map([['ZZ', hospitals.slice(0, 5)], ['YY', hospitals.slice(5)]]),
-    states: { ZZ: 'Zedland', YY: 'Yonderland' },
-  };
-  assert.equal(rankLine(hospitals[4], ctx), 'Larger cut than 40% of hospitals nationally, 80% of the 5 in Zedland, and 40% in peer group 1.');
-  assert.equal(rankLine(hospitals[0], ctx), 'No reduction, like 0 other hospitals.');
-  const withZeros = (n) => hospitals.map((y, i) => ({ ...y, red: i < n ? 0 : 0.5 }));
+  const list = Array.from({ length: 10 }, (_, i) => hosp({ id: String(990001 + i), red: i / 10, peer: i % 2 ? 2 : 1, st: i < 5 ? 'ZZ' : 'YY' }));
+  const states = { ZZ: 'Zedland', YY: 'Yonderland' };
+  const ctx = rankContext(list, states);
+  assert.equal(rankLine(list[4], ctx), 'Larger cut than 40% of hospitals nationally, 80% of the 5 in Zedland, and 40% in peer group 1.');
+  assert.equal(rankLine(list[0], ctx), 'No reduction, like 0 other hospitals.');
+  const withZeros = (n) => list.map((y, i) => ({ ...y, red: i < n ? 0 : 0.5 }));
   const zeros3 = withZeros(3);
-  assert.equal(rankLine(zeros3[0], { ...ctx, hospitals: zeros3 }), 'No reduction, like 2 other hospitals.');
+  assert.equal(rankLine(zeros3[0], rankContext(zeros3, states)), 'No reduction, like 2 other hospitals.');
   // The source printed "1 other hospitals"; one reads singular here.
   const zeros2 = withZeros(2);
-  assert.equal(rankLine(zeros2[0], { ...ctx, hospitals: zeros2 }), 'No reduction, like 1 other hospital.');
+  assert.equal(rankLine(zeros2[0], rankContext(zeros2, states)), 'No reduction, like 1 other hospital.');
 });
 
 test('summary sentence: penalized names the biggest contributor', () => {

@@ -2,13 +2,13 @@
 // record card, the stamp, the verdict beside it). The top of a hospital's page: the breadcrumb, the record card
 // (name, place, metro area, type, peer group, stars) beside the verdict (the stamps, the summary, the inactive note,
 // the factor and the estimated dollars, the rank, the report link). The figures that follow come in a later batch.
-import { estTag, formField, formTitle, stamp } from '../../../../web/render/components.js';
+import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { t } from '../hospital/copy.js';
-import { DOLLARS_HREF, hospitalPath } from '../links.js';
-import { breadcrumb, followed, shellOf } from './parts.js';
+import { hospitalPath } from '../links.js';
+import { breadcrumb, estimateTag, followed, shellOf } from './parts.js';
 
 const starsValue = (stars) => (stars.n === null ? stars.text
   : html`<span class="stars" aria-hidden="true">${stars.filled}<span class="stars__off">${stars.empty}</span></span><span class="vh">${stars.text}</span>`);
@@ -38,7 +38,6 @@ ${fields.map((markup) => html`${markup}
 
 function verdict(view, path) {
   const dollars = view.dollars;
-  const tag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });
   return html`<section class="hosp__verdict" aria-label="${t('verdictLabel')}">
 <div class="hosp__stamps">
 ${view.stamps.map((s) => stamp(s))}
@@ -47,7 +46,7 @@ ${view.stamps.map((s) => stamp(s))}
 ${view.inactive && html`<p class="hosp__inactive">${view.inactive}</p>`}
 <div class="form hosp__nums">
 ${formField({ no: 'A', label: t('fieldFactor'), value: view.factor.value, note: view.factor.note })}
-${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html`${dollars.value}${tag}` : dollars.value, note: dollars.note })}
+${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html`${dollars.value}${estimateTag}` : dollars.value, note: dollars.note })}
 </div>
 <p class="hosp__rank">${view.rank}</p>
 <p class="hosp__reportline">${externalLink(feedbackFor({ path }), t('report'))}</p>

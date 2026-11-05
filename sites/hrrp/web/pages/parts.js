@@ -1,10 +1,10 @@
 // The Readmissions pages' shared parts: the family shell's fields (the section menu to the program page's Parts and
 // Methods), and the hospital the header follows.
 import { html } from '../../../../web/render/html.js';
-import { lastCall } from '../../../../web/render/components.js';
+import { estTag, formField, formTitle, lastCall } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fill, t } from '../copy.js';
-import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
+import { DOLLARS_HREF, METHODS_PATH, PROGRAM_PATH } from '../links.js';
 
 // The program page's Parts the section menu links to, by id (the program page gives each Part its id), then Methods.
 export const SECTIONS = Object.freeze(['how', 'picture', 'map', 'history', 'explore', 'research']);
@@ -31,6 +31,16 @@ export const shellOf = ({ edition, current = null, hospital = null }) => ({ ...s
 // Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub and HACRP have no page for
 // it, so the tabs and the chip link none.
 export const followed = ({ ccn, name, inHub }) => ({ ccn, name, net: null, inTdr: true, inHub });
+
+// The "estimate" tag after a modeled dollar figure, linked to how the estimate is made.
+export const estimateTag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });
+
+// A numbered record card of the program and place pages: the title bar, then each field (an estimated one carries the tag).
+// card: { left, right, fields: [{ label, value, note, estimated }] }.
+export const recordCard = (card) => html`<div class="form prog__summary">
+${formTitle(card.left, card.right)}
+${card.fields.map((f, i) => html`${formField({ no: i + 1, label: f.label, value: f.estimated ? html`${f.value}${estimateTag}` : f.value, note: f.note })}
+`)}</div>`;
 
 // The breadcrumb: the places above the page, then the page itself, marked as the current page and not a link.
 export const breadcrumb = (crumbs, name) => html`<nav class="crumbs" aria-label="${t('crumbsLabel')}"><ol>

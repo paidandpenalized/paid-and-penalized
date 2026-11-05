@@ -31,16 +31,16 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
   const shared = hospitalContext(data);
-  const { list: places } = buildPlaces(hospitals, meta);
-  const area = areaContext({ ...data, places: { list: places } });
+  const places = buildPlaces(hospitals, meta);
+  const area = areaContext({ ...data, places });
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: programView(area), robots, assets }) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }
-  for (const place of places) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
+  for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
   // Methods last, with the count of the pages under the program.
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
-  log(`HRRP: ${1 + hospitals.length + places.length + 1} pages under ${PROGRAM_PATH}`);
+  log(`HRRP: ${1 + hospitals.length + places.list.length + 1} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 

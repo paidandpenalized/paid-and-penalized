@@ -8,11 +8,11 @@ import { createContext, siteDates } from '../../../pipeline/site/context.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
 import { HRRP, generateHrrp } from '../web/generate.js';
-import { loadHrrp } from '../web/data.js';
 import { PROGRAM_PATH, hospitalPath } from '../web/links.js';
 import { buildPlaces } from '../web/places.js';
+import { loadHrrpOnce } from './fixtures.js';
 
-const DATA = loadHrrp();
+const DATA = loadHrrpOnce();
 const SLICE = { ...DATA, hospitals: DATA.hospitals.slice(0, 5) };
 const quiet = { log: () => {} };
 

@@ -11,9 +11,8 @@ import { hospitalPage } from '../web/pages/hospital.js';
 import { shellOf } from '../web/pages/parts.js';
 import { hospitalPath } from '../web/links.js';
 import { loadHub } from '../../../hub/data.js';
-import { loadHrrp } from '../web/data.js';
 import { hospitalContext, hospitalView } from '../web/view.js';
-import { ASSETS, CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, ctxOf, hospital } from './fixtures.js';
+import { ASSETS, CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, ctxOf, hospital, loadHrrpOnce } from './fixtures.js';
 
 const ctx = ctxOf();
 const render = (h, robots = null) => hospitalPage({ view: hospitalView(h, ctx), robots, assets: ASSETS });
@@ -120,9 +119,12 @@ test('text of the page reads as words', () => {
 });
 
 // On the data: every hospital's page.
-const DATA = loadHrrp();
+const DATA = loadHrrpOnce();
 const SHARED = hospitalContext(DATA);
-const PAGES = DATA.hospitals.map((h) => [h, hospitalPage({ view: hospitalView(h, SHARED), robots: null, assets: ASSETS })]);
+const PAGES = DATA.hospitals.map((h) => {
+  const view = hospitalView(h, SHARED);
+  return [h, hospitalPage({ view, robots: null, assets: ASSETS }), view];
+});
 
 test('on the data: no page\'s text has NaN, undefined, null or [object Object]', () => {
   assert.equal(PAGES.length, DATA.hospitals.length);
@@ -135,7 +137,7 @@ test('on the data: no page\'s text has NaN, undefined, null or [object Object]',
 
 test('on the data: the header links no hub or HACRP page the build lacks', () => {
   const dollars = new Set(loadHub().dollars.hospitals.map((r) => r.ccn));
-  assert.deepEqual(DATA.hospitals.filter((h) => hospitalView(h, SHARED).inHub !== dollars.has(h.id)), [], 'the master\'s HACRP membership is the dollar file\'s');
+  assert.deepEqual(PAGES.filter(([h, , view]) => view.inHub !== dollars.has(h.id)).map(([h]) => h), [], 'the master\'s HACRP membership is the dollar file\'s');
   const out = PAGES.find(([h]) => !dollars.has(h.id));
   assert.ok(out, 'the data has a hospital the dollar file lacks');
   assert.ok(!/href="\/(hacrp\/)?hospital\//.test(headerOf(out[1])), 'its header links neither the hub\'s nor HACRP\'s page for it');

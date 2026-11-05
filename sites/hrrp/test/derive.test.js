@@ -1,8 +1,7 @@
 // The Readmissions site's derived values (derive.js), on synthetic records.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { summarize } from '../../../engine/js/hrrp/summary.js';
-import { capMarks, edition, exampleHospital, meanCutByYear, nationOf, pafByYear, withDerived } from '../web/derive.js';
+import { capMarks, edition, exampleHospital, meanCutByYear, pafByYear, withDerived } from '../web/derive.js';
 import { ALL, CUT, HISTORY, META, hospital } from './fixtures.js';
 
 test('edition: every phrase comes from the fiscal year and the history', () => {
@@ -55,8 +54,4 @@ test('exampleHospital: the median cut of the penalized, mid-size, several-condit
   assert.equal(exampleHospital(list).id, '990013');
   const none = [{ ...hospital({ id: '990021' }), flags: [] }, { ...hospital({ id: '990022' }), flags: [] }];
   assert.equal(exampleHospital(none).id, '990021');
-});
-
-test('nationOf is summarize()', () => {
-  assert.deepEqual({ ...nationOf(ALL) }, { ...summarize(ALL) });
 });

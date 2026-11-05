@@ -7,7 +7,7 @@ import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS } from '../../../engine/js/hrrp/f
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
-import { dotList, ordinal, placeText, spelled } from '../../../web/render/format.js';
+import { capitalize, dotList, ordinal, placeText, spelled } from '../../../web/render/format.js';
 import { GE_CUT_PCT, STARS_MAX } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
@@ -17,22 +17,17 @@ import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
 import { fill as siteFill } from './copy.js';
-import { deckLead, inactiveSentence, noEstimateNote, penalizedNote, plural, rankLine, summarySentence, upFirst, vsLabel } from './wording.js';
+import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, rankContext, rankLine, summarySentence, vsLabel } from './wording.js';
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
-// which the verdict sentence uses), what the rank line ranks against (every hospital's cut, each state's hospitals) and
+// which the verdict sentence uses), what the rank line ranks against (the cuts, nationally, by state and by peer group) and
 // the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital.
 export function hospitalContext({ hospitals, meta, history, conditions, master = null }) {
-  const byState = new Map();
-  for (const h of hospitals) {
-    if (!byState.has(h.st)) byState.set(h.st, []);
-    byState.get(h.st).push(h);
-  }
   return {
     meta,
     edition: { ...editionOf(meta, history), conditions },
     master,
-    rank: { hospitals, byState, sortedRed: hospitals.map((h) => h.red).sort((a, b) => a - b), states: meta.states },
+    rank: rankContext(hospitals, meta.states),
   };
 }
 
@@ -54,18 +49,19 @@ function typeText(h) {
   return parts.length ? dotList(parts) : t('typeNone');
 }
 
+const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${ccn}`;
+
 function starsOf(h) {
-  if (!h.star) return { n: null, filled: '', empty: '', text: t('starsNone'), href: careCompareHref(h.id) };
+  const href = careCompareHref(h.id);
+  if (!h.star) return { n: null, filled: '', empty: '', text: t('starsNone'), href };
   return {
     n: h.star,
     filled: '★'.repeat(h.star),
     empty: '☆'.repeat(Math.max(STARS_MAX - h.star, 0)),
     text: fill('starsSpoken', { n: String(h.star), max: String(STARS_MAX) }),
-    href: careCompareHref(h.id),
+    href,
   };
 }
-
-const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${ccn}`;
 
 // A hospital is in a metro area when the row names both its code and its name; otherwise it is outside the metro areas.
 export const inMetro = (h) => Boolean(h.cbsa && h.cbsaName);
@@ -135,8 +131,10 @@ export function hospitalView(h, ctx) {
 // average cuts (descending, for a state's rank among them). places: buildPlaces()'s result.
 export function areaContext({ hospitals, meta, history, conditions, places }) {
   const edition = { ...editionOf(meta, history), conditions };
-  const stateMeans = places.list.filter((p) => p.kind === 'state').map((p) => summarize(p.hospitals).meanRed).sort((a, b) => b - a);
-  return { hospitals, meta, edition, nation: summarize(hospitals), stateMeans, hasDc: places.list.some((p) => p.kind === 'state' && p.key === 'dc'), places };
+  const states = places.list.filter((p) => p.kind === 'state');
+  const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
+  const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
+  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -204,38 +202,44 @@ const stateRank = (place, S, ctx) => {
   return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0) };
 };
 
-const hospitalsOf = (n) => plural(n, t('nounHospital'), t('nounHospitals'));
-
 // The places inside this one, with their hospital counts: a state lists its metro areas (a metro across a state line
 // shows this state's hospitals only, as the source did) and the hospitals outside them.
 function childRows(place) {
+  const st = place.key.toUpperCase();
   const row = (p) => {
-    const mine = place.kind === 'state' ? p.hospitals.filter((h) => h.st === place.key.toUpperCase()) : p.hospitals;
-    const label = place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st: place.key.toUpperCase() }) : p.name;
-    return { label, href: p.path, n: mine.length, count: hospitalsOf(mine.length) };
+    const n = place.kind === 'state' ? p.hospitals.reduce((c, h) => c + (h.st === st ? 1 : 0), 0) : p.hospitals.length;
+    const label = place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st }) : p.name;
+    return { label, href: p.path, n, count: hospitals(n) };
   };
   const rows = place.children.map(row);
   if (place.kind === 'state') {
     const outside = place.hospitals.filter((h) => !inMetro(h));
-    if (outside.length) rows.push({ label: placeT('childOutside'), href: null, n: outside.length, count: hospitalsOf(outside.length) });
+    if (outside.length) rows.push({ label: placeT('childOutside'), href: null, n: outside.length, count: hospitals(outside.length) });
   }
   return rows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 }
 
+// How many of list fall under each value of key(h), as a Map.
+const countBy = (list, key) => {
+  const n = new Map();
+  for (const h of list) n.set(key(h), (n.get(key(h)) ?? 0) + 1);
+  return n;
+};
+
 // The codes of the states a place reaches, the one with the most of its hospitals first (ties: by code), as the source listed them.
 const statesByCount = (place) => {
-  const n = (st) => place.hospitals.filter((h) => h.st === st).length;
-  return [...place.states].sort((a, b) => n(b) - n(a) || (a < b ? -1 : 1));
+  const n = countBy(place.hospitals, (h) => h.st);
+  return [...place.states].sort((a, b) => n.get(b) - n.get(a) || (a < b ? -1 : 1));
 };
 
 // place: a buildPlaces() entry; ctx: areaContext(). The place page's head, deck and six-field card.
 export function placeView(place, ctx) {
   const { edition, nation: N } = ctx;
-  const S = summarize(place.hospitals);
+  const S = place.kind === 'state' ? ctx.stateSummaries.get(place.key) : summarize(place.hospitals);
   const noEst = noEstimateNote(place.hospitals);
   const rank = stateRank(place, S, ctx);
   const dc = rank && ctx.hasDc ? placeT('deckAndDc') : '';
-  const avg = S.n === 1 ? placeFill('deckAvgOne', { pct: fmtPct(S.meanRed) }) : placeFill('deckAvgMany', { hospitals: hospitalsOf(S.n), pct: fmtPct(S.meanRed) });
+  const avg = S.n === 1 ? placeFill('deckAvgOne', { pct: fmtPct(S.meanRed) }) : placeFill('deckAvgMany', { hospitals: hospitals(S.n), pct: fmtPct(S.meanRed) });
   const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
   const lead = deckLead(S, edition.label);
   const kind = placeT(KIND_KEY[place.kind]);
@@ -259,7 +263,7 @@ export function placeView(place, ctx) {
         { label: placeT('kpiMean'), value: fmtPct(S.meanRed), note: vsLabel(S.meanRed, N.meanRed, 2, t('unitPts')) },
         { label: placeFill('kpiGe', { pct: fmtPct(GE_CUT_PCT, 0) }), value: fmtInt(S.nGe1), note: placeFill('kpiGeNote', { share: fmtPct((100 * S.nGe1) / S.n, 0), nation: fmtPct((100 * N.nGe1) / N.n, 0) }) },
         { label: placeFill('kpiMax', { cap: String(CAP_PCT) }), value: fmtInt(S.nMax) },
-        { label: placeT('kpiDollars'), value: fmtMoney(S.penTotal), estimated: true, note: noEst ? `${upFirst(noEst)}.` : null },
+        { label: placeT('kpiDollars'), value: fmtMoney(S.penTotal), estimated: true, note: noEst ? `${capitalize(noEst)}.` : null },
       ],
     },
     children,

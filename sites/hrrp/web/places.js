@@ -4,8 +4,6 @@
 import { slug } from '../../../engine/js/hrrp/filters.js';
 import { KINDS, placePath } from './links.js';
 
-export { KINDS, placePath };
-
 const byName = (a, b) => a.name.localeCompare(b.name);
 
 // hospitals: the file's rows; meta: its meta (states: code -> name). Returns { list, byKey: Map('kind:key' -> place),

@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scopeFilter } from '../../../engine/js/hrrp/filters.js';
-import { loadHrrp } from '../web/data.js';
 import { buildPlaces } from '../web/places.js';
+import { loadHrrpOnce } from './fixtures.js';
 import { csvPath, hospitalPath, placePath, PROGRAM_PATH, DOLLARS_HREF } from '../web/links.js';
 
-const { hospitals, meta } = loadHrrp();
+const { hospitals, meta } = loadHrrpOnce();
 const P = buildPlaces(hospitals, meta);
 const ofKind = (k) => P.list.filter((p) => p.kind === k);
 

@@ -1,8 +1,9 @@
 // hospitalView: one hospital's record card, verdict and rank line as plain strings (no markup).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hospitalView } from '../web/view.js';
-import { CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, hospital, ctxOf } from './fixtures.js';
+import { rankPct } from '../../../engine/js/hrrp/summary.js';
+import { hospitalContext, hospitalView } from '../web/view.js';
+import { CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, hospital, ctxOf, loadHrrpOnce } from './fixtures.js';
 
 const ctx = ctxOf();
 const view = (h) => hospitalView(h, ctx);
@@ -34,6 +35,26 @@ test('the rank line: floor, the 99 cap, and "like N other hospitals"', () => {
   const top = view(hospital({ id: '990030', red: 99, paf: 0.5 })).rank;
   assert.match(top, /^Larger cut than 99% of hospitals nationally/, 'a hospital is never above itself: 99, not 100');
   assert.equal(view(NONE_BELOW).rank, 'No reduction, like 4 other hospitals.');
+});
+
+// The rank line as the straightforward computation gives it (a filter and sort over every hospital for each one).
+test('on the data: every hospital\'s rank line equals the direct computation', () => {
+  const data = loadHrrpOnce();
+  const shared = hospitalContext(data);
+  const all = data.hospitals;
+  const asc = (list) => list.map((y) => y.red).sort((a, b) => a - b);
+  const sortedRed = asc(all);
+  const zeroCut = all.filter((y) => y.red <= 0).length;
+  for (const h of all) {
+    const got = hospitalView(h, shared).rank;
+    if (h.red <= 0) {
+      assert.match(got, new RegExp(`^No reduction, like ${(zeroCut - 1).toLocaleString('en-US')} other hospitals?\\.$`), h.id);
+      continue;
+    }
+    const inState = asc(all.filter((y) => y.st === h.st));
+    const inPeer = asc(all.filter((y) => y.peer === h.peer));
+    assert.equal(got, `Larger cut than ${rankPct(sortedRed, h.red)}% of hospitals nationally, ${rankPct(inState, h.red)}% of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}, and ${rankPct(inPeer, h.red)}% in peer group ${h.peer}.`, h.id);
+  }
 });
 
 test('the record card: location, county, metro link and type', () => {

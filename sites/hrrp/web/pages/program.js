@@ -3,17 +3,16 @@
 // At-a-glance record card under its stamp, then the six Parts the section menu opens, each a numbered heading until its
 // figures are drawn. The page has no search box yet: the box needs the browser script that reads the hospitals file,
 // which this site does not have; the suggestions below the deck stand in.
-import { estTag, fillAround, formField, formTitle, stamp } from '../../../../web/render/components.js';
+import { fillAround, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { DOLLARS_HREF, PROGRAM_PATH } from '../links.js';
+import { PROGRAM_PATH } from '../links.js';
 import { fill, t } from '../program/copy.js';
-import { SECTIONS, labelOf, shellOf } from './parts.js';
+import { SECTIONS, estimateTag, labelOf, recordCard, shellOf } from './parts.js';
 
 function top(view) {
   const { deck, card } = view;
-  const tag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });
   const { metro } = view.try;
   const hints = fillAround((marks) => fill(metro ? 'heroTry' : 'heroTryNoMetro', marks), {
     state: html`<a href="${view.try.state.path}">${view.try.state.name}</a>`,
@@ -29,10 +28,7 @@ function top(view) {
 <p class="prog__try">${hints}</p>
 </div>
 <div class="prog__card stack">
-<div class="form prog__summary">
-${formTitle(card.left, card.right)}
-${card.fields.map((f, i) => html`${formField({ no: i + 1, label: f.label, value: f.estimated ? html`${f.value}${tag}` : f.value, note: f.note })}
-`)}</div>
+${recordCard(card)}
 ${stamp({ label: card.stamp })}
 </div>
 </header>`;

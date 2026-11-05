@@ -4,16 +4,13 @@
 // hold one differ from the source's by that character alone.
 import { CONDS, MIN_DISCHARGES, verdict } from '../../../engine/js/hrrp/formula.js';
 import { noEstimate, rankPct } from '../../../engine/js/hrrp/summary.js';
-import { capitalize, ordinal, spelled } from '../../../web/render/format.js';
+import { capitalize, spelled } from '../../../web/render/format.js';
 import { fill, t } from './copy.js';
 import { fmtDate, fmtInt, fmtPct } from './numbers.js';
 
-export { ordinal };
-export const upFirst = capitalize;
-
 // "1 hospital", "2,912 hospitals". one and many are words (read them from copy); many defaults to one plus s.
 export const plural = (n, one, many = `${one}s`) => `${fmtInt(n)} ${n === 1 ? one : many}`;
-const hospitals = (n) => plural(n, t('nounHospital'), t('nounHospitals'));
+export const hospitals = (n) => plural(n, t('nounHospital'), t('nounHospitals'));
 
 // Condition label inside a sentence: acronyms stay, words go lowercase.
 export const inSentence = (label) => (label === label.toUpperCase() ? label : label.toLowerCase());
@@ -39,16 +36,35 @@ export function noEstimateNote(list) {
   return fill(n === 1 ? 'noEstimateOne' : 'noEstimateMany', { n: fmtInt(n) });
 }
 
-// "Larger cut than N% of hospitals" for one hospital. ctx: { hospitals, byState (Map: state to its hospitals),
-// sortedRed (every hospital's cut, ascending), states (state code to name) }.
+// What rankLine ranks against, built once for a set of hospitals: every hospital's cut ascending, the same by state and
+// by peer group (Maps), the count with no cut, and the state names (state code to name).
+export function rankContext(hospitals, states) {
+  const sortedBy = (key) => {
+    const groups = new Map();
+    for (const h of hospitals) {
+      if (!groups.has(h[key])) groups.set(h[key], []);
+      groups.get(h[key]).push(h.red);
+    }
+    for (const cuts of groups.values()) cuts.sort((a, b) => a - b);
+    return groups;
+  };
+  return {
+    sortedRed: hospitals.map((h) => h.red).sort((a, b) => a - b),
+    byState: sortedBy('st'),
+    byPeer: sortedBy('peer'),
+    noCut: hospitals.filter((h) => h.red <= 0).length,
+    states,
+  };
+}
+
+// "Larger cut than N% of hospitals" for one hospital. ctx: rankContext()'s result.
 export function rankLine(h, ctx) {
-  const asc = (list) => list.map((y) => y.red).sort((a, b) => a - b);
   if (h.red <= 0) {
-    const others = ctx.hospitals.filter((y) => y.red <= 0).length - 1;
+    const others = ctx.noCut - 1;
     return fill(others === 1 ? 'rankNoneOne' : 'rankNone', { n: fmtInt(others) });
   }
-  const inState = asc(ctx.byState.get(h.st));
-  const inPeer = asc(ctx.hospitals.filter((y) => y.peer === h.peer));
+  const inState = ctx.byState.get(h.st);
+  const inPeer = ctx.byPeer.get(h.peer);
   return fill('rankLine', {
     nation: String(rankPct(ctx.sortedRed, h.red)),
     state: String(rankPct(inState, h.red)),
@@ -71,7 +87,7 @@ export function summarySentence(h, meta, edition) {
   const short = (k) => inSentence(edition.conditions.find((c) => c.key === k).short);
   if (v.status === 'none-rounded') {
     const names = v.above.map(short).join(t('and'));
-    return fill('sumNoneRounded', { ...base, names: upFirst(names), share: t(v.above.length > 1 ? 'shareMany' : 'shareOne') });
+    return fill('sumNoneRounded', { ...base, names: capitalize(names), share: t(v.above.length > 1 ? 'shareMany' : 'shareOne') });
   }
   const lead = h.inactive ? fill('leadInactive', { ...base, pct: fmtPct(h.red) })
     : fill('leadPaid', { name: h.name, pct: fmtPct(h.red), pay: edition.payLong });
@@ -92,8 +108,10 @@ export function inactiveSentence(h, edition) {
 
 // The area deck's share penalized, or noneMeasured() when none is ("it is not measured on any condition" for a
 // one-hospital area, so the deck's first sentence stays whole).
-const deckShare = (sm) => (sm.pctPen == null ? (sm.n === 1 ? fill('deckShareNone', { none: noneMeasured(sm) }) : noneMeasured(sm))
-  : fill('deckShare', { pct: fmtPct(sm.pctPen, 0), n: fmtInt(sm.nMeasured) }));
+function deckShare(sm) {
+  if (sm.pctPen != null) return fill('deckShare', { pct: fmtPct(sm.pctPen, 0), n: fmtInt(sm.nMeasured) });
+  return sm.n === 1 ? fill('deckShareNone', { none: noneMeasured(sm) }) : noneMeasured(sm);
+}
 
 // The deck's first sentence. Its subject is singular when one hospital takes a cut or the area has only one.
 export const deckLead = (sm, label) => fill(sm.nPen === 1 || sm.n === 1 ? 'deckLeadOne' : 'deckLeadMany',
