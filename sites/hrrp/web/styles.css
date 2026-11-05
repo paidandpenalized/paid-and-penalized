@@ -1,1 +1,41 @@
 /* The Readmissions site's own rules, linked after the shared stylesheet (web/styles/) and the chart and what-if kit. */
+
+/* ---------- the breadcrumb (hospital and place pages) ----------
+   The rows of a trail that wraps on a phone sit a target's height (--target-min) apart, line to line, whatever the type
+   size: each link keeps WCAG 2.2's 24px of clear space around it. */
+.crumbs ol { display: flex; flex-wrap: wrap; gap: calc(var(--target-min) - 1lh) 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.crumbs li + li::before { content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
+.crumbs a { color: var(--ink); }
+.crumbs [aria-current] { color: var(--ink-2); }
+
+/* ---------- the hospital page (pages/hospital.js), after Thirty Day Readmissions' hospital record ----------
+   The top: the record card and the verdict, 3fr and 2fr from 980px and the same height, over a bold rule; stacked
+   under 980px, the record first. */
+.hosp { gap: 0; }
+.hosp > * + * { margin-top: 28px; }
+.hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; padding: 4px 0 32px; border-bottom: 5px solid var(--ink); }
+@media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: stretch; } }
+.hosp__top > * { min-width: 0; }
+.hosp__id { display: flex; flex-direction: column; }
+/* The fields on a six-column grid: three to a row, the stars taking the room that is left. One column on a phone. */
+.hosp__fields { flex: 1 1 auto; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.hosp__fields > .field { grid-column: span 2; }
+.hosp__fields > .f-stars { grid-column: span 4; }
+@media (max-width: 600px) {
+  .hosp__fields { grid-template-columns: minmax(0, 1fr); }
+  .hosp__fields > .field, .hosp__fields > .f-stars { grid-column: 1 / -1; }
+}
+.hosp__name { margin-top: 6px; font: 400 clamp(1.9rem, 4.6vw, 3.25rem)/1.02 var(--font-display); letter-spacing: 0.005em; }
+.hosp__alias { display: block; margin-top: 4px; }
+.stars { color: var(--ink); letter-spacing: 0.05em; }
+.stars__off { color: var(--ink-3); }
+@media (forced-colors: active) { .stars__off { color: GrayText; } }
+/* The verdict: the stamps, the summary, the inactive note, fields A and B, the rank and the report link. */
+.hosp__verdict { display: flex; flex-direction: column; gap: 10px; }
+.hosp__stamps { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; }
+.hosp__stamps .stamp { flex: none; margin: 2px 0; font-size: clamp(1.6rem, 3.2vw, 2.2rem); }
+.hosp__summary { font-size: var(--fs-md); line-height: 1.45; }
+.hosp__inactive { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+.hosp__nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hosp__rank { color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.hosp__source { margin-top: 20px; }

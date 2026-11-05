@@ -1,51 +1,21 @@
-// The Readmissions site's page build: its manifest (pipeline/site/build.js lists it) and the generator that writes the
-// program page and one page for each hospital in the file. Before it writes anything it checks that the formula
-// (engine/js/hrrp/formula.js) gives CMS's payment adjustment factor for every hospital.
+// The Readmissions site's page build: its manifest (pipeline/site/build.js lists it) and the generator that writes one
+// page for each hospital in the file, and the program page, each place's page and Methods (stubs until their batch).
+// Before it writes anything it checks that the formula (engine/js/hrrp/formula.js) gives CMS's payment adjustment factor
+// for every hospital.
 import { contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
-import { html } from '../../../web/render/html.js';
-import { page } from '../../../web/render/layout.js';
-import { programDek } from '../../../web/programs.js';
 import { SITE } from '../../../web/site.js';
 import { loadHrrp } from './data.js';
-import { PROGRAM_PATH, hospitalPath } from './links.js';
+import { hospitalPage } from './pages/hospital.js';
+import { METHODS_PATH, PROGRAM_PATH, hospitalPath } from './links.js';
+import { buildPlaces } from './places.js';
+import { methodsStub, placeStub, programStub } from './stubs.js';
+import { hospitalContext, hospitalView } from './view.js';
 
 // The first hospital whose factor the formula does not reproduce, or null.
 export function firstMismatch(hospitals, meta) {
   return hospitals.find((h) => contrib(h, meta).paf !== h.paf) ?? null;
-}
-
-// The shell's fields for a Readmissions page (layout.js page()): the site's stylesheet and its program tab.
-const SHELL = { sheets: ['hrrp'], program: 'hrrp' };
-
-function programPage({ assets, robots }) {
-  const { title } = SITE.sites.hrrp;
-  const body = html`<article class="wrap page">
-<header class="page__head">
-<h1>${title}</h1>
-<p class="dek">${programDek('hrrp')}</p>
-</header>
-</article>`;
-  return page({ title: `${title} · ${SITE.name}`, description: programDek('hrrp'), path: PROGRAM_PATH, robots, body, assets, ...SHELL });
-}
-
-function hospitalPageOf({ hospital, assets, robots }) {
-  const body = html`<article class="wrap page">
-<header class="page__head">
-<h1>${hospital.name}</h1>
-<p class="dek">${hospital.city}, ${hospital.st}</p>
-</header>
-</article>`;
-  return page({
-    title: `${hospital.name} · ${SITE.sites.hrrp.title} · ${SITE.name}`,
-    description: `${hospital.name}, ${hospital.city}, ${hospital.st}, in the Hospital Readmissions Reduction Program.`,
-    path: hospitalPath(hospital.id),
-    robots,
-    body,
-    assets,
-    ...SHELL,
-  });
 }
 
 // ctx: the build's context (pipeline/site/context.js). data: loadHrrp()'s result (tests pass their own); released:
@@ -58,9 +28,16 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   log(`HRRP: the formula reproduces CMS's factor for all ${hospitals.length} hospitals`);
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ assets, robots }) });
-  for (const hospital of hospitals) ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPageOf({ hospital, assets, robots }) });
-  log(`HRRP: ${hospitals.length + 1} pages under ${PROGRAM_PATH}`);
+  const shared = hospitalContext(data);
+  const stubArgs = { edition: shared.edition.label, robots, assets };
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programStub(stubArgs) });
+  for (const hospital of hospitals) {
+    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
+  }
+  const { list: places } = buildPlaces(hospitals, meta);
+  for (const place of places) ctx.emit({ path: place.path, robots, text: placeStub(place, stubArgs) });
+  ctx.emit({ path: METHODS_PATH, robots, text: methodsStub(stubArgs) });
+  log(`HRRP: ${hospitals.length + places.length + 2} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 

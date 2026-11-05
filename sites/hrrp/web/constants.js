@@ -25,3 +25,6 @@ export const CLAIMS = {
   NTAP_SHARE: 'HRRP-07',
   PARHM_END: 'HRRP-08',
 };
+
+// Care Compare rates hospitals from one star to this many (CMS's overall rating scale); the record card shows the rating as filled and empty stars.
+export const STARS_MAX = 5;

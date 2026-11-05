@@ -8,7 +8,7 @@ import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
 import { loadHub } from '../../hub/data.js';
 import { EXAMPLE_CCN } from '../../hub/model.js';
-import { HRRP } from '../../sites/hrrp/web/generate.js';
+import { HRRP, generateHrrp } from '../../sites/hrrp/web/generate.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { checkLinks } from '../../tools/ci/link-check.js';
@@ -299,7 +299,12 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
 const DATA = loadHacrp();
 // The hub's example hospital too: the home page's example card links to its page.
 const SLICE = { ...DATA, hospitals: [...DATA.hospitals.slice(0, 4), DATA.hospitals.find((h) => h.ccn === EXAMPLE_CCN)] };
-const builtSlice = sliceBuild(SLICE, [HRRP]);
+// Readmissions' pages link the hub's and HACRP's page for their hospital, which the slice builds for its own hospitals only,
+// so its Readmissions pages are the slice's too.
+const SLICE_CCNS = new Set(SLICE.hospitals.map((h) => h.ccn));
+const HRRP_DATA = loadHrrp();
+const HRRP_SLICE = { ...HRRP, generate: (ctx) => generateHrrp(ctx, { data: { ...HRRP_DATA, hospitals: HRRP_DATA.hospitals.filter((h) => SLICE_CCNS.has(h.id)) }, log: () => {} }) };
+const builtSlice = sliceBuild(SLICE, [HRRP_SLICE]);
 
 // CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
 // site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's

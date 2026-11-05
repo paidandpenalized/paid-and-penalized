@@ -10,6 +10,7 @@ import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
 import { HRRP, generateHrrp } from '../web/generate.js';
 import { loadHrrp } from '../web/data.js';
 import { PROGRAM_PATH, hospitalPath } from '../web/links.js';
+import { buildPlaces } from '../web/places.js';
 
 const DATA = loadHrrp();
 const SLICE = { ...DATA, hospitals: DATA.hospitals.slice(0, 5) };
@@ -25,13 +26,13 @@ test('writes the program page and a page per hospital, noindex while unreleased,
   withTemp('pp-hrrp-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     const result = generateHrrp(ctx, { data: SLICE, released: false, ...quiet });
-    assert.equal(ctx.pages, SLICE.hospitals.length + 1);
+    assert.equal(ctx.pages, SLICE.hospitals.length + buildPlaces(SLICE.hospitals, SLICE.meta).list.length + 2, 'the hospitals, the places, the program page and Methods');
     assert.deepEqual(ctx.indexable, []);
     const program = readFileSync(join(dir, PROGRAM_PATH, 'index.html'), 'utf8');
     assert.match(program, /<meta name="robots" content="noindex">/);
     for (const h of SLICE.hospitals) {
       const text = readFileSync(join(dir, hospitalPath(h.id), 'index.html'), 'utf8');
-      assert.ok(text.includes(`<h1>${escapeHtml(h.name)}</h1>`), 'the hospital\'s name is the h1');
+      assert.ok(text.includes(`<h1 class="field__value hosp__name">${escapeHtml(h.name)}</h1>`), 'the hospital\'s name is the h1');
       assert.match(text, /<meta name="robots" content="noindex">/);
     }
     assert.doesNotThrow(() => siteDates('hrrp', result));
@@ -41,7 +42,7 @@ test('released in production, the pages are indexable', () =>
   withTemp('pp-hrrp-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     generateHrrp(ctx, { data: SLICE, released: true, ...quiet });
-    assert.equal(ctx.indexable.length, SLICE.hospitals.length + 1);
+    assert.equal(ctx.indexable.length, ctx.pages);
   }));
 
 test('a factor the formula does not reproduce stops the build and names the first such hospital, before any page', () =>

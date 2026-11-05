@@ -60,6 +60,22 @@ export const COPY = {
   inactiveOn: { text: ' on {date}', claim: null },
   inactiveTail: { text: ', so its cut is unlikely to be collected', claim: null },
 
+  // The edition's phrases (derive.js edition): each date is spelled out by the formatter, the label and span built here.
+  editionLabel: { text: 'FY{fy}', claim: null },
+  editionSpan: { text: 'FY{first}\u2013FY{last}', claim: null },
+  editionRange: { text: '{start} through {end}', claim: null },
+  editionPayShort: { text: '{start} \u2013 {end}', claim: null },
+  capMark: { text: '{cap}% cap', claim: null },
+  capMarkShort: { text: '{cap}%', claim: null },
+
+  // The section menu (pages/parts.js): the six Parts of the program page, then Methods (web/copy.js).
+  navHow: { text: 'How it works', claim: null },
+  navPicture: { text: 'The {edition} picture', claim: null },
+  navMap: { text: 'Map', claim: null },
+  navHistory: { text: 'History', claim: null },
+  navExplore: { text: 'Every hospital', claim: null },
+  navResearch: { text: 'Research', claim: null },
+
   // Area pages.
   deckShareNone: { text: 'it is {none}', claim: null },
   deckShare: { text: '{pct} of the {n} measured on at least one condition', claim: null },
