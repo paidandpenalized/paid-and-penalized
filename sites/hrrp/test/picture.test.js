@@ -132,7 +132,7 @@ test('singular forms: the lede, the table takeaway and the coin-flip words at a 
   assert.match(html, /The largest cut is 2\.00% of base payments\./);
   assert.doesNotMatch(html, /The one largest|1 largest/);
   assert.equal(coinMeasured(1), '1 condition'); assert.equal(coinMeasured(2), '2 conditions');
-  assert.doesNotMatch(COIN_WORDS.coinLow, /conditions,/);
+  assert.ok(!COIN_WORDS.coinLow.includes('{k}'));
   assert.match(html, /printout__scroll/);
 });
 
