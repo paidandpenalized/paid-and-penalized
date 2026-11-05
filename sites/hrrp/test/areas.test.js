@@ -137,7 +137,7 @@ test('hostile text in a place name is escaped', () => {
 });
 
 test('the 404 line is a Readmissions sentence with no digit (the family 404 page prints it: hub/test/pages.test.js)', () => {
-  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system. A hospital paid another way is not in it, and has no page here.');
+  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system, so critical access hospitals and the hospitals paid outside it (children’s, cancer, psychiatric, rehabilitation and long-term care hospitals) are not in it and have no page here.');
 });
 
 // On the data.

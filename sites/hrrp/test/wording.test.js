@@ -95,10 +95,12 @@ test('rankLine: the share of hospitals with a smaller cut, nationally, in the st
   assert.equal(rankLine(zeros2[0], rankContext(zeros2, states)), 'No reduction, like 1 other hospital.');
 });
 
+// This one sentence departs from the source site (Thirty Day Readmissions: "Medicare will pay") on purpose: the payment year
+// is running, so it is in the present tense.
 test('summary sentence: penalized names the biggest contributor', () => {
   const c = { HF: { n: 100, err: 1.2, flag: 1, ratio: 0.05 }, PN: { n: 100, err: 1.05, flag: 1, ratio: 0.05 }, AMI: { n: 40, err: 0.9, flag: 0, ratio: 0.02 } };
   assert.equal(summarySentence(hosp({ paf: 0.99, red: 1, c }), meta, edition),
-    `Medicare will pay ${NAME} 1.00% less on the base payment for every traditional-Medicare inpatient stay from October 1, 2026. `
+    `Medicare is paying ${NAME} 1.00% less on the base payment for every traditional-Medicare inpatient stay from October 1, 2026. `
     + '2 of its 3 measured conditions came in above the peer-group median; heart failure added the most.');
 });
 

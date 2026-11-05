@@ -43,7 +43,7 @@ export const COPY = {
   shareMany: { text: 'their share', claim: null },
   and: { text: ' and ', claim: null },
   leadPaid: {
-    text: 'Medicare will pay {name} {pct} less on the base payment for every traditional-Medicare inpatient stay from {pay}. ',
+    text: 'Medicare is paying {name} {pct} less on the base payment for every traditional-Medicare inpatient stay from {pay}. ',
     claim: 'HRRP-06',
   },
   leadInactive: { text: 'CMS set the {edition} cut for {name} at {pct}. ', claim: null },

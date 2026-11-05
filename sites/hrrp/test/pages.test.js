@@ -40,7 +40,7 @@ test('each verdict variant renders its sentence and stamp', () => {
   const stampOf = (text) => [...text.matchAll(/<p class="(stamp[^"]*)">([^<]+)<\/p>/g)].map((m) => [m[1], m[2]]);
   const cut = render(CUT);
   assert.deepEqual(stampOf(cut), [['stamp', 'Cut 1.00%']]);
-  assert.ok(cut.includes(`<p class="hosp__summary">Medicare will pay ${NAME} 1.00% less`));
+  assert.ok(cut.includes(`<p class="hosp__summary">Medicare is paying ${NAME} 1.00% less`));
   for (const [h, sentence] of [[NONE_MEASURED, 'None of its six conditions reached 25 cases'], [NONE_BELOW, 'All 2 of its measured conditions came in at or below'], [NONE_ROUNDED, 'the reduction rounded to zero']]) {
     const text = render(h);
     assert.deepEqual(stampOf(text), [['stamp stamp--ink', 'No cut']]);

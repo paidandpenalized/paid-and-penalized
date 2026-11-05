@@ -79,8 +79,8 @@ export const COPY = typesetCopy({
   dekPi: 'Hospitals that miss electronic health record requirements lose {share} of their yearly increase.',
   // Who is not in the Readmissions program: its Methods page and the hub's not-found page both say it (claim HRRP-11).
   notInHrrp: {
-    text: 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system. A hospital paid another way is not in it, and has no page here.',
-    claim: 'HRRP-11',
+    text: "The Readmissions program covers the hospitals Medicare pays under its inpatient payment system, so critical access hospitals and the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) are not in it and have no page here.",
+    claim: ['HRRP-11', 'HRRP-12', 'HRRP-13'],
   },
   dekTeam: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.',
 });

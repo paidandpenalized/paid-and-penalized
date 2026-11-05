@@ -11,7 +11,7 @@ const view = (h) => hospitalView(h, ctx);
 test('each verdict variant has its sentence and stamp', () => {
   const cut = view(CUT);
   assert.deepEqual(cut.stamps, [{ label: 'Cut 1.00%', ink: false }]);
-  assert.equal(cut.summary, `Medicare will pay ${NAME} 1.00% less on the base payment for every traditional-Medicare inpatient stay from October 1, 2026 through September 30, 2027. 1 of its 2 measured conditions came in above the peer-group median; heart failure added the most.`);
+  assert.equal(cut.summary, `Medicare is paying ${NAME} 1.00% less on the base payment for every traditional-Medicare inpatient stay from October 1, 2026 through September 30, 2027. 1 of its 2 measured conditions came in above the peer-group median; heart failure added the most.`);
 
   const none = [view(NONE_MEASURED), view(NONE_BELOW), view(NONE_ROUNDED)];
   for (const v of none) assert.deepEqual(v.stamps, [{ label: 'No cut', ink: true }]);

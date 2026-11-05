@@ -21,6 +21,8 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-09 | The payment reduction is capped at 3 percent, a payment adjustment factor of 0.97. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "The payment reduction is capped at 3 percent (that is, a payment adjustment factor of 0.97)." | 2026-11-05 |
 | HRRP-10 | A single neutrality modifier, the same for every hospital in a year, keeps total savings under the peer-group method equal to those under the earlier method with no peer groups. | https://www.law.cornell.edu/cfr/text/42/412.152 | "The neutrality modifier, a multiplicative factor that equates total Medicare savings under the current stratified methodology to the previous non-stratified methodology." | 2026-11-05 |
 | HRRP-11 | The program reduces payments to subsection (d) hospitals, the hospitals Medicare pays under its inpatient prospective payment system; a hospital paid another way is not in it. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "reduce payments to subsection (d) hospitals for excess readmissions beginning October 1, 2012 (that is, fiscal year [FY] 2013)" | 2026-11-05 |
+| HRRP-12 | Medicare pays children's, cancer, psychiatric, rehabilitation and long-term care hospitals outside the inpatient prospective payment system, so they are not subsection (d) hospitals in this program. | https://www.law.cornell.edu/cfr/text/42/412.23 | "Psychiatric hospitals" … "Rehabilitation hospitals" … "Children's hospitals" … "Long-term care hospitals" … "Cancer hospitals" … "excluded from the prospective payment systems" | 2026-11-05 |
+| HRRP-13 | Critical access hospitals are paid on their reasonable costs, not under the inpatient prospective payment system's DRG rates. | https://www.law.cornell.edu/cfr/text/42/413.70 | "payment for inpatient services of a CAH" … "reasonable costs of the CAH in providing CAH services to its inpatients" | 2026-11-05 |
 
 ## Notes on the sources
 
@@ -50,8 +52,14 @@ A claim marked `unverified` may not be used in copy.
   for excess readmissions"). "The same for every hospital in a year" is how the formula uses it: one multiplier in
   every hospital's sum.
 - **HRRP-11** quotes the CMS program page's account of the statute. A "subsection (d) hospital" is a hospital paid under
-  section 1886(d) of the Social Security Act, the inpatient prospective payment system; the site's 404 line says only that
-  a hospital paid another way is not in the program, and names no kind of hospital.
+  section 1886(d) of the Social Security Act, the inpatient prospective payment system; the site's 404 line says that a
+  hospital paid another way is not in the program, and names the kinds in HRRP-12 and HRRP-13.
+- **HRRP-12** is the list of hospital classifications in 42 CFR 412.23 (the regulation's headings, in order: psychiatric,
+  rehabilitation, children's, long-term care, cancer); each is excluded from the inpatient prospective payment system and
+  paid under another system (the psychiatric, rehabilitation and long-term care paragraphs name theirs). The last fragment
+  is the cancer paragraph's own words; the others say the same of their kind. Thirty Day Readmissions' list is the same five.
+- **HRRP-13** is 42 CFR 413.70(a)(1) (a plus-one-percent-of-reasonable-cost payment); the text has a double space after
+  "the" in "the  reasonable costs", which the quote runs past by splitting at the phrase.
 
 ## Link check (2026-11-04)
 
@@ -66,4 +74,6 @@ document's page; no source needed an archive copy.
 | https://www.govinfo.gov/content/pkg/FR-2026-08-04/pdf/2026-15833.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.23 | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/413.70 | 200 | direct |
 | https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
