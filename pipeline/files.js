@@ -39,6 +39,8 @@ export function newestYear(dir) {
 export const masterPath = (fy) => `data/emitted/hospital/fy${fy}/hospital_master.json`;
 // The HACRP site's emitted file for a fiscal year, repo-relative (written by `make emit`; see sites/hacrp/pipeline/emit.js).
 export const hacrpPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;
+// The Readmissions site's emitted file for a fiscal year, repo-relative (written by `make emit`).
+export const hrrpPath = (fy) => `data/emitted/hrrp/fy${fy}/hrrp.json`;
 // The dollar estimates for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/dollars.py).
 export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
 

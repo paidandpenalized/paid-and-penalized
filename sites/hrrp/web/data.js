@@ -1,0 +1,64 @@
+// What the Readmissions pages read at build time: the newest emitted HRRP file (else the pinned Thirty Day Readmissions output), the site's content files, the newest hospital master and the state outlines.
+// File reads live here; views and pages stay pure.
+import { existsSync } from 'node:fs';
+import { builtOn } from '../../../engine/js/dates.js';
+import { ATLAS_ID, stateShapes } from '../../../web/charts/geo.js';
+import { REPO_ROOT, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+
+// The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
+export const PIN_ID = 'tdr-hrrp-fy2027';
+const CONTENT = REPO_ROOT + 'sites/hrrp/content/';
+
+// The date (YYYY-MM-DD, UTC) the newest of these files was built: the newest built_at among them. files: [[repo
+// path, the parsed file]]. A built_at that is not a timestamp on the calendar stops the build and names the file.
+function changedOn(files) {
+  const days = files.map(([path, file]) => {
+    const day = builtOn(file.built_at);
+    if (!day) throw new RangeError(`HRRP: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
+    return day;
+  });
+  return days.sort().at(-1);
+}
+
+export function loadHrrp({ exists = existsSync } = {}) {
+  const manifest = readManifest();
+  const emittedPath = hrrpPath(newestYear('data/emitted/hrrp'));
+  const source = exists(REPO_ROOT + emittedPath) ? 'emitted' : 'pin';
+  let data;
+  let builtFiles;
+  if (source === 'emitted') {
+    data = readJson(REPO_ROOT + emittedPath);
+    builtFiles = [[emittedPath, data]];
+  } else {
+    // The pin has no built_at of its own; the day it was pinned stands in for it.
+    const entry = manifest.find((e) => e.id === PIN_ID);
+    if (!entry) throw new RangeError(`no manifest entry for ${PIN_ID}`);
+    data = JSON.parse(readPinned(PIN_ID));
+    builtFiles = [[`data/pinned/${entry.path}`, { built_at: `${entry.retrieved}T00:00:00Z` }]];
+  }
+  const fy = data.meta.fy;
+  const masterRel = masterPath(newestYear('data/emitted/hospital'));
+  const masterFile = readJson(REPO_ROOT + masterRel);
+  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  // The pin is named only when it was read; the emitted file lists it among its own sources.
+  const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ATLAS_ID]);
+  if (source === 'emitted') ids.delete(PIN_ID);
+  return {
+    source,
+    fy,
+    meta: data.meta,
+    conditions: data.conditions,
+    hospitals: data.hospitals,
+    history: data.history,
+    whatsNew: readJson(CONTENT + 'whats_new.json').items,
+    timeline: readJson(CONTENT + 'timeline.json'),
+    research: readJson(CONTENT + 'research.json'),
+    master,
+    shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
+    manifest,
+    pinsUsed: manifest.filter((e) => ids.has(e.id)),
+    builtFiles,
+    changedOn: changedOn(builtFiles),
+    cmsReleased: data.meta.fileDate,
+  };
+}
