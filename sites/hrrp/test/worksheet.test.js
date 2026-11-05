@@ -177,3 +177,10 @@ test('the example is the same on a synthetic area', () => {
   const how = howData({ ...areaOf(), whatsNew: null });
   assert.equal(how.worksheet.fields[0].id, how.exampleId);
 });
+
+test('the sheet pins Worksheet R to the column so a nowrap table cannot widen the page', async () => {
+  const { readFileSync } = await import('node:fs');
+  const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  assert.match(css, /^\.wsr \{[^}]*grid-template-columns: minmax\(0, 1fr\)/m, 'an implicit grid column would size to the table\'s no-wrap width');
+  assert.match(css, /^\.wsr__id \{[^}]*minmax\(min\(\d+px, 100%\), 1fr\)/m, 'the fields never ask for more than the column');
+});
