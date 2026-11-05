@@ -18,6 +18,9 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-06 | The cut applies to every traditional Medicare (fee-for-service) base operating DRG payment in the fiscal year, which runs from October 1 through September 30. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "Payment reductions are applied to all Medicare fee-for-service base operating diagnosis-related group payments during the FY (October 1 to September 30)." | 2026-11-04 |
 | HRRP-07 | CMS estimates that new-technology add-on payments will total about $1.74 billion in fiscal year 2027, paid on top of the DRG payment. | https://www.federalregister.gov/documents/2026/08/04/2026-15833 | "Aggregate Estimated Total FY 2027 Impact" … "$1,739,715,745.72" | 2026-11-04 |
 | HRRP-08 | CMS extended the Pennsylvania Rural Health Model's termination date to December 31, 2026. | https://www.cms.gov/files/document/r12622demo.pdf | "extend the existing termination date of the Pennsylvania Rural Health Model to 12/31/2026" | 2026-11-04 |
+| HRRP-09 | The payment reduction is capped at 3 percent, a payment adjustment factor of 0.97. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "The payment reduction is capped at 3 percent (that is, a payment adjustment factor of 0.97)." | 2026-11-05 |
+| HRRP-10 | A single neutrality modifier, the same for every hospital in a year, keeps total savings under the peer-group method equal to those under the earlier method with no peer groups. | https://www.law.cornell.edu/cfr/text/42/412.152 | "The neutrality modifier, a multiplicative factor that equates total Medicare savings under the current stratified methodology to the previous non-stratified methodology." | 2026-11-05 |
+| HRRP-11 | The program reduces payments to subsection (d) hospitals, the hospitals Medicare pays under its inpatient prospective payment system; a hospital paid another way is not in it. | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-readmissions-reduction-program-hrrp | "reduce payments to subsection (d) hospitals for excess readmissions beginning October 1, 2012 (that is, fiscal year [FY] 2013)" | 2026-11-05 |
 
 ## Notes on the sources
 
@@ -41,6 +44,14 @@ A claim marked `unverified` may not be used in copy.
   (`NTAP_SHARE`) is this site's ratio of that total to the modeled base, not CMS's figure.
 - **HRRP-08** is Pub. 100-19, Transmittal 12622 (change request 13595, May 2, 2024); the same source as HACRP-93. The
   constant drops out of later editions after the date passes.
+- **HRRP-09** is the CMS program page's own sentence; the regulation is 42 CFR 412.154(c)(2)(iii). The site's `CAP`
+  (engine/js/hrrp/formula.js) carries it out.
+- **HRRP-10** is the regulation's definition of the neutrality modifier (42 CFR 412.152, item (4) of "aggregate payments
+  for excess readmissions"). "The same for every hospital in a year" is how the formula uses it: one multiplier in
+  every hospital's sum.
+- **HRRP-11** quotes the CMS program page's account of the statute. A "subsection (d) hospital" is a hospital paid under
+  section 1886(d) of the Social Security Act, the inpatient prospective payment system; the site's 404 line says only that
+  a hospital paid another way is not in the program, and names no kind of hospital.
 
 ## Link check (2026-11-04)
 

@@ -28,3 +28,6 @@ export const CLAIMS = {
 
 // Care Compare rates hospitals from one star to this many (CMS's overall rating scale); the record card shows the rating as filled and empty stars.
 export const STARS_MAX = 5;
+
+// The area pages' "cut this much or more" field counts hospitals at or above this cut (percent): summarize()'s nGe1.
+export const GE_CUT_PCT = 1;

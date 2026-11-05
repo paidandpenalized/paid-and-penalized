@@ -21,6 +21,7 @@ import { hospitalPage } from './hospital/page.js';
 import { hacCounts, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
+import { t as readmissionsT } from '../sites/hrrp/web/program/copy.js';
 
 const PATH = /^\/[a-z0-9/-]*$/;
 
@@ -135,6 +136,7 @@ function notFound(assets, robots) {
 <header class="page__head">
 <h1>${COPY.notFoundTitle}</h1>
 <p class="dek">${COPY.notFoundBody}</p>
+<p class="note">${readmissionsT('notInProgram')}</p>
 </header>
 <ul class="links" role="list">
 <li><a href="/">${COPY.notFoundHome}</a></li>

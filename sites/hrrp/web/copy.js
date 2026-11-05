@@ -76,6 +76,14 @@ export const COPY = {
   navExplore: { text: 'Every hospital', claim: null },
   navResearch: { text: 'Research', claim: null },
 
+  // The estimate tag beside a modeled dollar figure (it links to Methods).
+  estimate: { text: 'estimate', claim: null },
+  estimateLabel: { text: 'Modeled on this site; how the estimate is made', claim: null },
+
+  // The breadcrumb (hospital and place pages).
+  crumbsLabel: { text: 'Breadcrumb', claim: null },
+  crumbNation: { text: 'Nation', claim: null },
+
   // Area pages.
   deckShareNone: { text: 'it is {none}', claim: null },
   deckShare: { text: '{pct} of the {n} measured on at least one condition', claim: null },

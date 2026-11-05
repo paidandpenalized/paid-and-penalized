@@ -23,7 +23,7 @@ export function buildPlaces(hospitals, meta) {
     const region = get('region', slug(h.region), h.region);
     const division = get('division', slug(h.division), h.division);
     const state = get('state', h.st.toLowerCase(), meta.states[h.st] ?? h.st);
-    const metro = h.cbsa ? get('metro', h.cbsa, h.cbsaName) : null;
+    const metro = h.cbsa && h.cbsaName ? get('metro', h.cbsa, h.cbsaName) : null;
     const chain = [region, division, state, metro];
     chains.set(h.id, chain);
     for (const p of chain) p?.hospitals.push(h);

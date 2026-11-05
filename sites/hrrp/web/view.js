@@ -2,15 +2,22 @@
 // One hospital's page data: the record card's fields, the stamps, the verdict and rank sentences, the breadcrumb,
 // as plain strings (pages escape them). Pure.
 import { TEACH_LABEL, slug } from '../../../engine/js/hrrp/filters.js';
-import { PEERS } from '../../../engine/js/hrrp/formula.js';
+import { CAP_PCT, PEERS } from '../../../engine/js/hrrp/formula.js';
+import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
-import { dotList, placeText } from '../../../web/render/format.js';
-import { STARS_MAX } from './constants.js';
+import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
+import { dotList, ordinal, placeText, spelled } from '../../../web/render/format.js';
+import { GE_CUT_PCT, STARS_MAX } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, placePath } from './links.js';
 import { factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
-import { inactiveSentence, rankLine, summarySentence } from './wording.js';
+import { fill as placeFill, t as placeT } from './place/copy.js';
+import { fill as methodsFill, t as methodsT } from './methods/copy.js';
+import { fill as programFill } from './program/copy.js';
+import { fill as siteFill } from './copy.js';
+import { MIN_DISCHARGES, CONDS } from '../../../engine/js/hrrp/formula.js';
+import { deckLead, inactiveSentence, noEstimateNote, penalizedNote, plural, rankLine, summarySentence, upFirst, vsLabel } from './wording.js';
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
 // which the verdict sentence uses), what the rank line ranks against (every hospital's cut, each state's hospitals) and
@@ -29,8 +36,8 @@ export function hospitalContext({ hospitals, meta, history, conditions, master =
   };
 }
 
-// A special-status code in words; a code the site has no words for is shown as CMS writes it.
-const typeName = (code) => (has(HOSPITAL, `type${code}`) ? t(`type${code}`) : code);
+// A special-status code in words; a code the site has no words for is dropped (a raw code means nothing to a reader).
+const typeName = (code) => (has(HOSPITAL, `type${code}`) ? t(`type${code}`) : null);
 
 // Bed counts are CMS certified beds; the few from the cost report instead are marked.
 const bedsText = (h) => (h.beds ? fill(h.bedsSrc === 'cr' ? 'typeBedsCostReport' : 'typeBeds', { beds: fmtInt(h.beds) }) : null);
@@ -60,19 +67,23 @@ function starsOf(h) {
 
 const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${ccn}`;
 
+// A hospital is in a metro area when the row names both its code and its name; otherwise it is outside the metro areas.
+export const inMetro = (h) => Boolean(h.cbsa && h.cbsaName);
+
 // Nation, then the hospital's region, division, state and metro area, each only when the row names it.
 function crumbsOf(h, ctx) {
   const out = [{ label: t('crumbNation'), href: PROGRAM_PATH }];
   if (h.region) out.push({ label: h.region, href: placePath('region', slug(h.region)) });
   if (h.division) out.push({ label: h.division, href: placePath('division', slug(h.division)) });
   out.push({ label: ctx.meta.states[h.st] ?? h.st, href: placePath('state', h.st) });
-  if (h.cbsa) out.push({ label: h.cbsaName, href: placePath('metro', h.cbsa) });
+  if (inMetro(h)) out.push({ label: h.cbsaName, href: placePath('metro', h.cbsa) });
   return out;
 }
 
 // Whether the hub's dollar file holds the hospital, so the hub and the HACRP site have a page for it: the file holds the
-// hospitals the master lists in HACRP (a test holds this equal to the hub's file). True where the context has no master.
-const inHubOf = (h, ctx) => ctx.master?.get(h.id)?.programs?.hacrp?.inProgram ?? true;
+// hospitals the master lists in HACRP (a test holds this equal to the hub's file). A hospital the master lacks is not in
+// the hub. True only where the context has no master at all (a test's slice).
+const inHubOf = (h, ctx) => (ctx.master ? ctx.master.get(h.id)?.programs?.hacrp?.inProgram === true : true);
 
 // h: a hospital row of the data file; ctx: hospitalContext(). Returns plain strings (and numbers where a page needs one).
 export function hospitalView(h, ctx) {
@@ -93,7 +104,7 @@ export function hospitalView(h, ctx) {
     alias: h.alias ? fill('alias', { alias: h.alias }) : null,
     location: [place, h.zip ? ` ${h.zip}` : ''].join(''),
     county: h.county || null,
-    metro: h.cbsa
+    metro: inMetro(h)
       ? { value: h.cbsaName, linkText: t('seeMetro'), href: placePath('metro', h.cbsa) }
       : { value: t('outsideMetro'), linkText: fill('seeState', { state: stateName }), href: placePath('state', h.st) },
     type: typeText(h),
@@ -117,5 +128,166 @@ export function hospitalView(h, ctx) {
     rank: rankLine(h, ctx.rank),
     crumbs: crumbsOf(h, ctx),
     source: fill('source', { edition: edition.label, date: fmtDate(ctx.meta.fileDate, 'long') }),
+  };
+}
+
+// What the program page and the place pages share, built once: the edition's phrases, the nation's summary and the states'
+// average cuts (descending, for a state's rank among them). places: buildPlaces()'s result.
+export function areaContext({ hospitals, meta, history, conditions, places }) {
+  const edition = { ...editionOf(meta, history), conditions };
+  const stateMeans = places.list.filter((p) => p.kind === 'state').map((p) => summarize(p.hospitals).meanRed).sort((a, b) => b - a);
+  return { hospitals, meta, edition, nation: summarize(hospitals), stateMeans, hasDc: has(meta.states, 'DC'), places };
+}
+
+// The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
+// the data, never by name.
+const largest = (list, kind) => list.filter((p) => p.kind === kind)
+  .reduce((a, b) => (b.hospitals.length > a.hospitals.length ? b : a));
+
+// The program page's top: the hero's words and the At-a-glance card's eight fields. Plain strings, with the places the
+// hero's suggestions link.
+export function programView(ctx) {
+  const { edition, meta, nation: S, places } = ctx;
+  const noEst = noEstimateNote(ctx.hospitals);
+  const state = largest(places.list, 'state');
+  const metro = largest(places.list, 'metro');
+  const link = (p) => ({ name: p.name, path: p.path });
+  return {
+    edition: edition.label,
+    heading: programFill('pageTitle', { edition: edition.label }),
+    description: programFill('pageDescription', { edition: edition.label }),
+    kicker: programFill('kicker', { edition: edition.label, n: String(edition.nYears) }),
+    deck: {
+      lead: programFill('deckLead', { days: spelled(HRRP_WINDOW_DAYS), pay: edition.payStart }),
+      count: programFill('deckCount', { nPen: fmtInt(S.nPen), n: fmtInt(S.n) }),
+      mid: programFill('deckMid'),
+      share: S.pctPen == null ? '' : programFill('deckShare', { pct: fmtPct(S.pctPen, 0), nMeasured: fmtInt(S.nMeasured) }),
+    },
+    try: { state: link(state), metro: link(metro) },
+    card: {
+      left: programFill('glanceTitle', { edition: edition.label }),
+      right: programFill('glanceSource'),
+      fields: [
+        { label: programFill('glanceEvaluated'), value: fmtInt(S.n) },
+        { label: programFill('glancePenalized'), value: fmtInt(S.nPen), note: S.pctPen == null ? null : programFill('glancePenalizedNote', { pct: fmtPct(S.pctPen, 0), nMeasured: fmtInt(S.nMeasured) }) },
+        { label: programFill('glanceMean'), value: fmtPct(S.meanRed) },
+        { label: programFill('glanceMeanPen'), value: fmtPct(S.meanRedPen) },
+        { label: programFill('glanceMax', { cap: String(CAP_PCT) }), value: fmtInt(S.nMax), note: programFill('glanceMaxNote') },
+        {
+          label: programFill('glanceDollars'),
+          value: programFill('glanceDollarsValue', { money: fmtMoney(meta.totals.modelPen) }),
+          estimated: true,
+          note: programFill('glanceDollarsNote', { cms: fmtMoney(meta.totals.cmsEst), missing: noEst ? ` ${noEst}.` : '' }),
+        },
+        { label: programFill('glanceWindow'), value: programFill('glanceWindowValue', { start: fmtDate(meta.perf[0]), end: fmtDate(meta.perf[1]) }) },
+        { label: programFill('glancePay'), value: edition.payShort },
+      ],
+      stamp: programFill('glanceStamp', { date: fmtDate(meta.fileDate) }),
+    },
+  };
+}
+
+const KIND_KEY = { region: 'kindRegion', division: 'kindDivision', state: 'kindState', metro: 'kindMetro' };
+const CHILDREN_KEY = { region: 'childrenDivisions', division: 'childrenStates', state: 'childrenMetros' };
+
+// The places above this one, nation first: the breadcrumb.
+function placeCrumbs(place) {
+  const out = [];
+  for (let p = place.parent; p; p = p.parent) out.unshift({ label: p.name, href: p.path });
+  return [{ label: t('crumbNation'), href: PROGRAM_PATH }, ...out];
+}
+
+// A state's rank by average cut among the states (and DC) in the program, or null for any other kind of place.
+const stateRank = (place, S, ctx) => {
+  if (place.kind !== 'state') return null;
+  const rank = ctx.stateMeans.findIndex((v) => v <= S.meanRed + 1e-12) + 1;
+  return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0) };
+};
+
+const hospitalsOf = (n) => plural(n, t('nounHospital'), t('nounHospitals'));
+
+// The places inside this one, with their hospital counts: a state lists its metro areas (a metro across a state line
+// shows this state's hospitals only, as the source did) and the hospitals outside them.
+function childRows(place) {
+  const row = (p) => {
+    const mine = place.kind === 'state' ? p.hospitals.filter((h) => h.st === place.key.toUpperCase()) : p.hospitals;
+    const label = place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st: place.key.toUpperCase() }) : p.name;
+    return { label, href: p.path, n: mine.length, count: hospitalsOf(mine.length) };
+  };
+  const rows = place.children.map(row);
+  if (place.kind === 'state') {
+    const outside = place.hospitals.filter((h) => !inMetro(h));
+    if (outside.length) rows.push({ label: placeT('childOutside'), href: null, n: outside.length, count: hospitalsOf(outside.length) });
+  }
+  return rows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+}
+
+// place: a buildPlaces() entry; ctx: areaContext(). The place page's head, deck and six-field card.
+export function placeView(place, ctx) {
+  const { edition, nation: N } = ctx;
+  const S = summarize(place.hospitals);
+  const noEst = noEstimateNote(place.hospitals);
+  const rank = stateRank(place, S, ctx);
+  const dc = rank && ctx.hasDc ? placeT('deckAndDc') : '';
+  const avg = S.n === 1 ? placeFill('deckAvgOne', { pct: fmtPct(S.meanRed) }) : placeFill('deckAvgMany', { hospitals: hospitalsOf(S.n), pct: fmtPct(S.meanRed) });
+  const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
+  const lead = deckLead(S, edition.label);
+  const kind = placeT(KIND_KEY[place.kind]);
+  const spans = place.kind === 'metro' && place.states.length > 1;
+  const children = CHILDREN_KEY[place.kind] ? { title: placeT(CHILDREN_KEY[place.kind]), rows: childRows(place) } : null;
+  return {
+    name: place.name,
+    path: place.path,
+    edition: edition.label,
+    heading: placeFill('pageTitle', { name: place.name, edition: edition.label }),
+    description: placeFill('pageDescription', { name: place.name, lead }),
+    crumbs: placeCrumbs(place),
+    kicker: spans ? placeFill('kindSpans', { kind, states: place.states.join(', ') }) : kind,
+    deck: { lead: `${lead} `, average: `${avg}${rankWords}`, total: placeT('deckTotal'), totalValue: fmtMoney(S.penTotal), totalNote: noEst ? placeFill('deckTotalNote', { note: noEst }) : '', totalEnd: placeT('deckTotalEnd') },
+    card: {
+      left: placeFill('cardTitle', { name: place.name, edition: edition.label }),
+      right: placeT('cardVs'),
+      fields: [
+        { label: placeT('kpiHospitals'), value: fmtInt(S.n) },
+        { label: placeT('kpiPenalized'), value: fmtPct(S.pctPen, 0), note: penalizedNote(S, N) },
+        { label: placeT('kpiMean'), value: fmtPct(S.meanRed), note: vsLabel(S.meanRed, N.meanRed, 2, t('unitPts')) },
+        { label: placeFill('kpiGe', { pct: fmtPct(GE_CUT_PCT, 0) }), value: fmtInt(S.nGe1), note: placeFill('kpiGeNote', { share: fmtPct((100 * S.nGe1) / S.n, 0), nation: fmtPct((100 * N.nGe1) / N.n, 0) }) },
+        { label: placeFill('kpiMax', { cap: String(CAP_PCT) }), value: fmtInt(S.nMax) },
+        { label: placeT('kpiDollars'), value: fmtMoney(S.penTotal), estimated: true, note: noEst ? `${upFirst(noEst)}.` : null },
+      ],
+    },
+    children,
+    back: placeT('back'),
+  };
+}
+
+// The Methods page's words as plain strings, filled from the data: the edition's phrases, the neutrality modifier at four
+// decimals, how many hospitals the recomputation reproduces, the sources the data file names.
+export function methodsView(ctx) {
+  const { edition, meta } = ctx;
+  const rep = meta.replication;
+  const label = (fy) => siteFill('editionLabel', { fy: String(fy) });
+  const span = { first: label(edition.firstFy), last: label(edition.fy - 1) };
+  return {
+    edition: edition.label,
+    heading: methodsFill('pageTitle', { edition: edition.label }),
+    description: methodsT('pageDescription'),
+    about: { intro: methodsFill('aboutIntro', { edition: edition.label }) },
+    formula: {
+      intro: methodsFill('formulaIntro', { conditions: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) }),
+      cap: methodsFill('formulaCap', { cap: String(CAP_PCT), nm: meta.nm.toFixed(4), pay: edition.payLong }),
+      replication: rep.exact === rep.total
+        ? methodsFill('replicationAll', { total: fmtInt(rep.total) })
+        : methodsFill('replicationSome', { exact: fmtInt(rep.exact), total: fmtInt(rep.total) }),
+    },
+    dollars: methodsFill('dollarsInputs', { edition: edition.label }),
+    small: methodsFill('readSmall', { minCases: String(MIN_DISCHARGES) }),
+    window: methodsFill('readWindow', { window: edition.perfLong }),
+    history: methodsFill('historyText', span),
+    sources: {
+      files: meta.sources.filter((s) => /^https:\/\//.test(s.url)),
+      supplemental: methodsFill('sourceSupplemental', span),
+      rules: methodsFill('sourceRules', { span: edition.span }),
+    },
   };
 }

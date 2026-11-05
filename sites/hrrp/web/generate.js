@@ -1,5 +1,5 @@
-// The Readmissions site's page build: its manifest (pipeline/site/build.js lists it) and the generator that writes one
-// page for each hospital in the file, and the program page, each place's page and Methods (stubs until their batch).
+// The Readmissions site's page build: its manifest (pipeline/site/build.js lists it) and the generator that writes the
+// program page, one page for each hospital in the file, each place's page and Methods (last).
 // Before it writes anything it checks that the formula (engine/js/hrrp/formula.js) gives CMS's payment adjustment factor
 // for every hospital.
 import { contrib } from '../../../engine/js/hrrp/formula.js';
@@ -8,10 +8,12 @@ import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { loadHrrp } from './data.js';
 import { hospitalPage } from './pages/hospital.js';
+import { methodsPage } from './pages/methods.js';
+import { placePage } from './pages/place.js';
+import { programPage } from './pages/program.js';
 import { METHODS_PATH, PROGRAM_PATH, hospitalPath } from './links.js';
 import { buildPlaces } from './places.js';
-import { methodsStub, placeStub, programStub } from './stubs.js';
-import { hospitalContext, hospitalView } from './view.js';
+import { areaContext, hospitalContext, hospitalView, methodsView, placeView, programView } from './view.js';
 
 // The first hospital whose factor the formula does not reproduce, or null.
 export function firstMismatch(hospitals, meta) {
@@ -29,15 +31,16 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
   const shared = hospitalContext(data);
-  const stubArgs = { edition: shared.edition.label, robots, assets };
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programStub(stubArgs) });
+  const { list: places } = buildPlaces(hospitals, meta);
+  const area = areaContext({ ...data, places: { list: places } });
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: programView(area), robots, assets }) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }
-  const { list: places } = buildPlaces(hospitals, meta);
-  for (const place of places) ctx.emit({ path: place.path, robots, text: placeStub(place, stubArgs) });
-  ctx.emit({ path: METHODS_PATH, robots, text: methodsStub(stubArgs) });
-  log(`HRRP: ${hospitals.length + places.length + 2} pages under ${PROGRAM_PATH}`);
+  for (const place of places) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
+  // Methods last, with the count of the pages under the program.
+  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
+  log(`HRRP: ${1 + hospitals.length + places.length + 1} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 

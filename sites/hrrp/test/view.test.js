@@ -62,7 +62,8 @@ test('the type line is a dash when empty; beds from the cost report are marked; 
   assert.match(view(hospital({ bedsSrc: 'cr' })).type, /220 beds \(cost report\)/);
   const types = view(hospital({ types: ['SCH', 'MDH', 'RRC', 'IHS', 'EACH'], teach: null, beds: null, own: null, urban: null })).type;
   assert.equal(types, ['Sole community hospital', 'Medicare-dependent hospital', 'Rural referral center', 'Indian Health Service', 'Essential access community hospital'].join(' · '));
-  assert.match(view(hospital({ types: ['XYZ'], teach: null, beds: null, own: null, urban: null })).type, /^XYZ$/);
+  assert.equal(view(hospital({ types: ['XYZ'], teach: null, beds: null, own: null, urban: null })).type, '—', 'a code with no words is dropped, not shown raw');
+  assert.equal(view(hospital({ types: ['XYZ', 'SCH'], teach: null, beds: null, own: null, urban: null })).type, 'Sole community hospital');
   const rural = view(hospital({ urban: false })).type;
   assert.ok(rural.includes('· Rural\u00a0·') && !rural.includes('Urban'));
 });
@@ -106,4 +107,15 @@ test('a hospital with no city: the place is the state alone', () => {
   const v = view(hospital({ city: '', zip: '' }));
   assert.equal(v.location, 'ZZ');
   assert.ok(v.heading.startsWith(`${NAME}, ZZ: `) && v.description.startsWith(`${NAME}, ZZ: `));
+});
+
+test('a metro code with no metro name reads as outside the metro areas; a hospital the master lacks is not in the hub', () => {
+  const v = view(hospital({ cbsa: '99901', cbsaName: undefined }));
+  assert.equal(v.metro.value, 'Outside metro areas');
+  assert.ok(!v.crumbs.some((c) => c.href.includes('/metro/')));
+  const master = new Map([[CUT.id, { programs: { hacrp: { inProgram: true } } }]]);
+  const withMaster = { ...ctxOf(), master };
+  assert.equal(hospitalView(CUT, withMaster).inHub, true);
+  assert.equal(hospitalView(hospital({ id: '990050' }), withMaster).inHub, false, 'missing from the master');
+  assert.equal(hospitalView(CUT, { ...ctxOf(), master: new Map([[CUT.id, { programs: {} }]]) }).inHub, false);
 });

@@ -13,10 +13,6 @@ export const COPY = {
     claim: null,
   },
 
-  // The breadcrumb.
-  crumbsLabel: { text: 'Breadcrumb', claim: null },
-  crumbNation: { text: 'Nation', claim: null },
-
   // The record card.
   recordTitle: { text: 'Hospital record · {edition}', claim: null },
   recordCcn: { text: 'CCN {ccn}', claim: null },
@@ -61,8 +57,6 @@ export const COPY = {
   dollarsNote: { text: 'on ≈ {base} of base payments', claim: null },
   dollarsNoVolume: { text: 'no volume data', claim: null },
   dollarsNone: { text: '—', claim: null },
-  estimate: { text: 'estimate', claim: null },
-  estimateLabel: { text: 'Modeled on this site; how the estimate is made', claim: null },
 
   // The foot.
   report: { text: "Report a problem with this hospital's data", claim: null },

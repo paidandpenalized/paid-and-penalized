@@ -8,13 +8,7 @@ import { externalLink, feedbackFor, page } from '../../../../web/render/layout.j
 import { SITE } from '../../../../web/site.js';
 import { t } from '../hospital/copy.js';
 import { DOLLARS_HREF, hospitalPath } from '../links.js';
-import { followed, shellOf } from './parts.js';
-
-// The breadcrumb: the last crumb is the hospital itself, marked as the current page and not a link.
-const breadcrumb = (crumbs, name) => html`<nav class="crumbs" aria-label="${t('crumbsLabel')}"><ol>
-${crumbs.map((c) => html`<li><a href="${c.href}">${c.label}</a></li>
-`)}<li aria-current="page">${name}</li>
-</ol></nav>`;
+import { breadcrumb, followed, shellOf } from './parts.js';
 
 const starsValue = (stars) => (stars.n === null ? stars.text
   : html`<span class="stars" aria-hidden="true">${stars.filled}<span class="stars__off">${stars.empty}</span></span><span class="vh">${stars.text}</span>`);

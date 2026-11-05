@@ -1,7 +1,8 @@
 // Synthetic hospitals for the Readmissions page tests: invented names, CCNs 990001-990099 (no real hospital), a
 // made-up fiscal year and peer medians of 1 (so an excess readmission ratio of 1.1 is 0.1 over its median).
 import { testAssets } from '../../../pipeline/test/helpers.js';
-import { hospitalContext } from '../web/view.js';
+import { buildPlaces } from '../web/places.js';
+import { areaContext, hospitalContext } from '../web/view.js';
 
 export const NAME = 'EXAMPLE GENERAL HOSPITAL';
 export const ASSETS = testAssets();
@@ -12,6 +13,9 @@ export const META = {
   nm: 1,
   peerMedians: Object.fromEntries([1, 2, 3, 4, 5].map((p) => [p, { AMI: 1, COPD: 1, HF: 1, PN: 1, CABG: 1, THA_TKA: 1 }])),
   states: { ZZ: 'Zedland', ZY: 'Zyland' },
+  totals: { modelPen: 341000000, cmsEst: 361000000 },
+  replication: { exact: 9, total: 9 },
+  sources: [{ id: 'a', name: 'Example source file', url: 'https://example.org/file.zip' }, { name: 'Example source without an address', url: 'http://insecure.example/' }],
 };
 export const HISTORY = { years: [2025, 2026], paf: {}, national: [{ fy: 2025, cap: 3 }, { fy: 2026, cap: 3 }] };
 export const CONDITIONS = [
@@ -42,3 +46,5 @@ export const OTHERS = [
 export const ALL = [CUT, NONE_MEASURED, NONE_BELOW, NONE_ROUNDED, INACTIVE, ...OTHERS];
 
 export const ctxOf = (hospitals = ALL) => hospitalContext({ hospitals, meta: META, history: HISTORY, conditions: CONDITIONS });
+
+export const areaOf = (hospitals = ALL) => areaContext({ hospitals, meta: META, history: HISTORY, conditions: CONDITIONS, places: buildPlaces(hospitals, META) });

@@ -39,3 +39,41 @@
 .hosp__nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .hosp__rank { color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .hosp__source { margin-top: 20px; }
+
+/* ---------- the program page's top, the Parts' headings, the place pages and Methods ---------- */
+.prog { gap: 0; }
+.prog__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 16px 20px; }
+@media (min-width: 960px) { .prog__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
+.prog__intro { display: grid; gap: 14px; align-content: start; container-type: inline-size; }
+.prog__kicker { color: var(--pen-ink); }
+.prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; color: var(--pen); }
+.prog__deck { max-width: 24.8em; font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.42; }
+.prog__deck strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
+.prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
+.prog__try a { color: var(--ink); text-decoration-color: var(--pen); }
+.prog__card, .place__card { display: grid; gap: 16px; align-content: start; container-type: inline-size; }
+.prog__summary { display: flex; flex-wrap: wrap; }
+.prog__summary > .field { flex: 1 1 210px; }
+.prog__summary > .form__title { flex-basis: 100%; }
+.prog__card .stamp { justify-self: end; margin: 4px 6px 0 0; white-space: nowrap; font-size: min(4.5cqi, 1.55rem); }
+.part { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 64px; padding-top: 28px; border-top: 5px double var(--ink); }
+.part__head { display: grid; gap: 10px; }
+.part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
+.part__title { font: 400 clamp(2rem, 5vw, 3.4rem)/1.02 var(--font-display); letter-spacing: -0.005em; }
+.place__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 8px 20px; }
+@media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
+.place__intro { display: grid; gap: 14px; align-content: start; }
+.place__title { font: 400 clamp(2.4rem, 7vw, 5rem)/0.98 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.place__deck { max-width: 36em; font-size: var(--fs-md); line-height: 1.45; }
+.place__kids { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+.kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 6px 24px; margin: 12px 0 0; padding: 0; list-style: none; }
+.kids a { display: inline-block; padding-block: 4px; }
+.meth__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px 56px; }
+@media (min-width: 960px) { .meth__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; } }
+.meth__sec { margin-top: 32px; }
+.meth__sec > h2, .meth__side > h2 { margin-bottom: 8px; }
+.meth__side { display: grid; gap: 8px; }
+.meth .formula { margin: 8px 0; padding: 16px 18px; border: var(--rule) solid var(--ink); background: var(--paper-2); font: 400 var(--fs-sm)/1.45 var(--font-type); white-space: pre-wrap; overflow-wrap: anywhere; }
+.glossary dt { margin-top: 10px; font-weight: 700; }
+.glossary dd { margin: 2px 0 0; }
+.sources { padding-left: 1.2em; }
