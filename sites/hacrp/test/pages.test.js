@@ -12,7 +12,6 @@ import { REPO_ROOT } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { chipOf, headerOf, withTemp } from '../../../pipeline/test/helpers.js';
-import { checkLinks } from '../../../tools/ci/link-check.js';
 import { cmsText, count, decimal, isoDate as isoDateOf, money as moneyText, shortIsoDate } from '../../../web/render/format.js';
 import { externalLink } from '../../../web/render/layout.js';
 import { LISTED_PROGRAMS, hospitalPathOf } from '../../../web/site.js';
@@ -239,14 +238,6 @@ test('the data dictionary page carries the as-of bar the program page shows, aft
   const out = await builtSlice();
   const dictionary = read(out, '/hacrp/data/');
   checkAsofBar(dictionary, read(out, '/hacrp/'), dictionary.lastIndexOf('</section>'));
-});
-
-// CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, so a moved anchor
-// fails before CI does. The slice's hospitals are the only ones built, and "#state=" names their states.
-test('every internal link on the built pages lands on a file, and every fragment on an id or a state the page reads', async () => {
-  const { pages, found } = checkLinks(await builtSlice(), SLICE.hospitals.map((h) => h.state));
-  assert.deepEqual(found, []);
-  assert.ok(pages > SLICE.hospitals.length + SLICE_PLACES.list.length, `${pages} pages checked`);
 });
 
 test('a preview build (no PP_ENV) is noindex everywhere, released or not', () =>

@@ -9,7 +9,7 @@ import { page } from '../../../web/render/layout.js';
 import { programDek } from '../../../web/programs.js';
 import { SITE } from '../../../web/site.js';
 import { loadHrrp } from './data.js';
-import { HOSPITALS_PATH, PROGRAM_PATH, hospitalPath } from './links.js';
+import { PROGRAM_PATH, hospitalPath } from './links.js';
 
 // The first hospital whose factor the formula does not reproduce, or null.
 export function firstMismatch(hospitals, meta) {
@@ -60,7 +60,7 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const { assets } = ctx;
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ assets, robots }) });
   for (const hospital of hospitals) ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPageOf({ hospital, assets, robots }) });
-  log(`HRRP: ${hospitals.length + 1} pages under ${HOSPITALS_PATH.slice(0, -'hospital/'.length)}`);
+  log(`HRRP: ${hospitals.length + 1} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 

@@ -6,6 +6,12 @@ import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
+import { loadHub } from '../../hub/data.js';
+import { EXAMPLE_CCN } from '../../hub/model.js';
+import { HRRP } from '../../sites/hrrp/web/generate.js';
+import { loadHrrp } from '../../sites/hrrp/web/data.js';
+import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
@@ -291,7 +297,24 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
 // HACRP released on its first four hospitals (every page type, in well under a second) with the hub: built once, in
 // production, for the tests that read a whole build.
 const DATA = loadHacrp();
-const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
+// The hub's example hospital too: the home page's example card links to its page.
+const SLICE = { ...DATA, hospitals: [...DATA.hospitals.slice(0, 4), DATA.hospitals.find((h) => h.ccn === EXAMPLE_CCN)] };
+const builtSlice = sliceBuild(SLICE, [HRRP]);
+
+// CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
+// site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's
+// hospitals are the only HACRP ones built, and "#state=" names their states.
+test('every internal link on the built pages lands on a file, and every fragment on an id or a state the page reads', async () => {
+  const { pages, found } = checkLinks(await builtSlice(), SLICE.hospitals.map((h) => h.state));
+  assert.deepEqual(found, []);
+  assert.ok(pages > SLICE.hospitals.length, `${pages} pages checked`);
+});
+
+test('the Readmissions site has a page for every hospital the hub marks for Readmissions, so the hub\'s links never 404', () => {
+  const have = new Set(loadHrrp().hospitals.map((h) => hrrpHospitalPath(h.id)));
+  const missing = [...loadHub().tdr.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
+  assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
+});
 
 test('HACRP gives the build its two dates, which /corrections/ shows', async () => {
   const out = await builtSlice();
