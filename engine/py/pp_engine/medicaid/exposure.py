@@ -150,6 +150,9 @@ def hospital_base(row):
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
     # at risk, but its line 5 can be in the lines 2 + 5 comparison.
     scored = not {"negative_medicaid_revenue", "medicaid_exceeds_patient_revenue"} & set(flags)
+    # The same screen for the lines 2 + 5 comparison: lines 2 + 5 above net patient revenue leave that version only.
+    if scored and has_margin and rev25 is not None and rev25 > npr:
+        flags.append("medicaid_2_5_exceeds_patient_revenue")
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
         status=row["status_label"], miur=_number(row.get("medicaid_day_share")),
@@ -185,7 +188,8 @@ def revenue_at_risk(base, share, line2_5=False):
     """Step 1: the Medicaid revenue base times the hospital's expansion share; 0 when the base is missing or not
     positive."""
     revenue = base["revenue_line2_5"] if line2_5 else base["medicaid_net_revenue"]
-    if share is None or not base["scored"] or revenue is None or revenue <= 0:
+    screened = line2_5 and "medicaid_2_5_exceeds_patient_revenue" in base["flags"]
+    if share is None or not base["scored"] or screened or revenue is None or revenue <= 0:
         return 0.0
     if not 0 <= share <= 1:
         raise ExposureError(f"VIII share {share} outside 0..1")

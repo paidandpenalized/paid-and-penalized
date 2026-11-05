@@ -44,7 +44,8 @@ def roll_up(pairs):
             inc += base["net_income_patients"] + oo
             rev_after += after + oo
             inc_after += base["net_income_patients"] + oo + res["income_change"]
-            if exposure.margin_change(res) <= -1:
+            change = exposure.margin_change(res)
+            if change is not None and change <= -1:
                 out["falls_1pp"] += 1
             if base["net_income"] is not None:
                 npr_t += base["net_patient_revenue"]

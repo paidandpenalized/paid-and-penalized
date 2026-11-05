@@ -92,6 +92,23 @@ class HospitalShare(unittest.TestCase):
         self.assertIsNone(exposure.hospital_share(None, 1.2))
 
 
+class LinesTwoAndFive(unittest.TestCase):
+    def test_lines_2_and_5_above_patient_revenue_leave_that_comparison_only(self):
+        b = exposure.hospital_base(hcris_row(medicaid_net_revenue="60000000", medicaid_supplemental="50000000"))
+        self.assertIn("medicaid_2_5_exceeds_patient_revenue", b["flags"])
+        self.assertTrue(b["scored"])
+        self.assertEqual(exposure.revenue_at_risk(b, 0.25), 15000000)
+        self.assertEqual(exposure.revenue_at_risk(b, 0.25, line2_5=True), 0.0)
+
+    def test_a_scenario_that_leaves_no_operating_revenue_is_not_a_one_point_fall(self):
+        b = exposure.hospital_base(hcris_row(other_operating_income="-99000000"))  # 1M of operating revenue
+        r = exposure.scenario(b, 0.5, 0.5)
+        self.assertIsNone(r["operating_margin_after"])
+        self.assertIsNone(exposure.margin_change(r))
+        out = rollup.roll_up([(b, r)])
+        self.assertEqual(out["falls_1pp"], 0)
+
+
 class Scenario(unittest.TestCase):
     def setUp(self):
         self.base = exposure.hospital_base(hcris_row())
