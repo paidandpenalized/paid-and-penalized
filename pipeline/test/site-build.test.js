@@ -20,7 +20,7 @@ import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
 import { pageProgram, pageType } from '../../tools/ci/page-types.js';
-import { cardFile } from '../../web/share-card.js';
+import { SHARE_CARDS, cardFile, shareCardOf } from '../../web/share-card.js';
 import { SITE } from '../../web/site.js';
 import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
@@ -388,7 +388,7 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
 
 test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, Readmissions\' its own, every other page the family\'s, each a copy of its committed PNG', async () => {
   const out = await builtSlice();
-  const shown = { hacrp: new Set(), hrrp: new Set(), family: new Set() };
+  const shown = Object.fromEntries(Object.keys(SHARE_CARDS).map((id) => [id, new Set()]));
   for (const file of htmlPages(out)) {
     const metas = [...tags(readFileSync(join(out, file), 'utf8'), { names: ['meta'] })].map(({ attrs }) => attrs);
     const content = (key) => metas.filter((a) => (a.property ?? a.name) === key).map((a) => a.content);
@@ -398,7 +398,7 @@ test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s car
     assert.ok(image.startsWith(`${SITE.origin}/assets/`), file);
     const path = image.slice(SITE.origin.length);
     assert.ok(existsSync(join(out, path)), `${file}: ${path} is not in dist/`);
-    const id = ['hacrp', 'hrrp'].find((key) => addressOf(file).startsWith(SITE.sites[key].path)) ?? 'family';
+    const id = shareCardOf(addressOf(file));
     assert.match(path, new RegExp(`^/assets/og-${id}\\.[0-9a-f]{8}\\.png$`), file);
     shown[id].add(path);
   }

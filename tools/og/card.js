@@ -56,7 +56,7 @@ const titleLines = (title) => title.split(' ').flatMap((word) => word.split(/(?<
 // Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red; size its font
 // size and top the words' top edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
 // the hospital's net dollars in the hub asset or its CCN among HACRP's cut hospitals (cut, a Set).
-const CARDS = {
+export const CARDS = {
   family: {
     kicker: null,
     lines: [COPY.wordmarkLead, COPY.wordmarkPen],

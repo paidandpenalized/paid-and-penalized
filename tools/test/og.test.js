@@ -7,7 +7,7 @@ import { REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { CARD_SIZE, CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
 import { sha256 } from '../../pipeline/site/assets.js';
 import { fmtInt, fmtPct } from '../../sites/hrrp/web/numbers.js';
-import { RENDER, cardDots, cardHtml, cardInputs } from '../og/card.js';
+import { CARDS, RENDER, cardDots, cardHtml, cardInputs } from '../og/card.js';
 
 const INPUTS = cardInputs();
 const STAMP = readJson(REPO_ROOT + CARD_STAMP);
@@ -41,7 +41,9 @@ for (const id of Object.keys(SHARE_CARDS)) {
   test(`the ${id} card's words hold no digit and no byline; it draws a dot for every hospital on the map`, () => {
     const page = cardHtml(id, INPUTS);
     const body = page.slice(page.indexOf('<body>'));
-    const words = body.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<span class="(num|lab)"[^>]*>[^<]*<\/span>/g, '').replace(/<[^>]+>/g, ' ');
+    // Only a card with fields draws figures (their numbers come from the data, not the words).
+    const figures = CARDS[id].fields ? body.replace(/<span class="(num|lab)"[^>]*>[^<]*<\/span>/g, '') : body;
+    const words = figures.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
     assert.doesNotMatch(words, /\d/);
     assert.doesNotMatch(words, /built by/i);
     assert.equal(circles(page).length, placedRows().length);

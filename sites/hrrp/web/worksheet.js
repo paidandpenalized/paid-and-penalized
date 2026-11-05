@@ -15,6 +15,9 @@ import { fill, t } from './program/copy.js';
 // The last digit can differ from a hand calculation (the note under the table); the note's words are in the copy.
 export const WORKSHEET_NOTE = fill('wsNote', { a: '4', b: '6' });
 
+// The class on Worksheet R's lettered fields (A to C), which tells them from a record card's numbered ones.
+export const SHEET_FIELD = 'field--sheet';
+
 // Line 4 for a counted condition: the stored excess (line 2 minus line 3) to four decimals, or "< 0.0001" when it is above
 // zero but prints as 0.0000.
 export const excessText = (err, med) => {
@@ -81,9 +84,9 @@ export function worksheetHtml(rows, { compact = false, dollars = null, edition =
   return html`<div class="wsr">
 <div class="form wsr__id">
 ${formTitle(t('wsTitle'), edition)}
-${formField({ no: fa.no, label: fa.label, value: html`<a href="${hospitalPath(fa.id)}">${fa.value}</a>`, note: fa.note, size: 'sm' })}
-${formField({ no: fb.no, label: fb.label, value: fb.value, note: fb.note, size: 'sm' })}
-${formField({ no: fc.no, label: fc.label, value: fc.value, note: fc.note, size: 'sm' })}
+${formField({ no: fa.no, label: fa.label, value: html`<a href="${hospitalPath(fa.id)}">${fa.value}</a>`, note: fa.note, size: 'sm', fieldCls: SHEET_FIELD })}
+${formField({ no: fb.no, label: fb.label, value: fb.value, note: fb.note, size: 'sm', fieldCls: SHEET_FIELD })}
+${formField({ no: fc.no, label: fc.label, value: fc.value, note: fc.note, size: 'sm', fieldCls: SHEET_FIELD })}
 </div>
 ${printout(html`<table class="gb wsr__table">
 <thead><tr><th scope="col">${t('wsColCondition')}</th>${head(1, t('wsColCases'))}${head(2, t('wsColRatio'))}${head(3, t('wsColMedian'))}${head(4, fill('wsColExcess', { a: '2', b: '3' }))}${head(5, t('wsColWeight'))}${head(6, fill('wsColPart', { c: 'C', a: '4', b: '5' }))}</tr></thead>

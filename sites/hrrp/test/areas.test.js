@@ -11,6 +11,7 @@ import { placePage } from '../web/pages/place.js';
 import { programPage } from '../web/pages/program.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { buildPlaces } from '../web/places.js';
+import { SHEET_FIELD } from '../web/worksheet.js';
 import { COPY as SHARED } from '../../../web/copy.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { areaContext, methodsView, placeView, programView } from '../web/view.js';
@@ -22,8 +23,9 @@ const placeOf = (kind, key, ctx = area) => ctx.places.list.find((p) => p.kind ==
 const placeHtml = (place, ctx = area) => placePage({ view: placeView(place, ctx), robots: null, assets: ASSETS });
 const methods = (ctx = area) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const main = (text) => text.slice(text.indexOf('<main'), text.indexOf('</main>'));
-// The record cards' fields are numbered; Worksheet R's on the program page are lettered A to C.
-const labels = (text) => [...text.matchAll(/<p class="field__label"><span class="field__no">(\d+)<\/span>([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
+// The record cards' numbered fields, "1 Label"; Worksheet R's lettered fields (A to C, class SHEET_FIELD) are left out.
+const labels = (text) => [...text.matchAll(/<div class="field([^"]*)">\n<p class="field__label"><span class="field__no">([^<]+)<\/span>([^<]+)<\/p>/g)]
+  .filter((m) => !m[1].split(' ').includes(SHEET_FIELD)).map((m) => `${m[2]} ${m[3]}`);
 
 test('the program page: the kicker, the name, the deck with the count, and the eight At-a-glance fields', () => {
   const text = program();
