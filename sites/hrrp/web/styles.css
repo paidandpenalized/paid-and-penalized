@@ -67,9 +67,10 @@
 .part__head { display: grid; gap: 10px; }
 .part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
 .part__title { font: 400 clamp(2rem, 5vw, 3.4rem)/1.02 var(--font-display); letter-spacing: -0.005em; }
+/* A Part is a grid with no gap, so its blocks (a figure, a figure's .pic wrapper, the map's columns, the research grid, the
+   explorer) space themselves: the same 28px HACRP's program page keeps between its blocks, and the callouts' grid keeps under the lede. */
+.part > :is(.pic, .fig, .mapcols, .rsgrid, .ht) { margin-top: 28px; }
 .part__intro { max-width: 52ch; margin-top: 10px; color: var(--ink-2); font-size: var(--fs-md); line-height: 1.5; }
-/* A figure straight after the lede (the map): the same 28px the callouts' grid keeps under it. */
-.part__intro + .fig { margin-top: 28px; }
 /* Part 1's callouts: what is new this year beside who is in the program, each a sentence set apart by a rule. */
 .hgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 28px; }
 @media (min-width: 760px) { .hgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; } }

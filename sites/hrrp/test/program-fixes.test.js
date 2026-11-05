@@ -181,3 +181,8 @@ test('figure: a categorical key swatch, and a free class or a bad swatch is refu
   assert.ok(String(figure({ ...FIG, key: [{ swatch: 'cat-1', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--cat-1" aria-hidden="true"></span>One</li>'));
   for (const key of [[{ cls: 'swatch-g1', label: 'x' }], [{ swatch: 'cat-9', label: 'x' }], [{ swatch: 'this', label: '' }]]) assert.throws(() => figure({ ...FIG, key }), TypeError);
 });
+
+test('a Part spaces its blocks itself: one 28px rule, and the old lede-to-figure patch is gone', () => {
+  assert.match(CSS, /\.part > :is\([^)]*\.pic[^)]*\.fig[^)]*\.mapcols[^)]*\.rsgrid[^)]*\)\s*\{\s*margin-top: 28px;/);
+  assert.ok(!CSS.includes('.part__intro + .fig'), 'the sibling-only patch is removed');
+});
