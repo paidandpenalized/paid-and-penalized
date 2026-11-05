@@ -118,15 +118,23 @@ DERIVED = (
 )
 
 # Each column's unit, for readers: dollars (whole or cents, as filed), days, discharges, beds, fte (full-time
-# equivalents), ratio (a fraction, 4 places: 0.0500 is 5%). Every metric and derived column has one.
-_UNIT_OF_CELL = {
+# equivalents), ratio (a fraction, 4 places: 0.0500 is 5%). Every metric and derived column has one: a cell on G-3 or
+# S-10 is dollars unless listed; a cell anywhere else, or a derived column, must be listed (import fails otherwise).
+_UNIT_OF = {
     "beds": "beds", "bed_days_available": "days", "fte_employees": "fte", "s10_ccr": "ratio",
     **{m: "days" for m in ("days_medicare", "days_medicaid", "days_total", "days_medicare_advantage",
-                          "days_medicaid_managed")},
+                          "days_medicaid_managed", "medicaid_days_all")},
     **{m: "discharges" for m in ("discharges_medicare", "discharges_medicaid", "discharges_total")},
+    **{name: "ratio" for name in ("medicaid_day_share", "medicare_day_share", "occupancy", "operating_margin",
+                                  "total_margin", "medicaid_payment_to_cost", "medicaid_revenue_share",
+                                  "uncompensated_share_of_expenses")},
 }
-UNITS = {**{c.metric: _UNIT_OF_CELL.get(c.metric, "dollars") for c in CELLS},
-         "medicaid_days_all": "days", **{name: "ratio" for name, _ in DERIVED if name != "medicaid_days_all"}}
+_MONEY_SHEETS = (G3, S10, S10_HOSPITAL)
+UNITS = {**{c.metric: _UNIT_OF.get(c.metric) or ("dollars" if c.sheet in _MONEY_SHEETS else None) for c in CELLS},
+         **{name: _UNIT_OF.get(name) for name, _ in DERIVED}}
+_NO_UNIT = [m for m, u in UNITS.items() if u is None]
+if _NO_UNIT:
+    raise ValueError(f"no unit for {_NO_UNIT}: add them to cells._UNIT_OF")
 # S-10 cells: the ones settlement revises most (the spike's drift study), which a year's `early` flag is about.
 S10_METRICS = frozenset(c.metric for c in CELLS if c.sheet in (S10, S10_HOSPITAL)) | {
     "medicaid_payment_to_cost", "uncompensated_share_of_expenses"}

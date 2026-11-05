@@ -22,8 +22,8 @@ from pathlib import Path
 
 from pp_engine.hcris import tidy
 from pp_pipeline.files import read_manifest, read_pinned_bytes
-from pp_pipeline.hcris.crosscheck import REFERENCES, _iso, _num, verdict
-from pp_pipeline.hcris.emit import pinned_years
+from pp_pipeline.hcris.crosscheck import REFERENCES, parse_date, parse_num, verdict
+from pp_pipeline.hcris.pins import pinned_years
 
 SPEC = REFERENCES["puf"]
 METRICS = tuple(SPEC["columns"])
@@ -42,7 +42,7 @@ def puf_records(rows, year):
         if not tidy.kind_of(ccn):
             continue
         out.append({"year": str(year), "rpt_rec_num": r["rpt_rec_num"].strip(), "ccn": ccn,
-                    "period_begin": _iso(r[k_begin], SPEC["date"]), "period_end": _iso(r[k_end], SPEC["date"]),
+                    "period_begin": parse_date(r[k_begin], SPEC["date"]), "period_end": parse_date(r[k_end], SPEC["date"]),
                     **{m: (r[col] or "").strip() for m, col in SPEC["columns"].items()}})
     return out
 
@@ -60,7 +60,7 @@ def compare(reports, values, records):
             out["same_report"] += 1
             ours = values.get(rpt, {})
             bad = [(rpt, m, str(ours.get(m, "")), rec[m]) for m in METRICS
-                   if verdict(ours.get(m), _num(rec[m])) != "equal"]
+                   if verdict(ours.get(m), parse_num(rec[m])) != "equal"]
             out["equal"] += not bad
             out["differences"] += bad
         elif (rec["ccn"], rec["period_begin"], rec["period_end"]) in by_key:

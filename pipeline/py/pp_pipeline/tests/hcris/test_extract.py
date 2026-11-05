@@ -98,7 +98,7 @@ class Extract(unittest.TestCase):
 
 class Crosscheck(unittest.TestCase):
     def test_verdicts(self):
-        D = crosscheck._num
+        D = crosscheck.parse_num
         self.assertEqual(crosscheck.verdict(D("100"), D("100.4")), "equal")
         self.assertEqual(crosscheck.verdict(None, D("0")), "equal")
         self.assertEqual(crosscheck.verdict(D("100"), D("100.9")), "close")

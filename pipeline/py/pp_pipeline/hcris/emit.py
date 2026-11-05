@@ -15,31 +15,21 @@ the layer use pp_engine.hcris.reader on `load_years()`.
 """
 import csv
 import datetime
-import re
 from datetime import timezone
 from decimal import Decimal
+from pathlib import Path
 
 from pp_engine.contract import envelope, format_emitted
 from pp_engine.hcris import tidy
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, read_pinned_bytes, write_emitted
+from pp_pipeline.hcris.pins import pinned_years
 
 SCHEMA_VERSION, METHODS_VERSION = 1, 1
 SCHEMA = "hcris.schema.json"
-PIN_ID = re.compile(r"hcris-fy(\d{4})-cells")
 MAX_BYTES = 10 * 1024 * 1024  # CLAUDE.md: a file of 10 MiB or more never goes in git
 LONG_RULE = "fullest"
 # The JSON's columns: the table's, less `year` (the file's `fy`).
 COLUMNS = tuple(c for c in tidy.WIDE_COLUMNS if c != "year")
-
-
-def pinned_years(manifest):
-    """{year: manifest entry} for every pinned cells table."""
-    out = {}
-    for e in manifest:
-        m = PIN_ID.fullmatch(e["id"])
-        if m:
-            out[int(m.group(1))] = e
-    return out
 
 
 def year_rows(entry, year):
@@ -131,7 +121,6 @@ def load_years():
 
 def write_downloads(out_dir):
     """The download files, from the pins (the same rows as the emitted files)."""
-    from pathlib import Path
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     counts = {}

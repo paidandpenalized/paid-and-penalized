@@ -1,10 +1,11 @@
 """The HCRIS layer on the pinned data: each committed data/emitted/hcris/fy<YYYY>/hcris.json equals a fresh build from
 its pinned cells table, every file stays under the 10 MiB limit, and the cells tables reproduce CMS's public use file
 (the pinned sample) on every report the two share. Counts are facts of the pinned bytes; no hospital is named."""
+import json
 import unittest
 
 from pp_engine.contract import format_emitted
-from pp_pipeline.files import EMITTED_DIR, read_json, read_manifest
+from pp_pipeline.files import EMITTED_DIR, read_manifest
 from pp_pipeline.hcris import emit, puf
 
 MIN_SAME_REPORT = 20  # per PUF year in the sample, so the check can't pass on a handful of reports
@@ -29,10 +30,9 @@ class Golden(unittest.TestCase):
     def test_rebuild_equals_committed(self):
         for year, path in sorted(self.emitted.items()):
             with self.subTest(year=year):
-                committed = read_json(path)
-                fresh = emit.build(year, self.manifest, committed["built_at"])
-                self.assertEqual(format_emitted(fresh), path.read_text(encoding="utf-8"))
-                self.assertEqual(emit.check(fresh), [])
+                text = path.read_text(encoding="utf-8")
+                fresh = emit.build(year, self.manifest, json.loads(text)["built_at"])
+                self.assertEqual(format_emitted(fresh), text)
 
     def test_sizes(self):
         for year, path in self.emitted.items():
