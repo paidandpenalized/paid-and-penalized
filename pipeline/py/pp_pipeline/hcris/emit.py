@@ -20,7 +20,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from pp_engine.contract import envelope, format_emitted
-from pp_engine.hcris import tidy
+from pp_engine.hcris import reader, tidy
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, read_pinned_bytes, write_emitted
 from pp_pipeline.hcris.pins import pinned_years
 
@@ -53,7 +53,7 @@ def build(year, manifest, built_at, rows=None):
     due = tidy.filing_due_by(year)
     return {
         **envelope(SCHEMA_VERSION, METHODS_VERSION, [entry["id"]], manifest, built_at, year),
-        "label": f"cost reports beginning in FY{year}",
+        "label": reader.label(year),
         "periodsBegin": [f"{year - 1}-10-01", f"{year}-09-30"],
         "posted": posted,
         "filingDueBy": due.isoformat(),

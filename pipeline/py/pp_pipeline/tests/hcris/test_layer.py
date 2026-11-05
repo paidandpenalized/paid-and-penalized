@@ -157,32 +157,34 @@ class Archive(unittest.TestCase):
         pin = {"bytes": len(table), "sha256": hashlib.sha256(table).hexdigest()}
         with tempfile.TemporaryDirectory() as tmp:
             zips = {}
-            for y in (2021, 2022, 2023, 2024, 2025):
+            for y in (2020, 2021, 2022, 2023, 2024, 2025):
                 zips[y] = Path(tmp) / f"HOSP10FY{y}.ZIP"
                 zips[y].write_bytes(f"zip {y}".encode())
             sha = {y: hashlib.sha256(z.read_bytes()).hexdigest() for y, z in zips.items()}
             manifest = [{"id": f"hcris-fy{y}-cells", **pin, "derivedFrom": {"sha256": d}}
-                        for y, d in ((2022, "f" * 64), (2023, "e" * 64), (2024, sha[2024]), (2025, sha[2025]))]
+                        for y, d in ((2020, "d" * 64), (2022, "f" * 64), (2023, "e" * 64), (2024, sha[2024]),
+                                     (2025, sha[2025]))]
             derived = []
 
             def fake_derive(z):
                 derived.append(Path(z).name)
                 return None, b"changed" if "2023" in Path(z).name else table, None
 
-            rows = archive.plan(list(zips.values()), manifest, archived=frozenset({f"sha256/{sha[2025]}"}),
-                                derive_fn=fake_derive)
+            archived = frozenset({f"sha256/{sha[2025]}", "sha256/" + "f" * 64})
+            rows = archive.plan(list(zips.values()), manifest, archived=archived, derive_fn=fake_derive)
         self.assertEqual([(Path(r[0]).name, r[3]) for r in rows],
-                         [("HOSP10FY2021.ZIP", "upload"),  # no pin yet
-                          ("HOSP10FY2022.ZIP", "skip"),  # new bytes, same table
+                         [("HOSP10FY2020.ZIP", "upload"),  # same table, but the pin's own zip isn't archived
+                          ("HOSP10FY2021.ZIP", "upload"),  # no pin yet
+                          ("HOSP10FY2022.ZIP", "skip"),  # new bytes, same table, the pin's zip archived
                           ("HOSP10FY2023.ZIP", "upload"),  # a changed table
                           ("HOSP10FY2024.ZIP", "upload"),  # the zip the pin names
                           ("HOSP10FY2025.ZIP", "skip")])  # already in the bucket
-        self.assertEqual(derived, ["HOSP10FY2022.ZIP", "HOSP10FY2023.ZIP"])  # parsed only when the hash can't settle it
+        self.assertEqual(derived, ["HOSP10FY2020.ZIP", "HOSP10FY2022.ZIP", "HOSP10FY2023.ZIP"])  # parsed only when the hash can't settle it
         cmds = archive.commands(rows)
         self.assertEqual(cmds[0], "npx --no-install wrangler@4.151.0 r2 bucket create pp-sources")
-        self.assertEqual(cmds[1], f"npx --no-install wrangler@4.151.0 r2 object put pp-sources/sha256/{sha[2021]} "
+        self.assertEqual(cmds[2], f"npx --no-install wrangler@4.151.0 r2 object put pp-sources/sha256/{sha[2021]} "
                                   f"--file={zips[2021]} --content-type=application/zip --remote")
-        self.assertEqual(len(cmds), 4)
+        self.assertEqual(len(cmds), 5)
 
     def test_main_runs_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:

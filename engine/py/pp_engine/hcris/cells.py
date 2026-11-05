@@ -137,4 +137,4 @@ if _NO_UNIT:
     raise ValueError(f"no unit for {_NO_UNIT}: add them to cells._UNIT_OF")
 # S-10 cells: the ones settlement revises most (the spike's drift study), which a year's `early` flag is about.
 S10_METRICS = frozenset(c.metric for c in CELLS if c.sheet in (S10, S10_HOSPITAL)) | {
-    "medicaid_payment_to_cost", "uncompensated_share_of_expenses"}
+    "medicaid_payment_to_cost", "medicaid_revenue_share", "uncompensated_share_of_expenses"}  # ratios over S-10 cells

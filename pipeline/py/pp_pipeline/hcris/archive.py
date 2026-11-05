@@ -4,7 +4,8 @@
 
 Each zip is stored once under its content address, `sha256/<hex>` in the `pp-sources` bucket, so a zip CMS posts again
 byte for byte is never uploaded twice. Beyond that, only changed years are uploaded: a zip whose derived cells table
-is byte-identical to the one pinned for its year is skipped, since the archived zip already reproduces that pin (CMS
+is byte-identical to the one pinned for its year is skipped when the pin's own zip is in the bucket, since that zip
+already reproduces the pin (CMS
 regenerates every year's file each posting, so new bytes alone don't mean new data). `--archived` lists keys already
 in the bucket, one per line (from `wrangler r2 object list`, when it exists).
 
@@ -40,11 +41,13 @@ def plan(zips, manifest, archived=frozenset(), derive_fn=derive):
             action, why = "upload", f"FY{year} has no pin yet"
         elif entry["derivedFrom"]["sha256"] == digest:
             action, why = "upload", f"backs the FY{year} pin"
-        elif pin_matches(entry, derive_fn(z)[1]):
+        elif not pin_matches(entry, derive_fn(z)[1]):
+            action, why = "upload", f"FY{year}'s cells table changed: a new pin"
+        elif archive_key(entry["derivedFrom"]["sha256"]) in archived:
             action, why = "skip", (f"FY{year}'s cells table is unchanged: the archived zip "
                                    f"{entry['derivedFrom']['sha256'][:12]} reproduces it")
-        else:
-            action, why = "upload", f"FY{year}'s cells table changed: a new pin"
+        else:  # the pin's own zip is not in the bucket; this one gives the same table
+            action, why = "upload", f"FY{year}'s pin has no archived zip; this one reproduces it"
         out.append((str(z), key, size, action, why))
     return out
 
