@@ -144,7 +144,8 @@ export const COPY = {
     text: 'Map dots come from each hospital’s street address, geocoded with the U.S. Census Bureau Geocoder ({address} hospitals). When an address does not match, or its point falls far outside the hospital’s county, the dot goes to the center of its ZIP code ({zip}) or, failing that, its county ({county}).',
     claim: null,
   },
-  placesNone: { text: ' {none} hospitals have no dot.', claim: null },
+  placesNone: { text: ' {none} have no dot.', claim: null },
+  placesNoneOne: { text: ' {none} has no dot.', claim: null },
   placesText: {
     text: 'Metro areas are the core-based statistical area where each hospital sits, from the IPPS impact file. Regions and divisions follow the Census Bureau.',
     claim: null,
@@ -193,7 +194,7 @@ export const COPY = {
   pinColGot: { text: 'Retrieved', claim: null },
   reuseHeading: { text: 'Reuse', claim: null },
   reuseText: {
-    text: 'This site’s text, charts and derived data may be reused with credit to Paid & Penalized (CC BY); its code is MIT-licensed. CMS’s data are U.S. government works. Every table with a download is a CSV file. In those files the CCN is plain text, so open its column as text in a spreadsheet to keep the leading zero; headers name their units; and a condition’s penalized column is blank when the hospital had fewer than {minCases} cases of it.',
+    text: 'This site’s text, charts and derived data may be reused with credit to Paid & Penalized (CC BY); its code is MIT-licensed. CMS’s data are U.S. government works. Every table with a download is a CSV file. In those files the CCN is plain text, so open its column as text in a spreadsheet to keep the leading zero; headers name their units; and a condition’s penalized column is blank when the hospital was not measured on it (fewer than {minCases} cases, or no ratio published).',
     claim: null,
   },
   reuseDictionary: { text: 'Every column of these files, and the files themselves, are on the {link} page.', claim: null },

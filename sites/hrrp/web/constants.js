@@ -23,6 +23,9 @@ export const TEACH_MAJOR = 0.25;
 export const ACCURACY_BAND = 15;
 export const SMALL_HOSPITAL_BEDS = 100;
 export const HISTORY_LISTED_FYS = Object.freeze([2013, 2018]);
+// The history years whose total is a later CMS simulation of that year under the earlier method, not the rule's own table
+// (the data's source label for FY2025 says so; a test pins this list to the data).
+export const HISTORY_SIMULATED_FYS = Object.freeze([2025]);
 
 // The claims-register row behind each method constant the gate checks (pipeline/test/copy-gate.test.js).
 // NTAP_FY and ROUND_COUNT_TO are not here: NTAP_FY is the year NTAP_AMOUNT states, and ROUND_COUNT_TO is a rounding of how a

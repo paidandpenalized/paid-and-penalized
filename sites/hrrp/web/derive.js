@@ -34,8 +34,12 @@ export function edition(meta, history) {
   };
 }
 
-// A condition's short name from the data file's condition list ([{ key, short }]); the key itself when the list lacks it.
-export const conditionShort = (conditions, key) => conditions.find((c) => c.key === key)?.short ?? key;
+// A condition's short name from the data file's condition list ([{ key, short }]); an unknown key stops the build.
+export function conditionShort(conditions, key) {
+  const found = conditions.find((c) => c.key === key);
+  if (!found) throw new RangeError(`conditionShort: no condition "${key}" in the data's condition list`);
+  return found.short;
+}
 
 // The row with each condition's part of the cut (cx), the conditions CMS flagged and its place line. The row itself is not changed.
 export function withDerived(h, meta) {

@@ -92,7 +92,7 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
     if (Object.hasOwn(SITE.sites, site.id)) updated.set(site.id, siteDates(site.id, result));
   }
   // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
-  writeFileMkdir(join(dir, '_headers'), headersFile({ env }));
+  writeFileMkdir(join(dir, '_headers'), headersFile({ env, noindexFiles: ctx.noindexFiles }));
   return { pages: ctx.pages, env };
 }
 

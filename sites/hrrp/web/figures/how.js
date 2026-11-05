@@ -8,12 +8,12 @@ import { columns } from '../../../../web/charts/columns.js';
 import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
 import { punchCard } from '../../../../web/charts/punchCard.js';
 import { printout } from '../../../../web/render/components.js';
-import { capitalize, count, listText, pct, shownAbove, spelled } from '../../../../web/render/format.js';
+import { capitalize, count, listText, noun, pct, shownAbove, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
 import { fmtInt, fmtPct, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
-import { inSentence } from '../wording.js';
+import { hospitals, inSentence } from '../wording.js';
 import { worksheetHtml } from '../worksheet.js';
 
 // Punch card: the largest sets each get a column; the rest are pooled.
@@ -51,9 +51,9 @@ function punchFigure({ sets, conditions, edition, n }) {
   const name = (conds) => listText(conds.map((k) => conditionShort(conditions, k)));
   const shareOf = (yes, total) => ({ shareText: pct(yes / total, 0), hot: shownAbove(yes / total, nation, 0) });
   const cols = [
-    ...kept.map((c) => ({ holes: c.conds.map((k) => CONDS.indexOf(k)), n: c.n, yes: c.yes, nText: count(c.n), ...shareOf(c.yes, c.n), tip: fill('fig1Tip', { set: name(c.conds), n: count(c.n), yes: count(c.yes) }) })),
-    ...(rest.length ? [{ holes: null, n: sum(rest, 'n'), yes: sum(rest, 'yes'), nText: count(sum(rest, 'n')), ...shareOf(sum(rest, 'yes'), sum(rest, 'n')), tip: fill('fig1TipOther', { k: count(rest.length), n: count(sum(rest, 'n')), yes: count(sum(rest, 'yes')) }) }] : []),
-    ...(sets.none ? [{ holes: null, empty: true, n: sets.none, yes: 0, nText: count(sets.none), tip: fill('fig1TipNone', { n: count(sets.none) }) }] : []),
+    ...kept.map((c) => ({ holes: c.conds.map((k) => CONDS.indexOf(k)), n: c.n, yes: c.yes, nText: count(c.n), ...shareOf(c.yes, c.n), tip: fill('fig1Tip', { set: name(c.conds), hospitals: hospitals(c.n), yes: count(c.yes) }) })),
+    ...(rest.length ? [{ holes: null, n: sum(rest, 'n'), yes: sum(rest, 'yes'), nText: count(sum(rest, 'n')), ...shareOf(sum(rest, 'yes'), sum(rest, 'n')), tip: fill('fig1TipOther', { sets: noun(rest.length, 'rarer set'), hospitals: hospitals(sum(rest, 'n')), yes: count(sum(rest, 'yes')) }) }] : []),
+    ...(sets.none ? [{ holes: null, empty: true, n: sets.none, yes: 0, nText: count(sets.none), tip: fill('fig1TipNone', { hospitals: hospitals(sets.none) }) }] : []),
   ];
   const rows = CONDS.map((k) => ({ label: abbr(k), total: sets.rows[k], totalText: count(sets.rows[k]) }));
   const labels = { other: t('fig1Other'), none: t('fig1None'), totals: t('fig1Totals'), share: t('fig1Share') };
@@ -90,7 +90,7 @@ function dualFigure({ dual, edition, n }) {
   const bins = dual.bins.map((b) => ({ ...b, cls: BAR_CLASS, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
     bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
-    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill(width < 400 ? 'fig2BandShort' : 'fig2Band', { n: String(b.peer) }) })),
+    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }), short: fill('fig2BandShort', { n: String(b.peer) }) })),
   });
   const sizes = dual.groups.map((g) => g.n);
   return figure({

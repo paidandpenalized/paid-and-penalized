@@ -59,9 +59,12 @@ export function createContext({ outDir, env, assets, shell }) {
     assets: shell === undefined ? assets : { ...assets, shell },
     pages: 0,
     indexable: [],
+    // The data files that must not be indexed (a header, since a CSV has no meta robots): see emit's noindex.
+    noindexFiles: [],
     // A path ending in "/" writes its index.html. robots: the page's meta robots value, as robotsFor returns it;
-    // null lists the page in the sitemap. Leave it out for a file that is not a page.
-    emit({ path, text, robots }) {
+    // null lists the page in the sitemap. Leave it out for a file that is not a page. noindex: true on a file that is not
+    // a page and must stay out of search results (a data file of an unreleased site): _headers sends it X-Robots-Tag.
+    emit({ path, text, robots, noindex = false }) {
       if (!PATH.test(path)) throw new RangeError(`emit: bad path "${path}"`);
       const file = fileFor(path);
       if (file.endsWith('.html') && /[A-Z]/.test(file)) throw new RangeError(`emit: bad path "${path}"`);
@@ -71,6 +74,7 @@ export function createContext({ outDir, env, assets, shell }) {
       writeFileMkdir(join(outDir, file), String(text));
       if (file.endsWith('.html')) ctx.pages++;
       if (robots === null) ctx.indexable.push(path);
+      if (noindex) ctx.noindexFiles.push(path);
     },
     // A content-hashed file under /assets/; returns its public path.
     asset: (name, ext, text) => writeHashed(join(outDir, 'assets'), name, ext, text),

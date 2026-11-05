@@ -87,7 +87,7 @@ test('the three fields: hospital, peer group, neutrality modifier', () => {
 
 test('the form: every line, the reasons, the CMS check, and the dollars line only when not compact', () => {
   const rows = worksheetRows(withDerived(hospital(), META), META, CONDITIONS);
-  const full = String(worksheetHtml(rows, { compact: false, dollars: DOLLARS }));
+  const full = String(worksheetHtml(rows, { compact: false, dollars: DOLLARS, conditions: CONDITIONS }));
   assert.match(full, /Worksheet R · Readmissions payment adjustment/);
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9]) assert.ok(full.includes(`Line ${n}`), `Line ${n}`);
   assert.match(full, /Line 8 · Line 7, capped at 3%, rounded/);
@@ -101,16 +101,16 @@ test('the form: every line, the reasons, the CMS check, and the dollars line onl
   assert.match(full, /Applied to every traditional Medicare base payment, Oct 1, 2026 to Sep 30, 2027/);
   assert.match(full, /≈ \$100K/);
   assert.ok(full.includes(TAG));
-  const compact = String(worksheetHtml(rows, { compact: true, dollars: DOLLARS }));
+  const compact = String(worksheetHtml(rows, { compact: true, dollars: DOLLARS, conditions: CONDITIONS }));
   assert.doesNotMatch(compact, /Applied to every/);
-  assert.doesNotMatch(String(worksheetHtml(rows, {})), /Applied to every/);
+  assert.doesNotMatch(String(worksheetHtml(rows, { conditions: CONDITIONS })), /Applied to every/);
   const none = worksheetRows(withDerived(hospital({ pen: null }), META), META, CONDITIONS);
-  assert.match(String(worksheetHtml(none, { dollars: DOLLARS })), /no estimate/);
+  assert.match(String(worksheetHtml(none, { dollars: DOLLARS, conditions: CONDITIONS })), /no estimate/);
 });
 
 test('a sliver of excess prints "< 0.0001" on the form, and a hospital name is escaped', () => {
   const h = hospital({ name: 'A <b>&</b> B', c: { HF: { n: 40, err: 1.00004, flag: 1, ratio: 0.1 } } });
-  const out = String(worksheetHtml(worksheetRows(withDerived(h, META), META, CONDITIONS), {}));
+  const out = String(worksheetHtml(worksheetRows(withDerived(h, META), META, CONDITIONS), { conditions: CONDITIONS }));
   assert.match(out, /&lt; 0\.0001/);
   assert.match(out, /A &lt;b&gt;&amp;&lt;\/b&gt; B/);
 });
@@ -148,7 +148,7 @@ test('on every hospital in the data, the recomputed factor is CMS\'s (all of the
     assert.equal(rows.totals.factor, contrib(h, meta).paf);
     if (rows.totals.factor === h.paf) exact += 1;
     assert.equal(rows.cms.matches, rows.totals.factor === h.paf || Math.abs(rows.totals.factor - h.paf) < 1e-9);
-    const wf = waterfallData(rows);
+    const wf = waterfallData(rows, CONDITIONS);
     assert.ok(Math.abs(wf.parts.reduce((s, p) => s + p.part, 0) - rows.totals.sum) < 1e-12);
     assert.equal(wf.line8, rows.totals.reduction);
     assert.equal(rows.totals.capped, rows.totals.sum > CAP);

@@ -41,14 +41,14 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   // The explorer's rows are a content-hashed asset the page reads, not part of the page.
   const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, meta)));
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl }) });
-  ctx.emit({ path: program.picture.csvHref, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
-  ctx.emit({ path: program.map.csvHref, text: placeCsv(statesCsvRows(program.map.pages)) });
+  ctx.emit({ path: program.picture.csvHref, noindex: robots !== null, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
+  ctx.emit({ path: program.map.csvHref, noindex: robots !== null, text: placeCsv(statesCsvRows(program.map.pages)) });
   // The full hospitals file and its dictionary: files, then the dictionary as a page.
   const { fy } = meta;
   const csvHref = csvPath(fy, hospitalsCsvName(fy));
   const dictionaryFilled = dictionaryText(data.dictionary, { edition: program.edition, fy, minCases: MIN_DISCHARGES });
-  ctx.emit({ path: csvHref, text: hospitalCsv(hospitals) });
-  ctx.emit({ path: dictionaryPath(fy), text: dictionaryFilled });
+  ctx.emit({ path: csvHref, noindex: robots !== null, text: hospitalCsv(hospitals) });
+  ctx.emit({ path: dictionaryPath(fy), noindex: robots !== null, text: dictionaryFilled });
   ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets }) });
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });

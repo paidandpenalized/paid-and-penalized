@@ -4,7 +4,7 @@
 // a name says percent (cuts, avgCut, share and vsNation in typeDots, and cut sizes are in percent); "cut" is a payment
 // reduction above zero; "measured" means measured on at least one condition (only those can be cut). Each function's header
 // names the denominator of every share it returns. Pure.
-import { CAP_PCT, CONDS, condState, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
+import { CAP_PCT, CONDS, PEERS, condState, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
 import { mean, median } from '../../../../engine/js/stats.js';
@@ -91,7 +91,7 @@ export function coinFlip(hospitals) {
     const nFlag = group.filter((x) => x.measured.some((c) => x.h.c[c].flag === 1)).length;
     return { k, n: group.length, nCut, observed: group.length ? nCut / group.length : null, anyFlag: group.length ? nFlag / group.length : null, coin: 1 - 0.5 ** k, own };
   });
-  const sixFlags = Array.from({ length: CONDS.length + 1 }, (_, flags) => ({ flags, n: groups[5].filter((x) => x.measured.filter((c) => x.h.c[c].flag === 1).length === flags).length }));
+  const sixFlags = Array.from({ length: CONDS.length + 1 }, (_, flags) => ({ flags, n: groups[CONDS.length - 1].filter((x) => x.measured.filter((c) => x.h.c[c].flag === 1).length === flags).length }));
   return {
     rows,
     sixFlags,
@@ -136,7 +136,7 @@ export function pairedBars(hospitals, meta) {
 // (a fraction: nCut / nMeasured, not / n; null when none is measured), median (percent, among the hospitals cut; null
 // without one) and bins (the cuts above zero, CUT_BIN wide).
 export function ridges(hospitals) {
-  const rows = [1, 2, 3, 4, 5].map((peer) => {
+  const rows = PEERS.map((peer) => {
     const group = hospitals.filter((h) => h.peer === peer);
     const s = summarize(group);
     const reds = group.map((h) => h.red).filter((r) => r > 0);

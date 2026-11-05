@@ -33,6 +33,6 @@ ${s.body}
 </ul>
 </section>
 </article>`;
-  // No browser script yet: the wide table scrolls in its own box (the figure script, web/client/figure.js, will make the box keyboard-reachable).
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, assets, ...shellOf({ edition }) });
+  // The figure script makes the wide table's scroll box keyboard-reachable, as on HACRP's dictionary page.
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, scripts: [assets.js.figure], assets, ...shellOf({ edition }) });
 }

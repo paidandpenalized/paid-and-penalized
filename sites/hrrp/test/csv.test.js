@@ -145,11 +145,24 @@ test('the dictionary lists every hospital column in file order, and nothing else
   assert.deepEqual(documented('Hospital files'), HOSPITAL_COLUMNS.map((c) => c.name));
 });
 
-test('the dictionary lists every area column (the first by the kinds of area it is named for)', () => {
+test('the dictionary lists every column of the one area file the build writes (states), and names no other area file', () => {
   const area = documented('Area files');
-  assert.deepEqual(area.slice(1), placeColumns('State').slice(1).map((c) => c.name));
-  for (const kind of ['State', 'Metro area', 'Division', 'Region']) assert.ok(DICTIONARY.includes(`\`${kind}\``), kind);
-  assert.equal(area[0], 'State');
+  assert.deepEqual(area, placeColumns('State').map((c) => c.name));
+  const intro = DICTIONARY.split(/^## /m)[0];
+  assert.match(intro, /The states file lists the states/);
+  assert.doesNotMatch(intro, /metro areas, divisions|regions the same way/);
+  assert.ok(!/Metro area|Division|Region/.test(DICTIONARY.split(/^## /m).find((x) => x.startsWith('Area files'))), 'no word for an area file the build does not write');
+});
+
+test('the dictionary and Methods say a condition\'s penalized column is blank when it was not measured (too few cases or no published ratio), and the csv does that', () => {
+  assert.match(DICTIONARY, /not measured on the condition: fewer than \{minCases\} cases, or no ratio/);
+  assert.match(DICTIONARY, /not measured on the condition: it had fewer than \{minCases\} cases of it, or CMS published no ratio/);
+  assert.match(METHODS_COPY.reuseText.text, /blank when the hospital was not measured on it \(fewer than \{minCases\} cases, or no ratio published\)/);
+  const col = HOSPITAL_COLUMNS.find((c) => c.name === 'AMI penalized (Y/N)');
+  const cell = (c) => col.get({ c: { AMI: c } });
+  assert.equal(cell({ n: 30, err: null, flag: 0 }), null, '25 or more cases but no published ratio: blank');
+  assert.equal(cell({ n: 10, err: 1.1, flag: 1 }), null, 'under 25 cases: blank');
+  assert.equal(cell({ n: 30, err: 1.1, flag: 1 }), 'Y');
 });
 
 test('the dictionary states the schema version, the conventions Methods promises, and that there is no patient information', () => {

@@ -173,7 +173,7 @@ test('the Part on the program page: callouts, steps 1 to 5, two figures and the 
   assert.equal(how.match(/<svg [^>]*chart--punch/g).length, 2, 'the punch card, phone and wide');
   assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
   assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
-  assert.ok(how.includes('>Group 1<') && how.includes('>5<'), 'wide labels say Group n, the phone only n');
+  assert.ok(how.includes('>Group 1<') && how.includes('>5<'), 'a label that fits says Group n; one that does not fit its band says n');
   assert.equal(how.match(/<section class="hstep"/g).length, 5, 'steps 1 to 5');
   assert.ok(!how.includes('swarm'));
   assert.ok(how.includes(`New for ${view.edition}`) && how.includes('Who is in the program'));

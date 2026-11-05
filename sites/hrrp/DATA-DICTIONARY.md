@@ -1,6 +1,6 @@
 # Data dictionary: Readmissions files
 
-These files hold what the Readmissions pages show for the {edition} edition of the Hospital Readmissions Reduction Program (HRRP). `{file}` has one row for each hospital in the program's file: its place, its payment adjustment factor and cut, this site's estimate of the dollars, and, for each of the six conditions, the hospital's cases, its excess readmission ratio and whether it was penalized on the condition. The area files list states, metro areas, divisions or regions the same way. They are files from Paid & Penalized (paidandpenalized.org). They hold no patient information.
+These files hold what the Readmissions pages show for the {edition} edition of the Hospital Readmissions Reduction Program (HRRP). `{file}` has one row for each hospital in the program's file: its place, its payment adjustment factor and cut, this site's estimate of the dollars, and, for each of the six conditions, the hospital's cases, its excess readmission ratio and whether it was penalized on the condition. The states file lists the states the same way. They are files from Paid & Penalized (paidandpenalized.org). They hold no patient information.
 
 schema_version: 1
 
@@ -16,7 +16,7 @@ schema_version: 1
 - The CCN is plain text. A spreadsheet may drop its leading zero on opening; import or open the column as text to keep it.
 - Header names carry their units: percent, dollars, a Y/N flag or a date.
 - A text cell that begins with `=`, `+`, `-`, `@` or a tab gets a leading `'`, so a spreadsheet reads it as text, not a formula. Number columns are written as they are.
-- A blank cell means the file has no value; it is never written as 0. A condition's penalized column is blank when the hospital had fewer than {minCases} cases of it.
+- A blank cell means the file has no value; it is never written as 0. A condition's penalized column is blank when the hospital was not measured on the condition: it had fewer than {minCases} cases of it, or CMS published no ratio for it.
 
 ## Hospital files
 
@@ -39,22 +39,22 @@ schema_version: 1
 | `Dual proportion` | number | The share of the hospital's patients who are dually eligible, as a fraction. | Four decimals. 0.2351 is 23.51%. |
 | `AMI discharges` | number | The hospital's cases for heart attack (acute myocardial infarction) in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `AMI ERR` | number | The hospital's excess readmission ratio for heart attack (acute myocardial infarction): its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `AMI penalized (Y/N)` | text | `Y` when the hospital's ratio for heart attack (acute myocardial infarction) was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `AMI penalized (Y/N)` | text | `Y` when the hospital's ratio for heart attack (acute myocardial infarction) was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 | `COPD discharges` | number | The hospital's cases for chronic obstructive pulmonary disease in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `COPD ERR` | number | The hospital's excess readmission ratio for chronic obstructive pulmonary disease: its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `COPD penalized (Y/N)` | text | `Y` when the hospital's ratio for chronic obstructive pulmonary disease was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `COPD penalized (Y/N)` | text | `Y` when the hospital's ratio for chronic obstructive pulmonary disease was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 | `HF discharges` | number | The hospital's cases for heart failure in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `HF ERR` | number | The hospital's excess readmission ratio for heart failure: its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `HF penalized (Y/N)` | text | `Y` when the hospital's ratio for heart failure was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `HF penalized (Y/N)` | text | `Y` when the hospital's ratio for heart failure was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 | `PN discharges` | number | The hospital's cases for pneumonia in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `PN ERR` | number | The hospital's excess readmission ratio for pneumonia: its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `PN penalized (Y/N)` | text | `Y` when the hospital's ratio for pneumonia was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `PN penalized (Y/N)` | text | `Y` when the hospital's ratio for pneumonia was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 | `CABG discharges` | number | The hospital's cases for coronary artery bypass graft surgery in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `CABG ERR` | number | The hospital's excess readmission ratio for coronary artery bypass graft surgery: its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `CABG penalized (Y/N)` | text | `Y` when the hospital's ratio for coronary artery bypass graft surgery was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `CABG penalized (Y/N)` | text | `Y` when the hospital's ratio for coronary artery bypass graft surgery was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 | `THA_TKA discharges` | number | The hospital's cases for elective hip or knee replacement in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `THA_TKA ERR` | number | The hospital's excess readmission ratio for elective hip or knee replacement: its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
-| `THA_TKA penalized (Y/N)` | text | `Y` when the hospital's ratio for elective hip or knee replacement was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital had fewer than {minCases} cases of the condition, so it was not measured on it. |
+| `THA_TKA penalized (Y/N)` | text | `Y` when the hospital's ratio for elective hip or knee replacement was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |
 
 ## Area files
 
@@ -62,9 +62,9 @@ The "Every state" file on the program page has these 8 columns, in this order. E
 
 | Column | Type | Meaning | Notes |
 |---|---|---|---|
-| `State` | text | The area's name. The column is named for the kind of area the file lists: `State`, `Metro area`, `Division` or `Region`. | Which hospitals are in an area is as the area's page lists them. |
+| `State` | text | The state's name. | Which hospitals are in a state is as the state's page lists them. |
 | `Hospitals` | number | The hospitals in the area. |  |
-| `Hospitals measured` | number | Those measured on at least one condition (with {minCases} or more cases of it). | A hospital measured on nothing cannot take a cut, so every share below is over this count. |
+| `Hospitals measured` | number | Those measured on at least one condition (with {minCases} or more cases of it and a published ratio). | A hospital measured on nothing cannot take a cut, so every share below is over this count. |
 | `Hospitals penalized` | number | Those with a cut. |  |
 | `Penalized (% of measured)` | number | Hospitals penalized as a percent of hospitals measured. | One decimal. |
 | `Average cut (%)` | number | The average payment reduction across the area's hospitals, in percent. | Two decimals. |

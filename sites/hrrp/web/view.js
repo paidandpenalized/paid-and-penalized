@@ -8,7 +8,7 @@ import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, spelled } from '../../../web/render/format.js';
-import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
+import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
@@ -321,7 +321,9 @@ function assumptionRows(ctx) {
   const nMdh = list.filter((h) => h.types?.includes('MDH')).length;
   const nInactive = list.filter((h) => h.inactive).length;
   const nNoEst = list.filter((h) => h.pen == null).length;
-  const mdhMonths = meta.mdh ? monthsBefore(edition.fy, meta.mdh.endDate) : null;
+  // Like the Pennsylvania row: an end before the payment year starts leaves nothing to say, so the row drops out.
+  const mdhCounts = meta.mdh && meta.mdh.endDate >= `${edition.fy - 1}-10-01`;
+  const mdhMonths = mdhCounts ? monthsBefore(edition.fy, meta.mdh.endDate) : null;
   const parhmMonths = monthsBefore(edition.fy, PARHM_END);
   const share = meta.totals?.modelBase ? pct(NTAP_AMOUNT / meta.totals.modelBase, 1) : null;
   const rates = dc?.rateDrift == null
@@ -332,7 +334,7 @@ function assumptionRows(ctx) {
     rates,
     f('assumeVolume', 'assumeVolumeE', { volumeFy: fyLabel(edition.fy - 2) }, { edition: edition.label }),
     f('assumeFfs', 'assumeFfsE'),
-    meta.mdh && (mdhMonths
+    mdhCounts && (mdhMonths
       ? f('assumeMdh', 'assumeMdhE', { months: mdhMonths, date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') }, { max: `${meta.mdh.maxShortfall}%` })
       : f('assumeMdhYear', 'assumeMdhYearE', { date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') })),
     share && f('assumeNtap', 'assumeNtapE', {}, { share, ntapFy: fyLabel(NTAP_FY), total: money(NTAP_AMOUNT) }),
@@ -352,7 +354,7 @@ function historyTotals(history) {
     total: r.totalEst == null ? null : money(r.totalEst),
     source: r.totalEst == null ? null : { name: r.totalSrc?.label ?? null, url: httpsUrl(r.totalSrc?.url) },
   }));
-  const simulated = history.national.filter((r) => /simulation/i.test(r.totalSrc?.label ?? '')).map((r) => fyLabel(r.fy));
+  const simulated = history.national.filter((r) => r.totalEst != null && HISTORY_SIMULATED_FYS.includes(r.fy)).map((r) => fyLabel(r.fy));
   return {
     text: simulated.length ? methodsFill('historyTotalsSim', { simulated: listText(simulated) }) : methodsT('historyTotals'),
     noTotal: noTotalText(history.national.filter((r) => r.totalEst == null).map((r) => r.fy)),
@@ -397,7 +399,7 @@ export function methodsView(ctx) {
     },
     places: meta.geocode
       ? methodsFill('placesGeocode', { address: fmtInt(meta.geocode.address), zip: fmtInt(meta.geocode.zip), county: fmtInt(meta.geocode.county) })
-        + (meta.geocode.none ? methodsFill('placesNone', { none: fmtInt(meta.geocode.none) }) : '')
+        + (meta.geocode.none ? methodsFill(meta.geocode.none === 1 ? 'placesNoneOne' : 'placesNone', { none: hospitals(meta.geocode.none) }) : '')
       : null,
     history: methodsFill('historyText', span),
     historyListed: methodsFill('historyListed', { first: fyLabel(HISTORY_LISTED_FYS[0]), last: fyLabel(HISTORY_LISTED_FYS[1]) }),

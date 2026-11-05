@@ -52,7 +52,7 @@ export const cspFor = (env) => [
 ].join('; ');
 
 // The rules in file order, each [pattern, [[name, value]]]. A request gets every matching rule's headers.
-const rulesFor = (env) => [
+const rulesFor = (env, noindexFiles = []) => [
   ['/*', [
     ['Content-Security-Policy', cspFor(env)],
     ['X-Content-Type-Options', 'nosniff'],
@@ -68,15 +68,18 @@ const rulesFor = (env) => [
   // The share cards (.png) too: a link preview's cache fetches a changed card by its new name. A splat matches slashes
   // too, so these would also take a .js, .css, .json or .png file under /assets/fonts/; that folder holds only fonts
   // and their licenses, and a test checks every built file against the rule.
+  // Data files of a site not yet released (no meta robots on a CSV): a production build keeps them out of search results
+  // by path; every other build already says noindex on every path.
+  ...(isProduction(env) ? noindexFiles.map((path) => [path, [['X-Robots-Tag', 'noindex']]]) : []),
   ...['js', 'css', 'json', 'png'].map((ext) => [`/assets/*.${ext}`, [['Cache-Control', IMMUTABLE]]]),
   // Fixed names whose content can change in place: kept a week, then checked again.
   ['/assets/fonts/*', [['Cache-Control', WEEK]]],
   ['/favicon.svg', [['Cache-Control', WEEK]]],
 ];
 
-// The _headers text for a build. env: the build's PP_ENV.
-export function headersFile({ env } = {}) {
-  const blocks = rulesFor(env).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
+// The _headers text for a build. env: the build's PP_ENV. noindexFiles: paths the build emitted with noindex (ctx.noindexFiles).
+export function headersFile({ env, noindexFiles = [] } = {}) {
+  const blocks = rulesFor(env, noindexFiles).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
   return `# Written by pipeline/site/headers.js. Cloudflare reads this file and does not serve it.\n${blocks.join('\n\n')}\n`;
 }
 
