@@ -1,9 +1,9 @@
 // The numbers behind the program page's History Part, as plain data (no markup). The small multiples (share penalized,
 // average cut, estimated totals; drawn by figures/history-draw.js) and the roll call (not drawn yet) are each a pure function returning its series,
 // marks and table rows; the timeline and the data windows are drawn (figures/history.js) from timelineData and windowRows.
-// Denominators: a year's share penalized is TDR's pctPen, over the hospitals in that year's file as the history pin holds them (n; FY2027: 2,334 of 2,912, not the page's 83% of the 2,798 measured on a condition; which hospitals the FY2013-FY2018 files leave out is not checked here);
+// Denominators: a year's share penalized is TDR's pctPen, over the hospitals in that year's file as the history pin holds them (n; not the page's share of the hospitals measured on a condition; which hospitals the FY2013-FY2018 files leave out is not checked here);
 // the average cuts are over every hospital in that year's file (all) or over those cut (penalized). The roll call covers
-// today's hospitals only, so its per-year shares run above CMS's national share for the year (FY2021: 85% against 82.6%);
+// today's hospitals only, so its per-year shares can run above CMS's national share for the year;
 // any words built from it say "of today's hospitals". Pure.
 import { isoDate, listText } from '../../../../web/render/format.js';
 import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS } from '../constants.js';

@@ -156,26 +156,26 @@ test('the figure: a year with no share draws no dot and breaks the line; no valu
   assert.ok(!/hist-dot--share" cx="[\d.]+" cy="[\d.]+" r="3"\/><\/g>[^]*FY2018: \d/.test(svg) && !svg.includes('FY2018: 0'));
   const d = [...svg.matchAll(/class="hist-line hist-line--share" d="([^"]*)"/g)][0][1];
   assert.equal((d.match(/[Mm]/g) ?? []).length, 2, 'two strokes around the gap');
-  const fig = historyFigure(lines, { n: 1 }).text;
+  const fig = historyFigure(lines, { n: () => 1 }).text;
   assert.match(fig, /<th scope="row">FY2018<\/th><td class="num" data-value="3005">3,005<\/td><td class="num">–<\/td>/);
 });
 
 test('the figure: frame, takeaway from the latest year, no-total words and the table of every plotted value', () => {
   const lines = smallLines({ history: HISTORY });
-  const text = historyFigure(lines, { n: 3 }).text;
+  const text = historyFigure(lines, { n: () => 3 }).text;
   assert.match(text, /74\.0% of hospitals are cut in FY2027\./);
   assert.match(text, /No total for FY2016 and FY2024\./);
   assert.match(text, /fig__swatch--bar-dark/);
   assert.match(text, /fig__swatch--bar-light/);
   assert.match(text, /<th scope="row">FY2016<\/th>[^]*?No total found/);
   assert.match(text, /<th scope="row">FY2022<\/th>[^]*?KFF estimate/);
-  assert.equal(historyFigure(smallLines({ history: { ...HISTORY, national: [] } }), { n: 1 }), '');
+  assert.equal(historyFigure(smallLines({ history: { ...HISTORY, national: [] } }), { n: () => 1 }), '');
   assert.match(historyPart({ lines, windows: windowRows({ history: HISTORY }), timeline: [] }, { figure: (() => { let n = 0; return () => ++n; })() }).text, /id="figure-1"[^]*id="figure-2"/);
 });
 
 test('the figure: a hostile source label is escaped in the tip and the table', () => {
   const hostile = { ...HISTORY, national: HISTORY.national.map((r) => (r.fy === 2013 ? { ...r, totalSrc: { kind: 'CMS', label: '<img src=x onerror=alert(1)>', url: 'https://example.org/' } } : r)) };
-  const text = historyFigure(smallLines({ history: hostile }), { n: 1 }).text;
+  const text = historyFigure(smallLines({ history: hostile }), { n: () => 1 }).text;
   assert.ok(!text.includes('<img'), 'no image tag');
   assert.ok(text.includes('&lt;img src=x onerror=alert(1)&gt;'));
 });
@@ -183,7 +183,7 @@ test('the figure: a hostile source label is escaped in the tip and the table', (
 test('real data: the figure builds at both widths; FY2024 and FY2026 are listed as having no published total; every mark is placed', () => {
   const { history } = loadHrrpOnce();
   const lines = smallLines({ history });
-  const fig = historyFigure(lines, { n: 1 }).text;
+  const fig = historyFigure(lines, { n: () => 1 }).text;
   assert.match(fig, /No total for FY2024 and FY2026\./);
   assert.match(fig, /80\.2% of hospitals are cut in FY2027\./);
   for (const width of [PHONE, WIDE]) {
@@ -195,10 +195,10 @@ test('real data: the figure builds at both widths; FY2024 and FY2026 are listed 
 });
 
 test('no raw ISO date reaches the History figure\'s words, tips or table; a year with no all-hospitals average still has a whole tip', () => {
-  const real = historyFigure(smallLines({ history: loadHrrpOnce().history }), { n: 1 }).text.replace(/<[^>]*>/g, ' ');
+  const real = historyFigure(smallLines({ history: loadHrrpOnce().history }), { n: () => 1 }).text.replace(/<[^>]*>/g, ' ');
   assert.doesNotMatch(real, /\d{4}-\d{2}-\d{2}/);
   assert.match(real, /January 1, 2020 through June 30, 2020/);
-  const part = historyFigure(smallLines({ history: HISTORY }), { n: 1 }).text;
+  const part = historyFigure(smallLines({ history: HISTORY }), { n: () => 1 }).text;
   assert.doesNotMatch(part, /<title>[^<]*\d{4}-\d{2}-\d{2}/);
   const gap = { ...HISTORY, national: HISTORY.national.map((r) => (r.fy === 2018 ? { ...r, meanRed: null } : r)) };
   const svg = svgOf(smallLines({ history: gap }), WIDE);
@@ -336,7 +336,7 @@ test('the data windows: a row for each fiscal year, newest first, the payment ye
   assert.deepEqual(rows.map((r) => r.fy), [2019, 2018]);
   assert.deepEqual(rows[0].pay, ['2018-10-01', '2019-09-30']);
   assert.equal(rows[1].perf, null);
-  const text = windowsFigure(rows, { n: 4 }).text;
+  const text = windowsFigure(rows, { n: () => 4 }).text;
   assert.match(text, /chart-periods__perf/);
   assert.match(text, /chart-periods__pay/);
   assert.match(text, /<th scope="row">FY2018<\/th><td>not available<\/td><td>October 1, 2017 – September 30, 2018<\/td>/);
@@ -390,4 +390,37 @@ test('the real research list: every study links over https', () => {
   assert.ok(groups.length >= 3);
   assert.equal(groups.flatMap((g) => g.items).length, data.research.length);
   assert.ok(groups.flatMap((g) => g.items).every((r) => r.url !== null), 'a research link was dropped');
+});
+
+// ---------- empty series: no panel throws; a figure that does not draw takes no number ----------
+
+const withNational = (f) => smallLines({ history: { ...HISTORY, national: NATIONAL.map(f) } });
+
+test('the drawing: a history with no average cut, no total, or neither never throws, and the empty panel draws nothing', () => {
+  for (const width of [PHONE, WIDE]) {
+    const noPen = svgOf(withNational((r) => ({ ...r, meanRedPen: null })), width);
+    assert.ok(noPen.includes('hist-panel--share') && noPen.includes('hist-panel--total'));
+    const noAvg = svgOf(withNational((r) => ({ ...r, meanRedPen: null, meanRed: null })), width);
+    assert.ok(!noAvg.includes('hist-panel--avg'), 'no average cut, no panel');
+    const noTotal = svgOf(withNational((r) => ({ ...r, totalEst: null, totalSrc: null })), width);
+    assert.ok(!noTotal.includes('hist-panel--total') && noTotal.includes('hist-panel--avg'));
+    const none = svgOf(withNational((r) => ({ ...r, meanRedPen: null, meanRed: null, totalEst: null, totalSrc: null })), width);
+    assert.ok(none.includes('hist-panel--share') && !none.includes('hist-panel--avg') && !none.includes('hist-panel--total'));
+  }
+});
+
+test('the drawing: only all-hospital averages (no penalized series) draw the gray line and no value labels for the missing one', () => {
+  const svg = svgOf(withNational((r) => ({ ...r, meanRedPen: null })), WIDE);
+  assert.match(svg, /hist-line--all" d="M/);
+  assert.ok(!/hist-dot--pen/.test(svg));
+});
+
+test('the Part: a history with no share draws no figure and no empty picture box, and takes no figure number', () => {
+  const lines = smallLines({ history: { ...HISTORY, national: [] } });
+  let n = 0;
+  const text = historyPart({ lines, windows: windowRows({ history: HISTORY }), timeline: [] }, { figure: () => ++n }).text;
+  assert.ok(!text.includes('<div class="pic"></div>'));
+  assert.match(text, /id="figure-1"/);
+  assert.ok(!text.includes('id="figure-2"'), 'the windows figure is the first and only one');
+  assert.equal(n, 1);
 });

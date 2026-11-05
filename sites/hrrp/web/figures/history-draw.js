@@ -41,7 +41,8 @@ function lineAt(pts, px) {
 //   box    { x0, x1, top, bottom }: the plot's limits; polys: the lines to keep clear of, [[{ px, py }]]
 function place(items, { box, polys }) {
   const placed = [];
-  return items.map((it) => {
+  // An item with no point to sit at draws nothing.
+  return items.filter((it) => it.at.length).map((it) => {
     const w = Math.max(...it.lines.map((l) => (l.mono ? textWidth(l.text, NOTE_PX, { mono: true }) : l.caps ? capsWidth(l.text) : textWidth(l.text, NOTE_PX))));
     const h = it.lines.length * LINE_H + 1;
     // The positions in order of preference (points, then sides, then anchors); the first clear one wins, else the least bad.
@@ -133,6 +134,8 @@ function sharePanel(lines, p, narrow) {
 // The average cut: the penalized hospitals' line in the penalty ink, all hospitals' in gray; the first, the highest and the latest
 // of the first printed, the latest of the second, each line named at a spot clear of both.
 function avgPanel(lines, p, narrow) {
+  // A panel with no value in either series draws nothing.
+  if (![...lines.avgPen, ...lines.avgAll].some((s) => s.value !== null)) return '';
   const top = Math.max(...lines.avgPen.map((s) => s.value ?? 0), ...lines.avgAll.map((s) => s.value ?? 0));
   const step = 0.5;
   const yMax = Math.max(step, Math.ceil((top * 1.3) / step) * step);
@@ -142,7 +145,7 @@ function avgPanel(lines, p, narrow) {
   const [pen, all] = [poly(lines.avgPen), poly(lines.avgAll)];
   const known = pen.filter((q) => q.value !== null);
   const lastP = known[known.length - 1];
-  const peak = known.reduce((a, q) => (q.value > a.value ? q : a), known[0]);
+  const peak = known.reduce((a, q) => (q.value > a.value ? q : a), known[0]);  // undefined when only all-hospital values exist
   const lastA = all.filter((q) => q.value !== null).pop();
   const val = (q, side, anchors) => ({ at: [q], lines: [{ text: fmtPct(q.value, 2), cls: 'chart-value chart-value--mark', mono: true }], sides: [side], anchors, gap: 6, leader: false });
   const name = (series, key, side, cls) => {
@@ -151,8 +154,8 @@ function avgPanel(lines, p, narrow) {
     return { at: order.map((i) => series[i]), lines: [{ text: t(key), cls: `chart-cap ${cls}`, caps: true }], sides: [side, side === 'above' ? 'below' : 'above'], anchors: ['middle', 'start', 'end'], gap: 5, leader: false };
   };
   const labeled = [
-    ...(peak.fy !== lastP.fy ? [val(peak, 'above', ['middle', 'start', 'end'])] : []),
-    val(lastP, 'above', ['end', 'middle']),
+    ...(peak && peak.fy !== lastP.fy ? [val(peak, 'above', ['middle', 'start', 'end'])] : []),
+    ...(lastP ? [val(lastP, 'above', ['end', 'middle'])] : []),
     ...(lastA ? [val(lastA, 'below', ['end', 'middle'])] : []),
     name(pen, 'histAvgPen', 'above', 'hist-name--pen'),
     name(all, 'histAvgAll', 'below', 'hist-name--all'),
@@ -172,6 +175,7 @@ function avgPanel(lines, p, narrow) {
 // The estimated totals: a bar for each year that has one, CMS's dark and KFF's light (a source for each bar, in its tip and the table),
 // a dash on the base for a year with none (nothing is drawn as a zero); the first, the highest and the latest labeled.
 function totalPanel(lines, p, narrow) {
+  if (!lines.totals.length) return '';
   const top = Math.max(...lines.totals.map((r) => r.value));
   const step = 2e8;
   const yMax = Math.max(step, Math.ceil(top / step) * step);

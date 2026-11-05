@@ -19,6 +19,8 @@ const range = ([start, end]) => `${isoDate(start)} – ${isoDate(end)}`;
 // The source line of an entry: a link when the address is https, else the label as plain text.
 const sourceOf = ({ label, url }) => (url ? externalLink(url, label) : label);
 
+const pic = (fig) => (fig ? html`<div class="pic">${fig}</div>` : '');
+
 // entries: history-data.js timelineData().
 export function timeline(entries) {
   if (!entries.length) return '';
@@ -33,14 +35,14 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 `)}</ol>`;
 }
 
-// rows: history-data.js windowRows() (newest first); n: the figure's number.
+// rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws.
 export function windowsFigure(rows, { n }) {
   if (!rows.length) return '';
   const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...(r.perf ? [span('perf', r.fy, r.perf)] : []), span('pay', r.fy, r.pay)] }));
   const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width });
   const newest = rows[0];
   return figure({
-    n, source: t('winSource'), csvName: 'hrrp-data-windows', alt: t('winAlt'), note: t('winKey'),
+    n: n(), source: t('winSource'), csvName: 'hrrp-data-windows', alt: t('winAlt'), note: t('winKey'),
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
@@ -52,7 +54,7 @@ export function windowsFigure(rows, { n }) {
   });
 }
 
-// The small multiples' figure [HI-09]. lines: history-data.js smallLines(); n: the figure's number. Its takeaway is the latest year's
+// The small multiples' figure [HI-09]. lines: history-data.js smallLines(); n: the figure counter, called only when the figure draws. Its takeaway is the latest year's
 // share of hospitals cut; the pandemic note and the years with no total are said under it; the table has every plotted value.
 const HIST_WIDE = 860;
 export function historyFigure(lines, { n }) {
@@ -63,7 +65,7 @@ export function historyFigure(lines, { n }) {
   const note = lines.noTotalText ? html`${prose}<span class="hist-note__none">${lines.noTotalText}</span>` : prose;
   const sourceOf = (r) => r.total && (r.total.label ?? t(r.total.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms'));
   return figure({
-    n, takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
+    n: n(), takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
     alt: t('histAlt'), note: note || null,
     key: [{ swatch: 'bar-dark', label: t('histKeyCms') }, { swatch: 'bar-light', label: t('histKeyKff') }],
     ...drawn((width) => drawHistory({ lines, width }), HIST_WIDE),
@@ -82,7 +84,7 @@ export function historyFigure(lines, { n }) {
 // history: view.history ({ lines, timeline, windows }); figure: the page's figure counter.
 export function historyPart(history, { figure: nextFigure }) {
   return html`<p class="part__intro">${t('historyIntro')}</p>
-<div class="pic">${historyFigure(history.lines, { n: nextFigure() })}</div>
-${windowsFigure(history.windows, { n: nextFigure() })}
+${pic(historyFigure(history.lines, { n: nextFigure }))}
+${windowsFigure(history.windows, { n: nextFigure })}
 ${timeline(history.timeline)}`;
 }
