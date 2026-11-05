@@ -133,18 +133,18 @@ export function pairedBars(hospitals, meta) {
 
 // A row for each of the five peer groups: lo, hi (CMS's cutoffs of the dual share, fractions; null when the edition lists none),
 // n (hospitals in it), nMeasured (those measured on a condition), nCut, shareCut (a fraction: nCut / nMeasured, not / n; null when
-// none is measured), median (percent, among the hospitals cut; null without one) and reds (the cuts, in percent, of the
-// measured hospitals: each is a dot on the strip, the unmeasured ones, which cannot be cut, are left out). takeaway: the groups
+// none is measured), median (percent: the median cut over every hospital in the group, those with no cut and those measured on
+// nothing included, as the old site's strip plot had it; null for an empty group) and reds (every hospital's cut, in percent: a dot
+// on the strip each, as the old site plotted the full list). takeaway: the groups
 // with a share, ordered by group: low (the least-cut group), min and max (shares over those groups) and others (the min and
 // max over the groups but the lowest-dual one, group 1), or null with fewer than two such groups.
 export function peerGroups(hospitals, meta) {
   const rows = PEERS.map((peer, i) => {
     const group = hospitals.filter((h) => h.peer === peer);
     const s = summarize(group);
-    const reds = group.filter((h) => measuredAny(h)).map((h) => h.red);
-    const cuts = reds.filter((r) => r > 0);
+    const reds = group.map((h) => h.red);
     const cutoff = meta.peerCutoffs?.[i];
-    return { peer, lo: cutoff?.[0] ?? null, hi: cutoff?.[1] ?? null, n: group.length, nMeasured: s.nMeasured, nCut: s.nPen, shareCut: s.nMeasured ? s.nPen / s.nMeasured : null, median: cuts.length ? median(cuts) : null, reds };
+    return { peer, lo: cutoff?.[0] ?? null, hi: cutoff?.[1] ?? null, n: group.length, nMeasured: s.nMeasured, nCut: s.nPen, shareCut: s.nMeasured ? s.nPen / s.nMeasured : null, median: reds.length ? median(reds) : null, reds };
   });
   const withShare = rows.filter((r) => r.shareCut !== null);
   const shares = (list) => list.map((r) => r.shareCut);
@@ -207,7 +207,7 @@ export function typeSpread(hospitals) {
   return {
     traits, national,
     takeaway: traits.length ? { widest: traits[0], narrowest: traits.length > 1 ? traits[traits.length - 1] : null } : null,
-    table: traits.flatMap((t) => t.groups.map((g) => ({ block: t.block, label: g.label, n: g.n, nMeasured: g.nMeasured, share: g.share }))),
+    table: traits.flatMap((t) => t.groups.map((g) => ({ block: t.block, key: g.key, label: g.label, n: g.n, nMeasured: g.nMeasured, share: g.share }))),
   };
 }
 

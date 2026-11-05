@@ -39,7 +39,7 @@ export function drawMeasured({ rows, width, axisFormat }) {
   const narrow = isNarrow(width);
   const left = narrow ? 8 : 150;
   const right = width - (narrow ? 44 : 56);
-  const floor = Math.max(0, Math.floor(Math.min(...rows.map((r) => r.lo)) * 10) / 10);
+  const floor = 0;
   const x = scaleLinear().domain([floor, 1]).range([left, right]);
   const most = Math.max(...rows.map((r) => r.n));
   const size = scaleSqrt().domain([0, most]).range([0, narrow ? 7 : 9]);
@@ -121,21 +121,21 @@ export function drawSpread({ traits, national, width, format, head }) {
   const gutter = narrow ? 0 : 30;
   const x = scaleLinear().domain([lo, hi]).range([gutter + (narrow ? 22 : 20), width - (narrow ? 22 : 100)]);
   const rowH = narrow ? 92 : 80;
-  const SLOTS = narrow ? [-11, 22, -24, 35] : [-10, 19, -22, 31];
+  const SLOTS = narrow ? [-9, 22, -19, 35] : [-10, 19, -22, 31];
   let y = 8;
   const blocks = traits.map((t) => {
     const cy = y + (narrow ? 52 : 40);
     const taken = SLOTS.map(() => []);
     const dots = [...t.groups].sort((a, b) => a.share - b.share).map((g) => {
       const label = g.label;
-      const w = textWidth(label, 11) + 8;
+      const w = textWidth(label, 11) + 16;
       const [a0, a1] = [x(g.share) - w / 2, x(g.share) + w / 2];
       const k = taken.findIndex((spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1));
       const slot = k < 0 ? 0 : k;
       taken[slot].push([a0, a1]);
       return mark({
         tip: g.tip, value: g.share, hit: null,
-        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: Math.max(w / 2, Math.min(width - w / 2, x(g.share))), y: cy + SLOTS[slot] + 3, cls: 'chart-note', body: label })}`,
+        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: Math.max(w / 2, Math.min(width - w / 2, x(g.share))), y: cy + SLOTS[slot] + 3, cls: 'chart-note chart-label--halo', body: label })}`,
       });
     });
     const heading = narrow

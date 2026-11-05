@@ -124,13 +124,14 @@ test('the peer groups: a row for each group with its dual range, share cut among
   assert.equal(g2.n, 2); assert.equal(g2.nCut, 2); assert.deepEqual([g2.lo, g2.hi], [0.14, 0.18]);
   near(g2.shareCut, 1); near(g2.median, 0.75);
   assert.deepEqual([...g2.reds].sort(), [0.5, 1]);
+  near(p.rows[1].median, 0.75);
   // shares are over the measured: peer 3 holds two hospitals, one measured; peer 5 holds one, measured on nothing and drawn as no dot
-  assert.equal(p.rows[2].n, 2); assert.equal(p.rows[2].nMeasured, 1); assert.deepEqual(p.rows[2].reds, [0]);
-  assert.equal(p.rows[4].n, 1); assert.equal(p.rows[4].nMeasured, 0); assert.equal(p.rows[4].shareCut, null); assert.deepEqual(p.rows[4].reds, []);
-  assert.equal(p.rows[2].nCut, 0); assert.equal(p.rows[2].median, null);
+  assert.equal(p.rows[2].n, 2); assert.equal(p.rows[2].nMeasured, 1); assert.deepEqual(p.rows[2].reds, [0, 0]); assert.equal(p.rows[2].median, 0);
+  assert.equal(p.rows[4].n, 1); assert.equal(p.rows[4].nMeasured, 0); assert.equal(p.rows[4].shareCut, null); assert.deepEqual(p.rows[4].reds, [0], 'a hospital measured on nothing is a dot at no cut');
+  assert.equal(p.rows[2].nCut, 0);
   assert.equal(p.rows[3].n, 0);
   assert.equal(p.table.length, 5);
-  assert.equal(p.rows.reduce((a, g) => a + g.reds.length, 0), 4, 'every measured hospital is a dot, no other');
+  assert.equal(p.rows.reduce((a, g) => a + g.reds.length, 0), POOL.length, 'every hospital is a dot');
   // the takeaway's numbers: the least-cut group, the range over all and over the groups but the first
   assert.equal(p.takeaway.low.peer, 3); near(p.takeaway.min, 0); near(p.takeaway.max, 1);
   assert.equal(p.takeaway.lowestDual, true);
@@ -142,7 +143,7 @@ test('the peer figure\'s takeaway: the lowest-dual group cut least against the o
   const row = (peer, shareCut) => ({ peer, shareCut });
   const low = row(1, 0.78);
   assert.equal(peerTakeaway({ takeaway: { low, min: 0.78, max: 0.85, others: { min: 0.84, max: 0.85 }, lowestDual: true } }),
-    'Group 1 serves the fewest dual-eligible patients, group 5 the most. Group 1 is cut least: 78% of its measured hospitals take a cut, against 84% to 85% in the other groups.');
+    'Group 1, which serves the fewest dual-eligible patients (group 5 the most), is cut least: 78% of its measured hospitals take a cut, against 84% to 85% in the other groups.');
   assert.match(peerTakeaway({ takeaway: { low, min: 0.78, max: 0.85, others: { min: 0.85, max: 0.85 }, lowestDual: true } }), /against 85% in the other groups\./);
   const other = peerTakeaway({ takeaway: { low: row(3, 0.7), min: 0.7, max: 0.9, others: { min: 0.7, max: 0.9 }, lowestDual: true } });
   assert.match(other, /runs from 70% \(group 3\) to 90%/);
@@ -163,6 +164,7 @@ test('the traits\' ranges: each trait from its lowest to its highest group, wide
   const owner = t.traits.find((x) => x.block === 'ownership');
   assert.equal(owner.lo.key, 'Nonprofit'); near(owner.hi.share, 100); near(owner.spread, 50);
   assert.equal(t.takeaway.widest, t.traits[0]); assert.equal(t.takeaway.narrowest, t.traits[t.traits.length - 1]);
+  for (const r of t.table) { const tr = t.traits.find((x) => x.block === r.block); assert.equal(r.label, tr.groups.find((g) => g.key === r.key).label); }
   assert.equal(t.table.length, t.traits.reduce((a, x) => a + x.groups.length, 0));
   near(t.national.share, 75);
   const one = typeSpread([hospital({ id: '990070', own: 'Government', beds: 50, teach: 'none', urban: true, c: { HF: m(40, 1.2, 1) } })]);
@@ -270,6 +272,13 @@ test('the Part: the lede in words and the table with the six-cell glyph, its key
   assert.match(html, />1 not cut</); assert.match(html, />3 cut</);
 });
 
+test('the trait table names each group: both Location rows, urban and rural, read as themselves', () => {
+  const view = programView(areaOf(POOL));
+  const html = picturePart(view.picture, { figure: (() => { let n = 4; return () => ++n; })(), edition: view.edition }).text;
+  assert.match(html, /<th scope="row"[^>]*>Location<\/th><td[^>]*>Urban<\/td>/);
+  assert.match(html, /<th scope="row"[^>]*>Location<\/th><td[^>]*>Rural<\/td>/);
+});
+
 test('a Part with nothing to draw leaves the figures out and numbers the rest in order', () => {
   const view = programView(areaOf([hospital({ id: '990080', red: 0, paf: 1, c: {} })]));
   let n = 4;
@@ -293,7 +302,7 @@ test('the whole file: the reference counts and shares', () => {
   const peers = peerGroups(hospitals, meta);
   assert.equal(peers.rows.length, 5);
   assert.equal(peers.takeaway.low.peer, 1, 'the lowest-dual group is cut least');
-  assert.ok(peers.rows.every((g) => g.reds.length === g.nMeasured));
+  assert.ok(peers.rows.every((g) => g.reds.length === g.n));
   assert.equal(peers.rows.reduce((a, g) => a + g.nMeasured, 0), 2798);
   const bars = pairedBars(hospitals, meta);
   near(bars.rows.reduce((a, r) => a + r.shareOfFlags, 0), 1); near(bars.rows.reduce((a, r) => a + r.shareOfDollars, 0), 1);

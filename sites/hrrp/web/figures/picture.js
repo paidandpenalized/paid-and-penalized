@@ -181,7 +181,7 @@ function peerFigure({ p, edition, n }) {
       reds: r.reds, median: r.median, shareText: share,
       label: fill('peerLabel', { n: String(r.peer) }),
       sub: r.lo === null ? '' : fill('peerSub', { from: pct0(r.lo), to: pct0(r.hi) }),
-      tip: fill('peerTip', { n: String(r.peer), hospitals: plural(r.nMeasured, t('nounHospital'), t('nounHospitals')), share: r.shareCut === null ? t('peerNoShare') : pct0(r.shareCut), median: r.median === null ? t('peerNoShare') : fmtPct(r.median) }),
+      tip: fill('peerTip', { n: String(r.peer), hospitals: plural(r.n, t('nounHospital'), t('nounHospitals')), share: r.shareCut === null ? t('peerNoShare') : pct0(r.shareCut), median: r.median === null ? t('peerNoShare') : fmtPct(r.median) }),
     };
   });
   const draw = (width) => drawStrip({ rows: spec, cap: CAP_PCT, width, ticks: cutTicks(width), format: percent, labels: { median: t('peerKeyMedian'), shade: t('peerKeyShade') } });
@@ -189,9 +189,9 @@ function peerFigure({ p, edition, n }) {
     n: n(), takeaway: peerTakeaway(p), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-cuts-by-peer-group',
     chart: imagePair(drawn(draw, PIC_WIDE), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
     table: {
-      columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('peerColN'), numeric: true }, { name: t('peerColShare'), numeric: true }, { name: t('peerColMedian'), numeric: true }],
+      columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('peerColAll'), numeric: true }, { name: t('peerColN'), numeric: true }, { name: t('peerColShare'), numeric: true }, { name: t('peerColMedian'), numeric: true }],
       rows: p.table.map((r) => [
-        fill('peerLabel', { n: String(r.peer) }), r.lo === null ? '—' : fill('peerDualRange', { from: pct0(r.lo), to: pct0(r.hi) }), num(count(r.nMeasured), r.nMeasured),
+        fill('peerLabel', { n: String(r.peer) }), r.lo === null ? '—' : fill('peerDualRange', { from: pct0(r.lo), to: pct0(r.hi) }), num(count(r.n), r.n), num(count(r.nMeasured), r.nMeasured),
         num(r.shareCut === null ? '—' : pct0(r.shareCut), r.shareCut), num(r.median === null ? '—' : fmtPct(r.median), r.median),
       ]),
     },
