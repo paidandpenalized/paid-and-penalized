@@ -42,6 +42,13 @@ CELLS = (
     Cell("discharges_medicare", S3, "01400", "01300", "flow", "S-3 I line 14 col 13: title XVIII discharges"),
     Cell("discharges_medicaid", S3, "01400", "01400", "flow", "S-3 I line 14 col 14: title XIX discharges"),
     Cell("discharges_total", S3, "01400", "01500", "flow", "S-3 I line 14 col 15: discharges, all patients"),
+    # Maternity Medicaid days. Line 13 (nursery) is inside line 14; its column 7 holds every Medicaid nursery day,
+    # HMO and eligible-unpaid days among them (4005.1, column 7). Line 32 (labor and delivery inpatient days, column 7
+    # title XIX, from periods beginning 2009-10-01) is outside lines 1 and 14 (4005.1, line 32: "These days must not be
+    # reported on Worksheet S-3, Part I, line 1 or line 14").
+    Cell("days_medicaid_nursery", S3, "01300", "00700", "flow", "S-3 I line 13 col 7: title XIX nursery days"),
+    Cell("days_medicaid_labor_delivery", S3, "03200", "00700", "flow",
+         "S-3 I line 32 col 7: title XIX labor and delivery inpatient days (not in line 14)"),
     # Worksheet G-3 (one column).
     Cell("patient_revenue_gross", G3, "00100", "00100", "flow", "G-3 line 1: total patient revenues (charges)"),
     Cell("contractual_allowances", G3, "00200", "00100", "flow",
@@ -49,6 +56,35 @@ CELLS = (
     Cell("net_patient_revenue", G3, "00300", "00100", "flow", "G-3 line 3: net patient revenues"),
     Cell("operating_expenses", G3, "00400", "00100", "flow", "G-3 line 4: total operating expenses"),
     Cell("net_income_patients", G3, "00500", "00100", "flow", "G-3 line 5: net income from service to patients"),
+    # Other income, line by line (lines 6 to 24 add up to line 25 with line 24's subscripts: 24.01 to 24.49 other,
+    # 24.50 COVID-19 PHE funding, 24.51 to 24.60 other COVID-19 funding; 4040.4). Lines 8 to 22 are the hospital's
+    # own ancillary operations (`other_operating_income`, in the operating margin).
+    Cell("income_contributions", G3, "00600", "00100", "flow", "G-3 line 6: contributions, donations, bequests, etc."),
+    Cell("income_investments", G3, "00700", "00100", "flow", "G-3 line 7: income from investments"),
+    Cell("income_telephone", G3, "00800", "00100", "flow",
+         "G-3 line 8: revenues from telephone and other miscellaneous communication services"),
+    Cell("income_tv_radio", G3, "00900", "00100", "flow", "G-3 line 9: revenue from television and radio service"),
+    Cell("income_purchase_discounts", G3, "01000", "00100", "flow", "G-3 line 10: purchase discounts"),
+    Cell("income_rebates_refunds", G3, "01100", "00100", "flow", "G-3 line 11: rebates and refunds of expenses"),
+    Cell("income_parking", G3, "01200", "00100", "flow", "G-3 line 12: parking lot receipts"),
+    Cell("income_laundry", G3, "01300", "00100", "flow", "G-3 line 13: revenue from laundry and linen service"),
+    Cell("income_meals", G3, "01400", "00100", "flow", "G-3 line 14: revenue from meals sold to employees and guests"),
+    Cell("income_quarters_rental", G3, "01500", "00100", "flow", "G-3 line 15: revenue from rental of living quarters"),
+    Cell("income_supplies_sales", G3, "01600", "00100", "flow",
+         "G-3 line 16: revenue from sale of medical and surgical supplies to other than patients"),
+    Cell("income_drug_sales", G3, "01700", "00100", "flow",
+         "G-3 line 17: revenue from sale of drugs to other than patients"),
+    Cell("income_records_sales", G3, "01800", "00100", "flow",
+         "G-3 line 18: revenue from sale of medical records and abstracts"),
+    Cell("income_tuition", G3, "01900", "00100", "flow",
+         "G-3 line 19: tuition (fees, sale of textbooks, uniforms, etc.)"),
+    Cell("income_gift_shop", G3, "02000", "00100", "flow",
+         "G-3 line 20: revenue from gifts, flowers, coffee shops, and canteen"),
+    Cell("income_vending", G3, "02100", "00100", "flow", "G-3 line 21: rental of vending machines"),
+    Cell("income_space_rental", G3, "02200", "00100", "flow", "G-3 line 22: rental of hospital space"),
+    Cell("income_appropriations", G3, "02300", "00100", "flow", "G-3 line 23: governmental appropriations"),
+    Cell("income_other_specified", G3, "02400", "00100", "flow",
+         "G-3 line 24: other (specify), the line itself, not its subscripts"),
     Cell("covid_phe_funding", G3, "02450", "00100", "flow", "G-3 line 24.50: COVID-19 PHE funding"),
     Cell("other_income", G3, "02500", "00100", "flow", "G-3 line 25: total other income"),
     Cell("other_expenses", G3, "02800", "00100", "flow", "G-3 line 28: total other expenses"),
@@ -91,6 +127,10 @@ CELLS = (
 )
 
 METRICS = tuple(c.metric for c in CELLS)
+# G-3 lines 8 to 22, the other income from the hospital's own operations that the operating margin counts (DATA-B-03,
+# decided 2026-11-05). Left out: contributions (6), investments (7), governmental appropriations (23), line 24 and its
+# subscripts, COVID-19 funding among them (24.50 to 24.60).
+OPERATING_OTHER_INCOME = tuple(c.metric for c in CELLS if c.sheet == G3 and 800 <= int(c.line) <= 2200)
 SHEET_OF = {c.metric: c.sheet for c in CELLS}
 # Every (worksheet code, line, column) read, old codes included, to its cell: one lookup per numeric row.
 BY_KEY = {(c.sheet, c.line, c.column): c for c in CELLS}
@@ -110,7 +150,11 @@ DERIVED = (
     ("medicaid_day_share", "medicaid_days_all / days_total"),
     ("medicare_day_share", "(days_medicare + days_medicare_advantage) / days_total"),
     ("occupancy", "days_total / bed_days_available"),
-    ("operating_margin", "net_income_patients / net_patient_revenue (G-3 line 5 / line 3)"),
+    ("medicaid_days_maternity", "days_medicaid_nursery + days_medicaid_labor_delivery (S-3 I lines 13 + 32, col 7)"),
+    ("other_operating_income", "income_telephone + ... + income_space_rental (G-3 lines 8 to 22)"),
+    ("patient_margin", "net_income_patients / net_patient_revenue (G-3 line 5 / line 3)"),
+    ("operating_margin", "(net_income_patients + other_operating_income) / (net_patient_revenue + "
+                         "other_operating_income) (G-3 (line 5 + lines 8 to 22) / (line 3 + lines 8 to 22))"),
     ("total_margin", "net_income / (net_patient_revenue + other_income) (G-3 line 29 / (line 3 + line 25))"),
     ("medicaid_payment_to_cost", "(medicaid_net_revenue + medicaid_supplemental) / medicaid_cost"),
     ("medicaid_revenue_share", "medicaid_net_revenue / net_patient_revenue (S-10 I line 2 / G-3 line 3)"),
@@ -123,9 +167,12 @@ DERIVED = (
 _UNIT_OF = {
     "beds": "beds", "bed_days_available": "days", "fte_employees": "fte", "s10_ccr": "ratio",
     **{m: "days" for m in ("days_medicare", "days_medicaid", "days_total", "days_medicare_advantage",
-                          "days_medicaid_managed", "medicaid_days_all")},
+                          "days_medicaid_managed", "medicaid_days_all", "days_medicaid_nursery",
+                          "days_medicaid_labor_delivery", "medicaid_days_maternity")},
     **{m: "discharges" for m in ("discharges_medicare", "discharges_medicaid", "discharges_total")},
-    **{name: "ratio" for name in ("medicaid_day_share", "medicare_day_share", "occupancy", "operating_margin",
+    "other_operating_income": "dollars",
+    **{name: "ratio" for name in ("medicaid_day_share", "medicare_day_share", "occupancy", "patient_margin",
+                                  "operating_margin",
                                   "total_margin", "medicaid_payment_to_cost", "medicaid_revenue_share",
                                   "uncompensated_share_of_expenses")},
 }

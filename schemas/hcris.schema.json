@@ -27,7 +27,7 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": 1
+      "const": 2
     },
     "methods_version": {
       "$ref": "common.schema.json#/$defs/methodsVersion"
@@ -90,7 +90,7 @@
       "const": 0.8
     },
     "early": {
-      "description": "settledShare < earlyBelow: S-10 (uncompensated-care) figures for the year are early and move most at settlement.",
+      "description": "settledShare, rounded to a whole percent, < earlyBelow: S-10 (uncompensated-care) figures for the year are early and move most at settlement (79.86% rounds to 80%: not early).",
       "type": "boolean"
     },
     "columns": {
@@ -118,11 +118,32 @@
         "discharges_medicare",
         "discharges_medicaid",
         "discharges_total",
+        "days_medicaid_nursery",
+        "days_medicaid_labor_delivery",
         "patient_revenue_gross",
         "contractual_allowances",
         "net_patient_revenue",
         "operating_expenses",
         "net_income_patients",
+        "income_contributions",
+        "income_investments",
+        "income_telephone",
+        "income_tv_radio",
+        "income_purchase_discounts",
+        "income_rebates_refunds",
+        "income_parking",
+        "income_laundry",
+        "income_meals",
+        "income_quarters_rental",
+        "income_supplies_sales",
+        "income_drug_sales",
+        "income_records_sales",
+        "income_tuition",
+        "income_gift_shop",
+        "income_vending",
+        "income_space_rental",
+        "income_appropriations",
+        "income_other_specified",
         "covid_phe_funding",
         "other_income",
         "other_expenses",
@@ -151,6 +172,9 @@
         "medicaid_day_share",
         "medicare_day_share",
         "occupancy",
+        "medicaid_days_maternity",
+        "other_operating_income",
+        "patient_margin",
         "operating_margin",
         "total_margin",
         "medicaid_payment_to_cost",
@@ -171,9 +195,9 @@
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
     },
     "row": {
-      "description": "61 values in `columns` order (the emitter checks the length and that each CCN appears once). Units by column are pp_engine.hcris.cells.UNITS.",
+      "description": "85 values in `columns` order (the emitter checks the length and that each CCN appears once). Units by column are pp_engine.hcris.cells.UNITS.",
       "type": "array",
-      "minItems": 61,
+      "minItems": 85,
       "items": {
         "type": [
           "string",

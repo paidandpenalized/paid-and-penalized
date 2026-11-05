@@ -8,11 +8,11 @@ pure) and `pipeline/py/pp_pipeline/hcris/` (files). Stdlib Python; CSV and JSON 
 
 1. **CMS's zip** (`HOSP10FY<YYYY>.ZIP`, ~136 MB, downloads.cms.gov). Out of git. Archived by content address
    (`sha256/<hex>`) in an R2 bucket; `cli.py archive-plan` is the dry run.
-2. **Pinned cells table**, `data/pinned/hcris-fy<YYYY>/hcris_fy<YYYY>_cells.csv` (~1.35 MB a year). One row per
+2. **Pinned cells table**, `data/pinned/hcris-fy<YYYY>/hcris_fy<YYYY>_cells.csv` (~1.6 MB a year). One row per
    report from an acute or critical access hospital, with the report's identity and every cell in
    `pp_engine/hcris/cells.py`. `cli.py pin` derives it; the manifest's `derivedFrom` names the zip. Anyone with the
    zip gets the same bytes.
-3. **Emitted year**, `data/emitted/hcris/fy<YYYY>/hcris.json` (~2.0 MB a year, ~29 MB for FY2011 to FY2026). The data
+3. **Emitted year**, `data/emitted/hcris/fy<YYYY>/hcris.json` (~2.6 MB a year, ~38 MB for FY2011 to FY2026). The data
    contract's envelope, the year's facts, `columns`, and one array per hospital. The golden test rebuilds it from
    the pin, offline.
 4. **Downloads** (`cli.py downloads <dir>`): `hcris_wide.csv` and `hcris_long.csv` for readers. Build-time only,
@@ -40,9 +40,10 @@ pure) and `pipeline/py/pp_pipeline/hcris/` (files). Stdlib Python; CSV and JSON 
   - "settled": codes 2, 3 and 4 (settled, with or without audit, and settled then reopened);
   - "as filed": codes 1 and 5 (as submitted, and amended by the hospital).
   - A row is settled only when every report behind it is.
-- **Early years.** A year with under 80% of hospital-years settled is `early`. Settlement revises S-10
-  (uncompensated care) most and G-3 (margins) least, so `reader` marks only S-10 values (`cells.S10_METRICS`) in an
-  early year. On the 2026-10-05 posting, FY2022 (79.9% settled) through FY2026 are early.
+- **Early years.** A year whose settled share of hospital-years, rounded to a whole percent, is under 80% is
+  `early` (DATA-B-04). Settlement revises S-10 (uncompensated care) most and G-3 (margins) least, so `reader` marks
+  only S-10 values (`cells.S10_METRICS`) in an early year. On the 2026-10-05 posting, FY2023 (63.5% settled) through
+  FY2026 are early; FY2022 (79.86%, so 80%) is not.
 - **Still filing.** `stillFiling` is true while CMS can still receive a year's regular reports. A report is due by the
   last day of the fifth month after its period ends, or 150 days after a period that ends mid-month
   (42 CFR 413.24(f)(2)(i)). On the 2026-10-05 posting, FY2025 and FY2026 are still filing; their hospitals are
@@ -67,7 +68,13 @@ trend = panel.series(ccn, "total_margin")            # one Value per year the ho
 - **One reader.** A site's own emitter (Python) reads the layer through `reader` and writes its own site JSON; the
   site's pages never parse HCRIS files. Sites join on CCN to the hospital master for names and locations.
 - **Stable columns.** `columns` is fixed by `schemas/hcris.schema.json` (a `const`). Adding a cell changes the schema
-  version and the methods version, and re-derives every pin. Names never change meaning.
+  version and the methods version, and re-derives every pin. Names never change meaning once a site reads them
+  (methods_version 2 renamed v1's `operating_margin`, line 5 over line 3, to `patient_margin` before any did).
+- **Margins** (DATA-B-03, decided 2026-11-05): `operating_margin` is G-3 (line 5 + lines 8 to 22) over (line 3 +
+  lines 8 to 22): the hospital's own ancillary income (cafeteria, parking, drug sales to non-patients, space
+  rental...) counts as operating; donations (6), investment income (7), governmental appropriations (23) and line 24
+  with its subscripts (COVID-19 funding among them) don't. `total_margin` is line 29 over (line 3 + line 25);
+  `patient_margin`, line 5 over line 3.
 - **Units** (`cells.UNITS`): `dollars` (as filed, nominal), `days`, `discharges`, `beds`, `fte`, `ratio` (a fraction
   to 4 places: 0.0500 is 5%).
 - **What a page shows beside a number:** the period dates, "as filed" or "settled", and for an S-10 value in an early
@@ -93,7 +100,7 @@ from PRM-II chapter 40 (Transmittal 25); section numbers are given.
 | Cost and charges by department; total cost, total charges | Worksheet C Part I lines 200 to 202, cols 3 and 8 (4023.1); Worksheet A line 200 (4013), cost centers by code in the alpha file (A000000, col 0) | "What does each department cost against what it charges? Where do markups come from?" This needs the alpha file. |
 | Medicare Advantage negotiated charges by MS-DRG (weighted medians) | S-12 lines 1 to 997, col 1 (4012.50); periods ending on or after 2026-01-01 | "What do Medicare Advantage plans pay this hospital compared with traditional Medicare?" |
 | CAH Medicare inpatient cost and 101% payment | E-3 Part V lines 4, 6 (4033.5) | "What does Medicare's cost-based payment mean for a critical access hospital's margin?" |
-| COVID-19 funding beyond line 24.50 | G-3 lines 24.51 to 24.60 (4040.4) | "How much did relief funds prop up 2020 and 2021 margins?" |
+| COVID-19 funding beyond line 24.50, and line 24's other subscripts | G-3 lines 24.01 to 24.49, 24.51 to 24.60 (4040.4) | "How much did relief funds prop up 2020 and 2021 margins?" |
 | Observation days; CAH outpatient visits | S-3 Part I line 28 col 8; line 15 (4005.1) | "Is observation replacing admissions?" |
 | S-10 detail: charity care uninsured vs insured; Medicare bad debt | S-10 Part I lines 20 to 23 cols 1 and 2; lines 27, 27.01 (4012.1) | "How much charity care goes to insured patients' deductibles?" |
 
