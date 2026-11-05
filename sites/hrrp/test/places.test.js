@@ -12,7 +12,9 @@ const ofKind = (k) => P.list.filter((p) => p.kind === k);
 test('paths', () => {
   assert.equal(PROGRAM_PATH, '/hrrp/');
   assert.equal(placePath('state', 'VA'), '/hrrp/state/va/');
-  assert.equal(hospitalPath('010001A'), '/hrrp/hospital/010001a/');
+  // No CCN in the data has a letter, so one is made from a row's: the path lowercases it.
+  const ccn = `${hospitals[0].id}A`;
+  assert.equal(hospitalPath(ccn), `/hrrp/hospital/${ccn.toLowerCase()}/`);
   assert.equal(csvPath(2027, 'x'), '/data/hrrp/fy2027/x.csv');
   assert.equal(DOLLARS_HREF, '/hrrp/methods/#methods-dollars');
   assert.throws(() => placePath('county', 'x'), RangeError);
@@ -26,6 +28,7 @@ test('the places on the data', () => {
   assert.ok(!P.byKey.has('state:md') && !P.byKey.has('state:pr'));
   assert.equal(ofKind('metro').length, 406);
   for (const p of P.list) assert.ok(p.hospitals.length > 0);
+  for (const m of ofKind('metro')) assert.equal(new Set(m.hospitals.map((h) => h.cbsaName)).size, 1, m.key);
 });
 
 test('every hospital resolves to its places', () => {
