@@ -130,8 +130,8 @@ CELLS = (
 )
 
 METRICS = tuple(c.metric for c in CELLS)
-# G-3 line 24 and its subscripts 24.01 to 24.49, summed by the class of each entry's label (other_income.py): flows, read
-# from the layer's second pinned table per year, not from CELLS.
+# G-3 line 24 and its subscripts 24.01 to 24.49, summed by the class of each entry's label (other_income.py): flows,
+# read from the layer's second pinned table per year, not from CELLS.
 LINE24_METRICS = tuple(LINE24_BY_CLASS.values())
 # G-3 lines 8 to 22, the other income from the hospital's own operations that the operating margin counts (DATA-B-03,
 # decided 2026-11-05), with line 24's entries whose label is operating (decided 2026-11-05, later). Left out:
@@ -183,7 +183,7 @@ _UNIT_OF = {
                           "days_medicaid_managed", "medicaid_days_all", "days_medicaid_nursery",
                           "days_medicaid_labor_delivery", "medicaid_days_maternity")},
     **{m: "discharges" for m in ("discharges_medicare", "discharges_medicaid", "discharges_total")},
-    "other_operating_income": "dollars", **{m: "dollars" for m in LINE24_METRICS},
+    "other_operating_income": "dollars",
     **{name: "ratio" for name in ("medicaid_day_share", "medicare_day_share", "occupancy", "patient_margin",
                                   "operating_margin",
                                   "total_margin", "medicaid_payment_to_cost", "medicaid_revenue_share",
@@ -191,7 +191,7 @@ _UNIT_OF = {
 }
 _MONEY_SHEETS = (G3, S10, S10_HOSPITAL)
 UNITS = {**{c.metric: _UNIT_OF.get(c.metric) or ("dollars" if c.sheet in _MONEY_SHEETS else None) for c in CELLS},
-         **{m: _UNIT_OF[m] for m in LINE24_METRICS}, **{name: _UNIT_OF.get(name) for name, _ in DERIVED}}
+         **{m: "dollars" for m in LINE24_METRICS}, **{name: _UNIT_OF.get(name) for name, _ in DERIVED}}
 _NO_UNIT = [m for m, u in UNITS.items() if u is None]
 if _NO_UNIT:
     raise ValueError(f"no unit for {_NO_UNIT}: add them to cells._UNIT_OF")

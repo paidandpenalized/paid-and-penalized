@@ -3,10 +3,10 @@
     python3 -I pipeline/py/pp_pipeline/hcris/cli.py archive-plan <dir of zips> [--archived <keys.txt>]
 
 Each zip is stored once under its content address, `sha256/<hex>` in the `pp-sources` bucket, so a zip CMS posts again
-byte for byte is never uploaded twice. Beyond that, only changed years are uploaded: a zip whose derived tables (the cells
-table and the line-24 table) are byte-identical to the ones pinned for its year is skipped when the pin's own zip is in the bucket, since that zip
-already reproduces the pin (CMS
-regenerates every year's file each posting, so new bytes alone don't mean new data). `--archived` lists keys already
+byte for byte is never uploaded twice. Beyond that, only changed years are uploaded: a zip whose derived tables (the
+cells table and the line-24 table) are byte-identical to the ones pinned for its year is skipped when the pin's own
+zip is in the bucket, since that zip already reproduces the pins (CMS regenerates every year's file each posting, so
+new bytes alone don't mean new data). `--archived` lists keys already
 in the bucket, one per line (from `wrangler r2 object list`, when it exists).
 
 Prints, for each zip, upload or skip and why, the totals against R2's free 10 GB-month, and the exact wrangler
