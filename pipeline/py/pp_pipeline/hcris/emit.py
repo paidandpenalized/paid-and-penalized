@@ -24,7 +24,7 @@ from pp_engine.hcris import reader, tidy
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, read_pinned_bytes, write_emitted
 from pp_pipeline.hcris.pins import pinned_years
 
-SCHEMA_VERSION, METHODS_VERSION = 1, 1
+SCHEMA_VERSION, METHODS_VERSION = 2, 2
 SCHEMA = "hcris.schema.json"
 MAX_BYTES = 10 * 1024 * 1024  # CLAUDE.md: a file of 10 MiB or more never goes in git
 LONG_RULE = "fullest"

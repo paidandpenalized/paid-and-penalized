@@ -93,11 +93,35 @@ class HospitalYears(unittest.TestCase):
         self.assertEqual((r["shape"], r["n_reports"], r["period_days"], r["reports"]), ("one", 1, 366, "7"))
         self.assertEqual(r["medicaid_days_all"], Decimal("200"))
         self.assertEqual(r["medicaid_day_share"], Decimal("0.2000"))
-        self.assertEqual(r["operating_margin"], Decimal("-0.0500"))
+        self.assertEqual(r["patient_margin"], Decimal("-0.0500"))
+        self.assertEqual(r["operating_margin"], Decimal("-0.0500"))  # no lines 8 to 22: the patient margin
         self.assertEqual(r["total_margin"], Decimal("0.0500"))
         self.assertIsNone(r["occupancy"])  # a zero denominator
         self.assertIsNone(r["medicaid_payment_to_cost"])  # a missing denominator
         self.assertIsNone(r["uncompensated_cost"])  # not stored: zero or not reported
+
+    def test_operating_margin_counts_lines_8_to_22_only(self):
+        rows = self.build([report("7", "990001")], [
+            cell("7", "net_patient_revenue", "1000"), cell("7", "net_income_patients", "-100"),
+            cell("7", "income_telephone", "20"), cell("7", "income_drug_sales", "60"),
+            cell("7", "income_space_rental", "20"),  # lines 8, 17, 22: operating
+            cell("7", "income_contributions", "500"), cell("7", "income_investments", "500"),
+            cell("7", "income_appropriations", "500"), cell("7", "income_other_specified", "500"),
+            cell("7", "covid_phe_funding", "500")])  # lines 6, 7, 23, 24, 24.50: not operating
+        r = rows["990001"]
+        self.assertEqual(r["other_operating_income"], Decimal("100"))
+        self.assertEqual(r["patient_margin"], Decimal("-0.1000"))
+        self.assertEqual(r["operating_margin"], Decimal("0"))  # (-100 + 100) / (1000 + 100)
+        no_g3 = self.build([report("8", "990002")], [cell("8", "income_parking", "5")])["990002"]
+        self.assertIsNone(no_g3["operating_margin"])  # lines 3 and 5 blank: no margin from line 12 alone
+
+    def test_maternity_medicaid_days(self):
+        rows = self.build([report("7", "990001")], [
+            cell("7", "days_medicaid", "300"), cell("7", "days_medicaid_nursery", "40"),
+            cell("7", "days_medicaid_labor_delivery", "10")])
+        self.assertEqual(rows["990001"]["medicaid_days_maternity"], Decimal("50"))
+        self.assertEqual(cells.OPERATING_OTHER_INCOME[0], "income_telephone")
+        self.assertEqual(len(cells.OPERATING_OTHER_INCOME), 15)  # lines 8 through 22
 
     def test_a_split_year_adds_flows_and_takes_stocks_from_the_last_period(self):
         rows = self.build([report("8", "990002", end="03/31/2024"), report("9", "990002", "04/01/2024", "09/30/2024")],

@@ -84,6 +84,12 @@ class Labels(unittest.TestCase):
                                                    "settled_share": Decimal("0.8000"), "early": False})
         self.assertTrue(tidy.year_summary(rows + [{"status_label": "as filed"}])["early"])  # 4 of 6
         self.assertTrue(tidy.year_summary([])["early"])
+        # The share is read to a whole percent: 79.86% is 80%, not early; 79.49% is 79%, early (DATA-B-04).
+        def year(settled, of):
+            return tidy.year_summary([{"status_label": "settled"}] * settled +
+                                     [{"status_label": "as filed"}] * (of - settled))
+        self.assertFalse(year(7986, 10000)["early"])
+        self.assertTrue(year(7949, 10000)["early"])
 
     def test_filing_due_by(self):
         # A period beginning 2024-09-30 ends 2025-09-29, not a month's last day: due 150 days later.

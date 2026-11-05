@@ -16,15 +16,15 @@ apart and leaves it blank.
 
 Readers see two labels, not five codes (`STATUS_LABEL`): "settled" once the contractor has settled the report (codes 2
 and 3, and 4, a settled report reopened), "as filed" before that (1, and 5, the hospital's own amended filing). A year
-whose share of settled hospital-years is under EARLY_BELOW is "early" (`year_summary`): settlement moves S-10's
-uncompensated-care figures most, so those pages say so.
+whose share of settled hospital-years, to a whole percent, is under EARLY_BELOW is "early" (`year_summary`):
+settlement moves S-10's uncompensated-care figures most, so those pages say so.
 """
 import datetime
 import re
 from collections import namedtuple
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
-from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, SHEETS_READ
+from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, OPERATING_OTHER_INCOME, SHEETS_READ
 
 RPT_FIELDS = 18
 NMRC_FIELDS = 5
@@ -32,6 +32,7 @@ STATUS = {"1": "as submitted", "2": "settled without audit", "3": "settled with 
           "5": "amended"}
 STATUS_LABEL = {"1": "as filed", "2": "settled", "3": "settled", "4": "settled", "5": "as filed"}
 EARLY_BELOW = Decimal("0.80")  # method constant: a year under 80% settled is "early" on S-10 figures
+EARLY_PLACES = Decimal("0.01")  # the share is read to a whole percent first: 79.86% is 80%, not early (DATA-B-04)
 RATIO_PLACES = Decimal("0.0001")
 # The layer's facility scope, by the CCN's last four digits (CMS's HCRIS facility-numbering table, HCRIS_FACILITY_
 # NUMBERING.csv in HOSPITAL2010-DOCUMENTATION.ZIP): 0001-0879 short-term (general and specialty) hospitals; 1300-1399,
@@ -215,10 +216,12 @@ def hospital_years(reports, values, year, long_rule="fullest"):
 
 def year_summary(rows):
     """{"hospital_years", "settled", "settled_share", "early"} over a year's rows: the share of hospital-years whose
-    values are all settled (4 places), and whether it is under EARLY_BELOW. An empty year is early."""
+    values are all settled (4 places), and whether that share, rounded to a whole percent, is under EARLY_BELOW. An
+    empty year is early."""
     settled = sum(r["status_label"] == "settled" for r in rows)
     share = (Decimal(settled) / len(rows)).quantize(RATIO_PLACES) if rows else Decimal(0)
-    return {"hospital_years": len(rows), "settled": settled, "settled_share": share, "early": share < EARLY_BELOW}
+    early = share.quantize(EARLY_PLACES, rounding=ROUND_HALF_UP) < EARLY_BELOW
+    return {"hospital_years": len(rows), "settled": settled, "settled_share": share, "early": early}
 
 
 def _ratio(num, den):
@@ -238,7 +241,13 @@ FORMULAS = {
     "medicaid_day_share": lambda g: _ratio(g("medicaid_days_all"), g("days_total")),
     "medicare_day_share": lambda g: _ratio(_sum(g("days_medicare"), g("days_medicare_advantage")), g("days_total")),
     "occupancy": lambda g: _ratio(g("days_total"), g("bed_days_available")),
-    "operating_margin": lambda g: _ratio(g("net_income_patients"), g("net_patient_revenue")),
+    "medicaid_days_maternity": lambda g: _sum(g("days_medicaid_nursery"), g("days_medicaid_labor_delivery")),
+    "other_operating_income": lambda g: _sum(*(g(m) for m in OPERATING_OTHER_INCOME)),
+    "patient_margin": lambda g: _ratio(g("net_income_patients"), g("net_patient_revenue")),
+    # Blank lines 8 to 22 count as zero; a blank line 3 or line 5 leaves the margin blank.
+    "operating_margin": lambda g: None if g("net_income_patients") is None or g("net_patient_revenue") is None else
+    _ratio(_sum(g("net_income_patients"), g("other_operating_income")),
+           _sum(g("net_patient_revenue"), g("other_operating_income"))),
     "total_margin": lambda g: _ratio(g("net_income"), _sum(g("net_patient_revenue"), g("other_income"))),
     "medicaid_payment_to_cost": lambda g: _ratio(_sum(g("medicaid_net_revenue"), g("medicaid_supplemental")),
                                                  g("medicaid_cost")),
