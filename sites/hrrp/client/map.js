@@ -2,20 +2,13 @@
 // checkbox turns the dot layer on, a state picked on the map opens its page, and the "Every state" pager shows one page of
 // the table at a time. Without this script the average cut shows, the dots are off and the whole table reads.
 import { placePath } from '../web/links.js';
+import { mountSwitch } from './switch.js';
 
 // The measures and the dots. The controls are hidden in the page; unhiding them is what offers them.
 function mountSwitches(box) {
   const controls = box.querySelector('.usmap__controls');
   if (!controls) return;
-  controls.hidden = false;
-  const buttons = [...controls.querySelectorAll('button[data-measure]')];
-  controls.querySelector('.usmap__modes')?.addEventListener('click', (e) => {
-    const picked = e.target.closest('button[data-measure]');
-    if (!picked) return;
-    for (const b of buttons) b.setAttribute('aria-pressed', String(b === picked));
-    for (const m of box.querySelectorAll('.usmap__m')) m.hidden = m.dataset.measure !== picked.dataset.measure;
-    box.dataset.measure = picked.dataset.measure;
-  });
+  mountSwitch({ box, controls, attr: 'measure', panels: box.querySelectorAll('.usmap__m'), group: controls.querySelector('.usmap__modes') });
   const dots = controls.querySelector('input[data-dots]');
   if (dots) {
     dots.checked = false;

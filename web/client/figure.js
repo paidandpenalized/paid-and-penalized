@@ -42,7 +42,7 @@ export function scrollState(scroll) {
 }
 
 // Each mounted box, { scroll, frame, label, region }, by its scroll box and by its table: what the observer reports.
-const BOXES = new Map();
+const BOXES = new WeakMap();
 let sizes = null;
 
 // Every box's state is read before any box is written, so the page is laid out once, not once per box.
@@ -182,9 +182,12 @@ function mountMarks(fig, svg, live) {
   // touch keeps the tooltip; a tap outside the chart, Escape or a scroll hides it.
   svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide(); });
   svg.addEventListener('blur', hide);
-  document.addEventListener('pointerdown', (e) => { if (current >= 0 && !svg.contains(e.target)) hide(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current >= 0) hide(); });
-  window.addEventListener('scroll', () => { if (current >= 0) hide(); }, { passive: true });
+  // The page-wide listeners go when a script redraws the figure and this drawing leaves the page (the first event after, by any of them).
+  const gone = new AbortController();
+  const onPage = (fn) => (e) => { if (!svg.isConnected) gone.abort(); else fn(e); };
+  document.addEventListener('pointerdown', onPage((e) => { if (current >= 0 && !svg.contains(e.target)) hide(); }), { signal: gone.signal });
+  document.addEventListener('keydown', onPage((e) => { if (e.key === 'Escape' && current >= 0) hide(); }), { signal: gone.signal });
+  window.addEventListener('scroll', onPage(() => { if (current >= 0) hide(); }), { passive: true, signal: gone.signal });
   svg.addEventListener('keydown', (e) => {
     const step = STEPS[e.key];
     let i;

@@ -3,7 +3,6 @@
 // the first hospital is picked; the waterfall under the sheet (figures/waterfall.js) is drawn again from the same rows.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
 import { mountFigure, mountScroll } from '../../../web/client/figure.js';
-import { buildIndex } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { CCN } from '../../../engine/js/ccn.js';
@@ -12,8 +11,7 @@ import { hospitalOf } from '../web/figures/worksheet-data.js';
 import { estimateTag } from '../web/pages/parts.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
 import { worksheetHtml, worksheetRows } from '../web/worksheet.js';
-import { hospitalEntries, searchWords } from './search.js';
-import { loadHospitals } from './hospitals.js';
+import { loadIndex, searchWords } from './search.js';
 
 const loadSheets = once(async (src) => {
   const res = await fetch(src);
@@ -25,7 +23,7 @@ const loadSheets = once(async (src) => {
 // The sheet and the waterfall for the hospital with this CCN, as markup: worksheetHtml and waterfallFigure over worksheetRows, the
 // ones the page was built with (n: the waterfall's figure number). The title bar's right side and the dollars line's words are read
 // from the sheet already on the page. null for a CCN not in the asset.
-export function sheetFor(data, ccn, { edition, conditions, payShort }, n) {
+function sheetFor(data, ccn, { edition, conditions, payShort }, n) {
   const row = data.rows.get(ccn.toLowerCase());
   if (!row) return null;
   const rows = worksheetRows(hospitalOf(row), data.meta);
@@ -46,7 +44,6 @@ export function mountWorksheet() {
   status.hidden = true;
   status.setAttribute('role', 'status');
   form.after(status);
-  const load = once((src) => loadHospitals(src).then((data) => buildIndex(hospitalEntries(data))));
   const pick = async (href) => {
     const ccn = href.replace(/\/$/, '').split('/').pop();
     try {
@@ -66,5 +63,5 @@ export function mountWorksheet() {
       status.hidden = false;
     }
   };
-  mountOmnibox(form, { load: () => load(form.dataset.src), words: searchWords(), open: pick });
+  mountOmnibox(form, { load: () => loadIndex(form.dataset.src), words: searchWords(), open: pick, types: ['hospital'] });
 }
