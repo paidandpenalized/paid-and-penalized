@@ -90,6 +90,7 @@ class Labels(unittest.TestCase):
                                      [{"status_label": "as filed"}] * (of - settled))
         self.assertFalse(year(7986, 10000)["early"])
         self.assertTrue(year(7949, 10000)["early"])
+        self.assertTrue(year(15899, 20000)["early"])  # 79.495%: 79%, though its 4-place share reads 0.7950
 
     def test_filing_due_by(self):
         # A period beginning 2024-09-30 ends 2025-09-29, not a month's last day: due 150 days later.
