@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { scopeFilter } from '../../../engine/js/hrrp/filters.js';
 import { buildPlaces } from '../web/places.js';
 import { loadHrrpOnce } from './fixtures.js';
+import { hospitalPathOf } from '../../../web/site.js';
 import { csvPath, hospitalPath, placePath, PROGRAM_PATH, DOLLARS_HREF } from '../web/links.js';
 
 const { hospitals, meta } = loadHrrpOnce();
@@ -18,6 +19,10 @@ test('paths', () => {
   assert.equal(csvPath(2027, 'x'), '/data/hrrp/fy2027/x.csv');
   assert.equal(DOLLARS_HREF, '/hrrp/methods/#methods-dollars');
   assert.throws(() => placePath('county', 'x'), RangeError);
+});
+
+test("the site's hospital address and the shared registry's agree for every hospital in the data", () => {
+  for (const h of hospitals) assert.equal(hospitalPath(h.id), hospitalPathOf('hrrp', h.id, { inTdr: true }), 'one address');
 });
 
 test('the places on the data', () => {

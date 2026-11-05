@@ -4,6 +4,7 @@
 import { CONDS, contrib, cutPct } from '../../../engine/js/hrrp/formula.js';
 import { mean } from '../../../engine/js/stats.js';
 import { capitalize, placeText, spelled } from '../../../web/render/format.js';
+import { EXAMPLE_MIN_BEDS, EXAMPLE_MIN_FLAGS } from './constants.js';
 import { fill } from './copy.js';
 import { fmtDate } from './numbers.js';
 
@@ -69,7 +70,7 @@ export function meanCutByYear(list, years, paf) {
 // A typical, readable example hospital: penalized, mid-size, several conditions flagged, and of those the median cut.
 // list: hospitals with withDerived()'s flags. The first hospital when none fits.
 export function exampleHospital(list) {
-  const fits = list.filter((h) => h.flags.length >= 3 && h.beds >= 150 && h.paf < 1).sort((a, b) => a.red - b.red);
+  const fits = list.filter((h) => h.flags.length >= EXAMPLE_MIN_FLAGS && h.beds >= EXAMPLE_MIN_BEDS && h.paf < 1).sort((a, b) => a.red - b.red);
   return fits[Math.floor(fits.length / 2)] ?? list[0];
 }
 

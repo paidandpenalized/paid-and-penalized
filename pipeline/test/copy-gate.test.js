@@ -78,7 +78,7 @@ for (const file of copyFiles()) {
 const registerText = (site) => readFileSync(new URL(`../../sites/${site}/CLAIMS.md`, import.meta.url), 'utf8');
 const registerRows = (site) => registerText(site)
   .split('\n')
-  .filter((line) => line.startsWith(`| ${CLAIM_PREFIX[site]}-`))
+  .filter((line) => new RegExp(`^\\|\\s*${CLAIM_PREFIX[site]}-`).test(line))
   .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
 
 // Every claim id a site uses: copy entries in its own copy files and in the shared ones, and its method constants.

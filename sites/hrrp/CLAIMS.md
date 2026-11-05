@@ -40,8 +40,8 @@ A claim marked `unverified` may not be used in copy.
 - **HRRP-07** is a table in the Federal Register; the HTML page shows it as an image, so the figure was read from the
   govinfo PDF of the same document (page 50423, "FY 2027 Estimates for New Technology Add-on Payments", rows for
   technologies continuing, alternative pathway and traditional pathway, $840,505,708.21 + $417,734,075.01 + $481,475,962.50).
-  It is CMS's upper bound: each estimate assumes every qualifying claim gets the maximum add-on. The site's "about 2%"
-  (`NTAP_SHARE`) is this site's ratio of that total to the modeled base, not CMS's figure.
+  It is CMS's upper bound: each estimate assumes every qualifying claim gets the maximum add-on. The total is the
+  only figure the row supports; a share of the modeled base is computed from the data where a page needs it.
 - **HRRP-08** is Pub. 100-19, Transmittal 12622 (change request 13595, May 2, 2024); the same source as HACRP-93. The
   constant drops out of later editions after the date passes.
 - **HRRP-09** is the CMS program page's own sentence; the regulation is 42 CFR 412.154(c)(2)(iii). The site's `CAP`
