@@ -7,6 +7,7 @@ import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
+import { fillCopy } from '../web/render/components.js';
 import { count } from '../web/render/format.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink } from '../web/render/layout.js';
@@ -21,7 +22,6 @@ import { hospitalPage } from './hospital/page.js';
 import { hacCounts, stateTotals, storyFacts } from './model.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
-import { t as readmissionsT } from '../sites/hrrp/web/program/copy.js';
 
 const PATH = /^\/[a-z0-9/-]*$/;
 
@@ -136,7 +136,7 @@ function notFound(assets, robots) {
 <header class="page__head">
 <h1>${COPY.notFoundTitle}</h1>
 <p class="dek">${COPY.notFoundBody}</p>
-<p class="note">${readmissionsT('notInProgram')}</p>
+<p class="note">${fillCopy(SHARED, 'notInHrrp')}</p>
 </header>
 <ul class="links" role="list">
 <li><a href="/">${COPY.notFoundHome}</a></li>

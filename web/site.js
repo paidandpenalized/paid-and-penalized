@@ -76,9 +76,8 @@ export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.
 // front page's directory and a hospital page's link say so).
 export const underConstruction = (p) => p.stage === 'soon' && p.inData;
 
-// The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' (that site's
-// hospital pages) or 'hrrp' (that site's hospital pages), each under its program's folder; null for any other program,
-// which has none yet.
+// The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' or 'hrrp'
+// (that site's hospital pages, under its program's folder); null for any other program, which has none yet.
 export function hospitalFolderOf(programId) {
   if (programId === 'hub') return '/hospital/';
   return programId === 'hacrp' || programId === 'hrrp' ? `${programById(programId).path}hospital/` : null;
@@ -86,8 +85,8 @@ export function hospitalFolderOf(programId) {
 
 // The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: a hospital
 // in the dollar file (inHub, as every hospital the hub's pages and data hold is) has a hub page and a HACRP page, and one
-// Thirty Day Readmissions has (inTdr, which the hub marks from that site's pinned file) a Readmissions page, which the
-// Readmissions site writes for every one of them. Folders are lowercase, so the CCN is too.
+// Thirty Day Readmissions has (inTdr, which the hub marks from that site's pinned file) a Readmissions page: the
+// Readmissions site writes a page for every hospital in its data file, which holds all of them. Folders are lowercase, so the CCN is too.
 export function hospitalPathOf(programId, ccn, { inTdr = false, inHub = true } = {}) {
   const folder = hospitalFolderOf(programId);
   return folder && (programId === 'hrrp' ? inTdr : inHub) ? `${folder}${ccn.toLowerCase()}/` : null;

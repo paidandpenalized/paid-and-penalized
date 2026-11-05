@@ -69,7 +69,7 @@ export const shellOf = ({ fy, current = null, searchUrl = null, hospital = null 
 // The hospital a HACRP hospital page's header follows (render/shell.js familyHeader): its CCN and name, its estimated net
 // from the dollar estimates (money: money.js hospitalMoney; null without an estimate) and whether Thirty Day
 // Readmissions has it (master: its hospital master record, whose Readmissions membership is read from that site's
-// pinned file). The header's Readmissions tab opens the hospital's interim Readmissions page when it has one, else the
+// pinned file). The header's Readmissions tab opens the hospital's Readmissions page when it has one, else the
 // program's folder (which the shell's script points at the hospital); the chip's name and All programs open its page
 // across the programs.
 export const followed = ({ view, money, master }) => ({

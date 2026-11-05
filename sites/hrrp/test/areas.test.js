@@ -9,12 +9,12 @@ import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { placePage } from '../web/pages/place.js';
 import { programPage } from '../web/pages/program.js';
-import { loadHrrp } from '../web/data.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { buildPlaces } from '../web/places.js';
-import { t as programT } from '../web/program/copy.js';
+import { COPY as SHARED } from '../../../web/copy.js';
+import { fillCopy } from '../../../web/render/components.js';
 import { areaContext, methodsView, placeView, programView } from '../web/view.js';
-import { ALL, META, areaOf, hospital } from './fixtures.js';
+import { ALL, META, areaOf, hospital, loadHrrpOnce } from './fixtures.js';
 
 const area = areaOf();
 const program = (ctx = area) => programPage({ view: programView(ctx), robots: null, assets: ASSETS });
@@ -137,11 +137,11 @@ test('hostile text in a place name is escaped', () => {
 });
 
 test('the 404 line is a Readmissions sentence with no digit (the family 404 page prints it: hub/test/pages.test.js)', () => {
-  assert.equal(programT('notInProgram'), 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system. A hospital paid another way is not in it, and has no page here.');
+  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system. A hospital paid another way is not in it, and has no page here.');
 });
 
 // On the data.
-const DATA = loadHrrp();
+const DATA = loadHrrpOnce();
 const PLACES = buildPlaces(DATA.hospitals, DATA.meta);
 const DATA_AREA = areaContext({ ...DATA, places: PLACES });
 

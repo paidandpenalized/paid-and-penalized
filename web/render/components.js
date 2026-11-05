@@ -42,8 +42,10 @@ export function lastCall(keyOf, fn) {
   };
 }
 
-// A copy object whose entries are plain strings, typeset once (for copy read directly, not through fillCopy).
-export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy).map(([k, v]) => [k, typeset(v)])));
+// A copy object whose entries are plain strings (or { text, claim }, for a sentence that cites the claims register),
+// typeset once (for copy read directly, not through fillCopy).
+export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy)
+  .map(([k, v]) => [k, typeof v === 'string' ? typeset(v) : { ...v, text: typeset(v.text) }])));
 
 // copy[key] (a string, or { text, claim }), typeset, with each {placeholder} replaced. Values must be strings (format numbers
 // first); a placeholder with no value, or a value with no placeholder, throws. plain: leave the text untypeset (a

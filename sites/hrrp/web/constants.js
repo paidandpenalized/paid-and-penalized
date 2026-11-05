@@ -26,6 +26,10 @@ export const CLAIMS = {
   PARHM_END: 'HRRP-08',
 };
 
+// What the copy gate reads: the prefix of this site's claim ids, and the method constants it checks (name and type).
+export const CLAIM_PREFIX = 'HRRP';
+export const METHOD_CONSTANTS = Object.freeze({ NTAP_TOTAL: 'string', NTAP_SHARE: 'number', PARHM_END: 'string' });
+
 // Care Compare rates hospitals from one star to this many (CMS's overall rating scale); the record card shows the rating as filled and empty stars.
 export const STARS_MAX = 5;
 

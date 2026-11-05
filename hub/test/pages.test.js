@@ -16,7 +16,6 @@ import { hacCounts, hubHospitals } from '../model.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
-import { t as readmissionsT } from '../../sites/hrrp/web/program/copy.js';
 import { hubSearchForm } from '../search/form.js';
 
 const NOINDEX = '<meta name="robots" content="noindex">';
@@ -74,7 +73,7 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
-    assert.ok(notFound.includes(readmissionsT('notInProgram')), 'the line on who is not in the Readmissions program');
+    assert.ok(notFound.includes(fillCopy(SHARED, 'notInHrrp')), 'the line on who is not in the Readmissions program');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));

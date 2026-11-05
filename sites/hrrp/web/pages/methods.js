@@ -3,7 +3,8 @@
 // decimals) and the replication sentence, the dollar estimate's method (the section every estimate tag links to), how to
 // read a penalty, places, history, the family's pages on feedback and privacy, then the sources and a short glossary
 // beside them. The assumptions behind the dollars, the checks drawn and the full glossary come in a later batch.
-import { fillAround } from '../../../../web/render/components.js';
+import { COPY as SHARED } from '../../../../web/copy.js';
+import { fillAround, fillCopy } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -46,7 +47,7 @@ ${section('read', t('readHeading'), html`<ul>
 <li>${t('readRelative')}</li>
 <li>${view.small}</li>
 <li>${view.window}</li>
-<li>${t('notInProgram')}</li>
+<li>${fillCopy(SHARED, 'notInHrrp')}</li>
 </ul>`)}
 ${section('places', t('placesHeading'), html`<p>${t('placesText')}</p>`)}
 ${section('history', t('historyHeading'), html`<p>${view.history}</p>`)}

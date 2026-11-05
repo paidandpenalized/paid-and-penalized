@@ -1,6 +1,5 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/home.js and views/methods.js at 33d1959).
-// The Readmissions program page's words: the hero, the At-a-glance card, the Parts' headings, and the line on who is
-// not in the program (the family's 404 page carries it too). No digit characters: every number arrives through a
+// The Readmissions program page's words: the hero, the At-a-glance card and the Parts' headings. No digit characters: every number arrives through a
 // {placeholder}. A sentence that states a program rule carries the claim id of its row in sites/hrrp/CLAIMS.md.
 import { copyOf } from '../../../../web/render/components.js';
 import { COPY as SITE } from '../copy.js';
@@ -47,12 +46,6 @@ export const COPY = {
 
   // The Parts the section menu opens (their figures come with the batches that draw them).
   partTag: { text: 'Part {n}', claim: null },
-
-  // Who is not in the program: the family's 404 page carries this line too (hub/pages.js).
-  notInProgram: {
-    text: 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system. A hospital paid another way is not in it, and has no page here.',
-    claim: 'HRRP-11',
-  },
 };
 
 export const { fill, fillKeep, t } = copyOf(COPY, SITE);
