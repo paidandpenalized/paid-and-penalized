@@ -283,6 +283,92 @@ dollars })`.
 
 ---
 
+## Milestone 2b: the review of the built pages, and the picked figures (added 2026-11-05)
+
+The built pages were reviewed against the old site (https://thirty-day-readmissions.vercel.app) on 2026-11-05 and a
+form was picked for each new figure (design note § Figures, amended). The rule under every item: where the old site
+had a form, port it before inventing one, and compare each part with its old-site twin before calling it done
+(the program page's Parts at `/`, a hospital at `#hospital-330023`, a state at `#state-ny`).
+
+Browser behavior: the switches and search boxes below are built now, as HRRP's first client entries on the HACRP
+pattern (`sites/hacrp/client/`, the family's `web/client/`), each a progressive enhancement: without the script the
+page shows the default view and reads whole. Their browser checks stay with the next step's e2e work.
+
+Visual check for every task here: `make build`, `node pipeline/site/serve.js`, then the old and new parts side by
+side at 1280 and 360, light and dark (`.superpowers/run3/vshot.mjs <url> <width> <out.png> <selector> [theme]
+[height]`, `.superpowers/run3/elshot.mjs`), no sideways scroll (`.superpowers/overflow2.mjs`) and no console errors.
+
+### Task 28: Program page fixes, hero to Worksheet R (Sonnet)
+
+- [ ] Hero: the old site's title section, the same look: h1 "Thirty Day Readmissions" set as the old site sets it
+      (two lines, the second in the penalty ink); the program tab keeps "Readmissions"; the family search box back in
+      the title section, under the deck, with its hint line (the design note promised it); the At-a-glance header on
+      one line as the old site's. Search works through the family search client.
+- [ ] How it works: "New for <FY>" and "Who is in the program" the same height; their source notes collapse into one
+      small "Sources" disclosure (the claims stay in CLAIMS.md; the copy gate still passes).
+- [ ] Fig. 1 (punch card): its notes no longer take the right column's height: trim them, shrink them, or move them
+      under the chart in the left column.
+- [ ] Fig. 2 (dual-share columns): each peer group's columns carry the group's color (family tokens), keyed, so which
+      columns fall in which group is obvious; the band labels read "Group 1" … "Group 5" at every width.
+- [ ] Step 4: the peer-group medians table is in the HTML but does not show (blank right column at 1280). Find why,
+      fix it, and add a layout test that fails on the bug. It should look like the old site's Fig. 4.
+- [ ] Step 5: Worksheet R full width (no sideways scroll at desktop or phone), with the old site's hospital search box
+      above it that swaps the worksheet's hospital (the browser recomputes the worksheet with `worksheet.js` from a
+      data asset loaded on first use; without the script the default hospital shows).
+- [ ] Tests for each; HACRP and the hub byte-identical. Commit.
+
+### Task 29: Map and Research Parts (Sonnet)
+
+- [ ] Map: replicate the old site's "Where the penalties land" (its Figs. 11–13): the full-width state map, the
+      four-measure switch as buttons and the "Show hospitals" toggle above it, the legend as labeled swatches under it
+      with Maryland hatched, the source line; "Every state" and "Browse by region" in the old site's layout. Keep this
+      site's numbers, words and table; keep the no-JS default (average cut).
+- [ ] Research: a section of its own kind: the findings in several columns at desktop (one on phones), smaller text if
+      needed, each theme a column head.
+- [ ] Tests; HACRP and the hub byte-identical. Commit.
+
+### Task 30: History totals for FY2024 and FY2026 (Sonnet, web research)
+
+- [ ] Search for a primary-source estimated total for FY2024 and for FY2026 (CMS's final-rule regulatory impact
+      tables and press materials first, then KFF Health News as for FY2022–FY2023). Add each one found with its
+      source, kind and URL to the totals the history figure reads (a reason on record if an emitted file changes);
+      otherwise the figure's words list the year as having no published total. Report what was found and where.
+- [ ] Tests; commit.
+
+### Task 31: Part `how` figures drawn (Sonnet; Opus reviewer)
+
+- [ ] Step 2 [S2-09]: the swarm for each of the six conditions on `howData().swarm`, the condition switch (heart
+      failure first), the line named as the peer median, the ±0.01 lens with its counts in words, the closest gap at 4
+      decimals, the example hospital's ▲; the phone form. The kit's `scoreSwarm` lens must hold ±0.01 at heart
+      failure's density (fix in the kit, HACRP byte-identical).
+- [ ] Step 5 [WF-12]: the waterfall beside Worksheet R: `web/charts/waterfall.js` gains a zoom/domain option and a
+      wider label column (HACRP byte-identical); the zoomed rows, each zero row's reason, the sum on the 0–3% scale
+      against the cap, the beams; the takeaway variants.
+- [ ] Drawing reference: `.superpowers/figure-options/figs/swarm.mjs` (S2-09) and `waterfall-b.mjs` (WF-12), not code
+      to copy. Tests; commit.
+
+### Task 32: Part `picture` figures drawn (Sonnet)
+
+- [ ] The size of the cuts in the Step 2 swarm form; conditions measured [CF-11 without the coin-flip line or any
+      words about it]; penalties by peer group (the old site's strip plot, ported, its takeaway carrying the share-cut
+      range and the lowest-dual group's share); penalties by hospital type [TD-10, the traits as groups]; which
+      conditions cost the most [PB-02, kit `pairBars`].
+- [ ] Each on its tested `figures/picture-data.js` function; reference modules in `.superpowers/figure-options/figs/`.
+      Tests; commit.
+
+### Task 33: History figure drawn [HI-09] (Sonnet)
+
+- [ ] The share-cut line large with each rule change written at its point; the average cut and the estimated totals
+      (Task 30's) small beside it; family colors, the penalty ink keeping its meaning; the COVID years shaded; the
+      phone form. Reference `.superpowers/figure-options/figs/history-forms.mjs`. Tests; commit.
+
+### Checkpoint M2b (main thread)
+
+- [ ] `/simplify`, `make test`, `/code-review`, `/security-review`; fix and repeat until clean. Visual review at 360
+      and 1280, light and dark, against the old site.
+
+---
+
 ## Milestone 3: hospital and place figures
 
 ### Task 13: Hospital figures (Sonnet; Opus reviewer for the what-if numbers)
@@ -295,6 +381,9 @@ dollars })`.
       the percentile by year, with "the measure changed" on FY2027; the full worksheet in a `<details>`; neighbors
       (more than one only, current row marked, cut descending, its CSV) with the nearby map.
 - [ ] Implement with `ruler`, `web/whatif/render.js` `renderWhatIf`, `rankYears`, `areaMap`. Run → PASS. Commit.
+- [ ] Amended 2026-11-05: the rulers are the picked form [RU-02], each on its own peer group's scale. The page carries the
+      old site's figures (where the penalty came from, the what-if calculator, penalty history, other hospitals in the
+      metro area with the nearby map) alongside the rulers; compare with the old site's `#hospital-330023`.
 
 ### Task 14: Place figures (Sonnet)
 
@@ -304,6 +393,10 @@ dollars })`.
       unlinked; none on metro pages) and its CSV; the hospitals table shell with the state filter only when the
       place spans states.
 - [ ] Implement with `placeMap`, `compareHist`, `smallLines`. Run → PASS. Commit.
+- [ ] Amended 2026-11-05: a state page carries every figure the old state page had (hospitals on the map, size of the
+      cuts, which conditions drive the penalties here, peer groups, average cut over time, metro areas) in its look;
+      compare with the old site's `#state-ny`. The child table's CSV and the area's hospitals CSV are listed in the
+      data dictionary.
 
 ### Checkpoint M3 (main thread)
 
