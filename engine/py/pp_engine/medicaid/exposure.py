@@ -66,14 +66,24 @@ def nonmaternity_ratio(bases):
     return nonmat / every if every > 0 else None
 
 
-def share_factor(base, state_ratio):
-    """The hospital's non-maternity Medicaid day share over its state's: what its state's VIII share is scaled by. 1
-    (the state share unchanged) when the hospital has no Medicaid days, fewer than params.MIN_MEDICAID_DAYS, or the
-    state has no ratio."""
+def few_medicaid_days(days):
+    """Whether a hospital's Medicaid days (medicaid_days) are too few for its own maternity split (the floor)."""
+    return days is not None and days[0] < params.MIN_MEDICAID_DAYS
+
+
+def raw_share_factor(base, state_ratio):
+    """The hospital's non-maternity Medicaid day share over its state's, before the day-count floor; 1 when the
+    hospital has no Medicaid days or the state has no ratio."""
     d = base["medicaid_days"]
-    if d is None or d[0] < params.MIN_MEDICAID_DAYS or not state_ratio:
+    if d is None or not state_ratio:
         return 1.0
     return (d[1] / d[0]) / state_ratio
+
+
+def share_factor(base, state_ratio):
+    """What its state's VIII share is scaled by: raw_share_factor, or 1 (the state share unchanged) below
+    params.MIN_MEDICAID_DAYS Medicaid days."""
+    return 1.0 if few_medicaid_days(base["medicaid_days"]) else raw_share_factor(base, state_ratio)
 
 
 def hospital_share(state_share, factor):
@@ -134,7 +144,7 @@ def hospital_base(row):
     base["medicaid_days"] = medicaid_days(base)
     if base["medicaid_days"] is None:
         flags.append("no_medicaid_days")
-    elif base["medicaid_days"][0] < params.MIN_MEDICAID_DAYS:
+    elif few_medicaid_days(base["medicaid_days"]):
         flags.append("few_medicaid_days")
     # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
