@@ -219,8 +219,9 @@ def year_summary(rows):
     values are all settled (4 places), and whether that share, rounded to a whole percent, is under EARLY_BELOW. An
     empty year is early."""
     settled = sum(r["status_label"] == "settled" for r in rows)
-    share = (Decimal(settled) / len(rows)).quantize(RATIO_PLACES) if rows else Decimal(0)
-    early = share.quantize(EARLY_PLACES, rounding=ROUND_HALF_UP) < EARLY_BELOW
+    exact = Decimal(settled) / len(rows) if rows else Decimal(0)
+    share = exact.quantize(RATIO_PLACES)
+    early = exact.quantize(EARLY_PLACES, rounding=ROUND_HALF_UP) < EARLY_BELOW  # from the exact share: rounded once
     return {"hospital_years": len(rows), "settled": settled, "settled_share": share, "early": early}
 
 
