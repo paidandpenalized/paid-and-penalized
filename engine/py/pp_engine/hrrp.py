@@ -14,7 +14,7 @@ import re
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
-from pp_engine.dollars import MDH_END, MDH_SHARE
+from pp_engine.dollars import MDH_END, MDH_SHARE, hsp_payment
 from pp_engine.hrrp_read import CONDITIONS
 
 
@@ -78,11 +78,10 @@ def est_base_payment(imp, rates):
 
 def est_mdh_addon(imp, federal, share):
     """Medicare-dependent hospital add-on to the base (42 CFR 412.152, 412.108): 75% of the amount by which the
-    hospital-specific-rate payment (HSP rate x CMI x cases, the federal estimate's cases and CMI) exceeds the federal
-    payment, times `share`, the fraction of the fiscal year the hospital keeps MDH status. 0 without an HSP rate."""
-    if federal is None or not imp.get("hsp"):
-        return 0.0
-    return MDH_SHARE * max(0.0, imp["hsp"] * imp["cmi"] * imp["cases"] - federal) * share
+    hospital-specific-rate payment (`dollars.hsp_payment`, on `cmi_hsp`) exceeds the federal payment, times `share`,
+    the fraction of the fiscal year the hospital keeps MDH status. 0 without an HSP rate or its case mix."""
+    hsp = hsp_payment(imp.get("hsp"), imp) if federal is not None and imp.get("cmi_hsp") is not None else None
+    return 0.0 if hsp is None else MDH_SHARE * max(0.0, hsp - federal) * share
 
 
 def est_penalty(base, paf):

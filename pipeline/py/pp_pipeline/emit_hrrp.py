@@ -33,7 +33,7 @@ PROVENANCE = "hrrp-history-provenance"  # how the history was built and checked:
 OWN_SOURCES = (SUPPLEMENTAL, TABLE15, emit_hospital.IMPACT, RATES, emit_hospital.HGI, HISTORY, SUMMARY, PROVENANCE,
                TOTALS, DOLLAR_CHECK)
 SOURCES = OWN_SOURCES + tuple(s for s in emit_hospital.SOURCES if s not in OWN_SOURCES)
-SCHEMA_VERSION, METHODS_VERSION = 1, 1
+SCHEMA_VERSION, METHODS_VERSION = 1, 2
 SCHEMA = "hrrp.schema.json"
 
 SUPP_XLSX = "FY2027_HRRP_Supplemental_File.xlsx"

@@ -121,11 +121,11 @@ def _rate_pair(inp, rates):
     return rates["operating"]["1A" if inp["wi"] > 1 else "1B"][rate_key(inp["quality"], inp["ehr"])]
 
 
-def _hsp_payment(rate, inp):
+def hsp_payment(rate, inp):
     """What the hospital-specific rate would pay for the year's cases, or None when there is no usable rate.
-    ASSUMPTION: a blank or zero rate is "no usable rate" (the file has zero in three rows). The comparison uses CMIV43
-    (`cmi_hsp`), which the impact file's README says applies to hospitals paid on their hospital-specific rate, and the
-    same transfer-adjusted `cases` as the federal side."""
+    ASSUMPTION: a blank or zero rate is "no usable rate" (the file has zero in three rows). The comparison uses
+    CMIV<grouper> (`cmi_hsp`), which the impact file's README says applies to hospitals paid on their hospital-specific
+    rate, and the same transfer-adjusted `cases` as the federal side."""
     if _missing(rate):
         return None
     return rate * inp["cmi_hsp"] * inp["cases"]
@@ -213,7 +213,7 @@ def _parts(inp, rates):
     # Medicare-dependent hospital: F plus 75% of the amount by which its (updated) hospital-specific payment exceeds F,
     # never negative. The extension ran through all of FY2026 (hence the FY2025-extension columns) and all of FY2024.
     mdh_addon = 0.0
-    hsp_mdh = _hsp_payment(inp["hsp_mdh"], inp) if inp["mdh"] else None
+    hsp_mdh = hsp_payment(inp["hsp_mdh"], inp) if inp["mdh"] else None
     if hsp_mdh is not None:
         mdh_addon = MDH_SHARE * max(0.0, hsp_mdh * _mdh_factor(inp, rates) - federal_operating)
 
@@ -223,7 +223,7 @@ def _parts(inp, rates):
     # (HACRP-92), and the cost report settles it on the period's totals, so the comparison here is made once, on the
     # year's totals, as the rule makes it.
     sch_diff = 0.0
-    hsp_sch = _hsp_payment(inp["hsp"], inp) if inp["sch"] else None
+    hsp_sch = hsp_payment(inp["hsp"], inp) if inp["sch"] else None
     if hsp_sch is not None:
         sch_diff = max(0.0, hsp_sch - federal_operating)
 

@@ -1,6 +1,7 @@
 """The Readmissions data's goldens: a fresh build from the pins equals the committed file, and its body equals Thirty Day
 Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every field. The pinned site file is the
-reference until the FY2028 refresh."""
+reference until the FY2028 refresh. Since methods_version 2 the MDHs' base and pen differ by design (MDH case mix;
+`docs/METHODS-LOG.md`), and a test proves that is the only difference."""
 import copy
 import functools
 import io
@@ -16,11 +17,48 @@ from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, requi
 # meta keys the emitted file sets differently on purpose: `sources` names the manifest's pins; `whatsNew` is page copy,
 # kept with the site's content.
 META_DIFFERS = ("sources", "whatsNew")
+# What the MDH case mix (methods_version 2) moves: an MDH's base and penalty, and the national totals of both.
+MDH_FIELDS = ("base", "pen")
+TOTALS_DIFFER = ("modelBase", "modelPen")
 
 
 @functools.lru_cache(maxsize=None)
 def fresh():
     return emit_hrrp.build_from_pins("2000-01-01T00:00:00Z")
+
+
+@functools.lru_cache(maxsize=None)
+def fresh_with_the_sites_case_mix():
+    """A build whose MDH add-on uses the transfer-adjusted case mix, as Thirty Day Readmissions' does."""
+    real = emit_hrrp.read_inputs
+
+    def inputs():
+        got = real()
+        return {**got, "impact": {c: {**r, "cmi_hsp": r["cmi"]} for c, r in got["impact"].items()}}
+    with mock.patch.object(emit_hrrp, "read_inputs", inputs):
+        return emit_hrrp.build_from_pins("2000-01-01T00:00:00Z")
+
+
+@functools.lru_cache(maxsize=None)
+def mdh_ids():
+    return {h["id"] for h in fresh()["hospitals"] if "MDH" in h["types"]}
+
+
+def differences(mine, theirs):
+    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs."""
+    a, b = {h["id"]: h for h in mine}, {h["id"]: h for h in theirs}
+    return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
+            for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
+
+
+def assert_none(test, diffs):
+    test.assertEqual(diffs, [], f"{len(diffs)} differences:\n" + "\n".join(d[2] for d in diffs[:30]))
+
+
+def without(meta, totals=()):
+    out = {k: v for k, v in meta.items() if k not in META_DIFFERS}
+    out["totals"] = {k: v for k, v in out["totals"].items() if k not in totals}
+    return out
 
 
 @functools.lru_cache(maxsize=None)
@@ -34,21 +72,32 @@ class Golden(unittest.TestCase):
         self.assertEqual({**fresh(), "built_at": None}, {**committed, "built_at": None},
                          "the committed file is not what the pins build: run `make emit`")
 
-    def test_meta_equals_the_site_file(self):
-        want = {k: v for k, v in site()["meta"].items() if k not in META_DIFFERS}
-        self.assertEqual({k: v for k, v in fresh()["meta"].items() if k not in META_DIFFERS}, want)
+    def test_meta_equals_the_site_file_but_the_totals_the_mdh_case_mix_moves(self):
+        self.assertEqual(without(fresh()["meta"], TOTALS_DIFFER), without(site()["meta"], TOTALS_DIFFER))
 
     def test_conditions_and_history_equal_the_site_file(self):
         self.assertEqual(fresh()["conditions"], site()["conditions"])
         self.assertEqual(fresh()["history"], site()["history"])
 
-    def test_every_hospital_equals_the_site_file(self):
-        mine = {h["id"]: h for h in fresh()["hospitals"]}
-        theirs = {h["id"]: h for h in site()["hospitals"]}
-        self.assertEqual(sorted(mine), sorted(theirs))
-        diffs = [f"{c} {k}: {mine[c].get(k)!r} vs {h.get(k)!r}" for c, h in sorted(theirs.items())
-                 for k in sorted(set(h) | set(mine[c])) if mine[c].get(k, "absent") != h.get(k, "absent")]
-        self.assertEqual(diffs, [], f"{len(diffs)} differences:\n" + "\n".join(diffs[:30]))
+    def test_every_hospital_equals_the_site_file_but_the_mdhs_base_and_penalty(self):
+        self.assertEqual(sorted(h["id"] for h in fresh()["hospitals"]), sorted(h["id"] for h in site()["hospitals"]))
+        diffs = differences(fresh()["hospitals"], site()["hospitals"])
+        assert_none(self, [d for d in diffs if not (d[0] in mdh_ids() and d[1] in MDH_FIELDS)])
+
+
+class MdhCaseMix(unittest.TestCase):
+    """methods_version 2: the MDH case mix is the only difference from the site file."""
+
+    def test_with_the_sites_case_mix_every_hospital_and_the_meta_equal_the_site_file(self):
+        theirs = site()
+        mine = fresh_with_the_sites_case_mix()
+        assert_none(self, differences(mine["hospitals"], theirs["hospitals"]))
+        self.assertEqual(without(mine["meta"]), without(theirs["meta"]))
+
+    def test_the_hsp_case_mix_moves_some_mdhs_and_nothing_else(self):
+        moved = {c for c, _, _ in differences(fresh()["hospitals"], site()["hospitals"])}
+        self.assertTrue(moved, "no MDH changed: is the add-on still on the transfer-adjusted case mix?")
+        self.assertLessEqual(moved, mdh_ids())
 
     def test_meta_sources_name_every_pin(self):
         ids = [s["id"] for s in fresh()["meta"]["sources"] if "id" in s]
