@@ -23,6 +23,7 @@ export const COPY = {
   deckMid: { text: ' CMS evaluated take a cut. ', claim: null },
   deckShare: { text: 'That is {pct} of the {nMeasured} hospitals measured on at least one condition.', claim: null },
   heroTry: { text: 'Try {state}, {metro}, or {every}. New to this? Start with {how}.', claim: null },
+  heroTryNoMetro: { text: 'Try {state}, or {every}. New to this? Start with {how}.', claim: null },
   heroEvery: { text: 'browse every hospital', claim: null },
   heroHow: { text: 'how the penalty works', claim: null },
 

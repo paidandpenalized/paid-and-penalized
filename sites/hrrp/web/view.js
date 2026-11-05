@@ -1,8 +1,9 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/hospital.js, views/columns.js and ui/breadcrumb.js at 33d1959).
-// One hospital's page data: the record card's fields, the stamps, the verdict and rank sentences, the breadcrumb,
+// The Readmissions pages' data: a hospital's record card, stamps, verdict and rank sentences and breadcrumb; the program
+// page's hero and card; a place's deck and card; Methods' filled sentences,
 // as plain strings (pages escape them). Pure.
 import { TEACH_LABEL, slug } from '../../../engine/js/hrrp/filters.js';
-import { CAP_PCT, PEERS } from '../../../engine/js/hrrp/formula.js';
+import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS } from '../../../engine/js/hrrp/formula.js';
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
@@ -16,7 +17,6 @@ import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
 import { fill as siteFill } from './copy.js';
-import { MIN_DISCHARGES, CONDS } from '../../../engine/js/hrrp/formula.js';
 import { deckLead, inactiveSentence, noEstimateNote, penalizedNote, plural, rankLine, summarySentence, upFirst, vsLabel } from './wording.js';
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
@@ -136,13 +136,13 @@ export function hospitalView(h, ctx) {
 export function areaContext({ hospitals, meta, history, conditions, places }) {
   const edition = { ...editionOf(meta, history), conditions };
   const stateMeans = places.list.filter((p) => p.kind === 'state').map((p) => summarize(p.hospitals).meanRed).sort((a, b) => b - a);
-  return { hospitals, meta, edition, nation: summarize(hospitals), stateMeans, hasDc: has(meta.states, 'DC'), places };
+  return { hospitals, meta, edition, nation: summarize(hospitals), stateMeans, hasDc: places.list.some((p) => p.kind === 'state' && p.key === 'dc'), places };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
 // the data, never by name.
 const largest = (list, kind) => list.filter((p) => p.kind === kind)
-  .reduce((a, b) => (b.hospitals.length > a.hospitals.length ? b : a));
+  .reduce((a, b) => (a === null || b.hospitals.length > a.hospitals.length ? b : a), null);
 
 // The program page's top: the hero's words and the At-a-glance card's eight fields. Plain strings, with the places the
 // hero's suggestions link.
@@ -163,7 +163,7 @@ export function programView(ctx) {
       mid: programFill('deckMid'),
       share: S.pctPen == null ? '' : programFill('deckShare', { pct: fmtPct(S.pctPen, 0), nMeasured: fmtInt(S.nMeasured) }),
     },
-    try: { state: link(state), metro: link(metro) },
+    try: { state: link(state), metro: metro && link(metro) },
     card: {
       left: programFill('glanceTitle', { edition: edition.label }),
       right: programFill('glanceSource'),
@@ -222,6 +222,12 @@ function childRows(place) {
   return rows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 }
 
+// The codes of the states a place reaches, the one with the most of its hospitals first (ties: by code), as the source listed them.
+const statesByCount = (place) => {
+  const n = (st) => place.hospitals.filter((h) => h.st === st).length;
+  return [...place.states].sort((a, b) => n(b) - n(a) || (a < b ? -1 : 1));
+};
+
 // place: a buildPlaces() entry; ctx: areaContext(). The place page's head, deck and six-field card.
 export function placeView(place, ctx) {
   const { edition, nation: N } = ctx;
@@ -242,7 +248,7 @@ export function placeView(place, ctx) {
     heading: placeFill('pageTitle', { name: place.name, edition: edition.label }),
     description: placeFill('pageDescription', { name: place.name, lead }),
     crumbs: placeCrumbs(place),
-    kicker: spans ? placeFill('kindSpans', { kind, states: place.states.join(', ') }) : kind,
+    kicker: spans ? placeFill('kindSpans', { kind, states: statesByCount(place).join(', ') }) : kind,
     deck: { lead: `${lead} `, average: `${avg}${rankWords}`, total: placeT('deckTotal'), totalValue: fmtMoney(S.penTotal), totalNote: noEst ? placeFill('deckTotalNote', { note: noEst }) : '', totalEnd: placeT('deckTotalEnd') },
     card: {
       left: placeFill('cardTitle', { name: place.name, edition: edition.label }),
@@ -285,7 +291,7 @@ export function methodsView(ctx) {
     window: methodsFill('readWindow', { window: edition.perfLong }),
     history: methodsFill('historyText', span),
     sources: {
-      files: meta.sources.filter((s) => /^https:\/\//.test(s.url)),
+      files: meta.sources.map((s) => ({ name: s.name, url: /^https:\/\//.test(s.url) ? s.url : null })),
       supplemental: methodsFill('sourceSupplemental', span),
       rules: methodsFill('sourceRules', { span: edition.span }),
     },

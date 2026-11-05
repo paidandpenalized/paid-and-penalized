@@ -26,7 +26,6 @@ const labels = (text) => [...text.matchAll(/<p class="field__label"><span class=
 
 test('the program page: the kicker, the name, the deck with the count, and the eight At-a-glance fields', () => {
   const text = program();
-  const S = summarize(ALL);
   assert.match(text, /<p class="cap kicker prog__kicker">FY2027 edition · Year 3 of Medicare readmission penalties<\/p>/);
   assert.match(text, /<h1 class="prog__title">Readmissions<\/h1>/);
   assert.equal(text.match(/<h1/g).length, 1);
@@ -39,7 +38,6 @@ test('the program page: the kicker, the name, the deck with the count, and the e
   assert.ok(text.includes("CMS’s rule-time estimate, from preliminary data: $361M."));
   assert.match(text, /<p class="stamp">Final · posted Oct 7, 2026<\/p>/);
   assert.match(text, /<a class="est-tag" href="\/hrrp\/methods\/#methods-dollars"/);
-  assert.ok(text.includes(`${S.nPen} of the`) || S.nPen === 0);
 });
 
 test('the hero hints link the state and the metro area with the most hospitals, every hospital and how it works', () => {
@@ -86,7 +84,7 @@ test('the deck: "the largest", "the Nth-largest", "one hospital", and none measu
 
 test('the state and metro rules: a metro across a state line says so, a state lists its metros and the hospitals outside them', () => {
   const metro = placeOf('metro', '99901');
-  assert.equal(placeView(metro, area).kicker, 'Metro area · spans ZY, ZZ');
+  assert.equal(placeView(metro, area).kicker, 'Metro area · spans ZZ, ZY');
   const state = placeView(placeOf('state', 'zy'), area);
   assert.equal(state.children.title, 'Metro areas');
   assert.ok(state.children.rows[0].label.endsWith('(ZY part)'));
@@ -119,7 +117,7 @@ test('Methods: the kicker, heading, both formulas, the neutrality modifier at fo
   some.meta = { ...META, nm: 0.962847, replication: { exact: 8, total: 9 } };
   assert.ok(methods(some).includes('0.9628.') && methods(some).includes('exactly for 8 of 9 hospitals.'));
   // Only https sources are linked.
-  assert.ok(text.includes('href="https://example.org/file.zip"') && !text.includes('insecure.example'));
+  assert.ok(text.includes('href="https://example.org/file.zip"') && text.includes('<li>Example source without an address</li>') && !text.includes('insecure.example'));
   assert.match(text, /<a href="https:\/\/docs\.google\.com\/forms\//);
 });
 
@@ -170,4 +168,53 @@ test('on the data: a state is ranked, and its rank is among the states and DC', 
   const ranks = PLACES.list.filter((p) => p.kind === 'state').map((p) => placeView(p, DATA_AREA).deck.average);
   assert.equal(ranks.filter((r) => r.includes('the largest among')).length, 1);
   assert.ok(ranks.every((r) => r.includes('states and DC in the program')));
+});
+
+// The cards' and the deck's notes, as exact strings.
+const noteOf = (view, label) => view.card.fields.find((f) => f.label === label).note;
+const below = (id, st) => hospital({ id, st, cbsa: null, cbsaName: null, paf: 1, red: 0, pen: 0, c: { HF: { n: 40, err: 0.9, flag: 0, ratio: 0.1 } } });
+const cut = (id, st, extra = {}) => hospital({ id, st, cbsa: null, cbsaName: null, ...extra });
+
+test('the At-a-glance notes: penalized of measured, and the maximum\'s "hospitals"', () => {
+  const fields = programView(area).card.fields;
+  const S = summarize(ALL);
+  assert.equal(fields[1].note, `${Math.round(S.pctPen)}% of the ${S.nMeasured} measured on at least one condition`);
+  assert.equal(fields[1].note, '50% of the 8 measured on at least one condition');
+  assert.deepEqual([fields[4].label, fields[4].value, fields[4].note], ['At the 3% maximum', '0', 'hospitals']);
+});
+
+test('the place Penalized note: the gap to the nation both ways, same as nation, and none measured', () => {
+  // Two cut hospitals in ZZ, two with no cut in ZY, one cut in ZY: ZZ 100% against the nation's 75%, ZY 50%... by property below.
+  const ctx = areaOf([cut('990081', 'ZZ'), cut('990082', 'ZZ'), cut('990083', 'ZY'), below('990084', 'ZY'), below('990085', 'ZY')]);
+  const zz = placeView(placeOf('state', 'zz', ctx), ctx);
+  const zy = placeView(placeOf('state', 'zy', ctx), ctx);
+  assert.equal(noteOf(zz, 'Penalized'), 'of 2 measured · +40 pts vs nation');
+  assert.equal(noteOf(zy, 'Penalized'), 'of 3 measured · −27 pts vs nation');
+  assert.equal(noteOf(placeView(placeOf('state', 'zz'), area), 'Penalized'), 'of 6 measured · same as nation');
+  assert.equal(noteOf(zz, 'Average cut'), '+0.40 pts vs nation');
+  const none = areaOf([hospital({ id: '990086', st: 'ZY', cbsa: null, cbsaName: null, pen: null, paf: 1, red: 0, c: { HF: { n: 10, err: 1.2, flag: 0, ratio: 0.1 } } })]);
+  const v = placeView(placeOf('state', 'zy', none), none);
+  assert.equal(noteOf(v, 'Penalized'), 'of 0 measured');
+  assert.equal(noteOf(v, 'Average cut'), 'same as nation');
+  assert.equal(noteOf(v, 'Estimated dollars'), '1 hospital has no estimate and is left out of the total.');
+  assert.equal(v.deck.totalNote, ' (1 hospital has no estimate and is left out of the total)');
+});
+
+test('the "Cut 1% or more" note: the area\'s share and the nation\'s', () => {
+  const zz = placeView(placeOf('state', 'zz'), area);
+  assert.equal(noteOf(zz, 'Cut 1% or more'), '29% of hospitals (nation 33%)');
+  assert.equal(noteOf(placeView(placeOf('state', 'zy'), area), 'Cut 1% or more'), '50% of hospitals (nation 33%)');
+});
+
+test('the hero drops the metro suggestion when no hospital is in a metro area', () => {
+  const ctx = areaOf([cut('990087', 'ZZ'), cut('990088', 'ZY')]);
+  assert.equal(programView(ctx).try.metro, null);
+  assert.match(program(ctx), /Try <a href="\/hrrp\/state\/z[zy]\/">[^<]+<\/a>, or <a href="#explore">browse every hospital<\/a>\./);
+});
+
+test('"spans" lists the state with the most hospitals first; DC is counted from the places, not the state list', () => {
+  const ctx = areaOf([cut('990089', 'ZY', { cbsa: '1', cbsaName: 'M' }), cut('990090', 'ZY', { cbsa: '1', cbsaName: 'M' }), cut('990091', 'ZZ', { cbsa: '1', cbsaName: 'M' })]);
+  assert.equal(placeView(placeOf('metro', '1', ctx), ctx).kicker, 'Metro area · spans ZY, ZZ');
+  assert.equal(ctx.hasDc, false);
+  assert.equal(areaOf([cut('990092', 'DC')]).hasDc, true);
 });

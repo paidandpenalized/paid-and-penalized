@@ -55,7 +55,7 @@ ${section('more', t('moreHeading'), html`<p>${more}</p>`)}
 <aside class="meth__side">
 <h2>${t('sourcesHeading')}</h2>
 <ul class="sources">
-${view.sources.files.map((s) => html`<li>${externalLink(s.url, s.name)}</li>
+${view.sources.files.map((s) => html`<li>${s.url ? externalLink(s.url, s.name) : s.name}</li>
 `)}<li>${view.sources.supplemental}</li>
 <li>${view.sources.rules}</li>
 </ul>
@@ -68,7 +68,7 @@ ${GLOSSARY.map(([term, def]) => html`<dt>${t(term)}</dt>
 </div>
 </article>`;
   return page({
-    title: `${t('heading')} · ${view.heading} · ${SITE.name}`,
+    title: `${view.heading} · ${SITE.name}`,
     description: view.description,
     path: METHODS_PATH,
     robots,

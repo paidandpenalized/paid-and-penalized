@@ -14,9 +14,10 @@ import { SECTIONS, labelOf, shellOf } from './parts.js';
 function top(view) {
   const { deck, card } = view;
   const tag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });
-  const hints = fillAround((marks) => fill('heroTry', marks), {
+  const { metro } = view.try;
+  const hints = fillAround((marks) => fill(metro ? 'heroTry' : 'heroTryNoMetro', marks), {
     state: html`<a href="${view.try.state.path}">${view.try.state.name}</a>`,
-    metro: html`<a href="${view.try.metro.path}">${view.try.metro.name}</a>`,
+    ...(metro && { metro: html`<a href="${metro.path}">${metro.name}</a>` }),
     every: html`<a href="#explore">${t('heroEvery')}</a>`,
     how: html`<a href="#how">${t('heroHow')}</a>`,
   });
