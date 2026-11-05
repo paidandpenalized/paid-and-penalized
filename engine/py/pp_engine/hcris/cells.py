@@ -12,6 +12,8 @@ fiscal year splits the year into short periods): a `flow` (dollars, days, discha
 """
 from collections import namedtuple
 
+from pp_engine.hcris.other_income import METRICS as LINE24_BY_CLASS
+
 # `since`: the first HCRIS year whose reports carry the cell (None: every year of the form).
 Cell = namedtuple("Cell", "metric sheet line column kind label since", defaults=(None,))
 
@@ -84,7 +86,8 @@ CELLS = (
     Cell("income_space_rental", G3, "02200", "00100", "flow", "G-3 line 22: rental of hospital space"),
     Cell("income_appropriations", G3, "02300", "00100", "flow", "G-3 line 23: governmental appropriations"),
     Cell("income_other_specified", G3, "02400", "00100", "flow",
-         "G-3 line 24: other (specify), the line itself, not its subscripts"),
+         "G-3 line 24: other (specify), the line itself, not its subscripts (all of them are sorted by label in "
+         "other_income.py)"),
     Cell("covid_phe_funding", G3, "02450", "00100", "flow", "G-3 line 24.50: COVID-19 PHE funding"),
     Cell("other_income", G3, "02500", "00100", "flow", "G-3 line 25: total other income"),
     Cell("other_expenses", G3, "02800", "00100", "flow", "G-3 line 28: total other expenses"),
@@ -127,9 +130,13 @@ CELLS = (
 )
 
 METRICS = tuple(c.metric for c in CELLS)
+# G-3 line 24 and its subscripts 24.01 to 24.49, summed by the class of each entry's label (other_income.py): flows, read
+# from the layer's second pinned table per year, not from CELLS.
+LINE24_METRICS = tuple(LINE24_BY_CLASS.values())
 # G-3 lines 8 to 22, the other income from the hospital's own operations that the operating margin counts (DATA-B-03,
-# decided 2026-11-05). Left out: contributions (6), investments (7), governmental appropriations (23), line 24 and its
-# subscripts, COVID-19 funding among them (24.50 to 24.60).
+# decided 2026-11-05), with line 24's entries whose label is operating (decided 2026-11-05, later). Left out:
+# contributions (6), investments (7), governmental appropriations (23), line 24's other entries, COVID-19 funding
+# (24.50 to 24.60).
 OPERATING_OTHER_INCOME = ("income_telephone", "income_tv_radio", "income_purchase_discounts", "income_rebates_refunds",
                           "income_parking", "income_laundry", "income_meals", "income_quarters_rental",
                           "income_supplies_sales", "income_drug_sales", "income_records_sales", "income_tuition",
@@ -156,10 +163,11 @@ DERIVED = (
     ("medicare_day_share", "(days_medicare + days_medicare_advantage) / days_total"),
     ("occupancy", "days_total / bed_days_available"),
     ("medicaid_days_maternity", "days_medicaid_nursery + days_medicaid_labor_delivery (S-3 I lines 13 + 32, col 7)"),
-    ("other_operating_income", "income_telephone + ... + income_space_rental (G-3 lines 8 to 22)"),
+    ("other_operating_income", "income_telephone + ... + income_space_rental + line24_operating (G-3 lines 8 to 22, "
+                               "and line 24's entries labeled operating)"),
     ("patient_margin", "net_income_patients / net_patient_revenue (G-3 line 5 / line 3)"),
     ("operating_margin", "(net_income_patients + other_operating_income) / (net_patient_revenue + "
-                         "other_operating_income) (G-3 (line 5 + lines 8 to 22) / (line 3 + lines 8 to 22))"),
+                         "other_operating_income) (G-3 (line 5 + other operating income) / (line 3 + the same))"),
     ("total_margin", "net_income / (net_patient_revenue + other_income) (G-3 line 29 / (line 3 + line 25))"),
     ("medicaid_payment_to_cost", "(medicaid_net_revenue + medicaid_supplemental) / medicaid_cost"),
     ("medicaid_revenue_share", "medicaid_net_revenue / net_patient_revenue (S-10 I line 2 / G-3 line 3)"),
@@ -175,7 +183,7 @@ _UNIT_OF = {
                           "days_medicaid_managed", "medicaid_days_all", "days_medicaid_nursery",
                           "days_medicaid_labor_delivery", "medicaid_days_maternity")},
     **{m: "discharges" for m in ("discharges_medicare", "discharges_medicaid", "discharges_total")},
-    "other_operating_income": "dollars",
+    "other_operating_income": "dollars", **{m: "dollars" for m in LINE24_METRICS},
     **{name: "ratio" for name in ("medicaid_day_share", "medicare_day_share", "occupancy", "patient_margin",
                                   "operating_margin",
                                   "total_margin", "medicaid_payment_to_cost", "medicaid_revenue_share",
@@ -183,7 +191,7 @@ _UNIT_OF = {
 }
 _MONEY_SHEETS = (G3, S10, S10_HOSPITAL)
 UNITS = {**{c.metric: _UNIT_OF.get(c.metric) or ("dollars" if c.sheet in _MONEY_SHEETS else None) for c in CELLS},
-         **{name: _UNIT_OF.get(name) for name, _ in DERIVED}}
+         **{m: _UNIT_OF[m] for m in LINE24_METRICS}, **{name: _UNIT_OF.get(name) for name, _ in DERIVED}}
 _NO_UNIT = [m for m, u in UNITS.items() if u is None]
 if _NO_UNIT:
     raise ValueError(f"no unit for {_NO_UNIT}: add them to cells._UNIT_OF")

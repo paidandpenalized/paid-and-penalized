@@ -70,7 +70,8 @@ class Labels(unittest.TestCase):
         self.assertEqual(tidy.status_label([]), "as filed")
 
     def test_scope_by_ccn_range(self):
-        for ccn, kind in (("990001", "acute"), ("990879", "acute"), ("990880", None), ("991300", "critical_access"),
+        for ccn, kind in (("990001", "acute"), ("990879", "acute"), ("990880", "acute"), ("990899", "acute"),
+                          ("990900", None), ("991300", "critical_access"),
                           ("991399", "critical_access"), ("992000", None), ("994001", None), ("99S001", None),
                           ("990000", None)):
             with self.subTest(ccn=ccn):

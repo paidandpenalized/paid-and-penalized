@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from pp_engine.contract import format_emitted
-from pp_engine.hcris import tidy
+from pp_engine.hcris import cells, other_income, tidy
 from pp_engine.schema import validate
 from pp_engine.tests.hcris.test_tidy import cell, report
 from pp_pipeline.files import load_schemas
@@ -22,21 +22,33 @@ REPORTS = [report("7", "990001", status="3"), report("8", "991300", status="1"),
            report("10", "990002", "10/01/2023", "06/30/2024"), report("11", "990002", "07/01/2024", "06/30/2025")]
 NUMBERS = [cell("7", "net_income", "125"), cell("7", "net_patient_revenue", "2000"), cell("7", "other_income", "500"),
            cell("7", "uncompensated_cost", "40.5"), cell("8", "beds", "12"), cell("9", "beds", "80"),
-           cell("10", "net_income", "90"), cell("11", "net_income", "100")]
+           cell("10", "net_income", "90"), cell("11", "net_income", "100"),
+           # G-3 line 24 and its subscripts: amounts in the numeric file, labels in the alphanumeric one
+           ["7", cells.G3, "02400", "00100", "300"], ["7", cells.G3, "02401", "00100", "200"],
+           ["7", cells.G3, "02402", "00100", "50"], ["9", cells.G3, "02401", "00100", "70"]]
+ALPHA = [["7", cells.G3, "02400", "00000", "PHYSICIAN PRACTICE INCOME"], ["7", cells.G3, "02401", "00000",
+                                                                         "INVESTMENT INCOME, NET"],
+         ["7", cells.G3, "02403", "00000", "GRANTS"],  # a label with no amount: zero, not pinned
+         ["9", cells.G3, "02401", "00000", "PHARMACY"],  # outside the scope
+         ["7", cells.S3, "00100", "00000", "ADULTS"]]  # another worksheet
 
 
 def synthetic_pin(tmp, year=2024):
+    """(zip, {pin id: bytes}, {pin id: manifest entry}) for the synthetic zip."""
     z = Path(tmp) / f"HOSP10FY{year}.ZIP"
-    write_zip(z, year, REPORTS, NUMBERS)
-    year, data, source = pins.derive(z)
-    return z, data, pins.new_entry(year, data, source, "2026-10-05", "2026-11-04")
+    write_zip(z, year, REPORTS, NUMBERS, ALPHA)
+    year, tables, source = pins.derive(z)
+    entries = {pid: pins.new_entry(year, data, source, "2026-10-05", "2026-11-04",
+                                   line24=pid == pins.line24_pin_id(year)) for pid, data in tables.items()}
+    return z, tables, entries
 
 
 class Pins(unittest.TestCase):
     def test_derive_keeps_the_scope_and_records_the_zip(self):
         with tempfile.TemporaryDirectory() as tmp:
-            z, data, entry = synthetic_pin(tmp)
+            z, tables, entries = synthetic_pin(tmp)
             zip_sha = hashlib.sha256(z.read_bytes()).hexdigest()
+        data, entry = tables["hcris-fy2024-cells"], entries["hcris-fy2024-cells"]
         rows = list(csv.reader(io.StringIO(data.decode("ascii"))))
         self.assertEqual(rows[0], list(tidy.PIN_COLUMNS))
         self.assertEqual([r[1] for r in rows[1:]], ["990001", "991300", "990002", "990002"])  # by report number
@@ -46,16 +58,30 @@ class Pins(unittest.TestCase):
         self.assertEqual((src["sha256"], src["archive"], src["lastModified"]),
                          (zip_sha, f"r2://pp-sources/sha256/{zip_sha}", "2026-10-05"))
         self.assertEqual(src["downloadUrl"], "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2024.ZIP")
+        self.assertEqual(src["members"], ["HOSP10_2024_rpt.csv", "HOSP10_2024_nmrc.csv"])
+
+    def test_the_line_24_table(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            _, tables, entries = synthetic_pin(tmp)
+        entry = entries["hcris-fy2024-g3-line24"]
+        self.assertEqual(entry["path"], "hcris-fy2024/hcris_fy2024_g3_line24.csv")
+        self.assertEqual(entry["derivedFrom"]["members"][-1], "HOSP10_2024_alpha.csv")
+        rows = list(csv.reader(io.StringIO(tables["hcris-fy2024-g3-line24"].decode("ascii"))))
+        self.assertEqual(rows, [other_income.PIN_COLUMNS, ["7", "02400", "PHYSICIAN PRACTICE INCOME", "300"],
+                                ["7", "02401", "INVESTMENT INCOME, NET", "200"],
+                                ["7", "02402", "", "50"]])  # an amount with no label; report 9 is out of scope
 
     def test_the_same_zip_gives_the_same_bytes(self):
         with tempfile.TemporaryDirectory() as tmp:
             a = synthetic_pin(tmp)[1]
             b = synthetic_pin(tmp)[1]
+        self.assertEqual(len(a), 2)
         self.assertEqual(a, b)
 
     def test_pin_refuses_a_zip_the_manifest_does_not_name(self):
         with tempfile.TemporaryDirectory() as tmp:
-            z, _, entry = synthetic_pin(tmp)
+            z, _, entries = synthetic_pin(tmp)
+            entry = entries["hcris-fy2024-cells"]
             other = {**entry, "derivedFrom": {**entry["derivedFrom"], "sha256": "0" * 64}}
             out = io.StringIO()
             with mock.patch.object(pins, "read_manifest", return_value=[other]), contextlib.redirect_stdout(out):
@@ -71,16 +97,18 @@ class Pins(unittest.TestCase):
 class Emit(unittest.TestCase):
     def build(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _, data, entry = synthetic_pin(tmp)
-        with mock.patch.object(emit, "read_pinned_bytes", return_value=data):
-            return emit.build(2024, [entry], "2026-11-05T00:00:00Z"), entry
+            _, tables, entries = synthetic_pin(tmp)
+        with mock.patch.object(emit, "read_pinned_bytes", side_effect=tables.__getitem__):
+            return emit.build(2024, list(entries.values()), "2026-11-05T00:00:00Z"), entries
 
     def test_the_file_passes_its_schema_and_its_checks(self):
-        doc, entry = self.build()
+        doc, entries = self.build()
         schemas = load_schemas()
         self.assertEqual(validate(schemas[emit.SCHEMA], doc, schemas), [])
         self.assertEqual(emit.check(doc), [])
-        self.assertEqual(doc["sources"], [entry["id"]])
+        self.assertEqual(doc["sources"], list(entries))
+        self.assertEqual(doc["otherIncomeRules"]["path"], "pipeline/py/pp_pipeline/hcris/other_income_rules.csv")
+        self.assertEqual(doc["otherIncomeRules"]["sha256"], hashlib.sha256(emit.rules_bytes()).hexdigest())
         self.assertEqual((doc["fy"], doc["label"], doc["periodsBegin"]),
                          (2024, "cost reports beginning in FY2024", ["2023-10-01", "2024-09-30"]))
         self.assertEqual((doc["posted"], doc["filingDueBy"], doc["stillFiling"]), ("2026-10-05", "2026-02-26", False))
@@ -93,6 +121,8 @@ class Emit(unittest.TestCase):
         self.assertEqual((a["kind"], a["status"], a["status_label"], a["net_income"], a["uncompensated_cost"],
                           a["total_margin"], a["beds"]), ("acute", "3", "settled", 125, 40.5, 0.05, None))
         self.assertEqual((rows["991300"]["kind"], rows["991300"]["status_label"]), ("critical_access", "as filed"))
+        self.assertEqual((a["line24_operating"], a["line24_non_operating"], a["line24_unclassified"],
+                          a["other_operating_income"], a["income_other_specified"]), (300, 200, 50, 300, 300))
         b = rows["990002"]
         self.assertEqual((b["shape"], b["basis"], b["net_income"], b["period_days"]), ("long", "fullest", 100, 365))
         self.assertEqual((doc["settledShare"], doc["early"]), (0.6667, True))  # 2 of 3 settled
@@ -113,6 +143,34 @@ class Emit(unittest.TestCase):
         self.assertNotEqual(validate(schemas[emit.SCHEMA], {**doc, "columns": doc["columns"][::-1]}, schemas), [])
         self.assertNotEqual(validate(schemas[emit.SCHEMA], {**doc, "hospitals": [doc["hospitals"][0][:5]]}, schemas),
                             [])
+
+
+class RulesFile(unittest.TestCase):
+    """The committed rules sort the kinds of label the decision names (DATA-B-03, 2026-11-05): generic label text,
+    no hospital's."""
+
+    def test_the_decided_kinds(self):
+        rules = emit.rules()
+        cases = {
+            "PHYSICIAN PRACTICE INCOME": "physician_professional", "PRO FEES": "physician_professional",
+            "PRIVATE PRACTICE REVENUE": "physician_professional", "MEDICAL STAFF INCOME": "physician_professional",
+            "340B CONTRACT PHARMACY": "pharmacy", "340 B REVENUE": "pharmacy", "RETAIL PHARMACY": "pharmacy",
+            "GRANT REVENUE": "grants_research", "RESEARCH GRANTS": "grants_research",
+            "UNREALIZED GAIN/LOSS": "investment", "INTEREST INCOME": "investment", "EQUITY IN EARNINGS": "investment",
+            "GAIN ON SALE OF PHYSICIAN PRACTICE": "investment",  # investment-type rules come first
+            "NET ASSETS RELEASED FROM RESTRICTION": "contributions", "GIFT SHOP": "like_lines_8_22",
+            "PROVIDER RELIEF FUND": "relief_funding", "PROPERTY TAX REVENUE": "appropriations_taxes",
+            "NON-OPERATING INCOME": "labeled_non_operating", "OTHER OP AND NON OP INC": "mixed",
+            "OTHER OPERATING REVENUE": "generic_operating", "MEDICAID DSH": "medicaid_supplemental",
+            "CAPITATION REVENUE": "health_plan", "POISON DRUG CENTER CONTRACTS": "other_services",
+            "INTERCOMPANY REVENUE": "intercompany", "MALPRACTICE REVENUE": "other", "OTHER REVENUE": "other",
+            "PHYSICAL THERAPY": "other", "": "unlabeled"}
+        for label, family in cases.items():
+            with self.subTest(label=label):
+                self.assertEqual(other_income.classify(label, rules)[0], family)
+        classes = {r.family: r.cls for r in rules}
+        self.assertEqual({f for f, c in classes.items() if c == "operating"},
+                         {"pharmacy", "physician_professional", "grants_research", "like_lines_8_22"})
 
 
 class Puf(unittest.TestCase):
@@ -168,7 +226,8 @@ class Archive(unittest.TestCase):
 
             def fake_derive(z):
                 derived.append(Path(z).name)
-                return None, b"changed" if "2023" in Path(z).name else table, None
+                year = int(Path(z).name[8:12])
+                return year, {f"hcris-fy{year}-cells": b"changed" if year == 2023 else table}, None
 
             archived = frozenset({f"sha256/{sha[2025]}", "sha256/" + "f" * 64})
             rows = archive.plan(list(zips.values()), manifest, archived=archived, derive_fn=fake_derive)

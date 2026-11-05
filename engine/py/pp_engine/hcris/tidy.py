@@ -24,7 +24,8 @@ import re
 from collections import namedtuple
 from decimal import ROUND_HALF_UP, Decimal
 
-from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, OPERATING_OTHER_INCOME, SHEETS_READ
+from pp_engine.hcris import other_income
+from pp_engine.hcris.cells import BY_KEY, CELLS, DERIVED, G3, LINE24_METRICS, OPERATING_OTHER_INCOME, SHEETS_READ
 
 RPT_FIELDS = 18
 NMRC_FIELDS = 5
@@ -35,9 +36,12 @@ EARLY_BELOW = Decimal("0.80")  # method constant: a year under 80% settled is "e
 EARLY_PLACES = Decimal("0.01")  # the share is read to a whole percent first: 79.86% is 80%, not early (DATA-B-04)
 RATIO_PLACES = Decimal("0.0001")
 # The layer's facility scope, by the CCN's last four digits (CMS's HCRIS facility-numbering table, HCRIS_FACILITY_
-# NUMBERING.csv in HOSPITAL2010-DOCUMENTATION.ZIP): 0001-0879 short-term (general and specialty) hospitals; 1300-1399,
-# which the table still calls rural primary care hospitals, the program critical access hospitals replaced.
-KINDS = (("acute", 1, 879), ("critical_access", 1300, 1399))
+# NUMBERING.csv in HOSPITAL2010-DOCUMENTATION.ZIP, and the State Operations Manual, ch. 2, sec. 2779A1, Rev. 205,
+# 2022-03-11): 0001-0879 short-term (general and specialty) hospitals; 0880-0899, which both reserve for "hospitals
+# participating in ORD demonstration project" (only Texas has any: CMS's provider file codes each a short-term
+# hospital, and the FY2026 IPPS final rule's impact file pays the eight still open under the IPPS); 1300-1399, which
+# the HCRIS table still calls rural primary care hospitals, the program critical access hospitals replaced.
+KINDS = (("acute", 1, 899), ("critical_access", 1300, 1399))
 CCN = re.compile(r"[0-9A-Z]{6}")
 DATE = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
 NUMBER = re.compile(r"-?(\d+(\.\d*)?|\.\d+)")
@@ -117,17 +121,25 @@ def parse_reports(rows, year):
     return reports
 
 
-def collect(number_rows, reports):
+def collect(number_rows, reports, line24=None):
     """{report number: {metric: Decimal}} for the cells in `cells.CELLS`, from the numeric file's rows. Rows on
     other worksheets are skipped before anything else is read (they are ~97% of the file). A worksheet's old code
-    (`cells.SHEET_ALIASES`) reads as its new one; a report that has a cell under both stops the extract."""
+    (`cells.SHEET_ALIASES`) reads as its new one; a report that has a cell under both stops the extract. With a dict
+    `line24`, also fills it with {(report number, line code): text} for G-3 line 24 and its subscripts 24.01 to 24.49
+    (other_income.py), in the same pass."""
     values = {}
     for r in number_rows:
         if len(r) != NMRC_FIELDS:
             raise HcrisError(f"numeric file: a row of {len(r)} fields, not {NMRC_FIELDS}")
         if r[1] not in SHEETS_READ:
             continue
-        cell = BY_KEY.get((r[1], r[2].strip(), r[3].strip()))
+        line, column = r[2].strip(), r[3].strip()
+        if line24 is not None and r[1] == G3 and column == "00100" and other_income.is_line24(line):
+            rpt, text = r[0].strip(), r[4].strip()
+            if rpt not in reports or not NUMBER.fullmatch(text) or (rpt, line) in line24:
+                raise HcrisError(f"numeric file: report {rpt!r}, G-3 line {line}: unknown report, not a number or twice")
+            line24[(rpt, line)] = text
+        cell = BY_KEY.get((r[1], line, column))
         if cell is None:
             continue
         rpt, text = r[0].strip(), r[4].strip()
@@ -209,6 +221,8 @@ def hospital_years(reports, values, year, long_rule="fullest"):
                                          if v is not None), None)
             else:
                 row[cell.metric] = _sum(*(values.get(r.rpt, {}).get(cell.metric) for r in used))
+        for metric in LINE24_METRICS:  # flows from the line-24 table (other_income.report_sums), when given
+            row[metric] = _sum(*(values.get(r.rpt, {}).get(metric) for r in used))
         derive(row)
         out.append(row)
     return out
@@ -243,9 +257,9 @@ FORMULAS = {
     "medicare_day_share": lambda g: _ratio(_sum(g("days_medicare"), g("days_medicare_advantage")), g("days_total")),
     "occupancy": lambda g: _ratio(g("days_total"), g("bed_days_available")),
     "medicaid_days_maternity": lambda g: _sum(g("days_medicaid_nursery"), g("days_medicaid_labor_delivery")),
-    "other_operating_income": lambda g: _sum(*(g(m) for m in OPERATING_OTHER_INCOME)),
+    "other_operating_income": lambda g: _sum(*(g(m) for m in OPERATING_OTHER_INCOME), g("line24_operating")),
     "patient_margin": lambda g: _ratio(g("net_income_patients"), g("net_patient_revenue")),
-    # Blank lines 8 to 22 count as zero; a blank line 3 or line 5 leaves the margin blank.
+    # Blank other operating income counts as zero; a blank line 3 or line 5 leaves the margin blank.
     "operating_margin": lambda g: None if g("net_income_patients") is None or g("net_patient_revenue") is None else
     _ratio(_sum(g("net_income_patients"), g("other_operating_income")),
            _sum(g("net_patient_revenue"), g("other_operating_income"))),
@@ -267,7 +281,7 @@ def derive(row):
 # The spike's ten identity columns first, in its order, then the layer's three.
 IDENTITY = ("ccn", "year", "n_reports", "shape", "reports", "status", "period_begin", "period_end", "period_days",
             "control", "kind", "basis", "status_label")
-VALUE_COLUMNS = tuple(c.metric for c in CELLS) + tuple(name for name, _ in DERIVED)
+VALUE_COLUMNS = tuple(c.metric for c in CELLS) + LINE24_METRICS + tuple(name for name, _ in DERIVED)
 WIDE_COLUMNS = IDENTITY + VALUE_COLUMNS
 
 
