@@ -38,7 +38,7 @@ def roll_up(pairs):
         if base["has_margin"] and not base["margin_outlier"]:
             out["margin_hospitals"] += 1
             after = base["net_patient_revenue"] - res["lost"] + res["other_coverage"]
-            oo = base["other_operating_income"] or 0.0
+            oo = base["other_operating_income"]
             npr += base["net_patient_revenue"]
             rev += base["net_patient_revenue"] + oo
             inc += base["net_income_patients"] + oo

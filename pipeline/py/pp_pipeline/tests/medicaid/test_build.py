@@ -173,8 +173,9 @@ class LayerAndPins(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "hcris.json"
             path.write_text(json.dumps(doc))
-            y = build.read_hcris(path)
+            y, digest = build.read_hcris(path)
             self.assertEqual((y.early, y.settled_share, y.rows[0]["ccn"]), (True, 0.6, "990001"))
+            self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
             path.write_text(json.dumps({**doc, "fy": 2024}))
             with self.assertRaises(ValueError):
                 build.read_hcris(path)

@@ -21,7 +21,6 @@ from pathlib import Path
 from pp_engine import geo
 from pp_engine.hcris import reader
 from pp_engine.medicaid import exposure, params, rollup, safety_net, shares
-from pp_pipeline.files import read_json
 from pp_pipeline.hcris.emit import emitted_path
 from pp_pipeline.medicaid import inputs
 from pp_pipeline.medicaid.safety_net import read_cuts
@@ -81,12 +80,13 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
 
 
 def read_hcris(path=None, year=params.BASE_YEAR):
-    """The HCRIS layer's year (a reader.Year: rows by CCN, the year's settled share and early flag), from its emitted
-    file."""
-    y = reader.Year(read_json(Path(path) if path else emitted_path(year)))
+    """(the HCRIS layer's year as a reader.Year: its rows, settled share and early flag; the file's SHA-256), from the
+    emitted file, read once."""
+    data = (Path(path) if path else emitted_path(year)).read_bytes()
+    y = reader.Year(json.loads(data))
     if y.year != year:
         raise ValueError(f"{path}: FY{y.year}, not the base year FY{year}")
-    return y
+    return y, hashlib.sha256(data).hexdigest()
 
 
 def program_dollars(dollars):
@@ -107,18 +107,18 @@ def _r(value, places=0):
     return int(v) if places == 0 else v
 
 
-def share_for(rec, st, share_key="share", state_only=False):
+def share_for(rec, st, share_key="share", factor=None):
     """The expansion share a record is scored with, for a hospital in a scenario state only: its state's VIII share
-    scaled by its own factor (exposure.hospital_share), or, with `state_only`, the state's share unchanged (the
+    scaled by its own factor (exposure.hospital_share), or by `factor` when given (1: the state's share unchanged, the
     method before 2026-11-05, kept as a sensitivity)."""
     if rec["cls"] != SCENARIO:
         return None
-    return exposure.hospital_share(st.get(share_key), 1.0 if state_only else rec["base"]["share_factor"])
+    return exposure.hospital_share(st.get(share_key), rec["base"]["share_factor"] if factor is None else factor)
 
 
-def score(rec, st, scenario_id, share_key="share", use=params.USE_DEFAULT, line2_5=False, state_only=False):
+def score(rec, st, scenario_id, share_key="share", use=params.USE_DEFAULT, line2_5=False, factor=None):
     """Steps 1 to 4 for one record under its state's inputs `st`."""
-    return exposure.scenario(rec["base"], share_for(rec, st, share_key, state_only),
+    return exposure.scenario(rec["base"], share_for(rec, st, share_key, factor),
                              (st.get("declines") or {}).get(scenario_id, 0.0), use, line2_5)
 
 
@@ -149,7 +149,7 @@ def hospital_records(master, hcris, states, programs, cuts, fence=None):
             rec["base"]["share_factor"] = exposure.share_factor(rec["base"], rec["state_ratio"])
             st = states.get(rec["state"], {})
             rec["share"] = share_for(rec, st)
-            rec["state_share"] = share_for(rec, st, state_only=True)
+            rec["state_share"] = share_for(rec, st, factor=1.0)
             rec["results"] = {sid: score(rec, st, sid) for sid in params.SCENARIO_IDS}
     return out
 
@@ -165,7 +165,7 @@ def state_ratios(records):
 
 def roll(records, scenario_id, states=None, where=None, by_state=False, **override):
     """The national roll-up for one scenario over the records `where` keeps (and by state, with `by_state`).
-    `override` (share_key, use, line2_5, state_only) reruns steps 1 to 4 for a sensitivity; without it the stored results stand."""
+    `override` (share_key, use, line2_5, factor) reruns steps 1 to 4 for a sensitivity; without it the stored results stand."""
     pairs, groups, states = [], {}, states or {}
     for r in records:
         if r["base"] is None or (where and not where(r)):
@@ -190,7 +190,7 @@ def results(records, states):
             by_state.setdefault(code, {})[sid] = _clean(v)
         for label, kw in (("line2_5", {"line2_5": True}), ("share_next_year", {"share_key": "share_next_year"}),
                           ("share_net_of_dsh", {"share_key": "share_net_of_dsh"}), ("use_0.75", {"use": params.USE_MIN}),
-                          ("use_1.25", {"use": params.USE_MAX}), ("state_share_only", {"state_only": True})):
+                          ("use_1.25", {"use": params.USE_MAX}), ("state_share_only", {"factor": 1.0})):
             sens.setdefault(label, {})[sid] = _clean(roll(records, sid, states=states, **kw)[0])
     groups = {}
     for label, where in (("critical_access", lambda r: r["kind"] == "critical_access"),
@@ -222,8 +222,6 @@ def hospital_rows(records):
         flat = {**b, **{k: r[k] for k in ("ccn", "name", "city", "state", "kind", "cls", "share")},
                 "flags": " ".join(b.get("flags", [])), "safety_net": " ".join(r["safety_net"] or ()),
                 "state_share": r["state_share"]}
-        if b:
-            flat["patient_margin"] = exposure.patient_margin(b)
         if res:
             flat["operating_margin"] = res["middle"]["operating_margin"]
             flat["total_margin"] = res["middle"]["total_margin"]
@@ -240,7 +238,7 @@ def explorer_record(r):
            else "A", "u": r["urban"], "bd": r["beds"], "o": r["own"], "cl": r["cls"],
            "la": r["lat"], "lo": r["lon"], "p": r["programs"]}
     if b is not None:
-        days = exposure.medicaid_days(b)
+        days = b["medicaid_days"]
         out.update(st=b["status"], pb=b["period_begin"], pe=b["period_end"], pd=b["period_days"],
                    fl=b["flags"], m2=_r(b["medicaid_net_revenue"]), m5=_r(b["medicaid_supplemental"]),
                    mc=_r(b["medicaid_cost"]), cr=_r(b["cost_ratio"], 4), cr5=_r(b["cost_ratio_line2_5"], 4),
@@ -250,14 +248,6 @@ def explorer_record(r):
                    mt=None if days is None else _r(1 - days[1] / days[0], 4), af=_r(b["share_factor"], 6),
                    sn=list(r["safety_net"]), hm=b["has_margin"], sc=b["scored"], mo=b["margin_outlier"])
     return out
-
-
-def sha256_of(path):
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def _shown(path):
@@ -276,16 +266,16 @@ def main(argv):
     states = state_table(inputs.read_csv(inputs.VIII), inputs.read_csv(inputs.URBAN), inputs.read_csv(inputs.FMR))
     master = json.loads(Path(a.master).read_text(encoding="utf-8"))
     dollars = json.loads(Path(a.dollars).read_text(encoding="utf-8"))
-    year = read_hcris(a.hcris)
+    year, hcris_sha256 = read_hcris(a.hcris)
     hcris = {r["ccn"]: r for r in year.rows}
     if not hcris:
         print(f"medicaid: no FY{params.BASE_YEAR} rows in the HCRIS layer", file=sys.stderr)
         return 1
     records = hospital_records(master, hcris, states, program_dollars(dollars),
                                read_cuts(inputs.read_csv(inputs.STATE_MIUR)))
-    for code, ratio in state_ratios(records).items():
-        states.setdefault(code, {"name": geo.STATE_NAMES.get(code, code), "share": None, "basis": None,
-                                 "class": NOT_EXPANSION})["nonmaternity_ratio"] = ratio
+    for r in records:  # each state's ratio, as hospital_records set it, on its existing entry
+        if r["state"] in states and r["state_ratio"] is not None:
+            states[r["state"]]["nonmaternity_ratio"] = r["state_ratio"]
     nat, by_state, sens, groups = results(records, states)
     counts = dict(Counter(r["cls"] for r in records))
     flags = dict(Counter(fl for r in records if r["base"] for fl in r["base"]["flags"]))
@@ -305,7 +295,7 @@ def main(argv):
                        "max_cost_ratio": params.MAX_COST_RATIO, "scenarios": dict(params.SCENARIOS)},
             "counts": counts, "flags": flags,
             "inputs": {"pinned": inputs.sources(),
-                       "hcris": {"path": _shown(hcris_path), "sha256": sha256_of(hcris_path),
+                       "hcris": {"path": _shown(hcris_path), "sha256": hcris_sha256,
                                  "methods_version": year.methods_version},
                        "master": {"path": _shown(a.master), "fy": master["fy"], "built_at": master["built_at"]},
                        "dollars": {"path": _shown(a.dollars), "fy": dollars["fy"], "built_at": dollars["built_at"]}}}

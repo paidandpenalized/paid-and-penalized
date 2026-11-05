@@ -40,7 +40,8 @@ def _number(value):
 
 
 def medicaid_days(base):
-    """(all Medicaid inpatient days, the non-maternity part), or None without Medicaid days on lines 14 and 2. All
+    """(all Medicaid inpatient days, the non-maternity part) from a base's day cells, or None without Medicaid days on
+    lines 14 and 2 (hospital_base stores it as `medicaid_days`). All
     days: S-3 I line 14 col 7 + line 2 col 7 (managed care and other eligible days) + line 32 col 7 (labor and
     delivery, outside line 14). Maternity: line 13 col 7 (nursery, inside line 14) + line 32 col 7. Labor and delivery
     days with no other Medicaid day (no postpartum or nursery day on lines 14 or 2) are a filing gap, read as none."""
@@ -55,7 +56,7 @@ def nonmaternity_ratio(bases):
     """The Medicaid-days-weighted non-maternity share of Medicaid days over `bases` (a state's hospitals), or None."""
     every = nonmat = 0.0
     for b in bases:
-        d = medicaid_days(b)
+        d = b["medicaid_days"]
         if d is not None:
             every += d[0]
             nonmat += d[1]
@@ -65,7 +66,7 @@ def nonmaternity_ratio(bases):
 def share_factor(base, state_ratio):
     """The hospital's non-maternity Medicaid day share over its state's: what its state's VIII share is scaled by. 1
     (the state share unchanged) when the hospital has no Medicaid days or the state has no ratio."""
-    d = medicaid_days(base)
+    d = base["medicaid_days"]
     if d is None or not state_ratio:
         return 1.0
     return (d[1] / d[0]) / state_ratio
@@ -106,6 +107,7 @@ def hospital_base(row):
         raise ExposureError(f"status label {row.get('status_label')!r}")
     flags = ["part_year"] if days < params.PART_YEAR_DAYS else []
     base = {k: _number(row.get(k)) for k in FLOWS}
+    base["other_operating_income"] = base["other_operating_income"] or 0.0  # blank lines 8 to 22 count as zero
     rev = base["medicaid_net_revenue"]
     if rev is None:
         flags.append("no_medicaid_revenue")
@@ -123,7 +125,8 @@ def hospital_base(row):
         flags.append("no_uncompensated_cost")
     if base["uncompensated_cost"] is not None and base["uncompensated_cost"] < 0:
         flags.append("negative_uncompensated_cost")
-    if medicaid_days(base) is None:
+    base["medicaid_days"] = medicaid_days(base)
+    if base["medicaid_days"] is None:
         flags.append("no_medicaid_days")
     # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
@@ -131,14 +134,11 @@ def hospital_base(row):
     scored = not {"negative_medicaid_revenue", "medicaid_exceeds_patient_revenue"} & set(flags)
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
-        status=row["status_label"], miur=_number(row.get("medicaid_day_share")), revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
+        status=row["status_label"], miur=_number(row.get("medicaid_day_share")),
+        patient_margin=_number(row.get("patient_margin")), revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
         share_factor=1.0, cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
         cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25), flags=flags)
     return base
-
-
-def _operating_other(base):
-    return base["other_operating_income"] or 0.0
 
 
 def operating_margin(base):
@@ -146,13 +146,8 @@ def operating_margin(base):
     patient revenue."""
     if not base["has_margin"]:
         return None
-    oo = _operating_other(base)
+    oo = base["other_operating_income"]
     return _margin(base["net_income_patients"] + oo, base["net_patient_revenue"] + oo)
-
-
-def patient_margin(base):
-    """The base's patient margin, G-3 line 5 over line 3 (Methods only); None without usable patient revenue."""
-    return base["net_income_patients"] / base["net_patient_revenue"] if base["has_margin"] else None
 
 
 def flag_margin_outliers(bases, fence=None):
@@ -213,7 +208,7 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     income_change = -lost + replaced + avoided
     out = {"at_risk": at_risk, "lost": lost, "lost_cost": lost_cost, "added_uncompensated": added_uc,
            "care_avoided": avoided, "other_coverage": replaced, "income_change": income_change}
-    npr, oth, oo = base["net_patient_revenue"], base["other_income"] or 0.0, _operating_other(base)
+    npr, oth, oo = base["net_patient_revenue"], base["other_income"] or 0.0, base["other_operating_income"]
     if base["has_margin"]:
         npr_after = npr - lost + replaced
         nip, ni = base["net_income_patients"], base["net_income"]

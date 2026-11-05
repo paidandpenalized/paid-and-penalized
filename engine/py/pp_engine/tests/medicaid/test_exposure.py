@@ -104,8 +104,8 @@ class Scenario(unittest.TestCase):
         self.assertAlmostEqual(exposure.margin_change(r), (r["operating_margin_after"] - 0.02) * 100)
 
     def test_the_operating_margin_counts_lines_8_to_22(self):
-        b = exposure.hospital_base(hcris_row(other_operating_income="1000000"))
-        self.assertAlmostEqual(exposure.patient_margin(b), 0.02)
+        b = exposure.hospital_base(hcris_row(other_operating_income="1000000", patient_margin="0.02"))
+        self.assertAlmostEqual(b["patient_margin"], 0.02)  # the layer's column, read as is
         self.assertAlmostEqual(exposure.operating_margin(b), 3000000 / 101000000)
         r = exposure.scenario(b, 0.25, 0.4)
         npr_after = 100000000 - r["lost"] + r["other_coverage"]
