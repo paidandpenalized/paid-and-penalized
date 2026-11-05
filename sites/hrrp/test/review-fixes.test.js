@@ -9,7 +9,7 @@ import { textOf } from '../../../pipeline/site/html.js';
 import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
 import { conditionShort } from '../web/derive.js';
 import { HISTORY_SIMULATED_FYS } from '../web/constants.js';
-import { coinFlip, ridges } from '../web/figures/picture-data.js';
+import { moreConditions, peerGroups } from '../web/figures/picture-data.js';
 import { dualBins, howData } from '../web/figures/how-data.js';
 import { howPart } from '../web/figures/how.js';
 import { generateHrrp } from '../web/generate.js';
@@ -170,14 +170,13 @@ test('Methods: "1 hospital has no dot", "3 hospitals have no dot"', () => {
   assert.ok(!view(0).includes('no dot'));
 });
 
-// ---------- 10. Ridges and the coin-flip follow the engine's lists ----------
+// ---------- 10. The peer groups and the conditions-measured rows follow the engine's lists ----------
 
-test('ridges has a row for each peer group and coinFlip a row for each count of conditions the engine lists', () => {
+test('peerGroups has a row for each peer group and moreConditions a row for each count of conditions the engine lists', () => {
   const hs = [hospital({ id: '990001', peer: 2, red: 1, c: { HF: m(40, 1.2, 1) } }), hospital({ id: '990002', peer: 4, red: 0, paf: 1, c: { HF: m(40, 0.9) } })];
-  assert.deepEqual(ridges(hs).rows.map((r) => r.peer), PEERS);
+  assert.deepEqual(peerGroups(hs, META).rows.map((r) => r.peer), PEERS);
   const six = hospital({ id: '990003', peer: 1, red: 0, paf: 1, c: Object.fromEntries(CONDS.map((k) => [k, m(40, 0.9)])) });
-  const c = coinFlip([...hs, six]);
+  const c = moreConditions([...hs, six]);
   assert.equal(c.rows.length, CONDS.length);
-  assert.equal(c.sixFlags.length, CONDS.length + 1);
-  assert.equal(c.sixFlags[0].n, 1, 'the all-measured hospital has no flags');
+  assert.equal(c.rows[CONDS.length - 1].n, 1, 'the all-measured hospital is in the last row');
 });

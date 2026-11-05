@@ -104,6 +104,22 @@
 .swarm__note { margin: 4px 0 0; max-width: 62ch; }
 @media (min-width: 560px) { .swarm__note--phone { display: none; } }
 .chart-lens-zone { fill: var(--ink); fill-opacity: 0.06; }
+/* The picture's figures keep their drawing's size (the program page lets a figure stretch to its column), so text stays text-sized. */
+.page--prog .pic .fig .chart { max-width: calc(var(--vb) * 1px); }
+/* The interval line through the share-cut dots, the strip plot's shaded dots, row bands and median tick (the old
+   site's look: the penalty's screens, darker for a bigger cut), and the trait ranges' rules and large spread numbers. */
+.cond-ci { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.strip-dot { stroke-opacity: 0.8; }
+.strip-dot--0 { stroke: var(--ink-3); stroke-opacity: 0.55; }
+.strip-dot--1 { stroke: var(--pen-seq-1); }
+.strip-dot--2 { stroke: var(--pen-seq-2); }
+.strip-dot--3 { stroke: var(--pen-seq-3); }
+.strip-dot--4 { stroke: var(--pen-seq-4); }
+.strip-dot--5 { stroke: var(--pen-seq-5); }
+.strip__band { fill: var(--paper-2); }
+.strip__median { stroke-width: 3.5px; }
+.spread__rule { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-spread { fill: var(--ink); font: 400 20px/1 var(--font-display); }
 /* Step 5's waterfall under Worksheet R: about the width its drawing is made for, not the whole page. */
 .wf-holder { margin-top: 28px; max-width: 760px; }
 /* Step 4's medians: open under a title and a note; a median above one is shaded, as the old site did. */
@@ -229,6 +245,10 @@
   .usmap__chip--hatch { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .btn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
   .chart-lens-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
+  .cond-ci, .spread__rule, .strip__median { stroke: CanvasText; }
+  .strip-dot--0 { stroke: GrayText; }
+  .strip-dot--1, .strip-dot--2, .strip-dot--3, .strip-dot--4, .strip-dot--5 { stroke: CanvasText; }
+  .strip__band { fill: Canvas; stroke: GrayText; }
 }
 
 /* The data windows (the kit's periods chart): the window the ratios come from is dark, the payment year is the penalty's color. */

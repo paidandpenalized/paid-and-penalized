@@ -50,6 +50,8 @@ const MARKS = [
   // the Readmissions peer groups' columns and key swatches, and the medians' shaded cells (sites/hrrp/web/styles.css)
   '.chart-col--g1', '.chart-col--g2', '.chart-col--g3', '.chart-col--g4', '.chart-col--g5', '.swatch-g1', '.swatch-g2', '.swatch-g3', '.swatch-g4', '.swatch-g5',
   '.meds__table td.hi',
+  // the picture's figures: the interval line, the strip plot's dots, bands and median tick, the trait ranges' rule (sites/hrrp/web/styles.css)
+  '.cond-ci', '.strip-dot--0', '.strip-dot--1', '.strip-dot--2', '.strip-dot--3', '.strip-dot--4', '.strip-dot--5', '.strip__band', '.strip__median', '.spread__rule',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

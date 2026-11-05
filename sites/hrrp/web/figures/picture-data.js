@@ -1,5 +1,5 @@
-// The numbers behind the program page's "The FY2027 picture" Part, as plain data (no markup): the lede's three counts and
-// the largest-penalties table are drawn (figures/picture.js); the five figures below them are not drawn yet, so each is a
+// The numbers behind the program page's "The FY2027 picture" Part, as plain data (no markup): the lede's three counts, the largest-penalties
+// table and the five figures, drawn by figures/picture.js and picture-draw.js; each figure's data is a
 // pure function returning its items or rows, its takeaway as data and its figure-table rows. Shares are fractions (0-1) unless
 // a name says percent (cuts, avgCut, share and vsNation in typeDots, and cut sizes are in percent); "cut" is a payment
 // reduction above zero; "measured" means measured on at least one condition (only those can be cut). Each function's header
@@ -7,9 +7,8 @@
 import { CAP_PCT, CONDS, PEERS, condState, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
-import { mean, median } from '../../../../engine/js/stats.js';
+import { median } from '../../../../engine/js/stats.js';
 import { r2 } from '../../../../web/charts/svg.js';
-import { noun } from '../../../../web/render/format.js';
 import { GE_CUT_PCT } from '../constants.js';
 import { csvPath } from '../links.js';
 import { binIndex, byId, countBy } from '../numbers.js';
@@ -23,7 +22,7 @@ export function pictureLede(hospitals) {
   return { n: s.n, nMeasured: s.nMeasured, nCut: s.nPen, medianCut: s.medianRedPen, nOnePlus: s.nGe1, nCap: s.nMax, onePlus: GE_CUT_PCT, cap: CAP_PCT };
 }
 
-// ---------- the size of the cuts (swarm, undrawn) ----------
+// ---------- the size of the cuts  ----------
 
 // A cut's bins are this wide (percentage points); a bin holds [lo, hi), the last one holds the cap too.
 export const CUT_BIN = 0.25;
@@ -53,54 +52,44 @@ export function sizeSwarm(hospitals, lede = pictureLede(hospitals)) {
       ...(zeroUnmeasured ? [{ lo: 0, hi: 0, n: zeroUnmeasured, measured: false }] : []),
       ...cutBins(hospitals.map((h) => h.red)),
     ],
-    takeaway: { median: lede.medianCut, nCut: lede.nCut, zero: zeroMeasured, nMeasured: lede.nMeasured, n: lede.n, nCap: lede.nCap },
+    takeaway: { median: lede.medianCut, nOnePlus: lede.nOnePlus, onePlus: lede.onePlus, cap: lede.cap, nCut: lede.nCut, zero: zeroMeasured, nMeasured: lede.nMeasured, n: lede.n, nCap: lede.nCap },
   };
 }
 
-// ---------- the coin-flip (undrawn) ----------
+// ---------- more conditions measured (CF-11) ----------
 
-// The words the coin-flip may carry. The finding is a gap between what is observed and what a fair coin for each condition
-// would give; the words say neither that conditions are independent nor that the whole gap is conditions moving together
-// (for one or two conditions the gap is the flag rate itself). No digits: numbers arrive through placeholders.
-export const COIN_WORDS = Object.freeze({
-  coinLow: 'Of the hospitals measured on {measured}, {observed} take a cut; a fair coin for each condition would give {coin}. With so few conditions, the gap is mostly how often a single condition is flagged.',
-  coinAll: 'Of the hospitals measured on all six, {observed} take a cut, against {coin} for a fair coin on each condition and {own} at the flag rates of those same hospitals.',
-});
+// The 95% Wilson score interval for a share of n (z = 1.96), as fractions; null for an empty group.
+export function wilson(nCut, n, z = 1.96) {
+  if (!n) return null;
+  const p = nCut / n;
+  const d = 1 + (z * z) / n;
+  const centre = (p + (z * z) / (2 * n)) / d;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n))) / d;
+  return [Math.max(0, centre - half), Math.min(1, centre + half)];
+}
 
-// "1 condition", "2 conditions": the {measured} placeholder of COIN_WORDS.coinLow.
-export const coinMeasured = (k) => noun(k, 'condition');
-
-const ks = CONDS.map((_, i) => i + 1);
-
-// For each k = 1..6 the hospitals measured on exactly k conditions (so every share here is over measured hospitals, none over
-// hospitals measured on nothing); shares are fractions: n, nCut, observed (share cut), anyFlag (share with a
-// condition flagged), coin (1 - 0.5^k), own (the share expected if each condition were flagged at that group's own rate for it,
-// 1 - the product of (1 - rate) over the hospital's measured conditions, averaged over the group; no claim that real flags
-// behave that way). sixFlags: for the k = 6 group, hospitals by number of flags 0..6.
-export function coinFlip(hospitals) {
-  const measuredOf = hospitals.map((h) => ({ h, measured: CONDS.filter((c) => isMeasured(h.c[c])) }));
-  const groups = ks.map((k) => measuredOf.filter((x) => x.measured.length === k));
-  const rows = ks.map((k, i) => {
-    const group = groups[i];
-    const rate = Object.fromEntries(CONDS.map((c) => {
-      const m = group.filter((x) => x.measured.includes(c));
-      return [c, m.length ? m.filter((x) => x.h.c[c].flag === 1).length / m.length : 0];
-    }));
-    const own = group.length ? mean(group.map((x) => 1 - x.measured.reduce((p, c) => p * (1 - rate[c]), 1))) : null;
-    const nCut = group.filter((x) => x.h.red > 0).length;
-    const nFlag = group.filter((x) => x.measured.some((c) => x.h.c[c].flag === 1)).length;
-    return { k, n: group.length, nCut, observed: group.length ? nCut / group.length : null, anyFlag: group.length ? nFlag / group.length : null, coin: 1 - 0.5 ** k, own };
+// For each k = 1..6 the hospitals measured on exactly k conditions (so every share is over measured hospitals, none over
+// hospitals measured on nothing): n, nCut, share (a fraction: nCut / n; null for an empty group) and interval ([lo, hi], the
+// 95% Wilson interval of that share). A group with no hospital has no share and no interval; the figure leaves its row out.
+// The words never claim the conditions are independent and say nothing of chance: they report the shares.
+export function moreConditions(hospitals) {
+  const measuredCount = hospitals.map((h) => CONDS.filter((c) => isMeasured(h.c[c])).length);
+  const rows = CONDS.map((_, i) => {
+    const k = i + 1;
+    const group = hospitals.filter((_h, j) => measuredCount[j] === k);
+    const nCut = group.filter((h) => h.red > 0).length;
+    return { k, n: group.length, nCut, share: group.length ? nCut / group.length : null, interval: wilson(nCut, group.length) };
   });
-  const sixFlags = Array.from({ length: CONDS.length + 1 }, (_, flags) => ({ flags, n: groups[CONDS.length - 1].filter((x) => x.measured.filter((c) => x.h.c[c].flag === 1).length === flags).length }));
+  const filled = rows.filter((r) => r.n > 0);
   return {
     rows,
-    sixFlags,
-    table: rows.map((r) => ({ k: r.k, n: r.n, nCut: r.nCut, observed: r.observed, coin: r.coin, own: r.own })),
-    variants: [{ key: 'coinLow', ks: [1, 2] }, { key: 'coinAll', ks: [6] }],
+    table: filled.map((r) => ({ k: r.k, n: r.n, nCut: r.nCut, share: r.share, interval: r.interval })),
+    // first, last: the fewest-conditions and most-conditions groups that hold a hospital; one group alone has no "last".
+    takeaway: filled.length ? { first: filled[0], last: filled.length > 1 ? filled[filled.length - 1] : null } : null,
   };
 }
 
-// ---------- paired bars (undrawn) ----------
+// ---------- which conditions cost the most (PB-02) ----------
 
 // For each condition: measured (hospitals measured on it), flags (CMS flagged it), shareFlagged (flags / measured on that
 // condition), shareOfFlags (its share of all flags; adds to one), dollars (the modeled penalty dollars it adds: each cut
@@ -127,25 +116,52 @@ export function pairedBars(hospitals, meta) {
     dollarsPerFlag: r.flags ? r.dollars / r.flags : null,
   }));
   rows.sort((a, b) => b.shareOfDollars - a.shareOfDollars || CONDS.indexOf(a.cond) - CONDS.indexOf(b.cond));
-  return { rows, totalDollars, totalFlags, table: rows.map((r) => ({ cond: r.cond, shareFlagged: r.shareFlagged, shareOfDollars: r.shareOfDollars })) };
+  // The pair the figure draws is shareOfFlags against shareOfDollars (both add to one, so like is compared with like; each
+  // condition flags about half its own measured hospitals by construction, so shareFlagged is no finding). takeaway: the
+  // condition whose dollar share runs furthest above its flag share (up) and the one furthest below (down); null when there
+  // are no flags or no dollars, and each side null when no condition lies on it.
+  const gap = (r) => r.shareOfDollars - r.shareOfFlags;
+  const up = rows.filter((r) => gap(r) > 0).sort((a, b) => gap(b) - gap(a))[0] ?? null;
+  const down = rows.filter((r) => gap(r) < 0).sort((a, b) => gap(a) - gap(b))[0] ?? null;
+  return {
+    rows, totalDollars, totalFlags, takeaway: totalFlags && totalDollars ? { up, down } : null,
+    table: rows.map((r) => ({ cond: r.cond, measured: r.measured, flags: r.flags, shareOfFlags: r.shareOfFlags, dollars: r.dollars, shareOfDollars: r.shareOfDollars })),
+  };
 }
 
-// ---------- ridges by peer group (undrawn) ----------
+// ---------- penalties by peer group (the old site's strip plot) ----------
 
-// A row for each of the five peer groups: n (hospitals in it), nMeasured (those measured on a condition), nCut, shareCut
-// (a fraction: nCut / nMeasured, not / n; null when none is measured), median (percent, among the hospitals cut; null
-// without one) and bins (the cuts above zero, CUT_BIN wide).
-export function ridges(hospitals) {
-  const rows = PEERS.map((peer) => {
+// A row for each of the five peer groups: lo, hi (CMS's cutoffs of the dual share, fractions; null when the edition lists none),
+// n (hospitals in it), nMeasured (those measured on a condition), nCut, shareCut (a fraction: nCut / nMeasured, not / n; null when
+// none is measured), median (percent, among the hospitals cut; null without one) and reds (the cuts, in percent, of the
+// measured hospitals: each is a dot on the strip, the unmeasured ones, which cannot be cut, are left out). takeaway: the groups
+// with a share, ordered by group: low (the least-cut group), min and max (shares over those groups) and others (the min and
+// max over the groups but the lowest-dual one, group 1), or null with fewer than two such groups.
+export function peerGroups(hospitals, meta) {
+  const rows = PEERS.map((peer, i) => {
     const group = hospitals.filter((h) => h.peer === peer);
     const s = summarize(group);
-    const reds = group.map((h) => h.red).filter((r) => r > 0);
-    return { peer, n: group.length, nMeasured: s.nMeasured, nCut: s.nPen, shareCut: s.nMeasured ? s.nPen / s.nMeasured : null, median: reds.length ? median(reds) : null, bins: cutBins(reds) };
+    const reds = group.filter((h) => measuredAny(h)).map((h) => h.red);
+    const cuts = reds.filter((r) => r > 0);
+    const cutoff = meta.peerCutoffs?.[i];
+    return { peer, lo: cutoff?.[0] ?? null, hi: cutoff?.[1] ?? null, n: group.length, nMeasured: s.nMeasured, nCut: s.nPen, shareCut: s.nMeasured ? s.nPen / s.nMeasured : null, median: cuts.length ? median(cuts) : null, reds };
   });
-  return { rows, table: rows.flatMap((g) => g.bins.map((b) => ({ peer: g.peer, ...b }))) };
+  const withShare = rows.filter((r) => r.shareCut !== null);
+  const shares = (list) => list.map((r) => r.shareCut);
+  const rest = withShare.filter((r) => r.peer !== PEERS[0]);
+  const low = withShare.length ? withShare.reduce((a, b) => (b.shareCut < a.shareCut ? b : a)) : null;
+  return {
+    rows,
+    takeaway: withShare.length > 1 ? {
+      low, min: Math.min(...shares(withShare)), max: Math.max(...shares(withShare)),
+      others: rest.length ? { min: Math.min(...shares(rest)), max: Math.max(...shares(rest)) } : null,
+      lowestDual: withShare.some((r) => r.peer === PEERS[0]),
+    } : null,
+    table: rows.map((r) => ({ peer: r.peer, lo: r.lo, hi: r.hi, n: r.n, nMeasured: r.nMeasured, shareCut: r.shareCut, median: r.median })),
+  };
 }
 
-// ---------- type dots (undrawn) ----------
+// ---------- type dots ----------
 
 const OWNERSHIP = ['Nonprofit', 'For-profit', 'Government'];
 const BLOCKS = [
@@ -170,6 +186,29 @@ export function typeDots(hospitals) {
     }).filter((r) => r.nMeasured > 0),
   }));
   return { blocks, national, table: blocks.flatMap((b) => b.rows.map((r) => ({ block: b.block, key: r.key, n: r.n, share: r.share, avgCut: r.avgCut }))) };
+}
+
+// The traits' ranges for the type figure [TD-10]: for each block with at least two groups, the groups from the lowest share cut
+// to the highest (lo, hi: the rows, with their share in percent), and spread (hi.share less lo.share, in points); the blocks
+// run from the widest spread down (ties: block order). takeaway: the widest and the narrowest block, null with fewer than
+// two blocks (then widest alone, or null with none).
+export function typeSpread(hospitals) {
+  const { blocks, national } = typeDots(hospitals);
+  const traits = blocks
+    .map((b, i) => {
+      const groups = b.rows.filter((r) => r.share !== null);
+      if (groups.length < 2) return null;
+      const sorted = [...groups].sort((x, y) => x.share - y.share);
+      const [lo, hi] = [sorted[0], sorted[sorted.length - 1]];
+      return { block: b.block, order: i, groups, lo, hi, spread: hi.share - lo.share };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.spread - a.spread || a.order - b.order);
+  return {
+    traits, national,
+    takeaway: traits.length ? { widest: traits[0], narrowest: traits.length > 1 ? traits[traits.length - 1] : null } : null,
+    table: traits.flatMap((t) => t.groups.map((g) => ({ block: t.block, label: g.label, n: g.n, nMeasured: g.nMeasured, share: g.share }))),
+  };
 }
 
 // ---------- the largest penalties (drawn) ----------
@@ -203,9 +242,9 @@ export function pictureData(ctx) {
     csvHref: csvPath(meta.fy, LARGEST_CSV),
     conditions: ctx.edition.conditions,
     size: () => sizeSwarm(hospitals, lede),
-    coin: () => coinFlip(hospitals),
+    measured: () => moreConditions(hospitals),
     bars: () => pairedBars(hospitals, meta),
-    ridges: () => ridges(hospitals),
-    types: () => typeDots(hospitals),
+    peers: () => peerGroups(hospitals, meta),
+    types: () => typeSpread(hospitals),
   };
 }
