@@ -25,6 +25,7 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-13 | Critical access hospitals are paid on their reasonable costs, not under the inpatient prospective payment system's DRG rates. | https://www.law.cornell.edu/cfr/text/42/413.70 | "payment for inpatient services of a CAH" … "reasonable costs of the CAH in providing CAH services to its inpatients" | 2026-11-05 |
 | HRRP-14 | Beginning in fiscal year 2027, CMS works out the excess readmission ratios from Medicare Advantage stays as well as fee-for-service stays; the payment cut still applies only to fee-for-service payments (HRRP-06). | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "Beginning in fiscal year (FY) 2027, CMS is calculating excess readmission ratios (ERRs) using both Medicare Advantage (MA) and fee-for-service (FFS) data" | 2026-11-05 |
 | HRRP-15 | A hospital's excess readmission ratio for a condition is its predicted 30-day readmission rate divided by the rate expected at an average hospital with a similar mix of patients; above 1.0 is more readmissions than expected. | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | "predicted 30-day readmission rate for a hospital" … "readmission rates at an average hospital with a similar patient case mix" | 2026-11-05 |
+| HRRP-16 | A subsection (d) hospital, the kind the program cuts (HRRP-11), is a hospital in one of the fifty states or the District of Columbia, so a hospital in Puerto Rico is not in the program. | https://www.law.cornell.edu/uscode/text/42/1395ww | "located in one of the fifty States or the District of Columbia" | 2026-11-05 |
 
 ## Notes on the sources
 
@@ -75,10 +76,16 @@ A claim marked `unverified` may not be used in copy.
   and the expected rate defined as quoted (the two fragments are from the two definitions). The regulation's definition
   (42 CFR 412.152, "Excess readmissions ratio") says the same in other words: actual readmissions, risk-adjusted, to
   risk-adjusted expected readmissions.
-- **Who is in the program** (the program page's callout) rests on HRRP-11 to HRRP-13, and on HRRP-01 for Maryland ("non-Maryland
-  subsection (d) hospitals"). The Thirty Day Readmissions callout also said Maryland hospitals "run under their own payment model"
-  and "Puerto Rico hospitals are not subject to the cut"; no source in this register or reached while building the page says
-  either, so the page says neither.
+- **HRRP-16** is 42 U.S.C. 1395ww(d)(1)(B), the definition of "subsection (d) hospital" ("located in one of the fifty States or the
+  District of Columbia other than" the listed psychiatric, rehabilitation, long-term care, children's and cancer hospitals).
+  Puerto Rico is neither, so with HRRP-11 (the program reduces payments to subsection (d) hospitals) its hospitals are out. The
+  inference is this register's; no CMS page found says it in so many words.
+- **Who is in the program** (the program page's callout) rests on HRRP-11 to HRRP-13 and HRRP-16, and on HRRP-01 for Maryland
+  ("non-Maryland subsection (d) hospitals"). The Thirty Day Readmissions callout also said Maryland hospitals "run under their
+  own payment model"; no primary source reached says why (the CMS program page, 42 CFR 412.150 and 412.152 are silent on
+  Maryland, and the federalregister.gov rule text would not load), so the page names Maryland as out without a reason. The
+  Maryland Health Services Cost Review Commission's pages call its own readmissions program a separate one with "an all-payer
+  focus", but do not say that Maryland is exempt from the federal program in words found.
 
 ## Link check (2026-11-04)
 
@@ -95,5 +102,6 @@ document's page; no source needed an archive copy.
 | https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/412.23 | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/413.70 | 200 | direct |
+| https://www.law.cornell.edu/uscode/text/42/1395ww | 200 (about 590,000 characters; the definition is in the second 100,000, read 2026-11-05) | direct |
 | https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |

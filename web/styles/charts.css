@@ -83,6 +83,10 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 /* Marks: neutral gray unless the mark is a cut (--pen); no data is the hatch, never a color. */
 .chart-bar, .chart-col { fill: var(--ink-3); }
 .chart-col--pen { fill: var(--pen); }
+/* The bands behind a columns chart (columns.js bands): every other one tinted, each labeled across the top. */
+.chart-band { fill: transparent; }
+.chart-band--tint { fill: var(--paper-2); }
+.chart-band__label { fill: var(--ink-2); font: 600 10px var(--font-type); }
 .chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* Nothing to show (no hospital in the file): an empty tile, dashed, so it never reads as the hatch's "not in the program". */
 /* A share of exactly zero: the neutral mark, a solid outline (the dashed one means nothing to show). */
@@ -187,6 +191,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-tile, .chart-tile__code, .chart-tile__value, .chart-tile-few--on { forced-color-adjust: none; }
   .chart-bar, .chart-col--pen, .chart-this { fill: CanvasText; }
   .chart-col { fill: GrayText; }
+  .chart-band--tint { fill: Canvas; stroke: GrayText; stroke-width: 1px; vector-effect: non-scaling-stroke; }
   .chart-hyp { fill: Canvas; stroke: CanvasText; }
   .chart-median, .chart-boundary, .chart-axis__line, .chart-axis__tick, .chart-zero { stroke: CanvasText; }
   .chart-line { stroke: Highlight; }

@@ -54,8 +54,8 @@ export const COPY = {
   newForSource: { text: "The note on Medicare Advantage is from CMS's {edition} payment methodology sheet.", claim: 'HRRP-14' },
   whoTitle: { text: 'Who is in the program', claim: null },
   whoText: {
-    text: "About {n} hospitals paid under Medicare's inpatient prospective payment system. Not included: critical access hospitals, and children's, cancer, psychiatric, rehabilitation and long-term care hospitals. Maryland hospitals are not measured.",
-    claim: ['HRRP-01', 'HRRP-11', 'HRRP-12', 'HRRP-13'],
+    text: "About {n} hospitals paid under Medicare's inpatient prospective payment system. Not included: critical access hospitals, and children's, cancer, psychiatric, rehabilitation and long-term care hospitals. Hospitals in Puerto Rico are out too, since the program covers hospitals in the fifty states and the District of Columbia, and so are Maryland's hospitals.",
+    claim: ['HRRP-01', 'HRRP-11', 'HRRP-12', 'HRRP-13', 'HRRP-16'],
   },
 
   // Step 1: the conditions, and the punch card of which each hospital is measured on.
@@ -96,7 +96,9 @@ export const COPY = {
     text: 'CMS sorts hospitals into five peer groups by the share of their stays that are for patients eligible for both Medicare and full Medicaid, a common marker of low income. Each hospital is compared only with the others in its group.',
     claim: 'HRRP-05',
   },
-  fig2Takeaway: { text: 'Group one has the lowest share of such patients and group five the highest. Each group holds about a fifth of the hospitals: {min} to {max} of the {n}.', claim: 'HRRP-05' },
+  fig2Takeaway: { text: 'Group one has the lowest share of such patients and group five the highest. The groups hold from {min} to {max} of the {n} hospitals each.', claim: 'HRRP-05' },
+  fig2Band: { text: 'Group {n}', claim: null },
+  fig2BandShort: { text: '{n}', claim: null },
   fig2Alt: { text: "Columns: how many hospitals have each share of dual-eligible stays, in one-point steps, with the cutoffs between the five peer groups marked on the axis.", claim: null },
   fig2Source: { text: 'CMS {edition} Hospital Readmissions Reduction Program supplemental data file (dual proportion and peer group).', claim: null },
   fig2Note: { text: "The marks on the axis are CMS's cutoffs between the groups: {cutoffs}.", claim: null },

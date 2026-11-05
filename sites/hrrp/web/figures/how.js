@@ -18,6 +18,8 @@ const KEEP = 12;
 // The least width, in drawing units, between two labeled cutoffs on the dual-share axis; a closer one goes unlabeled.
 const TICK_GAP = 26;
 const COLUMNS_HEIGHT = 150;
+// The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
+export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource' });
 const BAR_CLASS = 'chart-col';
 
 const shortOf = (conditions, key) => conditions.find((c) => c.key === key).short;
@@ -84,7 +86,10 @@ function labeled(ticks, top, width) {
 
 function dualFigure({ dual, edition, n }) {
   const bins = dual.bins.map((b) => ({ ...b, cls: BAR_CLASS, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
-  const draw = (width) => columns({ bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT });
+  const draw = (width) => columns({
+    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
+    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill(width < 400 ? 'fig2BandShort' : 'fig2Band', { n: String(b.peer) }) })),
+  });
   const sizes = dual.groups.map((g) => g.n);
   return figure({
     n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share',
@@ -120,7 +125,8 @@ export const calloutNewFor = ({ items, edition }) => (items
   ? html`<aside class="callout" aria-labelledby="callout-new-h">
 <p class="callout__title cap" id="callout-new-h">${fill('newForTitle', { edition })}</p>
 <ul>${items.map((i) => html`<li><b>${i.title}</b> ${i.body}</li>`)}</ul>
-${items.some((i) => i.title.includes('Medicare Advantage')) ? html`<p class="small muted">${fill('newForSource', { edition })}</p>` : ''}
+${[...new Set(items.map((i) => i.claim).filter((c) => c in NOTE_SOURCES))].map((c) => html`<p class="small muted">${fill(NOTE_SOURCES[c], { edition })}</p>
+`)}
 </aside>`
   : '');
 

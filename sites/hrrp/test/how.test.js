@@ -3,10 +3,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONDS, PEERS, isMeasured, peerMedian } from '../../../engine/js/hrrp/formula.js';
-import { escapeHtml } from '../../../web/render/html.js';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT } from '../../../pipeline/files.js';
 import { exampleHospital, withDerived } from '../web/derive.js';
 import { BAND, SWARM_ORDER, condSets, dualBins, exampleIdOf, howData, mediansRows, newFor, roundedCount, swarmData } from '../web/figures/how-data.js';
-import { calloutNewFor, calloutWho, howPart, mediansTable } from '../web/figures/how.js';
+import { NOTE_SOURCES, calloutNewFor, calloutWho, howPart, mediansTable } from '../web/figures/how.js';
 import { programView } from '../web/view.js';
 import { programPage } from '../web/pages/program.js';
 import { ASSETS, CONDITIONS, META, areaOf, hospital, loadHrrpOnce } from './fixtures.js';
@@ -85,6 +86,9 @@ test('Step 2: the example hospital is derive.js exampleHospital, the one Workshe
     assert.ok(sw.table.length < 80, 'a table of bins, not of 2,600 hospitals');
   }
   const hf = swarmData(hospitals, meta, 'HF');
+  const how = howData({ hospitals, meta, edition: { conditions: [] }, whatsNew: null, whatsNewFy: null });
+  assert.equal(how.exampleId, want, 'found once for the page');
+  assert.deepEqual(how.swarm('HF'), hf, 'the page\'s closure gives the same swarm');
   const h = hospitals.find((x) => x.id === hf.items[0].id);
   assert.equal(hf.items[0].d, Math.round((h.c.HF.err - peerMedian(meta, h.peer, 'HF')) * 1e6) / 1e6, "CMS's median for the hospital's own group");
 });
@@ -100,6 +104,7 @@ test('Step 3: the dual share in one-point bins, the five groups and their cutoff
   assert.deepEqual(dual.groups.map((g) => [g.peer, g.n]), [[1, 0], [2, 2], [3, 3], [4, 0], [5, 1]], "CMS's own assignment");
   assert.deepEqual(dual.groups.map((g) => [g.lo, g.hi]), META.peerCutoffs);
   assert.deepEqual(dual.ticks, [14, 18, 23, 31]);
+  assert.deepEqual(dual.bands, [{ peer: 1, x0: 0, x1: 14 }, { peer: 2, x0: 14, x1: 18 }, { peer: 3, x0: 18, x1: 23 }, { peer: 4, x0: 23, x1: 31 }, { peer: 5, x0: 31, x1: 35 }]);
 });
 
 test('Step 4: five rows by six conditions', () => {
@@ -133,8 +138,17 @@ test('"New for" shows only for the fiscal year the notes are for', () => {
   assert.equal(calloutNewFor({ items: null, edition: 'FY2027' }), '');
   const box = calloutNewFor({ items, edition: 'FY2027' }).text;
   assert.ok(box.includes('New for FY2027') && box.includes('<b>A note.</b> Its words.'));
-  assert.ok(escapeHtml(calloutNewFor({ items: [{ title: '<b>x</b>', body: '&' }], edition: 'FY2027' }).text).length > 0);
   assert.ok(!calloutNewFor({ items: [{ title: '<i>x</i>', body: 'y' }], edition: 'FY2027' }).text.includes('<i>'), 'escaped');
+});
+
+test('"New for" names its source from an item\'s claim field, not from its wording', () => {
+  const line = 'payment methodology sheet';
+  assert.ok(!calloutNewFor({ items: [{ title: 'Medicare Advantage patients now count.', body: 'x' }], edition: 'FY2027' }).text.includes(line), 'wording alone adds no source line');
+  assert.ok(calloutNewFor({ items: [{ title: 'A note.', body: 'x', claim: 'HRRP-14' }], edition: 'FY2027' }).text.includes(line));
+  assert.ok(!calloutNewFor({ items: [{ title: 'A note.', body: 'x', claim: 'HRRP-99' }], edition: 'FY2027' }).text.includes(line));
+  const content = JSON.parse(readFileSync(`${REPO_ROOT}sites/hrrp/content/whats_new.json`, 'utf8'));
+  for (const i of content.items) if (i.claim) assert.ok(i.claim in NOTE_SOURCES, `${i.claim} has a source line`);
+  assert.ok(content.items.some((i) => i.claim === 'HRRP-14'));
 });
 
 test('"Who is in the program" rounds the count to the hundred and names who is out', () => {
@@ -143,7 +157,7 @@ test('"Who is in the program" rounds the count to the hundred and names who is o
   assert.equal(roundedCount(2949), 2900);
   const box = calloutWho({ rounded: 2900 }).text;
   assert.ok(box.includes('About 2,900'));
-  for (const w of ['critical access', 'children', 'cancer', 'psychiatric', 'rehabilitation', 'long-term care', 'Maryland']) assert.ok(box.includes(w), w);
+  for (const w of ['critical access', 'children', 'cancer', 'psychiatric', 'rehabilitation', 'long-term care', 'Maryland', 'Puerto Rico']) assert.ok(box.includes(w), w);
 });
 
 test('the Part on the program page: callouts, steps 1 to 4, two figures and the medians table, no swarm', () => {
@@ -156,7 +170,10 @@ test('the Part on the program page: callouts, steps 1 to 4, two figures and the 
   const text = programPage({ view, robots: null, assets: ASSETS });
   const how = /<section class="part" id="how"[\s\S]*?<\/section>\s*<section class="part" id="picture"/.exec(text)[0];
   assert.equal(how.match(/<figure class="fig"/g).length, 2, 'the punch card and the dual-share columns');
-  assert.equal(how.match(/data-kind="punch"|chart-punch__card/g)?.length > 0, true);
+  assert.equal(how.match(/<svg [^>]*chart--punch/g).length, 2, 'the punch card, phone and wide');
+  assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
+  assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
+  assert.ok(how.includes('>Group 1<') && how.includes('>5<'), 'wide labels say Group n, the phone only n');
   assert.equal(how.match(/<section class="hstep"/g).length, 4);
   assert.ok(!how.includes('swarm'));
   assert.ok(how.includes(`New for ${view.edition}`) && how.includes('Who is in the program'));

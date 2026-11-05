@@ -19,6 +19,7 @@ test("whats_new.json's items are the pinned Thirty Day Readmissions output's met
   const whatsNew = readJson(CONTENT + 'whats_new.json');
   const { meta } = readJson(REPO_ROOT + 'data/pinned/tdr/hrrp.json');
   assert.equal(whatsNew.fy, meta.fy, 'the copy is for a different fiscal year than the pin; update one');
-  assert.deepEqual(whatsNew.items, meta.whatsNew.filter((i) => !LATER.test(i.title)));
+  // An item may carry a `claim` id (the claims register row behind it), which the pin does not have.
+  assert.deepEqual(whatsNew.items.map(({ claim, ...item }) => item), meta.whatsNew.filter((i) => !LATER.test(i.title)));
   assert.ok(whatsNew.items.every((i) => !LATER.test(i.title)));
 });

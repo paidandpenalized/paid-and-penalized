@@ -87,7 +87,7 @@ export function swarmData(hospitals, meta, cond, exampleId = exampleIdOf(hospita
 // ---------- Step 3: the dual share in one-point bins, and the five peer groups ----------
 
 // The hospitals' dual share (a fraction) in bins one percentage point wide from zero to the top of the data rounded up to
-// a multiple of five points; the empty bins stay (the figure draws the others). bins: [{ x0, x1, n }] in points. groups: each
+// a multiple of five points; the empty bins stay (the figure draws the others). bands: each group's span of the axis. bins: [{ x0, x1, n }] in points. groups: each
 // peer group's CMS cutoffs (meta.peerCutoffs, fractions) and how many hospitals CMS put in it. ticks: the groups'
 // upper cutoffs but the last, in points, where one group ends and the next begins.
 export function dualBins(hospitals, cutoffs) {
@@ -96,7 +96,11 @@ export function dualBins(hospitals, cutoffs) {
   const bins = Array.from({ length: top }, (_, i) => ({ x0: i, x1: i + 1, n: 0 }));
   for (const d of duals) bins[Math.min(top - 1, Math.floor(d * 100 + 1e-9))].n += 1;
   const groups = PEERS.map((peer, i) => ({ peer, lo: cutoffs[i][0], hi: cutoffs[i][1], n: hospitals.filter((h) => h.peer === peer).length }));
-  return { bins, top, groups, n: duals.length, ticks: groups.slice(0, -1).map((g) => round(g.hi * 100, 2)) };
+  const ticks = groups.slice(0, -1).map((g) => round(g.hi * 100, 2));
+  // The groups' bands across the axis: from zero to the first cutoff, between cutoffs, and from the last to the axis's end.
+  const edges = [0, ...ticks, top];
+  const bands = groups.map((g, i) => ({ peer: g.peer, x0: edges[i], x1: edges[i + 1] }));
+  return { bins, top, groups, n: duals.length, ticks, bands };
 }
 
 // ---------- Step 4: the peer-group medians ----------
@@ -127,7 +131,11 @@ export const newFor = ({ whatsNew, whatsNewFy, fy }) => (whatsNew?.length && wha
 // The Part's data from the area context (view.js areaContext).
 export function howData(ctx) {
   const { hospitals, meta } = ctx;
+  const exampleId = exampleIdOf(hospitals, meta);
   return {
+    exampleId,
+    // Step 2's swarm for a condition, undrawn: the example is found once for the page, not for each condition.
+    swarm: (cond) => swarmData(hospitals, meta, cond, exampleId),
     sets: condSets(hospitals),
     dual: dualBins(hospitals, meta.peerCutoffs),
     medians: mediansRows(meta),
