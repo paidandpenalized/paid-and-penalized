@@ -28,6 +28,11 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-16 | A subsection (d) hospital, the kind the program cuts (HRRP-11), is a hospital in one of the fifty states or the District of Columbia, so a hospital in Puerto Rico is not in the program. | https://www.law.cornell.edu/uscode/text/42/1395ww | "located in one of the fifty States or the District of Columbia" | 2026-11-05 |
 | HRRP-17 | CMS suppressed the pneumonia readmission measure for the FY2023 program year, so no pneumonia ratio counted toward the FY2023 cuts. | https://www.federalregister.gov/documents/2021/08/13/2021-16519 | "to suppress the Hospital 30-Day, All-Cause, Risk- Standardized Readmission Rate (RSRR) following Pneumonia Hospitalization measure (NQF #0506) for the FY 2023 program year" | 2026-11-05 |
 | HRRP-18 | CMS left claims for services from January 1 to June 30, 2020 out of the program's calculations because of the COVID-19 public health emergency. | https://www.federalregister.gov/documents/2020/09/18/2020-19637 | "no claims data reflecting services provided January 1, 2020-June 30, 2020 will be used in calculations for the Hospital Readmissions Reduction Program" | 2026-11-05 |
+| HRRP-19 | Beginning with fiscal year 2027, CMS works out the readmission ratios from two years of data instead of three; the FY2027 period is July 1, 2023 through June 30, 2025. | https://www.cms.gov/files/document/fy-2027-hrrp-fact-sheet-pdf.pdf | "CMS is reducing the performance period from 3-years to 2-years." … "The FY 2027 performance period is July 1, 2023, to June 30, 2025." | 2026-11-05 |
+| HRRP-20 | CMS gave notice in the FY2026 final rule that it would stop excluding patients with a COVID-19 diagnosis from the readmission measures beginning with the FY2027 program year. | https://www.federalregister.gov/documents/2025/08/04/2025-14681 | "we intend to remove the COVID-19 exclusion from the readmission measures beginning with the FY 2027 program year" | 2026-11-05 |
+| HRRP-21 | The base operating DRG payment the cut applies to is the wage-adjusted DRG operating payment plus new-technology add-on payments; it leaves out teaching, low-income-patient, outlier and low-volume payments. | https://www.law.cornell.edu/cfr/text/42/412.152 | "plus any applicable new technology add-on payments under subpart F of this part" | 2026-11-05 |
+| HRRP-22 | Congress extended the Medicare-dependent hospital program through December 31, 2026, which falls inside fiscal year 2027. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" | 2026-11-05 |
+| HRRP-23 | The readmission measures count unplanned readmissions within 30 days of discharge. | https://www.federalregister.gov/documents/2026/08/04/2026-15833 | "assesses unplanned readmissions occurring within 30 days of discharge" | 2026-11-05 |
 
 
 ## Notes on the sources
@@ -63,7 +68,11 @@ A claim marked `unverified` may not be used in copy.
 - **HRRP-12** is the list of hospital classifications in 42 CFR 412.23 (the regulation's headings, in order: psychiatric,
   rehabilitation, children's, long-term care, cancer); each is excluded from the inpatient prospective payment system and
   paid under another system (the psychiatric, rehabilitation and long-term care paragraphs name theirs). The last fragment
-  is the cancer paragraph's own words; the others say the same of their kind. Thirty Day Readmissions' list is the same five.
+  ("excluded from the prospective payment systems") is the rehabilitation (b) and cancer (f) paragraphs' words, and
+  paragraph (g) uses it for hospitals outside the fifty States; the psychiatric and long-term care paragraphs say "excluded
+  from the prospective payment system" (singular) and the children's paragraph (d) has no such sentence, being covered by
+  the section's opening text. Checked against the page 2026-11-05; the earlier note that the fragment was the cancer
+  paragraph's alone was wrong. Thirty Day Readmissions' list is the same five.
 - **HRRP-13** is 42 CFR 413.70(a)(1) (a plus-one-percent-of-reasonable-cost payment); the text has a double space after
   "the" in "the  reasonable costs", which the quote runs past by splitting at the phrase.
 
@@ -72,9 +81,8 @@ A claim marked `unverified` may not be used in copy.
   says "The payment adjustment factor (PAF) will continue to only be applied to all Medicare FFS base operating diagnosis-related
   group (DRG) payments during the FY. The PAF is not applied to MA payments," which is the second sentence of the program page's
   note and what HRRP-06 already says. The quote is the first sentence only, to stay within 25 words. The source is a PDF; it
-  was read from a copy downloaded outside the repo, not stored. The program page's other two "New for" notes (two years of data
-  instead of three; the pandemic-era exclusion ended) come from Thirty Day Readmissions' content file and have no row here yet:
-  this sheet does not state them.
+  was read from a copy downloaded outside the repo, not stored. The program page's other two "New for" notes now have rows
+  (HRRP-19, HRRP-20); this sheet does not state them.
 - **HRRP-15** is the same sheet's Step 1a: "ERR = predicted readmission rate / expected readmission rate", with the predicted
   and the expected rate defined as quoted (the two fragments are from the two definitions). The regulation's definition
   (42 CFR 412.152, "Excess readmissions ratio") says the same in other words: actual readmissions, risk-adjusted, to
@@ -97,6 +105,25 @@ A claim marked `unverified` may not be used in copy.
   final rule. The history's shaded years (FY2022 to FY2024, constants.js COVID_FYS) are the years whose data windows are
   cut short or run across those months; web/ tests check the windows in the data file. Read from the Federal Register's text file.
 
+- **HRRP-19** is CMS's FY2027 HRRP fact sheet (a PDF, read from a copy downloaded outside the repo, 2026-11-05). The
+  regulation says the same (42 CFR 412.152, "applicable period": from FY2027 the two-year period advanced one year), and the
+  FY2026 final rule (90 FR 36931 to 36932) finalized it with the example "claims/encounter data with admission dates beginning
+  from July 1, 2023, through June 30, 2025".
+- **HRRP-20** is the FY2026 IPPS/LTCH PPS final rule, 90 FR 36930, which says CMS "intend[s]" the removal and calls it a
+  technical update; no later confirmation was found, so the register states what CMS gave notice of. The "New for" note
+  keeps Thirty Day Readmissions' words (a test matches them to the pinned file).
+- **HRRP-21** is the regulation's definition of "base operating DRG payment amount" (42 CFR 412.152): the wage-adjusted DRG
+  operating payment plus new-technology add-ons, determined without regard to the value-based program's adjustments, and
+  not including indirect medical education, disproportionate share, outlier or low-volume payments.
+- **HRRP-22** is the same MLN Matters article as HACRP-88 (MM14415). That the add-on is in the base payment is this
+  register's reading (the Medicare-dependent hospital rate is part of the DRG operating payment); no source quoted says so.
+- **HRRP-23** is FR 2026-15833, 91 FR 49900 (a paragraph about the sepsis measure that says it is "consistent with other
+  Hospital Readmissions Reduction Program measures").
+- **42 CFR 412.152, "not less than 1.0"** (checked 2026-11-05): the definition of "excess readmissions ratio" reads "the ratio
+  (but not less than 1.0) of risk-adjusted readmissions...", while CMS's published ratios run below 1.0 and only the part above
+  the peer median counts. Methods says only what HRRP-04 and HRRP-09 support: a condition at or below its median adds nothing,
+  and the factor is one minus the summed contributions, held to the 3% cap. It does not say the ratio is floored.
+
 ## Link check (2026-11-04)
 
 Each source above, fetched with redirects followed. The Federal Register addresses redirect once to the same
@@ -117,3 +144,6 @@ document's page; no source needed an archive copy.
 | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |
 | https://www.federalregister.gov/documents/2021/08/13/2021-16519 | 200 | direct (one redirect) |
 | https://www.federalregister.gov/documents/2020/09/18/2020-19637 | 200 | direct (one redirect) |
+| https://www.federalregister.gov/documents/2025/08/04/2025-14681 | 200 (text file read, 2026-11-05) | direct (one redirect) |
+| https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |
+| https://www.cms.gov/files/document/fy-2027-hrrp-fact-sheet-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |

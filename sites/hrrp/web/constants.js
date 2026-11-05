@@ -6,7 +6,7 @@
 // "Aggregate Estimated Total FY 2027 Impact $1,739,715,745.72". Any share of the modeled base is computed from the data
 // where the page needs it, not typed here.
 export const NTAP_FY = 2027;
-export const NTAP_TOTAL = '$1.7 billion';
+export const NTAP_AMOUNT = 1739715745.72;
 
 // Medicare pays Pennsylvania Rural Health Model hospitals a global budget through this date: CMS Transmittal 12622
 // (CR 13595, May 2, 2024) extended the model's termination date to 12/31/2026. The row drops out of later editions.
@@ -15,17 +15,26 @@ export const PARHM_END = '2026-12-31';
 // "About 2,900 hospitals": the hospital count rounded to the nearest hundred (Thirty Day Readmissions, views/explainer.js).
 export const ROUND_COUNT_TO = 100;
 
+// Methods' display choices (not claims): the resident-to-bed ratio at which this site's hospital master calls a hospital major
+// teaching (engine/py/pp_engine/master.py MAJOR_TEACHING); the "within this share" band of the dollar check, which is the
+// check's own `within15` key (data meta.dollarCheck); the first and last fiscal years whose CMS files also listed hospitals
+// the history's share penalized leaves out.
+export const TEACH_MAJOR = 0.25;
+export const ACCURACY_BAND = 15;
+export const SMALL_HOSPITAL_BEDS = 100;
+export const HISTORY_LISTED_FYS = Object.freeze([2013, 2018]);
+
 // The claims-register row behind each method constant the gate checks (pipeline/test/copy-gate.test.js).
-// NTAP_FY and ROUND_COUNT_TO are not here: NTAP_FY is the year NTAP_TOTAL states, and ROUND_COUNT_TO is a rounding of how a
+// NTAP_FY and ROUND_COUNT_TO are not here: NTAP_FY is the year NTAP_AMOUNT states, and ROUND_COUNT_TO is a rounding of how a
 // count is shown, not a claim about CMS's program.
 export const CLAIMS = {
-  NTAP_TOTAL: 'HRRP-07',
+  NTAP_AMOUNT: 'HRRP-07',
   PARHM_END: 'HRRP-08',
 };
 
 // What the copy gate reads: the prefix of this site's claim ids, and the method constants it checks (name and type).
 export const CLAIM_PREFIX = 'HRRP';
-export const METHOD_CONSTANTS = Object.freeze({ NTAP_TOTAL: 'string', PARHM_END: 'string' });
+export const METHOD_CONSTANTS = Object.freeze({ NTAP_AMOUNT: 'number', PARHM_END: 'string' });
 
 // Care Compare rates hospitals from one star to this many (CMS's overall rating scale); the record card shows the rating as filled and empty stars.
 export const STARS_MAX = 5;

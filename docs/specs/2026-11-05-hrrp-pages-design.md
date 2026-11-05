@@ -128,9 +128,11 @@ Kicker "Methods & sources", heading "How this was made". About; the formula (neu
 the dollar formula and the modeled totals against CMS's; `#methods-dollars`: the accuracy line (the cost-report check)
 and the assumptions table (the fixed rows plus the conditional ones, each from data or a cited method constant); how
 to read a penalty; places (geocode counts); history (the FY2013–FY2018 exclusions, the FY2025 simulation); feedback and
-privacy (the site collects nothing about readers and sets no cookies; Google sees form submissions and the IP; no
-promised reply time); accessibility; the sources (every pin the site reads, with its hash and size); the 14-term
-glossary; reuse (licenses, CSV conventions, why a CCN reads `="010001"`). The data dictionary is its own page.
+privacy (Google sees form submissions and the IP; no promised reply time; the privacy claims, including how visits are
+counted with Cloudflare Web Analytics, live on the family privacy page, which Methods links); accessibility; the sources
+(every pin the site reads, with its hash and size); the 14-term glossary; reuse (licenses, CSV conventions: the family
+writes a CCN as plain text, so the reuse note says to open its column as text to keep the leading zero, not `="010001"`,
+which engine/js/csv.js's formula guard would break). The data dictionary is its own page.
 
 ## Everywhere
 

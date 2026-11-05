@@ -21,7 +21,7 @@ const KEEP = 12;
 const TICK_GAP = 26;
 const COLUMNS_HEIGHT = 150;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
-export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource' });
+export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
 
 const shortOf = (conditions, key) => conditions.find((c) => c.key === key).short;

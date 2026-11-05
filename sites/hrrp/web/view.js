@@ -7,16 +7,16 @@ import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS } from '../../../engine/js/hrrp/f
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
-import { capitalize, dotList, ordinal, placeText, spelled } from '../../../web/render/format.js';
-import { GE_CUT_PCT, STARS_MAX } from './constants.js';
+import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, spelled } from '../../../web/render/format.js';
+import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
-import { researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
+import { noTotalText, researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
-import { PROGRAM_PATH, placePath } from './links.js';
+import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
 import { factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
@@ -143,12 +143,12 @@ export function hospitalView(h, ctx) {
 
 // What the program page and the place pages share, built once: the edition's phrases, the nation's summary and the states'
 // average cuts (descending, for a state's rank among them). places: buildPlaces()'s result.
-export function areaContext({ hospitals, meta, history, conditions, places, whatsNew = null, whatsNewFy = null, shapes = null, timeline = null, research = null }) {
+export function areaContext({ hospitals, meta, history, conditions, places, whatsNew = null, whatsNewFy = null, shapes = null, timeline = null, research = null, pinsUsed = [] }) {
   const edition = { ...editionOf(meta, history), conditions };
   const states = places.list.filter((p) => p.kind === 'state');
   const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
   const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
-  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, whatsNew, whatsNewFy, shapes, history, conditions, timeline, research };
+  return { hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, whatsNew, whatsNewFy, shapes, history, conditions, timeline, research, pinsUsed };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -291,6 +291,78 @@ export function placeView(place, ctx) {
   };
 }
 
+// "Oct–Dec 2026": the part of the payment year before an end date that falls inside it, or null when the date is on or
+// after the year's last day (the whole year counts). endIso: YYYY-MM-DD.
+function monthsBefore(fy, endIso) {
+  if (endIso >= `${fy}-09-30`) return null;
+  const { month, year } = isoMonth(endIso);
+  const end = month.slice(0, 3);
+  return Number(year) === fy - 1 ? `Oct–${end} ${year}` : `Oct ${fy - 1}–${end} ${year}`;
+}
+
+// "an October 2026 check", from the check's date (YYYY-MM-DD); "a check" when it has none.
+function checkPhrase(asOf) {
+  if (!asOf) return 'a check';
+  const { month, year } = isoMonth(asOf);
+  return `${/^[AEIOU]/.test(month) ? 'an' : 'a'} ${month} ${year} check`;
+}
+
+// How the estimates compare with hospitals' cost reports; null when the data has no dollar check.
+function accuracyLine(dc, edition, label) {
+  if (dc?.within15 == null) return null;
+  const small = dc.within15Small == null ? '' : methodsFill('accuracySmall', { share: fmtPct(dc.within15Small, 0), beds: String(SMALL_HOSPITAL_BEDS) });
+  return methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: label(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: label(edition.fy), small });
+}
+
+// The assumptions as [assumption, effect] rows of words: the fixed ones, then those the data calls for (the Medicare-dependent
+// row with its end date and largest shortfall, the Pennsylvania model while it runs into the payment year, hospitals CMS lists
+// as inactive, hospitals with no estimate).
+function assumptionRows(ctx, label) {
+  const { edition, meta, hospitals: list } = ctx;
+  const dc = meta.dollarCheck;
+  const f = (a, e, av = {}, ev = {}) => [methodsFill(a, av), methodsFill(e, ev)];
+  const nMdh = list.filter((h) => h.types?.includes('MDH')).length;
+  const nInactive = list.filter((h) => h.inactive).length;
+  const nNoEst = list.filter((h) => h.pen == null).length;
+  const mdhMonths = meta.mdh ? monthsBefore(edition.fy, meta.mdh.endDate) : null;
+  const parhmMonths = monthsBefore(edition.fy, PARHM_END);
+  const share = meta.totals?.modelBase ? pct(NTAP_AMOUNT / meta.totals.modelBase, 1) : null;
+  const rates = dc?.rateDrift == null
+    ? [methodsFill('assumeRates', { edition: edition.label }), methodsFill('assumeRatesENone', {})]
+    : f('assumeRates', 'assumeRatesE', { edition: edition.label }, { drift: pct(Math.abs(dc.rateDrift - 1), 1), direction: methodsT(dc.rateDrift >= 1 ? 'directionAbove' : 'directionBelow'), costFy: label(dc.costFy) });
+  return [
+    f('assumeBase', 'assumeBaseE', { edition: edition.label }),
+    rates,
+    f('assumeVolume', 'assumeVolumeE', { volumeFy: label(edition.fy - 2) }, { edition: edition.label }),
+    f('assumeFfs', 'assumeFfsE'),
+    meta.mdh && (mdhMonths
+      ? f('assumeMdh', 'assumeMdhE', { months: mdhMonths, date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') }, { max: `${meta.mdh.maxShortfall}%` })
+      : f('assumeMdhYear', 'assumeMdhYearE', { date: fmtDate(meta.mdh.endDate, 'long'), hospitals: noun(nMdh, 'hospital') })),
+    share && f('assumeNtap', 'assumeNtapE', {}, { share, ntapFy: label(NTAP_FY), total: money(NTAP_AMOUNT) }),
+    PARHM_END >= `${edition.fy - 1}-10-01` && (parhmMonths
+      ? f('assumeParhm', 'assumeParhmE', {}, { date: fmtDate(PARHM_END, 'long'), months: parhmMonths })
+      : f('assumeParhm', 'assumeParhmYearE', {}, { date: fmtDate(PARHM_END, 'long') })),
+    f('assumeNew', 'assumeNewE'),
+    nInactive > 0 && f(nInactive === 1 ? 'assumeInactiveOne' : 'assumeInactiveMany', nInactive === 1 ? 'assumeInactiveOneE' : 'assumeInactiveManyE', { hospitals: noun(nInactive, 'hospital') }),
+    nNoEst > 0 && f(nNoEst === 1 ? 'assumeNoEstOne' : 'assumeNoEstMany', 'assumeNoEstE', { hospitals: noun(nNoEst, 'hospital') }),
+  ].filter(Boolean);
+}
+
+// The history's annual totals as table rows with their sources, and the sentence about where they come from.
+function historyTotals(history, label) {
+  const rows = history.national.map((r) => ({
+    fy: label(r.fy),
+    total: r.totalEst == null ? null : money(r.totalEst),
+    source: r.totalEst == null ? null : { name: r.totalSrc?.label ?? null, url: httpsUrl(r.totalSrc?.url) },
+  }));
+  const simulated = history.national.filter((r) => /simulation/i.test(r.totalSrc?.label ?? '')).map((r) => label(r.fy));
+  return {
+    text: simulated.length ? methodsFill('historyTotalsSim', { simulated: listText(simulated) }) : methodsT('historyTotals'),
+    noTotal: noTotalText(history.national.filter((r) => r.totalEst == null).map((r) => r.fy)),
+    rows,
+  };
+}
+
 // The Methods page's words as plain strings, filled from the data: the edition's phrases, the neutrality modifier at four
 // decimals, how many hospitals the recomputation reproduces, the sources the data file names.
 export function methodsView(ctx) {
@@ -298,6 +370,8 @@ export function methodsView(ctx) {
   const rep = meta.replication;
   const label = (fy) => siteFill('editionLabel', { fy: String(fy) });
   const span = { first: label(edition.firstFy), last: label(edition.fy - 1) };
+  const totals = meta.totals;
+  const cmsLabel = totals?.cmsSrc?.label ?? null;
   return {
     edition: edition.label,
     heading: methodsFill('pageTitle', { edition: edition.label }),
@@ -310,10 +384,35 @@ export function methodsView(ctx) {
         ? methodsFill('replicationAll', { total: fmtInt(rep.total) })
         : methodsFill('replicationSome', { exact: fmtInt(rep.exact), total: fmtInt(rep.total) }),
     },
+    meta,
+    conditions: edition.conditions,
     dollars: methodsFill('dollarsInputs', { edition: edition.label }),
-    small: methodsFill('readSmall', { minCases: String(MIN_DISCHARGES) }),
-    window: methodsFill('readWindow', { window: edition.perfLong }),
+    totals: totals?.modelBase == null ? null : {
+      text: methodsFill('dollarsTotals', { base: fmtMoney(totals.modelBase), pen: fmtMoney(totals.modelPen), cms: fmtMoney(totals.cmsEst), source: cmsLabel ?? methodsT('cmsSourceNone') }),
+      url: httpsUrl(totals.cmsSrc?.url),
+    },
+    accuracy: accuracyLine(meta.dollarCheck, edition, label),
+    assumptions: assumptionRows(ctx, label),
+    read: {
+      readmission: methodsT('readReadmission'),
+      small: methodsFill('readSmall', { minCases: String(MIN_DISCHARGES) }),
+      ma: methodsFill('readMa', { edition: edition.label }),
+      window: methodsFill('readWindow', { window: edition.perfLong }),
+    },
+    places: meta.geocode
+      ? methodsFill('placesGeocode', { address: fmtInt(meta.geocode.address), zip: fmtInt(meta.geocode.zip), county: fmtInt(meta.geocode.county) })
+        + (meta.geocode.none ? methodsFill('placesNone', { none: fmtInt(meta.geocode.none) }) : '')
+      : null,
     history: methodsFill('historyText', span),
+    historyListed: methodsFill('historyListed', { first: label(HISTORY_LISTED_FYS[0]), last: label(HISTORY_LISTED_FYS[1]) }),
+    historyTotals: historyTotals(ctx.history, label),
+    feedback: methodsT('feedbackText'),
+    reuse: methodsFill('reuseText', { minCases: String(MIN_DISCHARGES) }),
+    pins: ctx.pinsUsed.map((p) => ({ title: p.title, url: httpsUrl(p.landingPage || p.downloadUrl), bytes: fmtInt(p.bytes), hash: `${p.sha256.slice(0, 16)}…`, retrieved: fmtDate(p.retrieved, 'long') })),
+    glossary: {
+      paf: methodsFill('defPaf', { floor: (1 - CAP_PCT / 100).toFixed(2) }),
+      teach: methodsFill('defTeach', { major: String(TEACH_MAJOR) }),
+    },
     sources: {
       files: meta.sources.map((s) => ({ name: s.name, url: /^https:\/\//.test(s.url) ? s.url : null })),
       supplemental: methodsFill('sourceSupplemental', span),

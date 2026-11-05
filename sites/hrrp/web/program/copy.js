@@ -52,6 +52,8 @@ export const COPY = {
   stepLabel: { text: 'Step {n}', claim: null },
   newForTitle: { text: 'New for {edition}', claim: null },
   newForSource: { text: "The note on Medicare Advantage is from CMS's {edition} payment methodology sheet.", claim: 'HRRP-14' },
+  newForSourceWindow: { text: "The note on the data window is from CMS's {edition} Readmissions Reduction Program fact sheet.", claim: 'HRRP-19' },
+  newForSourceCovid: { text: "The note on the pandemic-era exclusion is from CMS’s notice, in the previous year’s payment rule, for {edition}.", claim: 'HRRP-20' },
   whoTitle: { text: 'Who is in the program', claim: null },
   whoText: {
     text: "About {n} hospitals paid under Medicare's inpatient prospective payment system. Not included: critical access hospitals, and children's, cancer, psychiatric, rehabilitation and long-term care hospitals. Hospitals in Puerto Rico are out too, since the program covers hospitals in the fifty states and the District of Columbia, and so are Maryland's hospitals.",
