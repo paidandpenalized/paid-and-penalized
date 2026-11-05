@@ -105,6 +105,18 @@ class Scenario(unittest.TestCase):
             if base["has_margin"]:
                 self.assertAlmostEqual(r["operating_margin_after"], r["operating_margin"])
 
+    def test_a_blank_line_2_is_scored_for_lines_2_and_5(self):
+        b = exposure.hospital_base(hcris_row(medicaid_net_revenue=""))
+        self.assertTrue(b["scored"])
+        self.assertEqual(exposure.scenario(b, 0.25, 0.4)["lost"], 0.0)
+        self.assertAlmostEqual(exposure.scenario(b, 0.25, 0.4, line2_5=True)["lost"], 2000000 * 0.25 * 0.4)
+
+    def test_negative_uncompensated_care_gives_no_percent(self):
+        b = exposure.hospital_base(hcris_row(uncompensated_cost="-5"))
+        self.assertIn("negative_uncompensated_cost", b["flags"])
+        self.assertIsNone(exposure.scenario(b, 0.25, 0.4)["uncompensated_change"])
+        self.assertIsNone(rollup.roll_up([(b, exposure.scenario(b, 0.25, 0.4))])["uncompensated_change"])
+
     def test_inconsistent_inputs_are_not_scored(self):
         b = exposure.hospital_base(hcris_row(net_patient_revenue="9000000"))
         self.assertFalse(b["scored"])
@@ -156,6 +168,13 @@ class RollUp(unittest.TestCase):
         self.assertEqual((t["hospitals"], t["margin_hospitals"]), (2, 1))
         self.assertAlmostEqual(t["lost"], 2000000)
         self.assertAlmostEqual(t["net_patient_revenue"], 100000000)
+
+    def test_an_operating_margin_counts_without_net_income(self):
+        b = exposure.hospital_base(hcris_row(net_income="", net_patient_revenue="20000000"))
+        t = rollup.roll_up([(b, exposure.scenario(b, 0.25, 0.9))])
+        self.assertEqual((t["margin_hospitals"], t["falls_1pp"], t["into_red"]), (1, 1, 0))
+        self.assertIsNotNone(t["operating_margin_after"])
+        self.assertIsNone(t["total_margin"])
 
     def test_empty(self):
         t = rollup.roll_up([])

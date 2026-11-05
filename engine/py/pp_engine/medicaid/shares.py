@@ -71,6 +71,11 @@ def by_state(rows):
     return out
 
 
+def _previous_quarter_end(day):
+    return {3: datetime.date(day.year - 1, 12, 31), 6: datetime.date(day.year, 3, 31),
+            9: datetime.date(day.year, 6, 30), 12: datetime.date(day.year, 9, 30)}[day.month]
+
+
 def _share(quarters, ends, basis):
     total = sum(quarters[q][0] for q in ends)
     viii = sum(quarters[q][1] for q in ends)
@@ -81,23 +86,26 @@ def _share(quarters, ends, basis):
 
 def state_share(quarters, fy):
     """One state's Share for federal fiscal year `fy`, from its {quarter end: (total, viii)}; None when the state
-    reports no VIII group at all (it did not expand). A state whose group starts during or after `fy` gets the four
-    newest quarters with VIII spending (basis `latest4`)."""
+    reports no VIII group at all (it did not expand). The year counts only when the group already had spending in the
+    quarter before the year began, so a first, partial year (a group adopted mid-quarter) doesn't pass. Otherwise the
+    four newest consecutive quarters with VIII spending stand in (basis `latest4`): they are the most revised-to-come
+    quarters in the file, so a later CMS-64 vintage can move this share."""
     ends = fy_quarter_ends(fy)
-    if all(q in quarters and quarters[q][1] is not None for q in ends):
+    has = lambda q: q in quarters and quarters[q][1] is not None  # noqa: E731
+    if has(_previous_quarter_end(ends[0])) and all(has(q) for q in ends):
         return _share(quarters, ends, f"ffy{fy}")
-    reported = sorted(q for q, (_, viii) in quarters.items() if viii is not None)
+    reported = sorted(q for q in quarters if has(q))
     if not reported:
         return None
     latest = reported[-4:]
-    if len(latest) < 4:
-        raise SharesError(f"CMS-64: fewer than four quarters of VIII spending (newest {latest[-1]})")
+    if len(latest) < 4 or any(_previous_quarter_end(b) != a for a, b in zip(latest, latest[1:])):
+        raise SharesError(f"CMS-64: no four consecutive quarters of VIII spending (newest {latest[-1]})")
     return _share(quarters, tuple(latest), "latest4")
 
 
-def state_shares(rows, fy):
-    """{state name: Share or None} for every state in the rows."""
-    return {state: state_share(qs, fy) for state, qs in by_state(rows).items()}
+def state_shares(rows, *fys):
+    """{state name: (Share or None for each of `fys`)} for every state in the rows, parsed once."""
+    return {state: tuple(state_share(qs, fy) for fy in fys) for state, qs in by_state(rows).items()}
 
 
 def net_of(share, deduction, fy):

@@ -13,6 +13,7 @@ import argparse
 import csv
 import hashlib
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 
@@ -42,8 +43,9 @@ def code_of(cms64_name):
 def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
     """{state code: inputs}: the VIII share for the base year (and the next year, and net of DSH, as sensitivities),
     Urban's three declines as fractions and their enrollment counts, and the state's class."""
-    base = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy).items() if code_of(n)}
-    later = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy + 1).items() if code_of(n)}
+    both = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy, fy + 1).items() if code_of(n)}
+    base = {code: s[0] for code, s in both.items()}
+    later = {code: s[1] for code, s in both.items()}
     fmr = {r["state"]: r for r in fmr_rows}
     urban = {r["state"]: r for r in urban_rows}
     out = {}
@@ -80,7 +82,7 @@ def read_hcris(path, year=params.BASE_YEAR):
         reader = csv.reader(f)
         header = next(reader)
         at, want = header.index("year"), str(year)
-        rows = (dict(zip(header, row)) for row in reader if row[at] == want)
+        rows = (dict(zip(header, row)) for row in reader if len(row) > at and row[at] == want)
         return {r["ccn"]: r for r in rows}
 
 
@@ -102,10 +104,15 @@ def _r(value, places=0):
     return int(v) if places == 0 else v
 
 
+def share_for(rec, st, share_key="share"):
+    """The VIII share a record is scored with: its state's, for a hospital in a scenario state only."""
+    return st.get(share_key) if rec["cls"] == SCENARIO else None
+
+
 def score(rec, st, scenario_id, share_key="share", use=params.USE_DEFAULT, line2_5=False):
-    """Steps 1 to 4 for one record under its state's inputs `st`: only a scenario state's hospitals get a share."""
-    share = st.get(share_key) if rec["cls"] == SCENARIO else None
-    return exposure.scenario(rec["base"], share, (st.get("declines") or {}).get(scenario_id, 0.0), use, line2_5)
+    """Steps 1 to 4 for one record under its state's inputs `st`."""
+    return exposure.scenario(rec["base"], share_for(rec, st, share_key),
+                             (st.get("declines") or {}).get(scenario_id, 0.0), use, line2_5)
 
 
 def hospital_records(master, hcris, states, programs, fence=None):
@@ -127,7 +134,7 @@ def hospital_records(master, hcris, states, programs, fence=None):
     for rec in out:
         if rec["base"] is not None:
             st = states.get(rec["state"], {})
-            rec["share"] = st.get("share") if rec["cls"] == SCENARIO else None
+            rec["share"] = share_for(rec, st)
             rec["results"] = {sid: score(rec, st, sid) for sid in params.SCENARIO_IDS}
     return out
 
@@ -135,7 +142,7 @@ def hospital_records(master, hcris, states, programs, fence=None):
 def roll(records, scenario_id, states=None, where=None, by_state=False, **override):
     """The national roll-up for one scenario over the records `where` keeps (and by state, with `by_state`).
     `override` (share_key, use, line2_5) reruns steps 1 to 4 for a sensitivity; without it the stored results stand."""
-    pairs, groups = [], {}
+    pairs, groups, states = [], {}, states or {}
     for r in records:
         if r["base"] is None or (where and not where(r)):
             continue
@@ -238,7 +245,11 @@ def main(argv):
     states = state_table(inputs.read_csv(inputs.VIII), inputs.read_csv(inputs.URBAN), inputs.read_csv(inputs.FMR))
     master = json.loads(Path(a.master).read_text(encoding="utf-8"))
     dollars = json.loads(Path(a.dollars).read_text(encoding="utf-8"))
-    records = hospital_records(master, read_hcris(a.hcris), states, program_dollars(dollars))
+    hcris = read_hcris(a.hcris)
+    if not hcris:
+        print(f"medicaid: no FY{params.BASE_YEAR} rows in {a.hcris}", file=sys.stderr)
+        return 1
+    records = hospital_records(master, hcris, states, program_dollars(dollars))
     nat, by_state, sens, groups = results(records, states)
     settled = rollup.settled_share(r["base"] for r in records if r["base"])
     counts = dict(Counter(r["cls"] for r in records))

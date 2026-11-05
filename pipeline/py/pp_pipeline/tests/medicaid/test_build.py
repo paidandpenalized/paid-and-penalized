@@ -9,7 +9,7 @@ from pathlib import Path
 from pp_engine.medicaid import rollup, shares
 from pp_pipeline.medicaid import build, inputs
 
-FY2023 = ("12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
+FY2023 = ("09/30/2022", "12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
 FY2024 = ("12/31/2023", "03/31/2024", "06/30/2024", "09/30/2024")
 
 
@@ -73,6 +73,7 @@ class StateTable(unittest.TestCase):
         self.assertEqual(ak["declines"], {"low": 0.1, "middle": 0.2, "high": 0.3})
         self.assertEqual(ak["urban_thousands"]["high"], 300)
         self.assertAlmostEqual(ak["share_net_of_dsh"], 1000 / 3600)  # four quarters of 250 over 4000 less 400 DSH
+        self.assertAlmostEqual(ak["total_vs_fmr"], 1.0)
         self.assertAlmostEqual(ak["share_next_year"], 0.25)
 
 

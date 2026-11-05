@@ -93,9 +93,12 @@ def hospital_base(row):
         flags.append("medicaid_exceeds_patient_revenue")
     if base["uncompensated_cost"] is None:
         flags.append("no_uncompensated_cost")
-    # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (a filing error;
-    # the scenario would remove more revenue than the hospital has).
-    scored = rev is not None and rev > 0 and "medicaid_exceeds_patient_revenue" not in flags
+    if base["uncompensated_cost"] is not None and base["uncompensated_cost"] < 0:
+        flags.append("negative_uncompensated_cost")
+    # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
+    # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
+    # at risk, but its line 5 can be in the lines 2 + 5 comparison.
+    scored = not {"negative_medicaid_revenue", "medicaid_exceeds_patient_revenue"} & set(flags)
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
         factor=factor, status=status_label(row["status"]),
@@ -177,7 +180,7 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     else:
         out.update(operating_margin=None, operating_margin_after=None, total_margin=None, total_margin_after=None)
     uc = base["uncompensated_cost"]
-    out["uncompensated_change"] = added_uc / uc if uc else None
+    out["uncompensated_change"] = added_uc / uc if uc and uc > 0 else None
     return out
 
 
