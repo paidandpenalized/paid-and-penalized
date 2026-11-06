@@ -147,10 +147,10 @@ test('sizeBands: share, quartiles, first and last, takeaway lower and higher', (
   close([b.p25, b.median, b.p75], [0.05, 0.1, 0.1]);
   assert.equal(hfRow.first, a);
   assert.equal(hfRow.last, b);
-  assert.deepEqual(res.takeaway, { lower: ['HF'], higher: [] });
+  assert.deepEqual(res.takeaway, { lower: ['HF'], higher: [], compared: 1 });
   const rev = sizeBands([...mid.map((h) => ({ ...h, c: { HF: { ...h.c.HF, n: 30 } } })), ...small.map((h) => ({ ...h, c: { HF: { ...h.c.HF, n: 60 } } }))], META);
-  assert.deepEqual(rev.takeaway, { lower: [], higher: ['HF'] });
-  assert.equal(sizeBands(small, META).takeaway, null, 'one shown band');
+  assert.deepEqual(rev.takeaway, { lower: [], higher: ['HF'], compared: 1 });
+  assert.deepEqual(sizeBands(small, META).takeaway, { lower: [], higher: [], compared: 0 }, 'one shown band: nothing compared');
   assert.equal(res.table.length, CONDS.length * SIZE_BANDS.length);
 });
 
@@ -190,7 +190,7 @@ test('yearsCut: absent years are excluded; partial.everyYear differs from takeaw
 });
 
 test('yearsCut: every value 0..nYears is listed, zeros too; no full records gives a null share', () => {
-  const y = yearsCut({ years: [1, 2], records: [{ id: 'a', marks: ' C' }, { id: 'b', marks: 'N ' }] });
+  const y = yearsCut({ years: [1, 2], records: [{ id: 'a', marks: ' C', present: 1, cut: 1 }, { id: 'b', marks: 'N ', present: 1, cut: 0 }] });
   assert.deepEqual(y.counts, [{ cut: 0, n: 0 }, { cut: 1, n: 0 }, { cut: 2, n: 0 }]);
   assert.equal(y.takeaway.share, null);
   assert.deepEqual(y.partial, { n: 2, everyYear: 1, never: 1 });
@@ -244,9 +244,10 @@ import { drawSizeBands } from '../web/figures/picture-draw.js';
 import { CONDITIONS } from './fixtures.js';
 
 test('#4 takeaway: the conditions on which the fewest-case band is flagged less and more often than the largest; never an interval', () => {
-  assert.equal(bandsTakeaway({ takeaway: { lower: ['COPD', 'HF'], higher: ['CABG'] } }, CONDITIONS), 'Hospitals with the fewest cases are flagged less often than the largest on COPD and heart failure, and more often on bypass surgery.');
-  assert.match(bandsTakeaway({ takeaway: { lower: [], higher: ['AMI'] } }, CONDITIONS), /more often than the largest on heart attack\.$/);
-  assert.match(bandsTakeaway({ takeaway: null }, CONDITIONS), /the same/);
+  assert.equal(bandsTakeaway({ takeaway: { lower: ['COPD', 'HF'], higher: ['CABG'], compared: 3 } }, CONDITIONS), 'Hospitals with the fewest cases are flagged less often than the largest on COPD and heart failure, and more often on bypass surgery.');
+  assert.match(bandsTakeaway({ takeaway: { lower: [], higher: ['AMI'], compared: 1 } }, CONDITIONS), /more often than the largest on heart attack\.$/);
+  assert.match(bandsTakeaway({ takeaway: { lower: [], higher: [], compared: 2 } }, CONDITIONS), /the same/);
+  assert.match(bandsTakeaway({ takeaway: { lower: [], higher: [], compared: 0 } }, CONDITIONS), /^No condition has enough hospitals in two bands/, 'no comparison made: never "the same"');
 });
 
 test('#4 drawing: six panels in a row on the wide drawing, two to a row on a phone; a band too small to show draws nothing; each shown band plots its share and middle half', () => {
@@ -283,8 +284,8 @@ import { drawWorth } from '../web/figures/picture-draw.js';
 
 test('#2 takeaway: the dearest and cheapest condition by the typical hospital, to the nearest hundred dollars', () => {
   const w = { takeaway: { hi: { cond: 'CABG', median: 9759.4 }, lo: { cond: 'COPD', median: 2487 } } };
-  assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of excess readmission ratio costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
-  assert.match(worthTakeaway({ takeaway: null }, CONDITIONS), /No condition/);
+  assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of ratio over the peer median costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
+  assert.equal(worthTakeaway({ takeaway: null, rows: [{ cond: 'HF', median: 7558 }, { cond: 'AMI', median: null }] }, CONDITIONS), 'Each 0.01 of ratio over the peer median costs a typical hospital about $7,600 on heart failure.', 'one priced condition: that one alone');
 });
 
 test('#2 drawing: each priced row plots its median and middle half; a row with no value draws its track and a dash only', () => {

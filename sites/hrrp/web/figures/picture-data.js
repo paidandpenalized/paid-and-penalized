@@ -170,7 +170,7 @@ export function peerGroups(hospitals, meta) {
 // skipped.
 // For each peer group (PEERS order): lo, hi (CMS's dual-share cutoffs, null when missing), measured (hospital-conditions measured
 // in the group with a peer median), now (over against the group's peer median: flags as graded), alone (over against the national
-// median of this file's measured errs for that condition, as if there were no peer groups), added (now and not alone: flags peer
+// median of this file's measured errs for that condition, one median for every hospital, so only the grouping changes), added (now and not alone: flags peer
 // grouping puts on), removed (alone and not now: flags it takes off) and net (added - removed). national: { [cond]: median } of
 // err over every hospital measured on it; this file's median, not CMS's (CMS's peer medians are not this file's medians), so words
 // say "about". totals: { measured, added, removed, flips: added + removed } over all groups (the figure's words come from the rows and
@@ -251,19 +251,21 @@ export const MIN_BAND = 20;
 // when n is 0), p25, median, p75 (of gap = err - peer median, PERCENTILE.INC, null when empty) and shown (n >= MIN_BAND).
 // p25-p75 is the middle half of the hospitals as observed, not a confidence interval. first, last: the first and last shown
 // bands (null if none). takeaway: { lower (conditions whose first shown band has a lower share over than the last), higher
-// (the reverse) } over conditions with two or more shown bands; null when both are empty. table: one row per condition and
+// (the reverse), compared (how many conditions have two or more shown bands to compare) }. table: one row per condition and
 // band, shown or not.
 export function sizeBands(hospitals, meta) {
   const conditions = CONDS.map((cond) => {
-    const bands = SIZE_BANDS.map((b) => {
-      const gaps = [];
-      for (const h of hospitals) {
-        const c = h.c[cond];
-        const med = peerMedian(meta, h.peer, cond);
-        if (!isMeasured(c) || med == null || c.n < b.lo || c.n > b.hi) continue;
-        gaps.push(roundTo(c.err - med, 6));
-      }
-      gaps.sort((x, y) => x - y);
+    // Each measured hospital's gap, into its band, in one pass.
+    const byBand = SIZE_BANDS.map(() => []);
+    for (const h of hospitals) {
+      const c = h.c[cond];
+      const med = peerMedian(meta, h.peer, cond);
+      if (!isMeasured(c) || med == null) continue;
+      const i = SIZE_BANDS.findIndex((b) => c.n >= b.lo && c.n <= b.hi);
+      if (i >= 0) byBand[i].push(roundTo(c.err - med, 6));
+    }
+    const bands = SIZE_BANDS.map((b, i) => {
+      const gaps = byBand[i].sort((x, y) => x - y);
       const q = (p) => (gaps.length ? percentileInc(gaps, p) : null);
       const over = gaps.filter((g) => g > 0).length;
       return { label: b.label, lo: b.lo, hi: b.hi, n: gaps.length, over, share: gaps.length ? over / gaps.length : null, p25: q(0.25), median: q(0.5), p75: q(0.75), shown: gaps.length >= MIN_BAND };
@@ -276,7 +278,7 @@ export function sizeBands(hospitals, meta) {
   const higher = multi.filter((r) => r.first.share > r.last.share).map((r) => r.cond);
   return {
     conditions,
-    takeaway: lower.length || higher.length ? { lower, higher } : null,
+    takeaway: { lower, higher, compared: multi.length },
     table: conditions.flatMap((r) => r.bands.map((b) => ({ cond: r.cond, ...b }))),
   };
 }

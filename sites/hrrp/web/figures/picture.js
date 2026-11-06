@@ -161,7 +161,8 @@ export function peerTakeaway(p) {
 const PEER_FIRST = 1;
 const PEER_LAST = 5;
 
-function peerFigure({ p, edition, n }) {
+// wide: the drawing's width, SIDE beside what peer grouping changed, FULL when it stands alone.
+function peerFigure({ p, edition, n, wide = SIDE }) {
   if (!p.rows.some((r) => r.nMeasured > 0)) return '';
   const spec = p.rows.map((r) => {
     const share = r.shareCut === null ? t('peerNoShare') : fill('peerShare', { share: pct0(r.shareCut) });
@@ -175,7 +176,7 @@ function peerFigure({ p, edition, n }) {
   const draw = (width) => drawStrip({ rows: spec, cap: CAP_PCT, width, ticks: cutTicks(width), format: percent, labels: { median: t('peerKeyMedian'), shade: t('peerKeyShade') } });
   return figure({
     n: n(), takeaway: peerTakeaway(p), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-cuts-by-peer-group',
-    chart: imagePair(drawn(draw, SIDE), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
+    chart: imagePair(drawn(draw, wide), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
     table: {
       columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('peerColAll'), numeric: true }, { name: t('peerColN'), numeric: true }, { name: t('peerColShare'), numeric: true }, { name: t('peerColMedian'), numeric: true }],
       rows: p.table.map((r) => [
@@ -273,11 +274,19 @@ function typeFigure({ ty, edition, n }) {
 const hundreds = (v) => roundedDollars(Math.round(v / 100) * 100);
 const STEP_TEXT = ratio(PER_STEP, 2);
 
+// The dearest and cheapest condition's typical price of 0.01 over the median; with one priced condition, that one alone.
 export function worthTakeaway(w, conditions) {
-  if (!w.takeaway) return t('worthTakeawayNone');
+  const name = (r) => inSentence(conditionShort(conditions, r.cond));
+  if (!w.takeaway) {
+    const only = w.rows.find((r) => r.median !== null);
+    return fill('worthTakeawayOne', { step: STEP_TEXT, hi: name(only), hiDollars: hundreds(only.median) });
+  }
   const { hi, lo } = w.takeaway;
-  return fill('worthTakeaway', { step: STEP_TEXT, hi: inSentence(conditionShort(conditions, hi.cond)), hiDollars: hundreds(hi.median), lo: inSentence(conditionShort(conditions, lo.cond)), loDollars: hundreds(lo.median) });
+  return fill('worthTakeaway', { step: STEP_TEXT, hi: name(hi), hiDollars: hundreds(hi.median), lo: name(lo), loDollars: hundreds(lo.median) });
 }
+
+// An axis tick in dollars: whole thousands as $5K, a smaller step exactly ($500, $1.5K).
+const axisMoney = (v) => (v === 0 ? '$0' : v < 1000 ? `$${v}` : `$${Number((v / 1000).toFixed(1))}K`);
 
 function worthFigure({ w, conditions, edition, n }) {
   if (!w.rows.some((r) => r.median !== null)) return '';
@@ -287,7 +296,6 @@ function worthFigure({ w, conditions, edition, n }) {
     tip: r.median === null ? fill('worthTipNone', { cond: conditionShort(conditions, r.cond) })
       : fill('worthTip', { cond: conditionShort(conditions, r.cond), step: STEP_TEXT, median: hundreds(r.median), from: hundreds(r.p25), to: hundreds(r.p75), hospitals: hospitals(r.priced) }),
   }));
-  const axisMoney = (v) => (v === 0 ? '$0' : `$${Math.round(v / 1000)}K`);
   const draw = (width) => drawWorth({ rows: spec(width), width, labels: { dot: t('worthKeyDot'), bar: t('worthKeyBar'), barShort: t('worthKeyBarShort') }, format: axisMoney });
   const blank = w.rows.reduce((s, r) => s + r.blank, 0);
   return figure({
@@ -307,9 +315,10 @@ function worthFigure({ w, conditions, edition, n }) {
 // ---------- are small hospitals let off? ----------
 
 export function bandsTakeaway(b, conditions) {
-  if (!b.takeaway) return t('bandsTakeawayNone');
   const names = (list) => listText(list.map((k) => inSentence(conditionShort(conditions, k))));
-  const { lower, higher } = b.takeaway;
+  const { lower, higher, compared } = b.takeaway;
+  if (!compared) return t('bandsTakeawayNoCompare');
+  if (!lower.length && !higher.length) return t('bandsTakeawayNone');
   if (lower.length && higher.length) return fill('bandsTakeaway', { lower: names(lower), higher: names(higher) });
   return lower.length ? fill('bandsTakeawayLower', { lower: names(lower) }) : fill('bandsTakeawayHigher', { higher: names(higher) });
 }
@@ -329,7 +338,7 @@ function bandsFigure({ b, conditions, edition, n }) {
   const draw = (width) => drawSizeBands({ panels: panelsFor(width), width, labels, format: pct0, signed: (v) => signed(v, 1) });
   return figure({
     n: n(), takeaway: bandsTakeaway(b, conditions), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flagged-by-cases',
-    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND) }),
+    chart: imagePair(drawn(draw, FULL), fill('bandsAlt', { count: capitalize(spelled(withAny.length)) })), note: fill('bandsNote', { min: String(MIN_BAND) }),
     table: {
       columns: [{ name: t('bandsColCond') }, { name: t('bandsColBand') }, { name: t('bandsColN'), numeric: true }, { name: t('bandsColShare'), numeric: true }, { name: t('bandsColFrom'), numeric: true }, { name: t('bandsColTo'), numeric: true }],
       rows: b.table.filter((r) => r.n > 0).map((r) => [
@@ -389,8 +398,9 @@ export function picturePart(picture, { figure: nextFigure, edition }) {
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
   const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), 'rside');
-  const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
-  const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
+  const f = picture.flips();
+  const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure, wide: f.totals.measured ? SIDE : FULL }));
+  const flips = pic(flipsFigure({ f, edition, n: nextFigure }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), 'side');
   const bands = pic(bandsFigure({ b: picture.bands(), conditions, edition, n: nextFigure }));
   return html`<p class="part__intro">${ledeText(picture)}</p>

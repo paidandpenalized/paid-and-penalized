@@ -19,7 +19,7 @@ import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
-import { MIN_BAND, dollarsPerStep, pictureData } from './figures/picture-data.js';
+import { MIN_BAND, dollarsPerStep, peerFlips, pictureData, sizeBands } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
 import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, ratio } from './numbers.js';
@@ -407,11 +407,14 @@ function historyTotals(history) {
 export function figureLimits({ hospitals: all, meta, history }) {
   const rounded = all.filter((h) => verdict(h, meta).status === 'none-rounded').length;
   const { counts } = rollCall({ hospitals: all, history, meta });
+  // Each new figure's trap only where the program page draws it (the same tests its figure makes).
+  const worth = dollarsPerStep(all, meta).rows;
+  const blank = worth.reduce((s, r) => s + r.blank, 0);
   return [
     rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null,
-    methodsFill('figuresWorth', { cap: String(CAP_PCT), step: ratio(PER_STEP, 2), zero: roundedDollars(0), blank: fmtInt(dollarsPerStep(all, meta).rows.reduce((s, r) => s + r.blank, 0)) }),
-    methodsT('figuresFlips'),
-    methodsFill('figuresBands', { min: String(MIN_BAND) }),
+    worth.some((r) => r.median !== null) ? methodsFill('figuresWorth', { cap: String(CAP_PCT), step: ratio(PER_STEP, 2), zero: roundedDollars(0), blank: blank ? methodsFill('figuresWorthBlank', { blank: fmtInt(blank) }) : '' }) : null,
+    peerFlips(all, meta).totals.measured ? methodsT('figuresFlips') : null,
+    sizeBands(all, meta).conditions.some((c) => c.first) ? methodsFill('figuresBands', { min: String(MIN_BAND) }) : null,
     counts.cutEveryYearInFile > counts.cutAllYears ? methodsFill('figuresEscapes', { inFile: fmtInt(counts.cutEveryYearInFile), all: fmtInt(counts.cutAllYears), years: String(counts.nYears) }) : null,
   ].filter(Boolean);
 }

@@ -89,7 +89,7 @@ export function rollCall({ hospitals, history, meta }) {
   };
   const order = (r) => (r.first < 0 ? years.length : r.first);
   const sorted = [...records].sort((a, b) => order(a) - order(b) || byId(a.id, b.id));
-  return { years, records: sorted.map(({ id, marks }) => ({ id, marks })), counts };
+  return { years, records: sorted.map(({ id, marks, present, cut }) => ({ id, marks, present, cut })), counts };
 }
 
 // "Has this hospital ever escaped?" from rollCall()'s result. full: the records in the file in every year (no absent mark);
@@ -100,13 +100,8 @@ export function rollCall({ hospitals, history, meta }) {
 // table: counts.
 export function yearsCut(roll) {
   const nYears = roll.years.length;
-  // Each record's years in the file and years cut, counted once.
-  const tallies = roll.records.map(({ marks }) => {
-    const all = [...marks];
-    return { present: all.filter((m) => m !== ROLL.absent).length, cut: all.filter((m) => m === ROLL.cut).length };
-  });
-  const full = tallies.filter((r) => r.present === nYears);
-  const part = tallies.filter((r) => r.present > 0 && r.present < nYears);
+  const full = roll.records.filter((r) => r.present === nYears);
+  const part = roll.records.filter((r) => r.present > 0 && r.present < nYears);
   const counts = Array.from({ length: nYears + 1 }, (_, cut) => ({ cut, n: 0 }));
   for (const r of full) counts[r.cut].n += 1;
   return {
