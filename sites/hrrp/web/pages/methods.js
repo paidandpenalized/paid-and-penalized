@@ -13,7 +13,7 @@ import { DICTIONARY_PAGE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { mediansRows } from '../figures/how-data.js';
 import { mediansTable } from '../figures/how.js';
 import { fill, t } from '../methods/copy.js';
-import { shellOf } from './parts.js';
+import { barSearchScripts, shellOf } from './parts.js';
 
 const DOLLARS_ID = DOLLARS_HREF.split('#')[1];
 // The glossary's 14 terms, in reading order: [term key, definition key or a view.glossary key].
@@ -111,7 +111,7 @@ ${GLOSSARY.map(([term, def]) => html`<dt>${t(term)}</dt>
     path: METHODS_PATH,
     robots,
     body,
-    scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : [])],
+    scripts: [assets.js.figure, ...barSearchScripts(assets, hospitalsUrl)],
     assets,
     ...shellOf({ edition: view.edition, current: 'methods', searchUrl: hospitalsUrl }),
   });

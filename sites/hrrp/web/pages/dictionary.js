@@ -7,7 +7,7 @@ import { markdownSections } from '../../../../web/render/markdown.js';
 import { SITE } from '../../../../web/site.js';
 import { t } from '../copy.js';
 import { DICTIONARY_PAGE } from '../links.js';
-import { shellOf } from './parts.js';
+import { barSearchScripts, shellOf } from './parts.js';
 
 // text: the filled Markdown (csv.js dictionaryText), as the downloadable file holds it; edition: the edition's label;
 // csvHref and markdownHref: the files' addresses; robots: null for an indexable page.
@@ -34,5 +34,5 @@ ${s.body}
 </section>
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable, as on HACRP's dictionary page.
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : [])], assets, ...shellOf({ edition, searchUrl: hospitalsUrl }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, scripts: [assets.js.figure, ...barSearchScripts(assets, hospitalsUrl)], assets, ...shellOf({ edition, searchUrl: hospitalsUrl }) });
 }

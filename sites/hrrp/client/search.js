@@ -6,7 +6,7 @@ import { buildIndex } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { KINDS } from '../web/links.js';
-import { fill } from '../web/program/copy.js';
+import { fill } from '../web/search/copy.js';
 import { loadHospitals } from './hospitals.js';
 
 const kindWord = (kind) => fill(`searchKind${kind[0].toUpperCase()}${kind.slice(1)}`);

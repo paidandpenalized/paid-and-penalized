@@ -5,7 +5,7 @@ import { searchForm } from '../../../../web/render/shell.js';
 import { formField, formTitle, lastCall } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fill, t } from '../copy.js';
-import { t as searchWord } from '../program/copy.js';
+import { t as searchWord } from '../search/copy.js';
 import { estimateTag } from '../estimate-tag.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
 
@@ -33,6 +33,9 @@ const shellParts = lastCall(({ edition, current, searchUrl }) => [edition, curre
   current,
   search: searchUrl ? searchBox(searchUrl) : '',
 }));
+// The script that wires the bar's search (client/search.js), on a page whose bar has the box (searchUrl is set).
+export const barSearchScripts = (assets, searchUrl) => (searchUrl ? [assets.js['hrrp-search']] : []);
+
 export const shellOf = ({ edition, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ edition, current, searchUrl }), hospital });
 
 // The hospital a Readmissions hospital page's header follows (render/shell.js familyHeader): its CCN, name and

@@ -12,7 +12,7 @@ import { hospitalsSection, kidsTable } from '../figures/place-table.js';
 import { PROGRAM_PATH } from '../links.js';
 import { t } from '../place/copy.js';
 import { estimateTag } from '../estimate-tag.js';
-import { breadcrumb, recordCard, shellOf } from './parts.js';
+import { barSearchScripts, breadcrumb, recordCard, shellOf } from './parts.js';
 
 // A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number.
 const titled = (id, title, figureHtml) => (figureHtml ? html`<section class="place__fig" aria-labelledby="pf-${id}"><h2 class="place__figh" id="pf-${id}">${title}</h2>
@@ -65,7 +65,7 @@ ${hospitalsSection(view.hospitals, { name: view.name, conditions: view.figures.c
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : []), assets.js['hrrp-place']],
+    scripts: [assets.js.figure, ...barSearchScripts(assets, hospitalsUrl), assets.js['hrrp-place']],
     assets,
     ...shellOf({ edition: view.edition, current: 'explore', searchUrl: hospitalsUrl }),
   });

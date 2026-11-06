@@ -3,6 +3,7 @@
 // {placeholder}. A sentence that states a program rule carries the claim id of its row in sites/hrrp/CLAIMS.md.
 import { copyOf } from '../../../../web/render/components.js';
 import { COPY as SITE } from '../copy.js';
+import { COPY as SEARCH } from '../search/copy.js';
 
 export const COPY = {
   // The page's head.
@@ -28,23 +29,6 @@ export const COPY = {
   heroLead: { text: 'Thirty Day', claim: null },
   heroFindRest: { text: 'by name, city, state or metro area', claim: null },
   heroPlaceholder: { text: 'Look up a hospital, city, state, or metro area', claim: null },
-
-  // The search box (render/shell.js searchForm) and the words its script (client/search.js) shows.
-  searchHeading: { text: 'Find a hospital', claim: null },
-  searchFind: { text: 'Find', claim: null },
-  searchFindRest: { text: 'a hospital or place by name, city, state, ZIP code or CCN', claim: null },
-  searchPlaceholder: { text: 'Hospital, city or state', claim: null },
-  searchKindHospital: { text: 'Hospital', claim: null },
-  searchKindState: { text: 'State', claim: null },
-  searchKindMetro: { text: 'Metro area', claim: null },
-  searchKindRegion: { text: 'Region', claim: null },
-  searchKindDivision: { text: 'Division', claim: null },
-  searchPlaceSub: { text: '{kind} · {n} hospitals', claim: null },
-  searchPlaceSubOne: { text: '{kind} · one hospital', claim: null },
-  searchEmpty: { text: "No matches. Try a city, a ZIP code or the hospital's CCN.", claim: null },
-  searchCount: { text: '{n} matches', claim: null },
-  searchCountOne: { text: 'One match', claim: null },
-  searchFailed: { text: "The hospital list didn't load. Leave the box and come back to try again.", claim: null },
 
   // The At-a-glance card, the record form with eight numbered fields.
   glanceTitle: { text: '{edition} at a glance', claim: null },
@@ -539,4 +523,4 @@ export const COPY = {
   researchIntro: { text: 'What published studies have found, grouped by the question each asks. Where researchers disagree, the findings below say so.', claim: null },
 };
 
-export const { fill, fillKeep, t } = copyOf(COPY, SITE);
+export const { fill, fillKeep, t } = copyOf(COPY, SITE, SEARCH);
