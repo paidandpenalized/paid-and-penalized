@@ -131,25 +131,30 @@ def main():
     if not years:
         print("hcris emit: no pinned cells tables (hcris-fy<YYYY>-cells) in the manifest")
         return 1
-    worst = 0
+    failed = []
     for year, entry in sorted(years.items()):
         path = emitted_path(year)
+        shown = path.relative_to(REPO_ROOT)
+        # ValueError covers HcrisError, RulesError, TableError, a pin that fails its manifest entry and a build that
+        # fails its schema (write_emitted): one bad year is reported and the rest are still attempted.
         try:
             fresh = build(year, manifest, built_at, entry=entry)
-        except (tidy.HcrisError, other_income.RulesError, other_income.TableError, KeyError, OSError) as err:
-            print(f"not written ({path.relative_to(REPO_ROOT)}): {err}")
-            worst = 1
+            problems = check(fresh)
+            if problems:
+                raise ValueError("; ".join(problems[:5]))
+            out = write_emitted(path, fresh, SCHEMA)
+        except (ValueError, KeyError, OSError) as err:
+            print(f"not written ({shown} left as it was): {err}")
+            failed.append(year)
             continue
-        problems = check(fresh)
-        if problems:
-            print(f"not written ({path.relative_to(REPO_ROOT)}): " + "; ".join(problems[:5]))
-            worst = 1
-            continue
-        out = write_emitted(path, fresh, SCHEMA)
-        print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['hospitals'])} hospitals, "
+        print(f"wrote {shown}: {len(out['hospitals'])} hospitals, "
               f"{path.stat().st_size} bytes, settled {out['settledShare']:.1%}{', early' if out['early'] else ''}"
               f"{', still filing' if out['stillFiling'] else ''}")
-    return worst
+    if failed:
+        print(f"hcris emit: {len(failed)} of {len(years)} years not written: "
+              + ", ".join(f"FY{y}" for y in failed))
+        return 1
+    return 0
 
 
 def load_years():

@@ -267,7 +267,9 @@ FORMULAS = {
     "operating_margin": lambda g: None if g("net_income_patients") is None or g("net_patient_revenue") is None else
     _ratio(_sum(g("net_income_patients"), g("other_operating_income")),
            _sum(g("net_patient_revenue"), g("other_operating_income"))),
-    "total_margin": lambda g: _ratio(g("net_income"), _sum(g("net_patient_revenue"), g("other_income"))),
+    # Blank other income (line 25) counts as zero; a blank line 3 or line 29 leaves the margin blank.
+    "total_margin": lambda g: None if g("net_income") is None or g("net_patient_revenue") is None else
+    _ratio(g("net_income"), _sum(g("net_patient_revenue"), g("other_income"))),
     "medicaid_payment_to_cost": lambda g: _ratio(_sum(g("medicaid_net_revenue"), g("medicaid_supplemental")),
                                                  g("medicaid_cost")),
     "medicaid_revenue_share": lambda g: _ratio(g("medicaid_net_revenue"), g("net_patient_revenue")),

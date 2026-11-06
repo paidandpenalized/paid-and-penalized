@@ -151,6 +151,52 @@ class Emit(unittest.TestCase):
         self.assertNotEqual(validate(schemas[emit.SCHEMA], {**doc, "hospitals": [doc["hospitals"][0][:5]]}, schemas),
                             [])
 
+    def run_main(self, tmp, write=None):
+        """emit.main over a manifest of FY2023 (a pin that fails its manifest entry) and the synthetic FY2024, writing
+        under `tmp`. (exit code, printed text, root)."""
+        _, tables, entries = synthetic_pin(tmp)
+        stale = [{**e, "id": e["id"].replace("2024", "2023")} for e in entries.values()]
+        manifest = stale + list(entries.values())
+
+        def read(pid):
+            if pid not in tables:
+                raise ValueError(f"pinned input {pid} does not match its manifest entry")
+            return tables[pid]
+
+        root = Path(tmp) / "repo"  # a stand-in repo: paths print relative to it, and the rules file is in it
+        rules_path = root / emit.RULES_PATH.relative_to(emit.REPO_ROOT)
+        rules_path.parent.mkdir(parents=True)
+        rules_path.write_bytes(emit.RULES_PATH.read_bytes())
+        out = io.StringIO()
+        with mock.patch.object(emit, "read_manifest", return_value=manifest), \
+                mock.patch.object(emit, "read_pinned_bytes", side_effect=read), \
+                mock.patch.object(emit, "REPO_ROOT", root), mock.patch.object(emit, "RULES_PATH", rules_path), \
+                mock.patch.object(emit, "EMITTED_DIR", root / "data" / "emitted"), \
+                mock.patch.object(emit, "write_emitted", side_effect=write or emit.write_emitted), \
+                contextlib.redirect_stdout(out):
+            code = emit.main()
+        return code, out.getvalue(), root
+
+    def test_main_reports_a_failing_year_and_writes_the_rest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            code, printed, root = self.run_main(tmp)
+            self.assertEqual(code, 1)
+            self.assertIn("not written (data/emitted/hcris/fy2023/hcris.json left as it was): pinned input", printed)
+            self.assertIn("wrote data/emitted/hcris/fy2024/hcris.json", printed)  # the bad year stops nothing after it
+            self.assertIn("1 of 2 years not written: FY2023", printed)
+            self.assertFalse((root / "data/emitted/hcris/fy2023/hcris.json").exists())
+            self.assertTrue((root / "data/emitted/hcris/fy2024/hcris.json").exists())
+
+    def test_main_reports_a_schema_failure(self):
+        real = emit.write_emitted
+        with tempfile.TemporaryDirectory() as tmp:
+            code, printed, root = self.run_main(tmp, write=lambda path, doc, schema: real(path, {**doc, "fy": "x"},
+                                                                                         schema))
+            self.assertEqual(code, 1)
+            self.assertIn("fy2024/hcris.json left as it was): hcris.json fails hcris.schema.json", printed)
+            self.assertIn("2 of 2 years not written: FY2023, FY2024", printed)
+            self.assertFalse((root / "data/emitted/hcris/fy2024/hcris.json").exists())
+
 
 class RulesFile(unittest.TestCase):
     """The committed rules sort the kinds of label the decision names (DATA-B-03, 2026-11-05): generic label text,
