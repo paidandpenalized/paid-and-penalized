@@ -1,7 +1,8 @@
 // The Map Part's browser behavior (figures/map.js): the measure buttons show one drawing at a time, the "hospital dots"
-// checkbox turns the dot layer on, a state picked on the map opens its page, and the "Every state" pager shows one page of
+// checkbox turns the dot layer on, a state picked on the map opens its page, and the "Every state" pager (pager.js) shows one page of
 // the table at a time. Without this script the average cut shows, the dots are off and the whole table reads.
 import { placePath } from '../web/links.js';
+import { mountPager } from './pager.js';
 import { mountSwitch } from './switch.js';
 
 // The measures and the dots. The controls are hidden in the page; unhiding them is what offers them.
@@ -25,21 +26,7 @@ function mountStateLinks(box) {
   }
 }
 
-// "Every state": one tbody for each page; the pager (hidden until now) shows one.
-function mountPager(table) {
-  const pager = document.querySelector('.states__pager');
-  if (!pager || !table) return;
-  const pages = [...table.querySelectorAll('tbody[data-page]')];
-  const show = (n) => {
-    for (const body of pages) body.hidden = body.dataset.page !== String(n);
-    for (const b of pager.querySelectorAll('button[data-to-page]')) b.setAttribute('aria-pressed', String(b.dataset.toPage === String(n)));
-  };
-  pager.hidden = false;
-  pager.addEventListener('click', (e) => { const b = e.target.closest('button[data-to-page]'); if (b) show(b.dataset.toPage); });
-  show(1);
-}
-
 export function mountMap() {
   for (const box of document.querySelectorAll('.usmap')) { mountSwitches(box); mountStateLinks(box); }
-  mountPager(document.querySelector('table.states__table'));
+  mountPager({ table: document.querySelector('table.states__table'), pager: document.querySelector('.states__pager') });
 }

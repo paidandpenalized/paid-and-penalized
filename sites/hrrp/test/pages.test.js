@@ -16,7 +16,7 @@ import { hospitalContext, hospitalView } from '../web/view.js';
 import { ASSETS, CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, ctxOf, hospital, loadHrrpOnce } from './fixtures.js';
 
 const ctx = ctxOf();
-const render = (h, robots = null) => hospitalPage({ view: hospitalView(h, ctx), robots, assets: ASSETS });
+const render = (h, robots = null) => hospitalPage({ view: hospitalView(h, ctx), robots, assets: ASSETS, shared: ctx });
 const crumbsOf = (text) => /<nav class="crumbs"[\s\S]*?<\/nav>/.exec(text)[0];
 
 test('the record card holds the six numbered fields under its title bar', () => {
@@ -125,7 +125,7 @@ const DATA = loadHrrpOnce();
 const SHARED = hospitalContext(DATA);
 const PAGES = DATA.hospitals.map((h) => {
   const view = hospitalView(h, SHARED);
-  return [h, hospitalPage({ view, robots: null, assets: ASSETS }), view];
+  return [h, hospitalPage({ view, robots: null, assets: ASSETS, shared: ctx }), view];
 });
 
 test('on the data: no page\'s text has NaN, undefined, null or [object Object]', () => {

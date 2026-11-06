@@ -16,7 +16,7 @@ export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/
   css,
   sheets,
   cards,
-  js: { theme: '/assets/theme.test.js', shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', 'hrrp-program': '/assets/hrrp-program.test.js', figure: '/assets/figure.test.js', ...js },
+  js: { theme: '/assets/theme.test.js', shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', 'hrrp-program': '/assets/hrrp-program.test.js', 'hrrp-hospital': '/assets/hrrp-hospital.test.js', figure: '/assets/figure.test.js', ...js },
   shell: {
     fy: 2026,
     hospitals: 3,

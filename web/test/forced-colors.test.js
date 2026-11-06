@@ -42,6 +42,8 @@ const MARKS = [
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',
+  // the Readmissions hospital page's area table (sites/hrrp/web/styles.css): the bar under a cut
+  '.nb__bar',
   // the Readmissions map's dot key (sites/hrrp/web/styles.css)
   '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint', '.usmap__chip--hatch',
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)

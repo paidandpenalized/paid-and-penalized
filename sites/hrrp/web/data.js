@@ -1,8 +1,8 @@
-// What the Readmissions pages read at build time: the newest emitted HRRP file (else the pinned Thirty Day Readmissions output), the site's content files, the newest hospital master and the state outlines.
+// What the Readmissions pages read at build time: the newest emitted HRRP file (else the pinned Thirty Day Readmissions output), the site's content files, the newest hospital master and the state and county outlines.
 // File reads live here; views and pages stay pure.
 import { existsSync, readFileSync } from 'node:fs';
 import { builtOn } from '../../../engine/js/dates.js';
-import { ATLAS_ID, stateShapes } from '../../../web/charts/geo.js';
+import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
@@ -65,6 +65,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
   const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
+  const atlas = JSON.parse(readPinned(ATLAS_ID));
   const whatsNew = readJson(CONTENT + 'whats_new.json');
   return {
     source,
@@ -81,7 +82,9 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     research: readJson(CONTENT + 'research.json'),
     master,
     dollars: new Map(dollarsFile.hospitals.map((r) => [r.ccn, r])),
-    shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
+    shapes: stateShapes(atlas),
+    // The county lines the hospital page's nearby map draws inside the states.
+    counties: countyShapes(atlas),
     manifest,
     pinsUsed: manifest.filter((e) => ids.has(e.id)),
     builtFiles,

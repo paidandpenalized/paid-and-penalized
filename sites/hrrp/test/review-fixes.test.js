@@ -1,4 +1,5 @@
 // The fixes from the /code-review of milestones 2 to 4 (m2m4-review-fixes.md), one test or more for each finding.
+import { areaGroups } from '../web/figures/neighbors-data.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONDS, PEERS } from '../../../engine/js/hrrp/formula.js';
@@ -69,7 +70,7 @@ test('while unreleased, a production build sends X-Robots-Tag: noindex for the d
     const held = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     generateHrrp(held, { data, released: false, ...quiet });
     const files = held.noindexFiles;
-    assert.equal(files.length, 4, 'largest-penalties, states, hospitals CSVs and the dictionary Markdown');
+    assert.equal(files.length, 4 + areaGroups(data.hospitals, data.meta).size, 'largest-penalties, states, hospitals CSVs, the dictionary Markdown and one CSV for each area a hospital page tables');
     assert.ok(files.every((p) => p.startsWith('/data/hrrp/')), files.join());
     assert.ok(files.some((p) => p.endsWith('.csv')) && files.some((p) => p.endsWith('.md')));
     const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: files }));

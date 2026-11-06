@@ -38,12 +38,12 @@ export function ledeText({ lede }) {
 }
 
 // One row's glyph: the six boxes in program order, a tooltip on the card naming each condition's state.
-function glyph(row, rank, conditions) {
+export function glyph(row, rank, conditions, prefix = 'pen') {
   const tip = CONDS.map((k, i) => fill(TIP[row.states[i]], { c: conditionShort(conditions, k) })).join('; ');
-  return miniCards({ id: `pen-${rank}`, width: GLYPH_WIDTH, cols: 1, cards: [{ cells: row.states.map((s) => CELL[s]), yes: row.h.red > 0, tip }] });
+  return miniCards({ id: `${prefix}-${rank}`, width: GLYPH_WIDTH, cols: 1, cards: [{ cells: row.states.map((s) => CELL[s]), yes: row.h.red > 0, tip }] });
 }
 
-const countedNames = (row, conditions) => CONDS.filter((_, i) => row.states[i] === 'counted').map((k) => conditionShort(conditions, k));
+export const countedNames = (row, conditions) => CONDS.filter((_, i) => row.states[i] === 'counted').map((k) => conditionShort(conditions, k));
 
 // The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page, then its cut, its
 // modeled dollars and the glyph (with the conditions in words for a screen reader).

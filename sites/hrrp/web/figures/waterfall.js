@@ -4,7 +4,7 @@
 // sits. Two scales, each labeled; no broken axis. A phone stacks the rows, each label over its bar. Drawn by the same code on the
 // server and in the browser (client/worksheet.js redraws it when the hospital box swaps the sheet), from worksheetRows' output.
 import { CAP, CAP_PCT, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
-import { drawn, figure, num } from '../../../../web/charts/figure.js';
+import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { LABEL_PX, isNarrow } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { waterfall } from '../../../../web/charts/waterfall.js';
@@ -85,6 +85,10 @@ function draw({ wf, width, id }) {
     },
   });
 }
+
+// The waterfall alone as its two drawings (a phone's and a wide one), for a page that frames it itself: the hospital page's what-if,
+// which draws it again as the sliders move. wf: waterfallData(); alt: the drawing's text alternative.
+export const waterfallPair = (wf, alt = t('wfAlt')) => imagePair(drawn((width) => draw({ wf, width, id: width === WF_WIDE ? 'wf-wide' : 'wf' }), WF_WIDE), alt);
 
 // The figure: rows: worksheetRows(); conditions: { key, short }; n: its number; edition: the edition's label.
 export function waterfallFigure({ rows, conditions, n, edition }) {

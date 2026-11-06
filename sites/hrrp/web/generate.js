@@ -36,7 +36,7 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   log(`HRRP: the formula reproduces CMS's factor for all ${hospitals.length} hospitals`);
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
-  const shared = hospitalContext(data);
+  const shared = hospitalContext(data);  // data.shapes and data.counties: the outlines the nearby map draws
   const places = buildPlaces(hospitals, meta);
   const area = areaContext({ ...data, places });  // data.shapes: the state outlines the map draws
   const program = programView(area);
@@ -57,8 +57,12 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   ctx.emit({ path: csvHref, noindex: robots !== null, text: hospitalCsv(hospitals) });
   ctx.emit({ path: dictionaryPath(fy), noindex: robots !== null, text: dictionaryFilled });
   ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets }) });
+  // One file for each area a hospital page tables (a metro, or a state outside its metros), shared by every hospital in it.
+  for (const area of shared.areas.values()) {
+    ctx.emit({ path: csvPath(fy, area.csvName), noindex: robots !== null, text: hospitalCsv(area.rows.map((r) => r.h)) });
+  }
   for (const hospital of hospitals) {
-    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
+    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, shared }) });
   }
   for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
   // Methods last, with the count of the pages under the program.
@@ -67,10 +71,10 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 
-// The Readmissions site's build manifest. One browser script so far: the program page's (search, Worksheet R's box).
+// The Readmissions site's build manifest. Two browser scripts: the program page's (search, Worksheet R's box, the map, the swarms) and the hospital page's (the what-if and the area table's pager).
 export const HRRP = {
   id: 'hrrp',
-  entries: { 'hrrp-program': 'sites/hrrp/client/program.js' },
+  entries: { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js' },
   styles: [...KIT_STYLES, 'sites/hrrp/web/styles.css'],
   generate: (ctx) => generateHrrp(ctx),
 };

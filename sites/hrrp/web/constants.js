@@ -85,3 +85,7 @@ export const COVID_EXCLUDED = Object.freeze(['2020-01-01', '2020-06-30']);
 
 // The explorer's table shows this many rows to a page (design: 25).
 export const EXPLORE_PAGE_SIZE = 25;
+
+// The other-hospitals table on a hospital page: rows to a page, and the drawing width of its map.
+export const NEIGHBORS_PAGE_SIZE = 25;
+export const NEARBY_MAP_WIDTH = 460;

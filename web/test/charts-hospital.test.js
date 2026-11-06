@@ -57,6 +57,17 @@ test('waterfall: each part starts where the last ended, the sum bar starts at ze
   assert.equal((svg.match(/class="chart-connector"/g) ?? []).length, 2);
 });
 
+test('waterfall: on a phone the cap\'s label starts at its line when the line is left of the edge (a sum past the cap), so it never crosses the strip\'s title', () => {
+  const draw = (max) => String(waterfall({
+    id: 'w', width: 300, stacked: true, domain: [0, 0.06], ticks: [0, 0.03, 0.06], format: String,
+    rows: [{ label: 'A', value: 0.05, valueText: '5', tip: 'A', pen: true }],
+    total: { label: 'Sum', value: 0.05, valueText: '5', tip: 'Sum', pen: true },
+    cap: { value: 0.03, max, title: 'Against the cap, to scale', label: '3% CAP', share: '169%', tip: 'cap', ticks: [0, 0.03], format: String },
+  }));
+  assert.match(draw(0.05), /text-anchor="start">3% CAP<\/text>/, 'line at 60% of the strip: the label runs right of it');
+  assert.match(draw(0.03), /text-anchor="end">3% CAP<\/text>/, 'line at the right edge: the label ends at it');
+});
+
 test('ridges: a row per group with its share, the words beside the plot when wide and over it when narrow', () => {
   const args = { edges: [0, 1, 2, 3], band: [1.4, 1.5], actual: 1.2, labels: { actual: 'This', actualValue: '1.2', line: 'Line', lineTip: 'Line' },
     rows: [{ label: 'All', sub: '9 hospitals', counts: [3, 4, 2], median: 1.1, share: '22% cut', tip: 'All' }, { label: 'State', sub: '5 hospitals', counts: [1, 3, 1], median: 1.3, share: '20% cut', tip: 'State' }] };

@@ -20,7 +20,7 @@ schema_version: 1
 
 ## Hospital files
 
-`{file}` and the largest-penalties file on the program page share these 31 columns, in this order.
+`{file}`, the largest-penalties file on the program page and the area files on the hospital pages share these 31 columns, in this order. An area file (`hrrp-fy…-metro-<code>-hospitals.csv` for a metro area, `hrrp-fy…-state-<xx>-hospitals.csv` for the hospitals of a state outside any metro area) lists the hospitals the "other hospitals" table shows on the pages of that area, largest cut first.
 
 | Column | Type | Meaning | Notes |
 |---|---|---|---|

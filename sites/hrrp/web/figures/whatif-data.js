@@ -1,0 +1,98 @@
+// The numbers behind a hospital page's what-if (figures/whatif.js draws them; client/hospital.js runs them in the browser).
+// One function, whatIfPaf (engine/js/hrrp/whatif.js), gives the factor for any set of ratios; the browser calls the same one, so
+// the page as built and the page as moved agree to the digit. Peer medians, payment weights and the neutrality modifier stay at
+// their edition values (the what-if is an approximation, and says so). Pure.
+import { CAP, CONDS, cutPct, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
+import { sliderRange, whatIfPaf } from '../../../../engine/js/hrrp/whatif.js';
+import { conditionShort } from '../derive.js';
+import { fill, t } from '../hospital/copy.js';
+import { factor4, fmtMoney, fmtPct } from '../numbers.js';
+import { waterfallData, worksheetRows } from '../worksheet.js';
+import { hospitalOf, sheetRow } from './worksheet-data.js';
+
+// A slider's step, in ratio.
+export const WI_STEP = 0.001;
+
+// What a result field reads at a state ({ paf, cut, dollars }); the browser writes the same words.
+export const resultWords = (state) => ({
+  cut: fmtPct(state.cut),
+  factor: factor4(state.paf),
+  dollars: state.dollars === null ? t('cellNone') : fmtMoney(state.dollars),
+});
+
+// The status line a screen reader hears when the ratios settle.
+export const liveWords = (state) => {
+  const words = resultWords(state);
+  return state.dollars === null ? fill('wiLiveNoDollars', words) : fill('wiLive', words);
+};
+
+// The hospital as the what-if holds it: the conditions it can move (measured ones), by key.
+export const measuredKeys = (h) => CONDS.filter((k) => isMeasured(h.c[k]));
+
+// The state at these ratios (over: { condition: ratio } for the ones moved; the rest stay at the hospital's own): CMS's factor moved
+// by the recomputed change, the cut it makes in percent and the dollars it takes (null without base payments).
+export function whatIfState(h, meta, over = {}) {
+  const paf = whatIfPaf(h, meta, over);
+  return { paf, cut: cutPct(paf), dollars: h.base == null ? null : Math.round(h.base * (1 - paf)) };
+}
+
+// The hospital with these ratios, for Worksheet R's rows and the waterfall: a moved condition's flag follows the ratio (over its
+// peer median, CMS would flag it), so a condition brought under the median reads "at or under its median", not "rounds to nothing".
+export function movedHospital(h, meta, over = {}) {
+  const c = { ...h.c };
+  for (const [k, err] of Object.entries(over)) {
+    if (c[k]) c[k] = { ...c[k], err, flag: err > peerMedian(meta, h.peer, k) ? 1 : 0 };
+  }
+  return { ...h, c };
+}
+
+// The waterfall's numbers at these ratios.
+export const whatIfWaterfall = (h, meta, conditions, over = {}) => waterfallData(worksheetRows(movedHospital(h, meta, over), meta), conditions);
+
+// Each measured condition: the slider's bounds (widened to hold the ratio), the median, and, for one over its median, its escape
+// value (the ratio that reaches the median) and what reaching it alone would save (percent of base payments, and dollars).
+export function sliderRows(h, meta, conditions) {
+  const dollars = (paf) => (h.base == null ? null : Math.round(h.base * (1 - paf)));
+  return measuredKeys(h).map((k) => {
+    const c = h.c[k];
+    const med = peerMedian(meta, h.peer, k);
+    const [min, max] = sliderRange(c.err);
+    const over = c.err > med;
+    let escape = null;
+    if (over) {
+      const paf = whatIfPaf(h, meta, { [k]: med });
+      const after = dollars(paf);
+      const now = dollars(h.paf);
+      escape = {
+        ratio: med,
+        saveCut: Math.round((cutPct(h.paf) - cutPct(paf)) * 100) / 100,
+        saveDollars: after === null || now === null ? null : now - after,
+        // Nothing saved while the other conditions alone keep the cut at its cap.
+        atCap: paf < 1 && 1 - paf >= CAP - 1e-9,
+      };
+    }
+    return { cond: k, short: conditionShort(conditions, k), err: c.err, med, min, max, over, escape };
+  });
+}
+
+// The hospital page's what-if, as data. The rows and the starting state; `client` is what the browser needs to recompute (the
+// hospital's worksheet row, its base payments, the neutrality modifier and its own peer group's medians).
+export function whatIfData(h, ctx) {
+  const { meta, edition } = ctx;
+  const sliders = sliderRows(h, meta, edition.conditions);
+  return {
+    sliders,
+    start: { ...whatIfState(h, meta), actualCut: h.red, actualPaf: h.paf, pen: h.pen ?? null },
+    wf: whatIfWaterfall(h, meta, edition.conditions),
+    client: {
+      row: sheetRow(h), base: h.base ?? null,
+      meta: { nm: meta.nm, peerMedians: { [h.peer]: meta.peerMedians[h.peer] } },
+      conditions: edition.conditions, edition: edition.label,
+    },
+  };
+}
+
+// The hospital (and meta) the browser rebuilds from `client`.
+export function clientHospital({ row, base, meta }) {
+  return { h: { ...hospitalOf(row), base }, meta };
+}

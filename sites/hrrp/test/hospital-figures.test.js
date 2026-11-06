@@ -9,8 +9,10 @@ import { hospitalContext, hospitalView } from '../web/view.js';
 import { ASSETS, CONDITIONS, CUT, HISTORY, INACTIVE, META, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, OTHERS, hospital, loadHrrpOnce } from './fixtures.js';
 
 const ctxFor = (hospitals, history = HISTORY) => hospitalContext({ hospitals, meta: META, history, conditions: CONDITIONS });
-const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS });
+const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS, shared: ctx });
 const figureOf = (text, n) => new RegExp(`<figure class="fig" id="figure-${n}"[\\s\\S]*?</figure>`).exec(text)?.[0] ?? '';
+// The history is figure 3 after the what-if, figure 2 on a page with nothing to simulate.
+const historyOf = (text) => figureOf(text, text.includes('data-hosp-whatif') ? 3 : 2);
 const rowsOf = (fig) => [...fig.matchAll(/<li class="rul__row[^"]*">[\s\S]*?<\/li>/g)].map((m) => m[0]);
 const ctx = ctxFor([CUT, NONE_MEASURED, NONE_BELOW, NONE_ROUNDED, INACTIVE, ...OTHERS]);
 
@@ -136,7 +138,7 @@ test('history: penalized in X of N years with data, n/a where the hospital is no
   assert.deepEqual([d.nWith, d.nCut], [7, 4]);
   assert.deepEqual(d.years.map((y) => y.cut), [null, 0, 1, 0, 2, 1, 0, 1]);
   const text = pageOf(CUT, hctx);
-  const fig = figureOf(text, 2);
+  const fig = historyOf(text);
   assert.match(fig, /Penalized in 4 of the 7 years with data\./);
   assert.equal((fig.match(/>n\/a<\/text>/g) ?? []).length, 2, 'the missing year, narrow and wide');
   assert.ok(fig.includes('FY2020: not in that year’s file'));
@@ -164,7 +166,7 @@ test('history: the place among hospitals ranks within each year\'s file, ties at
   assert.ok(Math.abs(other.share - 1 / 6) < 1e-9, 'tied with another uncut hospital: the middle of the two, over the three others');
   assert.equal(d.years[0].share, null, 'no place in a year without the hospital');
   assert.ok(d.years.every((y) => y.share === null || (y.share >= 0 && y.share <= 1)));
-  const fig = figureOf(pageOf(CUT, hctx), 2);
+  const fig = historyOf(pageOf(CUT, hctx));
   assert.ok(fig.includes('FY2022: cut 1.00%, larger than 66% of today’s hospitals in that year’s file'));
   assert.ok(fig.includes('FY2023: no cut, like 50% of today’s hospitals in that year’s file'));
   assert.ok(fig.includes('among today’s hospitals (those in the FY2027 program)'), 'the words name the basis the place is computed on');
@@ -172,7 +174,7 @@ test('history: the place among hospitals ranks within each year\'s file, ties at
 });
 
 test('history: the pandemic years are shaded with their note, the cap steps ruled, and FY2027 says the measure changed', () => {
-  const fig = figureOf(pageOf(CUT, hctx), 2);
+  const fig = historyOf(pageOf(CUT, hctx));
   assert.equal((fig.match(/class="hist-covid"/g) ?? []).length, 2);
   assert.ok(fig.includes('CMS left claims from January 1, 2020 through June 30, 2020 out of the program’s calculations'));
   assert.ok(fig.includes('The pandemic years'));
@@ -186,19 +188,19 @@ test('history: the pandemic years are shaded with their note, the cap steps rule
 
 test('history: a hospital in one year\'s file says "the one year with data"', () => {
   const lone = ctxFor([CUT, NONE_MEASURED]);
-  assert.ok(figureOf(pageOf(CUT, lone), 2).includes('Penalized in the one year with data.'));
-  assert.ok(figureOf(pageOf(NONE_MEASURED, lone), 2).includes('Not penalized in the one year with data.'));
+  assert.ok(historyOf(pageOf(CUT, lone)).includes('Penalized in the one year with data.'));
+  assert.ok(historyOf(pageOf(NONE_MEASURED, lone)).includes('Not penalized in the one year with data.'));
   const never = hospitalView(NONE_BELOW, hctx).figures.history;
   assert.ok(never.nWith > 0);
   const quiet = hospital({ id: '990030', paf: 1, red: 0, pen: 0, c: {} });
   const quietCtx = ctxFor([quiet, ...OTHERS], { ...HIST, paf: { ...HIST.paf, [quiet.id]: [1, 1, 1, 1, 1, 1, 1] } });
-  assert.match(figureOf(pageOf(quiet, quietCtx), 2), /Not penalized in any of the 8 years with data\./);
+  assert.match(historyOf(pageOf(quiet, quietCtx)), /Not penalized in any of the 8 years with data\./);
 });
 
 test('history: a hospital cut every year it is in a file reads "all"', () => {
   const h = hospital({ id: '990031' });
   const c = ctxFor([h, ...OTHERS], { years: [2025, 2026], paf: { [h.id]: [0.99, 0.98] }, national: [{ fy: 2025, cap: 3 }, { fy: 2026, cap: 3 }] });
-  assert.ok(figureOf(pageOf(h, c), 2).includes('Penalized in all 3 years with data.'));
+  assert.ok(historyOf(pageOf(h, c)).includes('Penalized in all 3 years with data.'));
 });
 
 // ---------- the full worksheet ----------
@@ -222,7 +224,7 @@ const DATA = loadHrrpOnce();
 const SHARED = hospitalContext(DATA);
 const BY = new Map();
 const PAGES = DATA.hospitals.map((h) => {
-  const text = hospitalPage({ view: hospitalView(h, SHARED), robots: null, assets: ASSETS });
+  const text = hospitalPage({ view: hospitalView(h, SHARED), robots: null, assets: ASSETS, shared: SHARED });
   return [h, text];
 });
 const pick = (name, pickFn) => {
@@ -236,7 +238,7 @@ test('on the data: every page has the six rulers, its history and its worksheet,
   for (const [h, text] of PAGES) {
     const fig = figureOf(text, 1);
     assert.equal(rowsOf(fig).length, CONDS.length, h.id);
-    assert.ok(figureOf(text, 2).includes('years with data') || figureOf(text, 2).includes('year with data'), h.id);
+    assert.ok(historyOf(text).includes('years with data') || historyOf(text).includes('year with data'), h.id);
     assert.ok(text.includes('hosp__ws'), h.id);
     const words = textOf(text.slice(text.indexOf('<main'), text.indexOf('</main>')));
     assert.doesNotMatch(words, /NaN|undefined|\bnull\b|\[object Object\]|Infinity/, h.id);

@@ -86,10 +86,15 @@ export function waterfall({ id, rows, total, band = null, labels = {}, width = 3
     const capX = scaleLinear().domain([0, capMax]).range(range);
     const cx = (v) => r2(capX(v));
     const start = bottom + (caption ? 36 : 24);
+    // The cap's label ends at its line; on a phone, with the line well left of the right edge (a sum past the cap), that would run
+    // into the strip's title, so it starts at the line instead.
+    const titleEnd = left + 8 + textWidth(cap.title, LABEL_PX);
+    const capLabelAt = stacked && cx(cap.value) - textWidth(cap.label, NOTE_PX) < titleEnd + 6
+      ? { x: Math.max(cx(cap.value) + 4, titleEnd + 8), anchor: 'start' } : { x: cx(cap.value), anchor: 'end' };
     below = html`${below}<path class="chart-loupe__beam" d="M${x(scale.domain()[0])} ${r2(start)}L${cx(0)} ${r2(stripY)}M${x(scale.domain()[1])} ${r2(start)}L${cx(scale.domain()[1])} ${r2(stripY)}"/>
 ${mark({
     tip: cap.tip, value: [total.value, cap.value], hit: { x: left, y: stripY - 6, width: width - left, height: 30 },
-    body: html`${text({ x: stacked ? left + 8 : 0, y: stripY - (stacked ? 8 : -11), anchor: 'start', cls: 'chart-label', body: cap.title })}<rect class="chart-track" x="${cx(0)}" y="${stripY}" width="${cx(capMax) - cx(0)}" height="${BAR}"/>${steps.filter((s) => s.value > 0).map((s) => html`<rect class="chart-step chart-step--pen" x="${cx(s.from)}" y="${stripY}" width="${r2(Math.max(0, capX(s.to) - capX(s.from) - 1))}" height="${BAR}"/>`)}<line class="chart-line" x1="${cx(cap.value)}" x2="${cx(cap.value)}" y1="${stripY - 6}" y2="${stripY + BAR + 6}"/>${text({ x: cx(cap.value), y: stripY - 9, anchor: 'end', cls: 'chart-cap chart-cap--pen', body: cap.label })}${text({ x: width, y: stripY + BAR - 3, anchor: 'end', cls: 'chart-value chart-value--total', body: cap.share })}`,
+    body: html`${text({ x: stacked ? left + 8 : 0, y: stripY - (stacked ? 8 : -11), anchor: 'start', cls: 'chart-label', body: cap.title })}<rect class="chart-track" x="${cx(0)}" y="${stripY}" width="${cx(capMax) - cx(0)}" height="${BAR}"/>${steps.filter((s) => s.value > 0).map((s) => html`<rect class="chart-step chart-step--pen" x="${cx(s.from)}" y="${stripY}" width="${r2(Math.max(0, capX(s.to) - capX(s.from) - 1))}" height="${BAR}"/>`)}<line class="chart-line" x1="${cx(cap.value)}" x2="${cx(cap.value)}" y1="${stripY - 6}" y2="${stripY + BAR + 6}"/>${text({ x: capLabelAt.x, y: stripY - 9, anchor: capLabelAt.anchor, cls: 'chart-cap chart-cap--pen', body: cap.label })}${text({ x: width, y: stripY + BAR - 3, anchor: 'end', cls: 'chart-value chart-value--total', body: cap.share })}`,
   })}
 <g transform="translate(0 ${r2(stripY + BAR + 6)})">${axis({ scale: capX, orient: 'bottom', ticks: cap.ticks, format: cap.format })}</g>`;
     height = stripY + BAR + 6 + 24;

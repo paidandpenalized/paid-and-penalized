@@ -11,6 +11,8 @@ import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, pla
 import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf, meanCutByYear, pafByYear } from './derive.js';
 import { historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
+import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
+import { whatIfData } from './figures/whatif-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
@@ -30,7 +32,7 @@ import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, r
 // which the verdict sentence uses), what the rank line ranks against (the cuts, nationally, by state and by peer group) and
 // the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital, and
 // the family's dollar estimates (a Map of CCN to row; optional), whose net the header chip shows.
-export function hospitalContext({ hospitals, meta, history, conditions, master = null, dollars = null }) {
+export function hospitalContext({ hospitals, meta, history, conditions, master = null, dollars = null, shapes = null, counties = [] }) {
   return {
     meta,
     edition: { ...editionOf(meta, history), conditions },
@@ -43,6 +45,10 @@ export function hospitalContext({ hospitals, meta, history, conditions, master =
     yearRanks: yearRanks(hospitals, history, meta),
     avgCut: meanCutByYear(hospitals, [...history.years, meta.fy], pafByYear({ history, meta })),
     lines: smallLines({ history }),
+    // The areas' hospital tables (each area once), and the outlines the nearby map draws (none: no map).
+    areas: areaGroups(hospitals, meta),
+    shapes,
+    counties,
   };
 }
 
@@ -79,8 +85,7 @@ function starsOf(h) {
   };
 }
 
-// A hospital is in a metro area when the row names both its code and its name; otherwise it is outside the metro areas.
-export const inMetro = (h) => Boolean(h.cbsa && h.cbsaName);
+export { inMetro };
 
 // Nation, then the hospital's region, division, state and metro area, each only when the row names it.
 function crumbsOf(h, ctx) {
@@ -101,6 +106,12 @@ const inHubOf = (h, ctx) => (ctx.master ? ctx.master.get(h.id)?.programs?.hacrp?
 const netOf = (h, ctx) => {
   const row = ctx.dollars?.get(h.id);
   return row?.status === 'estimated' ? row.net : null;
+};
+
+// The area table this hospital is in: its metro area's hospitals, or its state's outside the metros'; none when it is the only one.
+const areaOf = (h, ctx) => {
+  const area = ctx.areas.get(areaKeyOf(h));
+  return area?.rows.some((r) => r.h.id === h.id) ? area : null;
 };
 
 // h: a hospital row of the data file; ctx: hospitalContext(). Returns plain strings (and numbers where a page needs one).
@@ -145,7 +156,7 @@ export function hospitalView(h, ctx) {
       note: h.base != null ? fill('dollarsNote', { base: fmtMoney(h.base) }) : t('dollarsNoVolume'),
     },
     rank: rankLine(h, ctx.rank),
-    figures: { rulers: rulersData(h, ctx), history: historyData(h, ctx), sheet: { rows: worksheetRows(h, ctx.meta), conditions: edition.conditions } },
+    figures: { rulers: rulersData(h, ctx), whatIf: whatIfData(h, ctx), history: historyData(h, ctx), area: areaOf(h, ctx), sheet: { rows: worksheetRows(h, ctx.meta), conditions: edition.conditions } },
     crumbs: crumbsOf(h, ctx),
     source: fill('source', { edition: edition.label, date: fmtDate(ctx.meta.fileDate, 'long') }),
   };
