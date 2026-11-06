@@ -399,12 +399,15 @@ function historyTotals(history) {
   };
 }
 
-// The Methods page's notes on reading the program page's figures, each an accuracy trap worked out from the data: hospitals flagged
-// on a condition whose cut rounds to zero (counted as not cut by the share cut by conditions measured). A note with nothing to say
-// is left out.
+// The Methods page's notes on reading the program page's figures, each a figure's accuracy trap: hospitals flagged on a condition
+// whose cut rounds to zero (counted as not cut by the share cut by conditions measured); what peer grouping changed (approximate
+// medians, no dollars). A note with nothing to say is left out.
 export function figureLimits({ hospitals: all, meta }) {
   const rounded = all.filter((h) => verdict(h, meta).status === 'none-rounded').length;
-  return [rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null].filter(Boolean);
+  return [
+    rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null,
+    methodsT('figuresFlips'),
+  ].filter(Boolean);
 }
 
 // The Methods page's words as plain strings, filled from the data: the edition's phrases, the neutrality modifier at four

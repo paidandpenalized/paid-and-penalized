@@ -142,6 +142,12 @@
 .picpair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 40px; }
 .picpair > * { min-width: 0; }
 @media (min-width: 980px) { .picpair:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
+/* A 7-to-5 pair whose figures share rows (takeaway, chart, note, source, an open table), so their charts start level: the peer-group
+   strips and what peer grouping changed, drawn at one row pitch (layout.js SIDE and BESIDE), keep each group on one line across. */
+@media (min-width: 980px) {
+  .picpair--side:has(> :nth-child(2)) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); row-gap: 10px; }
+  .picpair--side > .pic, .picpair--side > .pic > .fig { display: grid; grid-row: span 5; grid-template-rows: subgrid; align-content: start; }
+}
 /* Figure 3's dual-share columns: two tones alternate by peer group (the group numbers above the chart name them). */
 .chart-col.dual-odd { fill: var(--ink); }
 .chart-col.dual-even { fill: var(--pen); }
@@ -171,6 +177,7 @@
 .strip-dot--5 { stroke: var(--pen-seq-5); }
 .strip__band { fill: var(--paper-2); }
 .strip__median { stroke-width: 3.5px; }
+.flips__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .spread__rule { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .chart-spread { fill: var(--ink); font: 400 20px/1 var(--font-display); }
 /* Step 5: the waterfall beside the step's words; the hospital box and Worksheet R under both. */
@@ -374,7 +381,7 @@
   .usmap__chip--hatch { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .btn[aria-pressed="true"] { background: Highlight; color: HighlightText; }
   .chart-lens-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
-  .cond-ci, .spread__rule, .strip__median { stroke: CanvasText; }
+  .cond-ci, .spread__rule, .strip__median, .flips__zero { stroke: CanvasText; }
   .strip-dot--0 { stroke: GrayText; }
   .strip-dot--1, .strip-dot--2, .strip-dot--3, .strip-dot--4, .strip-dot--5 { stroke: CanvasText; }
   .strip__band { fill: Canvas; stroke: GrayText; }

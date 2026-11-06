@@ -144,6 +144,10 @@ export const COPY = {
     text: '{hospitals} comes in above a peer-group median on at least one condition yet takes no cut: the condition’s share of its Medicare payments is small enough that the reduction rounds to zero. The share cut by number of conditions measured counts it as not cut.',
     claim: 'HRRP-04',
   },
+  figuresFlips: {
+    text: 'What peer grouping changed: each condition’s flags are drawn again against one median over every hospital measured on it in this file. CMS sets its peer medians itself, so the medians here differ slightly from any CMS would set, and the counts are approximate. Only flags move; no dollars are modeled for a world without peer groups.',
+    claim: 'HRRP-05',
+  },
   figuresRounded: {
     text: '{hospitals} come in above a peer-group median on at least one condition yet take no cut: the condition’s share of the hospital’s Medicare payments is small enough that the reduction rounds to zero. The share cut by number of conditions measured counts them as not cut.',
     claim: 'HRRP-04',

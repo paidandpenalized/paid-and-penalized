@@ -18,8 +18,8 @@ import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN } from './picture-data.js';
-import { drawCuts, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
-import { FULL, HALF, SIDE, pic } from './layout.js';
+import { drawCuts, drawFlips, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
+import { BESIDE, HALF, SIDE, pic } from './layout.js';
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -68,8 +68,8 @@ function penFigure({ rows, conditions, edition, n }) {
 
 // ---------- the size of the cuts ----------
 
-// Two figures side by side where there is room (one alone takes the row).
-const pair = (a, b) => (a || b ? html`<div class="picpair">${a}${b}</div>` : '');
+// Two figures side by side where there is room (one alone takes the row); side: 7 to 5 columns, their text and charts on shared rows.
+const pair = (a, b, side = false) => (a || b ? html`<div class="picpair${side ? ' picpair--side' : ''}">${a}${b}</div>` : '');
 const pct0 = (fraction) => pct(fraction, 0);
 const CUT_TICKS = [0, 0.5, 1, 1.5, 2, 2.5, CAP_PCT];
 const cutTicks = (width) => (isNarrow(width) ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
@@ -176,12 +176,56 @@ function peerFigure({ p, edition, n }) {
   const draw = (width) => drawStrip({ rows: spec, cap: CAP_PCT, width, ticks: cutTicks(width), format: percent, labels: { median: t('peerKeyMedian'), shade: t('peerKeyShade') } });
   return figure({
     n: n(), takeaway: peerTakeaway(p), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-cuts-by-peer-group',
-    chart: imagePair(drawn(draw, FULL), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
+    chart: imagePair(drawn(draw, SIDE), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
     table: {
       columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('peerColAll'), numeric: true }, { name: t('peerColN'), numeric: true }, { name: t('peerColShare'), numeric: true }, { name: t('peerColMedian'), numeric: true }],
       rows: p.table.map((r) => [
         fill('peerLabel', { n: String(r.peer) }), r.lo === null ? '—' : fill('peerDualRange', { from: pct0(r.lo), to: pct0(r.hi) }), num(count(r.n), r.n), num(count(r.nMeasured), r.nMeasured),
         num(r.shareCut === null ? '—' : pct0(r.shareCut), r.shareCut), num(r.median === null ? '—' : fmtPct(r.median), r.median),
+      ]),
+    },
+  });
+}
+
+// ---------- what did peer grouping change? ----------
+
+// "About" a count: the single median is this file's, not CMS's, so a count of 20 or more is said to the nearest ten.
+const about = (n) => fmtInt(n >= 20 ? Math.round(n / 10) * 10 : n);
+// "group 5", "groups 1 to 4" (a run), or "groups 1, 3 and 5".
+function groupsText(peers) {
+  if (peers.length === 1) return fill('flipsGroup', { n: String(peers[0]) });
+  const run = peers.every((p, i) => i === 0 || p === peers[i - 1] + 1);
+  return run ? fill('flipsGroupsRun', { from: String(peers[0]), to: String(peers[peers.length - 1]) }) : fill('flipsGroups', { list: listText(peers.map(String)) });
+}
+
+export function flipsTakeaway(f) {
+  if (!f.takeaway) return t('flipsTakeawayNone');
+  const side = (keep) => {
+    const rows = f.rows.filter(keep);
+    return rows.length ? { groups: groupsText(rows.map((r) => r.peer)), n: about(Math.abs(rows.reduce((s, r) => s + r.net, 0))) } : null;
+  };
+  const [more, fewer] = [side((r) => r.net < 0), side((r) => r.net > 0)];
+  if (more && fewer) return fill('flipsTakeaway', { more: more.groups, moreN: more.n, fewer: fewer.groups, fewerN: fewer.n });
+  if (more) return fill('flipsTakeawayMore', { more: more.groups, moreN: more.n });
+  if (fewer) return fill('flipsTakeawayFewer', { fewer: fewer.groups, fewerN: fewer.n });
+  return t('flipsTakeawayEven');
+}
+
+function flipsFigure({ f, edition, n }) {
+  if (!f.totals.measured) return '';
+  const spec = f.rows.map((r) => ({
+    label: fill('peerLabel', { n: String(r.peer) }), sub: r.lo === null ? '' : fill('peerSub', { from: pct0(r.lo), to: pct0(r.hi) }), added: r.added, removed: r.removed,
+    tip: fill('flipsTip', { n: String(r.peer), on: fmtInt(r.added), off: fmtInt(r.removed) }),
+  }));
+  const draw = (width) => drawFlips({ rows: spec, width, labels: { off: t('flipsHeadOff'), on: t('flipsHeadOn') } });
+  return figure({
+    n: n(), takeaway: flipsTakeaway(f), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flags-without-peer-groups',
+    chart: imagePair(drawn(draw, BESIDE), t('flipsAlt')), note: t('flipsNote'),
+    table: {
+      columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('flipsColMeasured'), numeric: true }, { name: t('flipsColNow'), numeric: true }, { name: t('flipsColAlone'), numeric: true }, { name: t('flipsColOn'), numeric: true }, { name: t('flipsColOff'), numeric: true }],
+      rows: f.table.map((r) => [
+        fill('peerLabel', { n: String(r.peer) }), r.lo === null ? '—' : fill('peerDualRange', { from: pct0(r.lo), to: pct0(r.hi) }), num(fmtInt(r.measured), r.measured),
+        num(fmtInt(r.now), r.now), num(fmtInt(r.alone), r.alone), num(fmtInt(r.added), r.added), num(fmtInt(r.removed), r.removed),
       ]),
     },
   });
@@ -263,7 +307,7 @@ function barsFigure({ b, conditions, edition, n }) {
 
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
 // numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
-// conditions measured beside the conditions' share of flags and dollars, the cuts by peer group across the page, the traits'
+// conditions measured beside the conditions' share of flags and dollars, the cuts by peer group beside what peer grouping changed, the traits'
 // ranges (words beside), then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
@@ -271,11 +315,12 @@ export function picturePart(picture, { figure: nextFigure, edition }) {
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
   const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
+  const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
   return html`<p class="part__intro">${ledeText(picture)}</p>
 ${cuts}
 ${pair(measured, bars)}
-${peers}
+${pair(peers, flips, true)}
 ${types}
 ${largest.length ? html`<div class="pic">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
 <p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}`;

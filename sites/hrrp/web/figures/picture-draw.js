@@ -8,7 +8,7 @@ import { html } from '../../../../web/render/html.js';
 import { axis } from '../../../../web/charts/axis.js';
 import { dotsPath, spread } from '../../../../web/charts/dots.js';
 import { scoreSwarm } from '../../../../web/charts/scoreSwarm.js';
-import { NOTE_PX, frame, isNarrow, mark, r2, text } from '../../../../web/charts/svg.js';
+import { NOTE_PX, barPath, frame, isNarrow, mark, r2, text } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { clamp } from '../../../../engine/js/stats.js';
 import { dotsFor } from './swarm.js';
@@ -68,6 +68,9 @@ ${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen'
 // The dot's shade by the size of its cut, the old site's bins (no cut, under 0.25%, under 0.5%, under 1%, under 2%, 2% or more).
 export const stripShade = (red) => (red <= 0 ? 0 : red < 0.25 ? 1 : red < 0.5 ? 2 : red < 1 ? 3 : red < 2 ? 4 : 5);
 const STRIP_DOT = 3.6;
+// The strip plot's wide rows: their pitch and the header over the first (drawFlips shares them, so the two drawings' rows line up).
+const STRIP_ROW = 46;
+const STRIP_TOP = 26;
 
 // rows: [{ label, sub, reds (cuts in percent of each measured hospital), median (percent or null), shareText, tip }];
 // cap: the axis's top (percent); labels: { median, shade } for the key.
@@ -75,8 +78,8 @@ export function drawStrip({ rows, cap, width, labels, ticks, format }) {
   const narrow = isNarrow(width);
   const left = narrow ? MARGIN : 100;
   const right = width - (narrow ? MARGIN : 74);
-  const rowH = narrow ? 56 : 46;
-  const top = 26;
+  const rowH = narrow ? 56 : STRIP_ROW;
+  const top = STRIP_TOP;
   const x = scaleLinear().domain([0, cap]).range([left, right]);
   const shades = Array.from({ length: 6 }, () => []);
   const body = rows.map((r, row) => {
@@ -101,6 +104,47 @@ ${mx === null ? '' : html`<line class="chart-median strip__median" x1="${mx}" x2
     kind: 'strip', width, height: base + 34, body: html`<line class="chart-median strip__median" x1="${left + 4}" x2="${left + 4}" y1="4" y2="18"/>${text({ x: left + 12, y: 15, anchor: 'start', cls: 'chart-note', body: labels.median })}${text({ x: right, y: 15, anchor: 'end', cls: 'chart-note', body: labels.shade })}
 ${body}${dots}
 <g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks, format })}</g>`,
+  });
+}
+
+// ---------- what did peer grouping change? ----------
+
+// The flags each peer group gains and loses against one national median, as two bars from a line: those peer grouping takes off
+// (grey, to the left) and those it puts on (penalty ink, to the right). The wide drawing shares the strip plot's geometry (its
+// header, row pitch and axis), so beside it each group's bars sit level with its strip; a phone's rows carry their own label over
+// the bars. rows: [{ label, sub, added, removed, tip }] in group order; labels: { off, on } over the line.
+export function drawFlips({ rows, width, labels }) {
+  const narrow = isNarrow(width);
+  const rowH = narrow ? 44 : STRIP_ROW;
+  const top = STRIP_TOP;
+  // Room at the left for the row labels and the largest number taken off, at the right for the largest put on.
+  const left = narrow ? 30 : 100;
+  const right = width - (narrow ? 24 : 30);
+  const most = (key) => Math.max(1, ...rows.map((r) => r[key]));
+  const x = scaleLinear().domain([-most('removed'), most('added')]).range([left, right]);
+  const x0 = r2(x(0));
+  const barH = narrow ? 12 : 14;
+  const body = rows.map((r, row) => {
+    const y0 = top + row * rowH;
+    const yb = narrow ? y0 + 22 : y0 + rowH / 2 - 2 - barH / 2;
+    const [xOff, xOn] = [r2(x(-r.removed)), r2(x(r.added))];
+    const value = (v, at, anchor) => (v ? text({ x: at, y: yb + barH / 2 + 4, anchor, cls: 'chart-value', body: String(v) }) : '');
+    return mark({
+      tip: r.tip, value: [r.added, r.removed], hit: { x: 0, y: y0, width, height: rowH },
+      body: html`${narrow || row % 2 ? '' : html`<rect class="strip__band" x="${left}" y="${y0 + 2}" width="${r2(right - left)}" height="${rowH - 4}"/>`}
+${narrow
+    ? text({ x: 0, y: y0 + 13, anchor: 'start', cls: 'chart-label', body: html`${r.label} <tspan class="chart-note">${r.sub}</tspan>` })
+    : text({ x: 0, y: y0 + rowH / 2 + 2, anchor: 'start', cls: 'chart-label', body: r.label })}
+<path class="chart-bar" d="${barPath(x0, xOff, yb, barH)}"/><path class="chart-col--pen" d="${barPath(x0, xOn, yb, barH)}"/>
+${value(r.removed, xOff - 5, 'end')}${value(r.added, xOn + 5, 'start')}`,
+    });
+  });
+  const base = top + rows.length * rowH;
+  return frame({
+    kind: 'flips', width, height: base + 34, body: html`${text({ x: x0 - 6, y: 15, anchor: 'end', cls: 'chart-note', body: labels.off })}${text({ x: x0 + 6, y: 15, anchor: 'start', cls: 'chart-note chart-label--pen', body: labels.on })}
+${body}
+<line class="flips__zero" x1="${x0}" x2="${x0}" y1="4" y2="${r2(base)}"/>
+<g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: 4, format: (v) => String(Math.abs(v)) })}</g>`,
   });
 }
 

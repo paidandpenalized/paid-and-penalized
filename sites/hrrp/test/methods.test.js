@@ -175,7 +175,7 @@ test('on the data: Methods holds every pin the data read, each claim sentence re
   assert.ok(html.length < 200000);
 });
 
-test('reading the figures: hospitals flagged on a condition whose cut rounds to zero are counted (one is said in the singular), and the section is left out with none', () => {
+test('reading the figures: hospitals flagged on a condition whose cut rounds to zero are counted (one is said in the singular, none leaves the line out); the peer-grouping trap is always there', () => {
   const rounded = (list) => list.filter((h) => verdict(h, META).status === 'none-rounded');
   const many = rounded(ALL);
   assert.ok(many.length > 1);
@@ -184,6 +184,6 @@ test('reading the figures: hospitals flagged on a condition whose cut rounds to 
   const one = ctxOf({ hospitals: ALL.filter((h) => !many.slice(1).includes(h)) });
   assert.match(methodsView(one).figures[0], /^1 hospital comes in above .* yet takes no cut: .* counts it as not cut\.$/);
   const none = ctxOf({ hospitals: ALL.filter((h) => !many.includes(h)) });
-  assert.deepEqual(methodsView(none).figures, []);
-  assert.doesNotMatch(textOf(page(none)), /Reading the figures/);
+  assert.equal(methodsView(none).figures.length, 1, 'only the notes that always apply');
+  assert.match(methodsView(none).figures[0], /^What peer grouping changed: .* no dollars are modeled/);
 });

@@ -210,3 +210,25 @@ test('swarmData close: |gap| <= 0.001 counts (exactly 0.001 in, 0.0011 out)', ()
   const s = swarmData(hs, META, 'HF', 'none');
   assert.deepEqual(s.close, { half: 0.001, n: 3 });
 });
+
+// ---------- #10's words and drawing ----------
+import { flipsTakeaway } from '../web/figures/picture.js';
+import { drawFlips } from '../web/figures/picture-draw.js';
+
+const flipRows = (nets) => ({ takeaway: {}, rows: nets.map((net, i) => ({ peer: i + 1, net })) });
+test('#10 takeaway: says "about", rounds a count of 20 or more to ten, names a run of groups as a run; no dollars', () => {
+  assert.equal(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), 'Against one national median instead of five peer medians, group 5 would carry about 170 more flags and groups 1 to 4 about 140 fewer.');
+  assert.equal(flipsTakeaway(flipRows([3, 0, -2, 0, 0])), 'Against one national median instead of five peer medians, group 3 would carry about 2 more flags and group 1 about 3 fewer.');
+  assert.match(flipsTakeaway(flipRows([5, -9, 5, 0, 0])), /groups 1 and 3 about 10 fewer/);
+  assert.match(flipsTakeaway({ takeaway: null, rows: [] }), /no flag would change/);
+  assert.doesNotMatch(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), /\$/);
+});
+
+test('#10 drawing: the wide rows share the strip plot\'s pitch; each row plots what it puts on and takes off', () => {
+  const rows = [1, 2, 3, 4, 5].map((g) => ({ label: `Group ${g}`, sub: '', added: g === 5 ? 2 : 10 * g, removed: g === 5 ? 168 : 0, tip: 't' }));
+  const wide = String(drawFlips({ rows, width: 457, labels: { off: 'off', on: 'on' } }));
+  assert.match(wide, /viewBox="0 0 457 290"/, 'the strip plot\'s height: 26 + 5 × 46 + 34');
+  assert.match(wide, /data-value="2 168"/);
+  const narrow = String(drawFlips({ rows, width: 300, labels: { off: 'off', on: 'on' } }));
+  assert.match(narrow, /viewBox="0 0 300 /);
+});
