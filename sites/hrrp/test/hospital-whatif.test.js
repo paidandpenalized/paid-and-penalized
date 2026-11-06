@@ -300,15 +300,21 @@ test('Bring all to median acts on the current value: over the median it comes do
   assert.equal(medianTarget(1.2, null), null, 'no median published');
 });
 
-test('on the data: with nothing to simulate the words sit above the pair and the history alone fills it', () => {
+test('on the data: with nothing to simulate the words stand in the what-if\'s place, before the history', () => {
   const none = DATA.hospitals.find((h) => !CONDS.some((k) => isMeasured(h.c[k])));
   const text = render(none);
   const nowi = text.indexOf('hosp__nowi');
-  const pair = text.indexOf('<div class="hosp__pair">');
-  assert.ok(nowi > 0 && nowi < pair, 'the words come before the pair');
-  const inside = text.slice(pair, text.indexOf('</div>', text.indexOf('id="figure-2"')));
-  assert.ok(!inside.includes('hosp__nowi'));
-  assert.equal((text.slice(pair).match(/<figure class="fig"/g) ?? []).length >= 1, true);
-  const pairHtml = /<div class="hosp__pair">([\s\S]*?)<\/figure>\s*<\/div>/.exec(text)[1];
-  assert.equal((pairHtml.match(/<figure class="fig"/g) ?? []).length, 1, 'one child in the pair');
+  const history = text.indexOf('class="hosphist"');
+  assert.ok(nowi > 0 && nowi < history, 'the words come before the history');
+  assert.ok(!text.includes('data-hosp-whatif'), 'no what-if');
+});
+
+test('on the data: the what-if\'s result sits in its own block after the sliders, and the history follows the what-if', () => {
+  const some = DATA.hospitals.find((h) => CONDS.some((k) => isMeasured(h.c[k])));
+  const text = render(some);
+  const wi = text.indexOf('data-hosp-whatif');
+  assert.ok(wi > 0 && wi < text.indexOf('data-wi="fields"') && text.indexOf('data-wi="fields"') < text.indexOf('class="wi__result"'));
+  assert.ok(text.indexOf('class="wi__result"') < text.indexOf('data-wi="parts"'), 'the parts are in the result block');
+  assert.ok(text.indexOf('class="wi__result"') < text.indexOf('class="hosphist"'), 'the history comes after the what-if');
+  assert.ok(!text.includes('hosp__pair'));
 });

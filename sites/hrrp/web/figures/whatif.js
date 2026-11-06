@@ -1,5 +1,6 @@
-// A hospital page's what-if: one slider for each condition the hospital is measured on, "Reset" and "Bring all to median", the
-// hypothetical cut, factor and dollars beside the actual ones, and under them the waterfall of the parts of the cut at those
+// A hospital page's what-if: one slider for each condition the hospital is measured on, "Reset" and "Bring all to median", and
+// beside them (.wi__result, held in view while the sliders move) the hypothetical cut, factor and dollars beside the actual ones,
+// and under them the waterfall of the parts of the cut at those
 // ratios (figures/waterfall.js, drawn by the same code in the browser as the sliders move: client/hospital.js). Each row says its
 // escape value, the ratio that reaches the median, and what reaching it alone would save. Without the script the sliders are
 // disabled at the actual ratios and the figure reads as the page was built. Data from figures/whatif-data.js; words in hospital/copy.js.
@@ -55,12 +56,14 @@ ${wi.sliders.map(slider)}</ul>
 <p class="wi__btns" data-wi="buttons" hidden><button type="button" class="fig__btn" data-wi="reset">${t('wiReset')}</button> <button type="button" class="fig__btn" data-wi="median" aria-describedby="wi-median-help">${t('wiToMedian')}</button></p>
 <p class="small muted wi__help" id="wi-median-help" data-wi="help" hidden>${t('wiToMedianHelp')}</p>
 </div>
+<div class="wi__result">
 <div class="form wi__out" role="group" aria-label="${t('wiResultsLabel')}">
 ${fields}
 </div>
 <p class="vh" role="status" data-wi="live"></p>
 <h3 class="wi__title">${t('wiPartsTitle')}</h3>
 <div class="wi__parts" data-wi="parts">${waterfallPair(wi.wf, t('wiWfAlt'))}</div>
+</div>
 </div>`;
   const dash = num(t('cellNone'), null);
   return figure({

@@ -1,8 +1,9 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/hospital.js at 33d1959), after HACRP's hospital page (the
 // record card, the stamp, the verdict beside it). The top of a hospital's page: the breadcrumb, the record card
 // (name, place, metro area, type, peer group, stars) beside the verdict (the stamps, the summary, the inactive note,
-// the factor and the estimated dollars, the rank, the report link). Then the figures: where the penalty came from, the
-// what-if, the penalty history, the full worksheet and the other hospitals in the area (their table and the nearby map).
+// the factor and the estimated dollars, the rank, the report link). Then the figures, each across the page: where the penalty
+// came from, the what-if (its result beside the sliders), the penalty history, the full worksheet and the other hospitals in the
+// area (their table and the nearby map).
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
@@ -73,11 +74,8 @@ ${recordCard(view)}
 ${verdict(view, path)}
 </div>
 ${rulersFigure(rulers, { view, n: n() })}
-${interactive ? '' : whatIfNone()}
-<div class="hosp__pair">
-${interactive ? whatIfFigure(whatIf, { view, n: n() }) : ''}
+${interactive ? whatIfFigure(whatIf, { view, n: n() }) : whatIfNone()}
 ${historyFigure(history, { view, n: n() })}
-</div>
 ${interactive ? whatIfScriptData(whatIf) : ''}
 ${worksheetDisclosure(sheet, view.edition)}
 ${area && neighborsFigure(area, { view, n: n() })}
