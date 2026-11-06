@@ -28,8 +28,8 @@ def urban_row(code, pcts):
 
 
 STATES = build.state_table(
-    viii_rows("Alaska", "250") + viii_rows("Wisconsin", "N/A") + viii_rows("Texas", "N/A"),
-    [urban_row("AK", (10, 20, 30)), urban_row("WI", (20, 40, 60))],
+    viii_rows("Alaska", "250") + viii_rows("Wisconsin", "N/A") + viii_rows("Texas", "N/A") + viii_rows("Maryland", "250"),
+    [urban_row("AK", (10, 20, 30)), urban_row("WI", (20, 40, 60)), urban_row("MD", (10, 20, 30))],
     [{"state": "AK", "map_total_net_expenditures": "4000", "dsh_inpatient_hospital": "400",
       "dsh_mental_health_facility": ""}])
 
@@ -66,6 +66,12 @@ class StateTable(unittest.TestCase):
     def test_classes(self):
         self.assertEqual((STATES["AK"]["class"], STATES["WI"]["class"], STATES["TX"]["class"]),
                          (build.SCENARIO, build.NO_VIII, build.NOT_EXPANSION))
+
+    def test_maryland_is_all_payer_but_keeps_its_inputs(self):
+        md = STATES["MD"]
+        self.assertEqual(md["class"], build.ALL_PAYER)
+        self.assertAlmostEqual(md["share"], 0.25)
+        self.assertEqual(md["declines"]["middle"], 0.2)
 
     def test_shares_and_declines(self):
         ak = STATES["AK"]

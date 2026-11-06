@@ -40,6 +40,9 @@ CODE_OF_NAME = {name: code for code, _, name in geo.STATES}
 SCENARIO = "scenario"            # in Urban's table, with a VIII group in CMS-64
 NO_VIII = "no_viii_group"        # in Urban's table, without a VIII group (Wisconsin's waiver adults)
 NOT_EXPANSION = "not_expansion"  # not in Urban's table: did not expand Medicaid (or a territory)
+ALL_PAYER = "all_payer"          # in Urban's table, but HSCRC sets every payer's hospital rates and builds
+#                                  uncompensated care into them, so a lost Medicaid dollar isn't the hospital's loss
+ALL_PAYER_STATES = ("MD",)
 NO_REPORT = "no_cost_report"     # a hospital without a base-year cost report
 
 
@@ -77,7 +80,7 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
         else:
             entry["declines"] = {sid: -int(u[col + "_pct"]) / 100 for sid, col in params.SCENARIOS}
             entry["urban_thousands"] = {sid: -int(u[col + "_thousands"]) for sid, col in params.SCENARIOS}
-            entry["class"] = SCENARIO if s is not None else NO_VIII
+            entry["class"] = (ALL_PAYER if code in ALL_PAYER_STATES else SCENARIO if s is not None else NO_VIII)
         out[code] = entry
     return out
 
