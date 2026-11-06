@@ -277,7 +277,7 @@
 .browse__regions { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
 .browse__regions > li { padding-top: 8px; border-top: var(--rule) solid var(--pen); }
 .browse__region { font: 400 var(--fs-lg)/1.2 var(--font-display); }
-.browse__divs { display: grid; gap: 8px; margin-top: 6px; padding-left: 12px; border-left: 2px solid var(--line); }
+.browse__divs { display: grid; gap: 8px; margin-top: 6px; }
 .browse__div { font-weight: 600; }
 .browse__states { display: block; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
 @media (forced-colors: active) {
