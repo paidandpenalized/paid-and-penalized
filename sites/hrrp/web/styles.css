@@ -288,6 +288,8 @@
    at its drawing's size, as the explorer's rows have it. */
 .pen__table { min-width: 36rem; }
 .pen__glyph { display: block; width: 96px; }
+/* Step 1's punch card on a phone: its row names reach left of the drawing, so it sits in from the column's edge. */
+@media (max-width: 559px) { #step-1 .chart--punch { width: calc(100% - 14px); margin-left: 14px; } }
 .pen__glyph .chart { width: 96px; max-width: 96px; }
 
 /* Part 3, the map (figures/map.js), in the old site's look: the measure buttons and the hospitals checkbox above a full-width

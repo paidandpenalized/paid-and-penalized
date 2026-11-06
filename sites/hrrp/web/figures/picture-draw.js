@@ -116,21 +116,24 @@ export function drawSpread({ traits, national, width, format, head }) {
   const hi = Math.min(100, Math.ceil((Math.max(...shares) + 4) / 10) * 10);
   const gutter = narrow ? 0 : 30;
   const x = scaleLinear().domain([lo, hi]).range([gutter + (narrow ? 22 : 20), width - (narrow ? 22 : 100)]);
-  const rowH = narrow ? 92 : 80;
-  const SLOTS = narrow ? [-9, 22, -19, 35] : [-10, 19, -22, 31];
+  const rowH = narrow ? 100 : 80;
+  // Label rows around the dots: on a phone the rows above (and below) sit a full line apart, so stacked labels never touch.
+  const SLOTS = narrow ? [-9, 22, -23, 36] : [-10, 19, -22, 31];
   let y = 8;
   const blocks = traits.map((t) => {
-    const cy = y + (narrow ? 52 : 40);
+    const cy = y + (narrow ? 58 : 40);
     const taken = SLOTS.map(() => []);
     const dots = [...t.groups].sort((a, b) => a.share - b.share).map((g) => {
       const w = textWidth(g.label, NOTE_PX) + 16;
-      const [a0, a1] = [x(g.share) - w / 2, x(g.share) + w / 2];
+      // The label's span where it is drawn (kept inside the drawing), so a label pushed in from an edge is checked where it sits.
+      const at = clamp(x(g.share), w / 2, width - w / 2);
+      const [a0, a1] = [at - w / 2, at + w / 2];
       const k = taken.findIndex((spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1));
       const slot = k < 0 ? 0 : k;
       taken[slot].push([a0, a1]);
       return mark({
         tip: g.tip, value: g.share, hit: null,
-        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: clamp(x(g.share), w / 2, width - w / 2), y: cy + SLOTS[slot] + 3, cls: 'chart-note chart-label--halo', body: g.label })}`,
+        body: html`<circle class="chart-share__dot chart-share__dot--pen" cx="${r2(x(g.share))}" cy="${r2(cy)}" r="4.5"/>${text({ x: at, y: cy + SLOTS[slot] + 3, cls: 'chart-note chart-label--halo', body: g.label })}`,
       });
     });
     const heading = narrow
