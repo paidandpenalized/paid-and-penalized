@@ -43,6 +43,8 @@ export function mountWorksheet() {
   status.className = 'wsr-pick__status small muted';
   status.setAttribute('role', 'status'); // present (and empty) from the start, so a screen reader hears the words put in it
   form.after(status);
+  // Cleared first, so the same words said again are announced again.
+  const say = (words) => { status.textContent = ''; status.textContent = words; };
   let latest = 0;
   const pick = async (href) => {
     const ccn = href.replace(/\/$/, '').split('/').pop();
@@ -61,13 +63,13 @@ export function mountWorksheet() {
           for (const fig of waterfall.querySelectorAll('figure[data-figure]')) mountFigure(fig);
         }
         for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(mountScroll);
-        status.textContent = t('wsPickDone');
+        say(t('wsPickDone'));
       } else {
         // A CCN the asset does not hold: the example stays, and the status says so (a stale failure message is replaced).
-        status.textContent = t('wsPickMissing');
+        say(t('wsPickMissing'));
       }
     } catch {
-      if (mine === latest) status.textContent = fill('wsPickFailed');
+      if (mine === latest) say(fill('wsPickFailed'));
     }
   };
   mountOmnibox(form, { load: () => loadIndex(form.dataset.src), words: searchWords(), open: pick, types: ['hospital'] });
