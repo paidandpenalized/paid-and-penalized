@@ -97,16 +97,15 @@ const groupOf = (bands, bin) => bands.find((b) => bin.x0 + 0.5 < b.x1)?.peer ?? 
 
 // The figure and the line about its axis marks, which goes with the step's words (it would stretch the figure's column).
 function dualFigure({ dual, edition, n }) {
-  // A peer group's tone on the dual-share columns (the kit's chart-cat-N) and in their key (swatch cat-N): N is the group's number.
-  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} chart-cat-${groupOf(dual.bands, b)}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
+  // Two tones alternate by peer group (odd groups ink, even groups penalty red); the group numbers above the columns name them, so there is no key.
+  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${groupOf(dual.bands, b) % 2 ? 'dual-odd' : 'dual-even'}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
     bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT, stagger: true,
     bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }) })),
   });
   const sizes = dual.groups.map((g) => g.n);
-  const key = dual.groups.map((g) => ({ swatch: `cat-${g.peer}`, label: fill('fig2Key', { n: String(g.peer), from: pct(g.lo, 0), to: pct(g.hi, 0) }) }));
   const fig = figure({
-    n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share', key,
+    n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share',
     takeaway: fill('fig2Takeaway', { min: fmtInt(Math.min(...sizes)), max: fmtInt(Math.max(...sizes)), n: fmtInt(dual.n) }),
     ...drawn(draw, WIDE),
     table: {

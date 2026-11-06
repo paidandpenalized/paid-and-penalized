@@ -145,7 +145,6 @@ export const COPY = {
   fig2Band: { text: 'Group {n}', claim: null },
   fig2Alt: { text: "Columns: how many hospitals have each share of dual-eligible stays, in one-point steps, with the cutoffs between the five peer groups marked on the axis.", claim: null },
   fig2Source: { text: 'CMS {edition} Hospital Readmissions Reduction Program supplemental data file (dual proportion and peer group).', claim: null },
-  fig2Key: { text: 'Group {n} · {from}–{to} dual', claim: null },
   fig2Note: { text: "The marks on the axis are CMS's cutoffs between the groups: {cutoffs}.", claim: null },
   fig2Tip: { text: '{from} to {to} dual-eligible: {n} hospitals', claim: null },
   fig2ColShare: { text: 'Dual-eligible share of stays', claim: null },

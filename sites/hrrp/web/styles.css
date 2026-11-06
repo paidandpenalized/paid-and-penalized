@@ -96,6 +96,10 @@
 .hstep__title { font: 700 clamp(1.3rem, 2.2vw, 1.6rem)/1.2 var(--font-body); }
 .hstep__text > p:not(.hstep__n) { line-height: 1.6; }
 .page--prog .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+/* Figure 3's dual-share columns: two tones alternate by peer group (the group numbers above the chart name them). */
+.chart-col.dual-odd { fill: var(--ink); }
+.chart-col.dual-even { fill: var(--pen); }
+@media (forced-colors: active) { .chart-col.dual-odd { fill: CanvasText; } .chart-col.dual-even { fill: GrayText; } }
 .page--prog .fig__cap { font-size: var(--fs-md); line-height: 1.4; }
 .page--prog .fig .chart { max-width: none; }
 /* Step 2's swarm: the condition switch over the drawing (a script unhides it; the old site's .seg look), the lens's shaded span on the

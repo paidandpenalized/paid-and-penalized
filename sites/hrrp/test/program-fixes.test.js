@@ -15,8 +15,6 @@ import { worksheetRows } from '../web/worksheet.js';
 import { ASSETS, loadHrrpOnce } from './fixtures.js';
 
 const CSS = readFileSync(`${REPO_ROOT}sites/hrrp/web/styles.css`, 'utf8');
-const TOKENS = readFileSync(`${REPO_ROOT}web/styles/tokens.css`, 'utf8');
-const KIT_CSS = readFileSync(`${REPO_ROOT}web/styles/charts.css`, 'utf8');
 const rule = (selector) => new RegExp(`(^|\\n)${selector.replace(/[.[\]*#]/g, '\\$&')}\\s*\\{([^}]*)\\}`).exec(CSS)?.[2] ?? null;
 
 function page({ hospitalsUrl = '/assets/hrrp-hospitals.test.json', worksheetUrl = '/assets/hrrp-worksheet.test.json' } = {}) {
@@ -137,24 +135,17 @@ test('Fig. 1: the note on the holes is in the step\'s words, not under the chart
 
 // ---------- Fig. 2 ----------
 
-test('Fig. 2: each group\'s columns carry the group\'s tone, keyed, and every label reads Group n at every width', () => {
+test('Fig. 2: the columns alternate two tones by peer group, with no key, and every label reads Group n at every width', () => {
   const text = page();
   const step3 = between(text, 'id="step-3"', 'id="step-4"');
-  for (const n of [1, 2, 3, 4, 5]) {
-    assert.ok(step3.includes(`class="chart-col chart-cat-${n}"`), `columns in group ${n}`);
-    assert.match(step3, new RegExp(`<span class="fig__swatch fig__swatch--cat-${n}" aria-hidden="true"></span>Group ${n} · \\d+%–\\d+% dual`), `key for group ${n}`);
-  }
-  assert.ok(!step3.includes('class="chart-col"'), 'every column has a group');
-  // The tones are tokens in both themes and none is the penalty or reward ink.
-  for (const n of [1, 2, 3, 4, 5]) {
-    assert.equal(TOKENS.match(new RegExp(`--cat-${n}:`, 'g')).length, 2, `--cat-${n} in the light and dark blocks`);
-    assert.match(KIT_CSS.match(new RegExp(`\\.chart-cat-${n} \\{([^}]*)\\}`))?.[1] ?? '', new RegExp(`fill: var\\(--cat-${n}\\)`));
-    assert.match(KIT_CSS.match(new RegExp(`\\.fig__swatch--cat-${n} \\{([^}]*)\\}`))?.[1] ?? '', new RegExp(`background: var\\(--cat-${n}\\)`));
-  }
-  const tones = [...TOKENS.matchAll(/--cat-\d: (#[0-9a-f]{6})/g)].map((m) => m[1]);
-  assert.equal(new Set(tones).size, tones.length, 'ten different values');
-  const pen = [...TOKENS.matchAll(/--(?:pen|pen-ink|rew|pen-scar): (#[0-9a-f]{6})/g)].map((m) => m[1]);
-  assert.ok(tones.every((t) => !pen.includes(t)));
+  assert.ok(step3.includes('class="chart-col dual-odd"'), 'columns in odd groups');
+  assert.ok(step3.includes('class="chart-col dual-even"'), 'columns in even groups');
+  assert.ok(!step3.includes('class="chart-col"') && !step3.includes('chart-cat-'), 'every column has one of the two tones');
+  assert.ok(!step3.includes('fig__key') && !/fig__swatch/.test(step3.slice(step3.indexOf('<figure'), step3.indexOf('</figure>'))), 'no key');
+  const css = CSS;
+  assert.match(css.match(/\.chart-col\.dual-odd \{([^}]*)\}/)?.[1] ?? '', /fill: var\(--ink\)/);
+  assert.match(css.match(/\.chart-col\.dual-even \{([^}]*)\}/)?.[1] ?? '', /fill: var\(--pen\)/);
+  assert.match(css, /forced-colors: active\) \{ \.chart-col\.dual-odd \{ fill: CanvasText; \} \.chart-col\.dual-even \{ fill: GrayText; \}/);
   for (const svg of step3.match(/<svg [^>]*chart--columns[\s\S]*?<\/svg>/g)) {
     for (const n of [1, 2, 3, 4, 5]) assert.ok(svg.includes(`>Group ${n}<`), `Group ${n}`);
   }
