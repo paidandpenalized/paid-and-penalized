@@ -8,7 +8,7 @@ import { html } from '../../../../web/render/html.js';
 import { axis } from '../../../../web/charts/axis.js';
 import { dotsPath, spread } from '../../../../web/charts/dots.js';
 import { scoreSwarm } from '../../../../web/charts/scoreSwarm.js';
-import { NOTE_PX, barPath, frame, isNarrow, mark, r2, text } from '../../../../web/charts/svg.js';
+import { NOTE_PX, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { clamp } from '../../../../engine/js/stats.js';
 import { dotsFor } from './swarm.js';
@@ -86,7 +86,6 @@ export function drawStrip({ rows, cap, width, labels, ticks, format }) {
     const y0 = top + row * rowH;
     const pad = narrow ? 22 : 7;
     r.reds.forEach((red, i) => shades[stripShade(red)].push([x(Math.min(cap, red)), y0 + pad + spread(i + 31 * row) * (rowH - pad - 7)]));
-    const mx = r.median === null ? null : r2(x(Math.min(cap, r.median)));
     // On a phone the row's words sit over its band; the band and the median tick start under them.
     const bandTop = y0 + (narrow ? 17 : 2);
     return mark({
@@ -95,14 +94,22 @@ export function drawStrip({ rows, cap, width, labels, ticks, format }) {
 ${narrow
     ? html`${text({ x: MARGIN, y: y0 + 13, anchor: 'start', cls: 'chart-label', body: html`${r.label} <tspan class="chart-note">${r.sub}</tspan>` })}${text({ x: width - MARGIN, y: y0 + 13, anchor: 'end', cls: 'chart-value', body: r.shareText })}`
     : html`${text({ x: 0, y: y0 + rowH / 2 - 2, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: 0, y: y0 + rowH / 2 + 11, anchor: 'start', cls: 'chart-note', body: r.sub })}${text({ x: width, y: y0 + rowH / 2 + 4, anchor: 'end', cls: 'chart-value', body: r.shareText })}`}
-${mx === null ? '' : html`<line class="chart-median strip__median" x1="${mx}" x2="${mx}" y1="${bandTop}" y2="${y0 + rowH - 2}"/>`}`,
+`,
     });
+  });
+  // Each group's median tick over its dots (drawn after them), on a halo of the page's paper so the dots don't break it.
+  const medians = rows.map((r, row) => {
+    if (r.median === null) return '';
+    const y0 = top + row * rowH;
+    const mx = r2(x(Math.min(cap, r.median)));
+    const [y1, y2] = [y0 + (narrow ? 17 : 2), y0 + rowH - 2];
+    return html`<line class="strip__halo" x1="${mx}" x2="${mx}" y1="${y1}" y2="${y2}"/><line class="chart-median strip__median" x1="${mx}" x2="${mx}" y1="${y1}" y2="${y2}"/>`;
   });
   const dots = shades.map((pts, i) => dotsPath(pts, `strip-dot strip-dot--${i}`, STRIP_DOT));
   const base = top + rows.length * rowH;
   return frame({
     kind: 'strip', width, height: base + 34, body: html`<line class="chart-median strip__median" x1="${left + 4}" x2="${left + 4}" y1="4" y2="18"/>${text({ x: left + 12, y: 15, anchor: 'start', cls: 'chart-note', body: labels.median })}${text({ x: right, y: 15, anchor: 'end', cls: 'chart-note', body: labels.shade })}
-${body}${dots}
+${body}${dots}${medians}
 <g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks, format })}</g>`,
   });
 }
@@ -136,7 +143,7 @@ export function drawFlips({ rows, width, labels }) {
 ${narrow
     ? text({ x: 0, y: y0 + 12, anchor: 'start', cls: 'chart-label', body: html`${r.label} <tspan class="chart-note">${r.sub}</tspan>` })
     : text({ x: 0, y: y0 + rowH / 2 + 2, anchor: 'start', cls: 'chart-label', body: r.label })}
-<path class="chart-bar" d="${barPath(x0, xOff, yb, barH)}"/><path class="chart-col--pen" d="${barPath(x0, xOn, yb, barH)}"/>
+${r.removed ? html`<rect class="chart-bar" x="${xOff}" y="${r2(yb)}" width="${r2(x0 - xOff)}" height="${barH}"/>` : ''}${r.added ? html`<rect class="chart-col--pen" x="${x0}" y="${r2(yb)}" width="${r2(xOn - x0)}" height="${barH}"/>` : ''}
 ${value(r.removed, xOff - 5, 'end')}${value(r.added, xOn + 5, 'start')}`,
     });
   });
@@ -147,6 +154,67 @@ ${body}
 <line class="flips__zero" x1="${x0}" x2="${x0}" y1="4" y2="${r2(base)}"/>
 <g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: 4, format: (v) => String(Math.abs(v)) })}</g>`,
   });
+}
+
+// ---------- are small hospitals let off? [FN-08] ----------
+
+// One panel per condition, its bands of cases from fewest to most across: over a strip, the share of each band's hospitals over their
+// peer median as a line of dots (penalty ink over half, open at or under; half dashed), and under it the middle half of the band's
+// hospitals, ratio minus peer median (a grey bar from the 25th to the 75th percentile, an ink tick at the median, the median at 0),
+// on the panel's own scale, named at its top left (the fewest-case band, the narrowest, leaves that corner clear). A band too small to show leaves its place empty. The wide drawing sets the six panels in a row with the
+// tiers named in a gutter at the left; a phone's sets two to a row under a two-line header.
+//   panels  [{ name, bands: [{ shown, share, p25, median, p75, tip }] }]; ends: [first band's label, last band's label]
+//   labels  { flagged, half, middle, median, cases, headTop, headBottom }; format: share -> text
+export function drawSizeBands({ panels, ends, width, labels, format }) {
+  const narrow = isNarrow(width);
+  const cols = narrow ? 2 : panels.length;
+  const gutter = narrow ? 0 : 96;
+  const gap = narrow ? 18 : 16;
+  const pw = (width - gutter - gap * (cols - 1)) / cols;
+  const head = narrow ? 34 : 0;
+  // A panel's rows: its name, the share tier, the middle-half tier, the band labels.
+  const T = { name: 12, top: 24, topH: narrow ? 64 : 72, mid: narrow ? 100 : 110, midH: narrow ? 50 : 58, ends: narrow ? 166 : 182, h: narrow ? 186 : 196 };
+  // The share tier spans the shares shown, rounded out a tenth past each end (half always inside it): a line, so it needn't start at zero.
+  const shares = panels.flatMap((p) => p.bands.filter((b) => b.shown).map((b) => b.share));
+  const hiShare = Math.min(1, Math.ceil(Math.max(0.5, ...shares) * 10 - 1e-9) / 10 + 0.1);
+  const loShare = Math.max(0, Math.floor(Math.min(0.5, ...shares) * 10 + 1e-9) / 10 - 0.1);
+  const n = panels[0]?.bands.length ?? 0;
+  const out = panels.map((p, i) => {
+    const px = gutter + (i % cols) * (pw + gap);
+    const py = head + Math.floor(i / cols) * T.h;
+    const xs = (j) => r2(px + 8 + (j * (pw - 16)) / Math.max(1, n - 1));
+    const ys = scaleLinear().domain([loShare, hiShare]).range([py + T.top + T.topH, py + T.top]);
+    const shown = p.bands.map((b, j) => ({ ...b, j })).filter((b) => b.shown);
+    const reach = Math.max(0.01, ...shown.flatMap((b) => [Math.abs(b.p25), Math.abs(b.p75)]));
+    const m = Math.ceil(reach / 0.05 - 1e-9) * 0.05;
+    const yg = scaleLinear().domain([-m, m]).range([py + T.mid + T.midH, py + T.mid + 10]);
+    const pts = shown.map((b) => ({ px: xs(b.j), py: r2(ys(b.share)) }));
+    const [first, last] = [shown[0], shown[shown.length - 1]];
+    // An end's share is written on the side of its dot away from the line: under it when its neighbour is higher, over it when lower.
+    const valueAt = (b, next, anchor) => text({
+      x: xs(b.j) + (anchor === 'start' ? 2 : -2), y: r2(ys(b.share) + (next && next.share > b.share ? 15 : -8)), anchor,
+      cls: `chart-value${b.share > 0.5 ? ' chart-label--pen' : ''}`, body: format(b.share),
+    });
+    const marks = shown.map((b) => mark({
+      tip: b.tip, value: [b.share, b.p25, b.p75], hit: { x: xs(b.j) - (pw - 16) / (2 * Math.max(1, n - 1)), y: py + T.top - 6, width: (pw - 16) / Math.max(1, n - 1), height: T.mid + T.midH - T.top + 12 },
+      body: html`<rect class="bands__mid" x="${r2(xs(b.j) - 3.5)}" y="${r2(yg(b.p75))}" width="7" height="${r2(Math.max(1, yg(b.p25) - yg(b.p75)))}"/><line class="bands__med" x1="${r2(xs(b.j) - 5)}" x2="${r2(xs(b.j) + 5)}" y1="${r2(yg(b.median))}" y2="${r2(yg(b.median))}"/>
+<circle class="chart-share__dot${b.share > 0.5 ? ' chart-share__dot--pen' : ''}" cx="${xs(b.j)}" cy="${r2(ys(b.share))}" r="3.5"/>`,
+    }));
+    return html`${text({ x: px, y: py + T.name, anchor: 'start', cls: 'chart-label', body: p.name })}
+<line class="bands__half" x1="${r2(px)}" x2="${r2(px + pw)}" y1="${r2(ys(0.5))}" y2="${r2(ys(0.5))}"/>
+<line class="bands__zero" x1="${r2(px)}" x2="${r2(px + pw)}" y1="${r2(yg(0))}" y2="${r2(yg(0))}"/>
+${pts.length > 1 ? html`<path class="bands__line" d="${lineD(pts.map((q) => ({ x: q.px, y: q.py })), (v) => v, (v) => v)}"/>` : ''}${marks}
+${first ? valueAt(first, shown[1], 'start') : ''}${last && last !== first ? valueAt(last, shown[shown.length - 2], 'end') : ''}
+${text({ x: px, y: py + T.ends, anchor: 'start', cls: 'chart-axis__label', body: ends[0] })}${text({ x: px + pw, y: py + T.ends, anchor: 'end', cls: 'chart-axis__label', body: ends[1] })}
+${text({ x: px, y: r2(py + T.mid + 8), anchor: 'start', cls: 'chart-axis__label', body: `±${r2(m)}` })}`;
+  });
+  const rows = Math.ceil(panels.length / cols);
+  const y0 = head;
+  const gutterText = narrow ? '' : html`${text({ x: 0, y: y0 + T.top + 10, anchor: 'start', cls: 'chart-label', body: labels.flagged })}${text({ x: gutter - 8, y: r2(y0 + T.top + T.topH - (0.5 / hiShare) * T.topH + 4), anchor: 'end', cls: 'chart-axis__label', body: labels.half })}
+${text({ x: 0, y: y0 + T.mid + 10, anchor: 'start', cls: 'chart-label', body: labels.middle })}${text({ x: gutter - 8, y: y0 + T.mid + T.midH / 2 + 4, anchor: 'end', cls: 'chart-axis__label', body: labels.median })}
+${text({ x: gutter - 8, y: y0 + T.ends, anchor: 'end', cls: 'chart-axis__label', body: labels.cases })}`;
+  const header = narrow ? html`${text({ x: 0, y: 11, anchor: 'start', cls: 'chart-note', body: labels.headTop })}${text({ x: 0, y: 25, anchor: 'start', cls: 'chart-note', body: labels.headBottom })}` : '';
+  return frame({ kind: 'bands', width, height: head + rows * T.h, body: html`${header}${gutterText}${out}` });
 }
 
 // ---------- the traits' ranges [TD-10] ----------

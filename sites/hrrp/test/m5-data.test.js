@@ -215,14 +215,15 @@ test('swarmData close: |gap| <= 0.001 counts (exactly 0.001 in, 0.0011 out)', ()
 import { flipsTakeaway } from '../web/figures/picture.js';
 import { drawFlips } from '../web/figures/picture-draw.js';
 
-const flipRows = (nets) => ({ takeaway: {}, rows: nets.map((net, i) => ({ peer: i + 1, net })) });
-test('#10 takeaway: from peer grouping\'s side, as drawn; says "about", rounds a count of 20 or more to ten, names a run of groups as a run; no dollars', () => {
-  assert.equal(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), 'Against one national median, peer grouping takes about 170 flags off group 5 and puts about 140 on groups 1 to 4.');
-  assert.equal(flipsTakeaway(flipRows([3, 0, -2, 0, 0])), 'Against one national median, peer grouping takes about 2 flags off group 3 and puts about 3 on group 1.');
-  assert.match(flipsTakeaway(flipRows([5, -9, 5, 0, 0])), /puts about 10 on groups 1 and 3\.$/);
-  assert.match(flipsTakeaway(flipRows([0, 0, 0, 0, -4])), /takes about 4 flags off group 5\.$/);
+const flipRows = (rows) => ({ takeaway: {}, rows: rows.map(([added, removed], i) => ({ peer: i + 1, added, removed, net: added - removed })) });
+test('#10 takeaway: from peer grouping\'s side, as drawn, with the bars\' own counts (grey taken off, red put on); "about", to the nearest ten from 20; a run of groups as a run; no dollars', () => {
+  const real = flipRows([[49, 0], [59, 9], [34, 0], [22, 18], [2, 168]]);
+  assert.equal(flipsTakeaway(real), 'Against one national median, peer grouping takes about 170 flags off group 5 and puts about 160 on groups 1 to 4.');
+  assert.equal(flipsTakeaway(flipRows([[3, 0], [0, 0], [0, 2], [0, 0], [0, 0]])), 'Against one national median, peer grouping takes about 2 flags off group 3 and puts about 3 on group 1.');
+  assert.match(flipsTakeaway(flipRows([[5, 0], [0, 9], [5, 0], [0, 0], [0, 0]])), /puts about 10 on groups 1 and 3\.$/);
+  assert.match(flipsTakeaway(flipRows([[0, 0], [0, 0], [0, 0], [0, 0], [0, 4]])), /takes about 4 flags off group 5\.$/);
   assert.match(flipsTakeaway({ takeaway: null, rows: [] }), /changes no flag/);
-  assert.doesNotMatch(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), /\$/);
+  assert.doesNotMatch(flipsTakeaway(real), /\$/);
 });
 
 test('#10 drawing: the wide rows share the strip plot\'s pitch; each row plots what it puts on and takes off', () => {
@@ -232,4 +233,43 @@ test('#10 drawing: the wide rows share the strip plot\'s pitch; each row plots w
   assert.match(wide, /data-value="2 168"/);
   const narrow = String(drawFlips({ rows, width: 300, labels: { off: 'off', on: 'on' } }));
   assert.match(narrow, /viewBox="0 0 300 /);
+});
+
+// ---------- #4's words and drawing ----------
+import { bandsTakeaway } from '../web/figures/picture.js';
+import { drawSizeBands } from '../web/figures/picture-draw.js';
+import { CONDITIONS } from './fixtures.js';
+
+test('#4 takeaway: the conditions on which the fewest-case band is flagged less and more often than the largest; never an interval', () => {
+  assert.equal(bandsTakeaway({ takeaway: { lower: ['COPD', 'HF'], higher: ['CABG'] } }, CONDITIONS), 'Hospitals with the fewest cases are flagged less often than the largest on COPD and heart failure, and more often on bypass surgery.');
+  assert.match(bandsTakeaway({ takeaway: { lower: [], higher: ['AMI'] } }, CONDITIONS), /more often than the largest on heart attack\.$/);
+  assert.match(bandsTakeaway({ takeaway: null }, CONDITIONS), /the same/);
+});
+
+test('#4 drawing: six panels in a row on the wide drawing, two to a row on a phone; a band too small to show draws nothing; each shown band plots its share and middle half', () => {
+  const band = (shown, share) => ({ shown, share, p25: -0.02, median: 0, p75: 0.03, tip: 't' });
+  const panels = ['A', 'B', 'C', 'D', 'E', 'F'].map((name) => ({ name, bands: [band(true, 0.4), band(true, 0.6), band(false, 0.9)] }));
+  const labels = { flagged: 'f', half: 'h', middle: 'm', median: 'pm', cases: 'c', headTop: 'top', headBottom: 'bottom' };
+  const wide = String(drawSizeBands({ panels, ends: ['25–49', '800+'], width: 1120, labels, format: (v) => `${Math.round(v * 100)}%` }));
+  assert.equal((wide.match(/data-value="/g) ?? []).length, 12, 'two shown bands in each of six panels');
+  assert.match(wide, /data-value="0\.6 -0\.02 0\.03"/);
+  assert.doesNotMatch(wide, /0\.9/, 'the band too small to show draws nothing');
+  assert.match(wide, /chart-share__dot chart-share__dot--pen/, 'over half: penalty ink');
+  const narrow = String(drawSizeBands({ panels, ends: ['25–49', '800+'], width: 300, labels, format: (v) => `${v}` }));
+  assert.match(narrow, />top</);
+  assert.match(narrow, /viewBox="0 0 300 592"/, 'a two-line header and three rows of two');
+});
+
+test('real data: the Picture Part draws #10 beside the peer strips and #4 after the traits; Methods names #4\'s trap', async () => {
+  const { areaContext, programView, methodsView } = await import('../web/view.js');
+  const { buildPlaces } = await import('../web/places.js');
+  const { picturePart } = await import('../web/figures/picture.js');
+  const data = loadHrrpOnce();
+  const ctx = areaContext({ ...data, places: buildPlaces(data.hospitals, data.meta) });
+  const view = programView(ctx);
+  const html = picturePart(view.picture, { figure: (() => { let n = 4; return () => ++n; })(), edition: view.edition }).text;
+  const order = [...html.matchAll(/data-figure-csv="(hrrp-[a-z-]+)\.csv"/g)].map((x) => x[1]);
+  assert.ok(order.indexOf('hrrp-flags-without-peer-groups') === order.indexOf('hrrp-cuts-by-peer-group') + 1);
+  assert.ok(order.indexOf('hrrp-flagged-by-cases') === order.indexOf('hrrp-share-cut-by-trait') + 1);
+  assert.match(methodsView(ctx).figures.join(' '), /Flagged by number of cases: .* not an interval; a band of fewer than 20 hospitals is left out\./);
 });

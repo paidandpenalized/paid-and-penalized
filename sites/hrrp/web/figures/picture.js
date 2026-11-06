@@ -13,13 +13,13 @@ import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
 import { hospitalPath } from '../links.js';
-import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
+import { fmtInt, fmtMoney, fmtPct, gapText } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
-import { CUT_BIN } from './picture-data.js';
-import { drawCuts, drawFlips, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
-import { BESIDE, HALF, SIDE, pic } from './layout.js';
+import { CUT_BIN, MIN_BAND } from './picture-data.js';
+import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip } from './picture-draw.js';
+import { BESIDE, FULL, HALF, SIDE, pic } from './layout.js';
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -69,7 +69,7 @@ function penFigure({ rows, conditions, edition, n }) {
 // ---------- the size of the cuts ----------
 
 // Two figures side by side where there is room (one alone takes the row); side: 7 to 5 columns, their text and charts on shared rows.
-const pair = (a, b, side = false) => (a || b ? html`<div class="picpair${side ? ' picpair--side' : ''}">${a}${b}</div>` : '');
+const pair = (a, b, side = false) => (a || b ? html`<div class="picpair${side ? ' picpair--rows picpair--side' : ''}">${a}${b}</div>` : '');
 const pct0 = (fraction) => pct(fraction, 0);
 const CUT_TICKS = [0, 0.5, 1, 1.5, 2, 2.5, CAP_PCT];
 const cutTicks = (width) => (isNarrow(width) ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
@@ -200,12 +200,13 @@ function groupsText(peers) {
 
 export function flipsTakeaway(f) {
   if (!f.takeaway) return t('flipsTakeawayNone');
-  const side = (keep) => {
+  // Said from peer grouping's side, as the drawing has it: the groups it takes flags off on balance, with the flags their grey bars take
+  // off, then the groups it puts flags on, with the flags their red bars put on (the numbers a reader adds up from the bars).
+  const side = (keep, key) => {
     const rows = f.rows.filter(keep);
-    return rows.length ? { groups: groupsText(rows.map((r) => r.peer)), n: about(Math.abs(rows.reduce((s, r) => s + r.net, 0))) } : null;
+    return rows.length ? { groups: groupsText(rows.map((r) => r.peer)), n: about(rows.reduce((s, r) => s + r[key], 0)) } : null;
   };
-  // Said from peer grouping's side, as the drawing has it: the groups it takes flags off on balance, then those it puts flags on.
-  const [off, on] = [side((r) => r.net < 0), side((r) => r.net > 0)];
+  const [off, on] = [side((r) => r.net < 0, 'removed'), side((r) => r.net > 0, 'added')];
   if (off && on) return fill('flipsTakeaway', { off: off.groups, offN: off.n, on: on.groups, onN: on.n });
   if (off) return fill('flipsTakeawayOff', { off: off.groups, offN: off.n });
   if (on) return fill('flipsTakeawayOn', { on: on.groups, onN: on.n });
@@ -267,6 +268,42 @@ function typeFigure({ ty, edition, n }) {
   });
 }
 
+// ---------- are small hospitals let off? ----------
+
+export function bandsTakeaway(b, conditions) {
+  if (!b.takeaway) return t('bandsTakeawayNone');
+  const names = (list) => listText(list.map((k) => inSentence(conditionShort(conditions, k))));
+  const { lower, higher } = b.takeaway;
+  if (lower.length && higher.length) return fill('bandsTakeaway', { lower: names(lower), higher: names(higher) });
+  return lower.length ? fill('bandsTakeawayLower', { lower: names(lower) }) : fill('bandsTakeawayHigher', { higher: names(higher) });
+}
+
+const gap4 = (v) => (v === null ? '—' : gapText(v));
+
+function bandsFigure({ b, conditions, edition, n }) {
+  const withAny = b.conditions.filter((c) => c.bands.some((band) => band.shown));
+  if (!withAny.length) return '';
+  const ends = [b.conditions[0].bands[0].label, b.conditions[0].bands[b.conditions[0].bands.length - 1].label];
+  const panelsFor = (width) => withAny.map((c) => ({
+    name: conditionShort(conditions, c.cond, { narrow: isNarrow(width) }),
+    bands: c.bands.map((band) => ({
+      ...band, tip: band.shown ? fill('bandsTip', { cond: conditionShort(conditions, c.cond), band: band.label, share: pct0(band.share), hospitals: hospitals(band.n), from: gap4(band.p25), to: gap4(band.p75) }) : '',
+    })),
+  }));
+  const labels = { flagged: t('bandsFlagged'), half: t('bandsHalf'), middle: t('bandsMiddle'), median: t('bandsMedian'), cases: t('bandsCases'), headTop: t('bandsHeadTop'), headBottom: t('bandsHeadBottom') };
+  const draw = (width) => drawSizeBands({ panels: panelsFor(width), ends, width, labels, format: pct0 });
+  return figure({
+    n: n(), takeaway: bandsTakeaway(b, conditions), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flagged-by-cases',
+    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND) }),
+    table: {
+      columns: [{ name: t('bandsColCond') }, { name: t('bandsColBand') }, { name: t('bandsColN'), numeric: true }, { name: t('bandsColShare'), numeric: true }, { name: t('bandsColFrom'), numeric: true }, { name: t('bandsColTo'), numeric: true }],
+      rows: b.table.filter((r) => r.n > 0).map((r) => [
+        conditionShort(conditions, r.cond), r.label, num(fmtInt(r.n), r.n), num(pct0(r.share), r.share), num(gap4(r.p25), r.p25), num(gap4(r.p75), r.p75),
+      ]),
+    },
+  });
+}
+
 // ---------- which conditions cost the most ----------
 
 export function barsTakeaway(b, conditions) {
@@ -309,7 +346,7 @@ function barsFigure({ b, conditions, edition, n }) {
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
 // numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
 // conditions measured beside the conditions' share of flags and dollars, the cuts by peer group beside what peer grouping changed, the traits'
-// ranges (words beside), then the table of the largest cuts across the page, a line to a hospital.
+// ranges (words beside), the share flagged by size band across the page, then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
   const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
@@ -318,11 +355,13 @@ export function picturePart(picture, { figure: nextFigure, edition }) {
   const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
   const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
+  const bands = pic(bandsFigure({ b: picture.bands(), conditions, edition, n: nextFigure }));
   return html`<p class="part__intro">${ledeText(picture)}</p>
 ${cuts}
 ${pair(measured, bars)}
 ${pair(peers, flips, true)}
 ${types}
+${bands}
 ${largest.length ? html`<div class="pic">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
 <p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}`;
 }

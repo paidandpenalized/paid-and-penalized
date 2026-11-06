@@ -19,7 +19,7 @@ import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
-import { pictureData } from './figures/picture-data.js';
+import { MIN_BAND, pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
 import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
@@ -401,7 +401,7 @@ function historyTotals(history) {
 
 // The Methods page's notes on reading the program page's figures, each a figure's accuracy trap: hospitals flagged on a condition
 // whose cut rounds to zero (counted as not cut by the share cut by conditions measured); what peer grouping changed (approximate
-// medians, no dollars); the years cut (today's hospitals only; an absent year is not "not cut", so two counts differ). A note with
+// medians, no dollars); the size bands (model ratios, no interval; the middle half observed); the years cut (today's hospitals only; an absent year is not "not cut", so two counts differ). A note with
 // nothing to say is left out.
 export function figureLimits({ hospitals: all, meta, history }) {
   const rounded = all.filter((h) => verdict(h, meta).status === 'none-rounded').length;
@@ -409,6 +409,7 @@ export function figureLimits({ hospitals: all, meta, history }) {
   return [
     rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null,
     methodsT('figuresFlips'),
+    methodsFill('figuresBands', { min: String(MIN_BAND) }),
     counts.cutEveryYearInFile > counts.cutAllYears ? methodsFill('figuresEscapes', { inFile: fmtInt(counts.cutEveryYearInFile), all: fmtInt(counts.cutAllYears), years: String(counts.nYears) }) : null,
   ].filter(Boolean);
 }

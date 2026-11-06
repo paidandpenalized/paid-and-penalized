@@ -273,7 +273,7 @@ test('the Part: the lede in words and the table with the six-cell glyph, its key
   assert.equal([...html.matchAll(/class="pic"/g)].length, 5, 'the two pairs\' four and the largest cuts');
   assert.equal([...html.matchAll(/class="pic pic--side"/g)].length, 2);
   assert.equal([...html.matchAll(/class="picpair"/g)].length, 1);
-  assert.equal([...html.matchAll(/class="picpair picpair--side"/g)].length, 1);
+  assert.equal([...html.matchAll(/class="picpair picpair--rows picpair--side"/g)].length, 1);
   // the cuts' swarm labels its pile with the count of hospitals measured and not cut (one in POOL)
   assert.match(html, />1 not cut</); assert.match(html, />3 cut</);
 });

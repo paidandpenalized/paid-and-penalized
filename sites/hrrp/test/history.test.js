@@ -359,7 +359,7 @@ test('the History Part with the years cut: small multiples, then the years cut b
   const escapes = () => yearsCut(rollCall({ hospitals: ROLL_HOSPITALS, history: ROLL_HISTORY, meta: META }));
   const text = historyPart({ lines: smallLines({ history: HISTORY }), escapes, windows: windowRows({ history: HISTORY }), timeline: [] }, { figure: () => ++n }).text;
   assert.deepEqual([...text.matchAll(/id="figure-(\d+)"/g)].map((m) => Number(m[1])), [12, 13, 14]);
-  assert.match(text, /<div class="picpair">\s*<div class="pic">\s*<figure class="fig" id="figure-13"[\s\S]*hrrp-years-cut\.csv[\s\S]*<div class="pic">\s*<figure class="fig" id="figure-14"[\s\S]*hrrp-data-windows\.csv/);
+  assert.match(text, /<div class="picpair picpair--rows">\s*<div class="pic">\s*<figure class="fig" id="figure-13"[\s\S]*hrrp-years-cut\.csv[\s\S]*<div class="pic">\s*<figure class="fig" id="figure-14"[\s\S]*hrrp-data-windows\.csv/);
 });
 
 test('#6, the years cut: "of today\'s hospitals"; counts only hospitals in the file every year (an absent year is never "not cut"); the note counts the rest and those cut in every year they appear', () => {

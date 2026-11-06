@@ -221,15 +221,19 @@ ${totalPanel(lines, { ...slot.total, title: t('histTitleTotal') }, narrow)}`;
 
 // ---------- has this hospital ever escaped? ----------
 
+// The room under the columns' base: the counts' axis, then the line naming its ends.
+const UNDER = 36;
+
 // Today's hospitals that were in the file every year, counted by how many of those years they were cut: a column for each count
 // from none to every year, the every-year column in penalty ink, the rest grey, each column's count over it (on a phone only the
 // two ends', which the takeaway names). Under the axis, its two ends named and what it counts. counts: yearsCut().counts ([{ cut, n,
 // tip }]); labels: { never, every, axis }.
-export function drawYearsCut({ counts, width, labels }) {
+// height: the wide drawing's height, to stand level with the figure beside it (its axis on the same line); a phone's is its own.
+export function drawYearsCut({ counts, width, labels, height = null }) {
   const narrow = isNarrow(width);
   const last = counts.length - 1;
   const top = 18;
-  const base = narrow ? 150 : 230;
+  const base = narrow ? 150 : (height ?? 266) - UNDER;
   const x = scaleBand().domain(counts.map((c) => c.cut)).range([4, width - 4]).paddingInner(narrow ? 0.18 : 0.22);
   const max = Math.max(1, ...counts.map((c) => c.n));
   const y = (n) => base - (n / max) * (base - top);
@@ -247,7 +251,7 @@ export function drawYearsCut({ counts, width, labels }) {
   const ticks = counts.filter((c) => !narrow || c.cut % 5 === 0 || c.cut === last).map(tick);
   const under = base + 30;
   return frame({
-    kind: 'yearscut', width, height: under + 6, body: html`${cols}
+    kind: 'yearscut', width, height: base + UNDER, body: html`${cols}
 <line class="chart-baseline" x1="4" x2="${width - 4}" y1="${base}" y2="${base}"/>${ticks}
 ${text({ x: 4, y: under, anchor: 'start', cls: 'chart-note', body: labels.never })}${text({ x: width / 2, y: under, cls: 'chart-note', body: labels.axis })}${text({ x: width - 4, y: under, anchor: 'end', cls: 'chart-note chart-label--pen', body: labels.every })}`,
   });
