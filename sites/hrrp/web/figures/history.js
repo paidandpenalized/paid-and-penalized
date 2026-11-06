@@ -38,7 +38,8 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 // rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws.
 // The data windows' drawing at a width (null with no rows).
 const windowsDraw = (rows) => (rows.length ? (width) => periodsChart({ rows: rows.map((r) => ({ label: fyLabel(r.fy), spans: [...(r.perf ? [span('perf', r.fy, r.perf)] : []), span('pay', r.fy, r.pay)] })), kinds: ['perf', 'pay'], width }) : null);
-const heightOf = (svg) => Number(String(svg).match(/viewBox="0 0 \d+ (\d+)"/)[1]);
+// A periods chart's plot base: where its year gridlines end and its year labels hang (the kit's chart-grid lines).
+const plotBaseOf = (svg) => Number(String(svg).match(/class="chart-grid"[^>]*y2="([\d.]+)"/)[1]);
 
 export function windowsFigure(rows, { n }) {
   const draw = windowsDraw(rows);
@@ -60,12 +61,12 @@ export function windowsFigure(rows, { n }) {
 // "Has this hospital ever escaped?" [#6]: today's hospitals in the file every year, by how many of those years they were cut. e:
 // history-data.js yearsCut(); n: the figure counter, called only when the figure draws. Its words always say "of today's hospitals";
 // the hospitals in the file fewer years are counted in the note (a year out of the file is never "not cut").
-// height: the wide drawing's height (the data windows' beside it), or null for its own.
-export function escapesFigure(e, { n, height = null }) {
+// base: the wide drawing's baseline (the data windows' plot base beside it), or null for its own.
+export function escapesFigure(e, { n, base = null }) {
   if (!e?.full) return '';
   const years = String(e.nYears);
   const counts = e.counts.map((c) => ({ ...c, tip: fill('escTip', { hospitals: hospitals(c.n), k: String(c.cut), years }) }));
-  const draw = (width) => drawYearsCut({ counts, width, height, labels: { never: t('escNever'), every: t('escEvery'), axis: fill('escAxis', { years }) } });
+  const draw = (width) => drawYearsCut({ counts, width, base, labels: { never: t('escNever'), every: t('escEvery'), axis: fill('escAxis', { years }) } });
   const { every, never, share } = e.takeaway;
   const { partial } = e;
   return figure({
@@ -117,11 +118,11 @@ const pair = (a, b) => (a || b ? html`<div class="picpair picpair--rows">${a}${b
 // history: view.history ({ lines, escapes (a function; none: no years-cut figure), timeline, windows }); figure: the page's figure counter. The small multiples, then the years
 // cut beside the data windows, then the timeline.
 export function historyPart(history, { figure: nextFigure }) {
-  // The years cut stand as tall as the data windows beside them, their charts starting level (.picpair--rows), so the two axes share a line.
+  // The years cut stand on the data windows' plot base beside them, their charts starting level (.picpair--rows), so the two axes' labels share a line.
   const winDraw = windowsDraw(history.windows);
-  const winH = winDraw ? heightOf(winDraw(HALF)) : null;
+  const winBase = winDraw ? plotBaseOf(winDraw(HALF)) : null;
   return html`<p class="part__intro">${t('historyIntro')}</p>
 ${pic(historyFigure(history.lines, { n: nextFigure }))}
-${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, height: winH })), pic(windowsFigure(history.windows, { n: nextFigure })))}
+${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, base: winBase })), pic(windowsFigure(history.windows, { n: nextFigure })))}
 ${timeline(history.timeline)}`;
 }

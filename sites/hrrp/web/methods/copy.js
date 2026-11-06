@@ -148,6 +148,10 @@ export const COPY = {
     text: 'What peer grouping changed: each condition’s flags are drawn again against one median over every hospital measured on it in this file. CMS sets its peer medians itself, so the medians here differ slightly from any CMS would set, and the counts are approximate. Only flags move; no dollars are modeled for a world without peer groups.',
     claim: 'HRRP-05',
   },
+  figuresWorth: {
+    text: 'What {step} of ratio is worth: modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}; a condition with no payment weight in the file, or a hospital with no base payment, is left out ({blank} in all).',
+    claim: 'HRRP-09',
+  },
   figuresBands: {
     text: 'Flagged by number of cases: a ratio is CMS’s predicted readmission rate over the rate expected at an average hospital with similar patients, not a raw rate, and the file gives no interval around it. The middle half shown is the spread of the hospitals observed in a band, not an interval; a band of fewer than {min} hospitals is left out.',
     claim: 'HRRP-15',

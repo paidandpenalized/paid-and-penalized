@@ -273,3 +273,21 @@ test('real data: the Picture Part draws #10 beside the peer strips and #4 after 
   assert.ok(order.indexOf('hrrp-flagged-by-cases') === order.indexOf('hrrp-share-cut-by-trait') + 1);
   assert.match(methodsView(ctx).figures.join(' '), /Flagged by number of cases: .* not an interval; a band of fewer than 20 hospitals is left out\./);
 });
+
+// ---------- #2's words and drawing ----------
+import { worthTakeaway } from '../web/figures/picture.js';
+import { drawWorth } from '../web/figures/picture-draw.js';
+
+test('#2 takeaway: the dearest and cheapest condition by the typical hospital, to the nearest hundred dollars', () => {
+  const w = { takeaway: { hi: { cond: 'CABG', median: 9759.4 }, lo: { cond: 'COPD', median: 2487 } } };
+  assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of ratio costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
+  assert.match(worthTakeaway({ takeaway: null }, CONDITIONS), /No condition/);
+});
+
+test('#2 drawing: each priced row plots its median and middle half; a row with no value draws its track and a dash only', () => {
+  const rows = [{ label: 'A', median: 9000, p25: 5000, p75: 17000, valueText: '$9,000', tip: 't' }, { label: 'B', median: null, p25: null, p75: null, valueText: '—', tip: 't' }];
+  const svg = String(drawWorth({ rows, width: 640, labels: { dot: 'typical', bar: 'middle half' }, format: (v) => '$' + v / 1000 + 'K' }));
+  assert.match(svg, /data-value="9000 5000 17000"/);
+  assert.equal((svg.match(/data-value=/g) ?? []).length, 1);
+  assert.match(svg, />—</);
+});

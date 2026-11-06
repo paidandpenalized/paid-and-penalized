@@ -228,12 +228,13 @@ const UNDER = 36;
 // from none to every year, the every-year column in penalty ink, the rest grey, each column's count over it (on a phone only the
 // two ends', which the takeaway names). Under the axis, its two ends named and what it counts. counts: yearsCut().counts ([{ cut, n,
 // tip }]); labels: { never, every, axis }.
-// height: the wide drawing's height, to stand level with the figure beside it (its axis on the same line); a phone's is its own.
-export function drawYearsCut({ counts, width, labels, height = null }) {
+// base: the wide drawing's baseline, set on the plot base of the figure beside it so the two axes' labels share a line; a phone's is
+// its own.
+export function drawYearsCut({ counts, width, labels, base: wideBase = null }) {
   const narrow = isNarrow(width);
   const last = counts.length - 1;
   const top = 18;
-  const base = narrow ? 150 : (height ?? 266) - UNDER;
+  const base = narrow ? 150 : wideBase ?? 230;
   const x = scaleBand().domain(counts.map((c) => c.cut)).range([4, width - 4]).paddingInner(narrow ? 0.18 : 0.22);
   const max = Math.max(1, ...counts.map((c) => c.n));
   const y = (n) => base - (n / max) * (base - top);

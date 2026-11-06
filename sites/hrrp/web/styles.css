@@ -181,11 +181,17 @@
 .strip__median { stroke-width: 3.5px; }
 .strip__halo { stroke: var(--paper); stroke-width: 7px; }
 .flips__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+/* What 0.01 of ratio is worth: the middle half of hospitals a grey bar, the typical hospital an ink dot. */
+.worth__bar { fill: var(--ink-3); }
+.worth__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 /* The size bands' panels: the share line in ink, half dashed, the middle-half bars grey with an ink median tick, the peer median a thin ink line. */
 .bands__line { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .bands__half { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .bands__zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .bands__mid { fill: var(--ink-3); }
+.bands__grid { stroke: var(--ink-3); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* An end share's words stay legible where a line runs under them. */
+.bands__value { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
 .bands__med { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .spread__rule { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .chart-spread { fill: var(--ink); font: 400 20px/1 var(--font-display); }
@@ -393,7 +399,8 @@
   .cond-ci, .spread__rule, .strip__median, .flips__zero, .bands__line, .bands__zero, .bands__med { stroke: CanvasText; }
   .bands__half { stroke: GrayText; }
   .strip__halo { stroke: Canvas; }
-  .bands__mid { fill: GrayText; }
+  .bands__mid, .worth__bar { fill: GrayText; }
+  .worth__dot { fill: CanvasText; }
   .strip-dot--0 { stroke: GrayText; }
   .strip-dot--1, .strip-dot--2, .strip-dot--3, .strip-dot--4, .strip-dot--5 { stroke: CanvasText; }
   .strip__band { fill: Canvas; stroke: GrayText; }

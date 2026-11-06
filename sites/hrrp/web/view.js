@@ -7,10 +7,10 @@ import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS, verdict } from '../../../engine/
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
-import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, spelled } from '../../../web/render/format.js';
+import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
-import { historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
+import { PER_STEP, historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
 import { childTable, hospitalsTable } from './figures/place-table-data.js';
 import { whatIfData } from './figures/whatif-data.js';
@@ -19,10 +19,10 @@ import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
-import { MIN_BAND, pictureData } from './figures/picture-data.js';
+import { MIN_BAND, dollarsPerStep, pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
-import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct } from './numbers.js';
+import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, ratio } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
@@ -400,7 +400,8 @@ function historyTotals(history) {
 }
 
 // The Methods page's notes on reading the program page's figures, each a figure's accuracy trap: hospitals flagged on a condition
-// whose cut rounds to zero (counted as not cut by the share cut by conditions measured); what peer grouping changed (approximate
+// whose cut rounds to zero (counted as not cut by the share cut by conditions measured); what 0.01 of ratio is worth (modeled; $0 at
+// the cap; left out without a weight); what peer grouping changed (approximate
 // medians, no dollars); the size bands (model ratios, no interval; the middle half observed); the years cut (today's hospitals only; an absent year is not "not cut", so two counts differ). A note with
 // nothing to say is left out.
 export function figureLimits({ hospitals: all, meta, history }) {
@@ -408,6 +409,7 @@ export function figureLimits({ hospitals: all, meta, history }) {
   const { counts } = rollCall({ hospitals: all, history, meta });
   return [
     rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null,
+    methodsFill('figuresWorth', { cap: String(CAP_PCT), step: ratio(PER_STEP, 2), zero: roundedDollars(0), blank: fmtInt(dollarsPerStep(all, meta).rows.reduce((s, r) => s + r.blank, 0)) }),
     methodsT('figuresFlips'),
     methodsFill('figuresBands', { min: String(MIN_BAND) }),
     counts.cutEveryYearInFile > counts.cutAllYears ? methodsFill('figuresEscapes', { inFile: fmtInt(counts.cutEveryYearInFile), all: fmtInt(counts.cutAllYears), years: String(counts.nYears) }) : null,

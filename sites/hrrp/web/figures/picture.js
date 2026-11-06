@@ -8,17 +8,18 @@ import { CAP_PCT, CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { isNarrow, r2 } from '../../../../web/charts/svg.js';
 import { pairBars } from '../../../../web/charts/pairBars.js';
-import { capitalize, count, listText, noun, numberWord, pct, placeText, spelled } from '../../../../web/render/format.js';
+import { capitalize, count, listText, noun, numberWord, pct, placeText, roundedDollars, spelled } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
 import { hospitalPath } from '../links.js';
-import { fmtInt, fmtMoney, fmtPct, gapText } from '../numbers.js';
+import { fmtInt, fmtMoney, fmtPct, gapText, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN, MIN_BAND } from './picture-data.js';
-import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip } from './picture-draw.js';
+import { PER_STEP } from './hospital-data.js';
+import { BAND_GRID, drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
 import { BESIDE, FULL, HALF, SIDE, pic } from './layout.js';
 
 // The Part's lede paragraph.
@@ -268,6 +269,43 @@ function typeFigure({ ty, edition, n }) {
   });
 }
 
+// ---------- what is 0.01 of ratio worth? ----------
+
+// Dollars to the nearest hundred (a typical value, not an exact one): $9,800.
+const hundreds = (v) => roundedDollars(Math.round(v / 100) * 100);
+const STEP_TEXT = ratio(PER_STEP, 2);
+
+export function worthTakeaway(w, conditions) {
+  if (!w.takeaway) return t('worthTakeawayNone');
+  const { hi, lo } = w.takeaway;
+  return fill('worthTakeaway', { step: STEP_TEXT, hi: inSentence(conditionShort(conditions, hi.cond)), hiDollars: hundreds(hi.median), lo: inSentence(conditionShort(conditions, lo.cond)), loDollars: hundreds(lo.median) });
+}
+
+function worthFigure({ w, conditions, edition, n }) {
+  if (!w.rows.some((r) => r.median !== null)) return '';
+  const spec = (width) => w.rows.map((r) => ({
+    label: conditionShort(conditions, r.cond, { narrow: isNarrow(width) }), median: r.median, p25: r.p25, p75: r.p75,
+    valueText: r.median === null ? '—' : hundreds(r.median),
+    tip: r.median === null ? fill('worthTipNone', { cond: conditionShort(conditions, r.cond) })
+      : fill('worthTip', { cond: conditionShort(conditions, r.cond), step: STEP_TEXT, median: hundreds(r.median), from: hundreds(r.p25), to: hundreds(r.p75), hospitals: hospitals(r.priced) }),
+  }));
+  const axisMoney = (v) => (v === 0 ? '$0' : `$${Math.round(v / 1000)}K`);
+  const draw = (width) => drawWorth({ rows: spec(width), width, labels: { dot: t('worthKeyDot'), bar: t('worthKeyBar') }, format: axisMoney });
+  const blank = w.rows.reduce((s, r) => s + r.blank, 0);
+  return figure({
+    n: n(), takeaway: worthTakeaway(w, conditions), source: fill('pictSourceDollars', { edition }), claimLevel: 'estimate', csvName: 'hrrp-dollars-per-step',
+    chart: imagePair(drawn(draw, SIDE), fill('worthAlt', { step: STEP_TEXT })), note: fill(blank ? 'worthNote' : 'worthNoteAll', { cap: String(CAP_PCT), zero: roundedDollars(0) }),
+    table: {
+      columns: [{ name: t('worthColCond') }, { name: t('worthColN'), numeric: true }, { name: t('worthColMedian'), numeric: true }, { name: t('worthColP25'), numeric: true }, { name: t('worthColP75'), numeric: true }, { name: t('worthColCapped'), numeric: true }, { name: t('worthColBlank'), numeric: true }],
+      rows: w.table.map((r) => [
+        conditionShort(conditions, r.cond), num(fmtInt(r.priced), r.priced),
+        ...[r.median, r.p25, r.p75].map((v) => (v === null ? num('—', null) : num(roundedDollars(v), v))),
+        num(fmtInt(r.capped), r.capped), num(fmtInt(r.blank), r.blank),
+      ]),
+    },
+  });
+}
+
 // ---------- are small hospitals let off? ----------
 
 export function bandsTakeaway(b, conditions) {
@@ -283,7 +321,6 @@ const gap4 = (v) => (v === null ? '—' : gapText(v));
 function bandsFigure({ b, conditions, edition, n }) {
   const withAny = b.conditions.filter((c) => c.bands.some((band) => band.shown));
   if (!withAny.length) return '';
-  const ends = [b.conditions[0].bands[0].label, b.conditions[0].bands[b.conditions[0].bands.length - 1].label];
   const panelsFor = (width) => withAny.map((c) => ({
     name: conditionShort(conditions, c.cond, { narrow: isNarrow(width) }),
     bands: c.bands.map((band) => ({
@@ -291,10 +328,10 @@ function bandsFigure({ b, conditions, edition, n }) {
     })),
   }));
   const labels = { flagged: t('bandsFlagged'), half: t('bandsHalf'), middle: t('bandsMiddle'), median: t('bandsMedian'), cases: t('bandsCases'), headTop: t('bandsHeadTop'), headBottom: t('bandsHeadBottom') };
-  const draw = (width) => drawSizeBands({ panels: panelsFor(width), ends, width, labels, format: pct0 });
+  const draw = (width) => drawSizeBands({ panels: panelsFor(width), width, labels, format: pct0 });
   return figure({
     n: n(), takeaway: bandsTakeaway(b, conditions), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flagged-by-cases',
-    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND) }),
+    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND), step: String(BAND_GRID) }),
     table: {
       columns: [{ name: t('bandsColCond') }, { name: t('bandsColBand') }, { name: t('bandsColN'), numeric: true }, { name: t('bandsColShare'), numeric: true }, { name: t('bandsColFrom'), numeric: true }, { name: t('bandsColTo'), numeric: true }],
       rows: b.table.filter((r) => r.n > 0).map((r) => [
@@ -345,13 +382,14 @@ function barsFigure({ b, conditions, edition, n }) {
 
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
 // numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
-// conditions measured beside the conditions' share of flags and dollars, the cuts by peer group beside what peer grouping changed, the traits'
+// conditions measured beside the conditions' share of flags and dollars, what 0.01 of ratio is worth (words beside), the cuts by peer group beside what peer grouping changed, the traits'
 // ranges (words beside), the share flagged by size band across the page, then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
   const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
+  const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), true);
   const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
   const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
@@ -359,6 +397,7 @@ export function picturePart(picture, { figure: nextFigure, edition }) {
   return html`<p class="part__intro">${ledeText(picture)}</p>
 ${cuts}
 ${pair(measured, bars)}
+${worth}
 ${pair(peers, flips, true)}
 ${types}
 ${bands}
