@@ -70,8 +70,8 @@ def compare(reports, values, records):
     return out
 
 
-def pinned_reports(year):
-    entry = pinned_years(read_manifest())[year]
+def pinned_reports(entry, year):
+    """(reports, values) from the year's pinned cells table; `entry`, its manifest entry."""
     return tidy.from_pin_rows(csv.reader(read_pinned_bytes(entry["id"]).decode("ascii").splitlines()), year)
 
 
@@ -109,7 +109,7 @@ def main_check(paths):
     for path in sorted(paths):
         try:
             year, rows = read_puf(path)
-            reports, values = pinned_reports(year)
+            reports, values = pinned_reports(pinned_years(read_manifest())[year], year)
         except (OSError, KeyError, ValueError, csv.Error) as err:
             print(f"puf-check: {path}: {err!r}")
             return 1

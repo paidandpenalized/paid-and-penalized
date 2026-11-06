@@ -26,12 +26,13 @@ from pathlib import Path
 from pp_engine.contract import envelope, format_emitted
 from pp_engine.hcris import other_income, reader, tidy
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, read_pinned_bytes, write_emitted
+from pp_pipeline.hcris.extract import write_tables
 from pp_pipeline.hcris.pins import line24_pin_id, pinned_years
 
 SCHEMA_VERSION, METHODS_VERSION = 3, 3
 SCHEMA = "hcris.schema.json"
 MAX_BYTES = 10 * 1024 * 1024  # CLAUDE.md: a file of 10 MiB or more never goes in git
-LONG_RULE = "fullest"
+LONG_RULE = "fullest"  # what tidy.hospital_years does with a year of more than 366 days, recorded in each file
 # The JSON's columns: the table's, less `year` (the file's `fy`).
 COLUMNS = tuple(c for c in tidy.WIDE_COLUMNS if c != "year")
 RULES_PATH = Path(__file__).with_name("other_income_rules.csv")
@@ -65,7 +66,7 @@ def year_rows(entry, year):
     stray = next((rpt for rpt in line24 if rpt not in reports), None)
     if stray is not None:
         raise tidy.HcrisError(f"FY{year} line-24 table: report {stray} is not in the cells table")
-    return tidy.hospital_years(reports, values, year, long_rule=LONG_RULE, line24=line24)
+    return tidy.hospital_years(reports, values, year, line24=line24)
 
 
 def _json(value):
@@ -74,8 +75,9 @@ def _json(value):
     return value
 
 
-def build(year, manifest, built_at, rows=None):
-    entry = pinned_years(manifest)[year]
+def build(year, manifest, built_at, rows=None, entry=None):
+    """The year's file. `entry`: its cells table's manifest entry, when the caller has looked it up already."""
+    entry = entry or pinned_years(manifest)[year]
     rows = year_rows(entry, year) if rows is None else rows
     summary = tidy.year_summary(rows)
     posted = entry["derivedFrom"]["lastModified"]
@@ -130,10 +132,10 @@ def main():
         print("hcris emit: no pinned cells tables (hcris-fy<YYYY>-cells) in the manifest")
         return 1
     worst = 0
-    for year in sorted(years):
+    for year, entry in sorted(years.items()):
         path = emitted_path(year)
         try:
-            fresh = build(year, manifest, built_at)
+            fresh = build(year, manifest, built_at, entry=entry)
         except (tidy.HcrisError, other_income.RulesError, other_income.TableError, KeyError, OSError) as err:
             print(f"not written ({path.relative_to(REPO_ROOT)}): {err}")
             worst = 1
@@ -156,18 +158,7 @@ def load_years():
 
 
 def write_downloads(out_dir):
-    """The download files, from the pins (the same rows as the emitted files)."""
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    counts = {}
-    with open(out_dir / "hcris_wide.csv", "w", newline="", encoding="ascii") as fw, \
-            open(out_dir / "hcris_long.csv", "w", newline="", encoding="ascii") as fl:
-        wide, long_ = csv.writer(fw, lineterminator="\n"), csv.writer(fl, lineterminator="\n")
-        wide.writerow(tidy.WIDE_COLUMNS)
-        long_.writerow(tidy.LONG_COLUMNS)
-        for year, entry in sorted(pinned_years(read_manifest()).items()):
-            rows = year_rows(entry, year)
-            wide.writerows(tidy.wide_rows(rows))
-            long_.writerows(tidy.long_rows(rows))
-            counts[year] = len(rows)
+    """The download files, from the pins (the same rows as the emitted files). {year: hospital-years}."""
+    years = sorted(pinned_years(read_manifest()).items())
+    counts, _ = write_tables(out_dir, ((year, year_rows(entry, year)) for year, entry in years))
     return counts

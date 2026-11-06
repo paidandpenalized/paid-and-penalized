@@ -110,10 +110,10 @@ def _alpha_rows(zf, member):
         yield from csv.reader(io.TextIOWrapper(raw, encoding="latin-1", newline=""))
 
 
-def derive(zip_path):
+def derive(zip_path, hashed=None):
     """(year, {pin id: table bytes}, the zip's `derivedFrom` facts) from one zip: the cells table and the line-24
-    table, from one read of each member."""
-    digest, size = sha256(zip_path)
+    table, from one read of each member. `hashed`: the zip's (SHA-256, size), when the caller has already read it."""
+    digest, size = hashed or sha256(zip_path)
     amounts = {}
     year, reports, values = read_year(zip_path, line24=amounts)
     with zipfile.ZipFile(zip_path) as zf:

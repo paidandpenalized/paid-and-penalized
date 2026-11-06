@@ -234,9 +234,10 @@ class Archive(unittest.TestCase):
                                      (2025, sha[2025]))]
             derived = []
 
-            def fake_derive(z):
+            def fake_derive(z, hashed):
                 derived.append(Path(z).name)
                 year = int(Path(z).name[8:12])
+                self.assertEqual(hashed, (sha[year], zips[year].stat().st_size))  # plan's hash, passed through
                 return year, {f"hcris-fy{year}-cells": b"changed" if year == 2023 else table}, None
 
             archived = frozenset({f"sha256/{sha[2025]}", "sha256/" + "f" * 64})

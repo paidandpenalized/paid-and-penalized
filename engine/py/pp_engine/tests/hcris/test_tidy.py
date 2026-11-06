@@ -25,8 +25,8 @@ class Reports(unittest.TestCase):
                          "2023-10-01", "2024-09-30", None))
 
     def test_the_file_year_is_the_federal_fiscal_year_the_period_begins_in(self):
-        self.assertEqual(tidy.federal_fy(tidy._date("10/01/2023", "", "")), 2024)
-        self.assertEqual(tidy.federal_fy(tidy._date("09/30/2024", "", "")), 2024)
+        self.assertEqual(tidy.federal_fy(tidy._date("10/01/2023", "MM/DD/YYYY", "")), 2024)
+        self.assertEqual(tidy.federal_fy(tidy._date("09/30/2024", "MM/DD/YYYY", "")), 2024)
         with self.assertRaises(HcrisError):
             parse_reports([report("7", "990001", begin="09/30/2023", end="06/30/2024")], 2024)
 
