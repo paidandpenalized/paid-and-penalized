@@ -84,7 +84,8 @@ trend = panel.series(ccn, "total_margin")            # one Value per year the ho
   (`pp_engine/hcris/other_income.py`), and each emitted file records its SHA-256. Investment-type income, donations
   (6), investment income (7), governmental appropriations (23), unclassified line-24 entries and COVID-19 funding
   (24.50 to 24.60) don't count. The `line24_*` columns hold each report's line-24 dollars by class. `total_margin` is line 29 over (line 3 + line 25);
-  `patient_margin`, line 5 over line 3.
+  `patient_margin`, line 5 over line 3. All three are blank when line 3 is blank (a blank line 25 or other operating
+  income counts as zero).
 - **Units** (`cells.UNITS`): `dollars` (as filed, nominal), `days`, `discharges`, `beds`, `fte`, `ratio` (a fraction
   to 4 places: 0.0500 is 5%).
 - **What a page shows beside a number:** the period dates, "as filed" or "settled", and for an S-10 value in an early

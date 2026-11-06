@@ -115,6 +115,13 @@ class HospitalYears(unittest.TestCase):
         no_g3 = self.build([report("8", "990002")], [cell("8", "income_parking", "5")])["990002"]
         self.assertIsNone(no_g3["operating_margin"])  # lines 3 and 5 blank: no margin from line 12 alone
 
+    def test_total_margin_needs_line_3(self):
+        rows = self.build([report("7", "990001"), report("8", "990002")], [
+            cell("7", "other_income", "1000000"), cell("7", "net_income", "900000"),  # line 3 blank
+            cell("8", "net_patient_revenue", "2000"), cell("8", "net_income", "100")])  # line 25 blank
+        self.assertIsNone(rows["990001"]["total_margin"])  # not 0.9000: line 25 alone is no denominator
+        self.assertEqual(rows["990002"]["total_margin"], Decimal("0.0500"))  # blank line 25 counts as zero
+
     def test_maternity_medicaid_days(self):
         rows = self.build([report("7", "990001")], [
             cell("7", "days_medicaid", "300"), cell("7", "days_medicaid_nursery", "40"),
