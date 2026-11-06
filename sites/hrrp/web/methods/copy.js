@@ -149,7 +149,7 @@ export const COPY = {
     claim: 'HRRP-05',
   },
   figuresWorth: {
-    text: 'What {step} of ratio is worth: modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}; a condition with no payment weight in the file, or a hospital with no base payment, is left out ({blank} in all).',
+    text: 'What {step} of ratio is worth: modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}; a condition with no payment weight in the file, or a hospital with no base payment, is left out ({blank} hospital-conditions in all).',
     claim: 'HRRP-09',
   },
   figuresBands: {

@@ -250,14 +250,14 @@ test('#4 drawing: six panels in a row on the wide drawing, two to a row on a pho
   const band = (shown, share) => ({ shown, share, p25: -0.02, median: 0, p75: 0.03, tip: 't' });
   const panels = ['A', 'B', 'C', 'D', 'E', 'F'].map((name) => ({ name, bands: [band(true, 0.4), band(true, 0.6), band(false, 0.9)] }));
   const labels = { flagged: 'f', half: 'h', middle: 'm', median: 'pm', cases: 'c', headTop: 'top', headBottom: 'bottom' };
-  const wide = String(drawSizeBands({ panels, ends: ['25–49', '800+'], width: 1120, labels, format: (v) => `${Math.round(v * 100)}%` }));
+  const wide = String(drawSizeBands({ panels, width: 1120, labels, format: (v) => `${Math.round(v * 100)}%`, signed: String }));
   assert.equal((wide.match(/data-value="/g) ?? []).length, 12, 'two shown bands in each of six panels');
   assert.match(wide, /data-value="0\.6 -0\.02 0\.03"/);
   assert.doesNotMatch(wide, /0\.9/, 'the band too small to show draws nothing');
   assert.match(wide, /chart-share__dot chart-share__dot--pen/, 'over half: penalty ink');
-  const narrow = String(drawSizeBands({ panels, ends: ['25–49', '800+'], width: 300, labels, format: (v) => `${v}` }));
+  const narrow = String(drawSizeBands({ panels, width: 300, labels, format: (v) => `${v}`, signed: String }));
   assert.match(narrow, />top</);
-  assert.match(narrow, /viewBox="0 0 300 592"/, 'a two-line header and three rows of two');
+  assert.match(narrow, /viewBox="0 0 300 634"/, 'a two-line header and three rows of two');
 });
 
 test('real data: the Picture Part draws #10 beside the peer strips and #4 after the traits; Methods names #4\'s trap', async () => {
@@ -286,7 +286,8 @@ test('#2 takeaway: the dearest and cheapest condition by the typical hospital, t
 
 test('#2 drawing: each priced row plots its median and middle half; a row with no value draws its track and a dash only', () => {
   const rows = [{ label: 'A', median: 9000, p25: 5000, p75: 17000, valueText: '$9,000', tip: 't' }, { label: 'B', median: null, p25: null, p75: null, valueText: '—', tip: 't' }];
-  const svg = String(drawWorth({ rows, width: 640, labels: { dot: 'typical', bar: 'middle half' }, format: (v) => '$' + v / 1000 + 'K' }));
+  const svg = String(drawWorth({ rows, width: 640, labels: { dot: 'typical', bar: 'middle half', barShort: 'mid' }, format: (v) => '$' + v / 1000 + 'K' }));
+  assert.match(svg, />typical</, 'the first row names its dot in place');
   assert.match(svg, /data-value="9000 5000 17000"/);
   assert.equal((svg.match(/data-value=/g) ?? []).length, 1);
   assert.match(svg, />—</);

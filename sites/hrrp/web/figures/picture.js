@@ -8,7 +8,7 @@ import { CAP_PCT, CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { isNarrow, r2 } from '../../../../web/charts/svg.js';
 import { pairBars } from '../../../../web/charts/pairBars.js';
-import { capitalize, count, listText, noun, numberWord, pct, placeText, roundedDollars, spelled } from '../../../../web/render/format.js';
+import { capitalize, count, listText, noun, numberWord, pct, placeText, roundedDollars, signed, spelled } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
@@ -19,7 +19,7 @@ import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN, MIN_BAND } from './picture-data.js';
 import { PER_STEP } from './hospital-data.js';
-import { BAND_GRID, drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
+import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
 import { BESIDE, FULL, HALF, SIDE, pic } from './layout.js';
 
 // The Part's lede paragraph.
@@ -290,7 +290,7 @@ function worthFigure({ w, conditions, edition, n }) {
       : fill('worthTip', { cond: conditionShort(conditions, r.cond), step: STEP_TEXT, median: hundreds(r.median), from: hundreds(r.p25), to: hundreds(r.p75), hospitals: hospitals(r.priced) }),
   }));
   const axisMoney = (v) => (v === 0 ? '$0' : `$${Math.round(v / 1000)}K`);
-  const draw = (width) => drawWorth({ rows: spec(width), width, labels: { dot: t('worthKeyDot'), bar: t('worthKeyBar') }, format: axisMoney });
+  const draw = (width) => drawWorth({ rows: spec(width), width, labels: { dot: t('worthKeyDot'), bar: t('worthKeyBar'), barShort: t('worthKeyBarShort') }, format: axisMoney });
   const blank = w.rows.reduce((s, r) => s + r.blank, 0);
   return figure({
     n: n(), takeaway: worthTakeaway(w, conditions), source: fill('pictSourceDollars', { edition }), claimLevel: 'estimate', csvName: 'hrrp-dollars-per-step',
@@ -328,10 +328,10 @@ function bandsFigure({ b, conditions, edition, n }) {
     })),
   }));
   const labels = { flagged: t('bandsFlagged'), half: t('bandsHalf'), middle: t('bandsMiddle'), median: t('bandsMedian'), cases: t('bandsCases'), headTop: t('bandsHeadTop'), headBottom: t('bandsHeadBottom') };
-  const draw = (width) => drawSizeBands({ panels: panelsFor(width), width, labels, format: pct0 });
+  const draw = (width) => drawSizeBands({ panels: panelsFor(width), width, labels, format: pct0, signed: (v) => signed(v, 1) });
   return figure({
     n: n(), takeaway: bandsTakeaway(b, conditions), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flagged-by-cases',
-    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND), step: String(BAND_GRID) }),
+    chart: imagePair(drawn(draw, FULL), t('bandsAlt')), note: fill('bandsNote', { min: String(MIN_BAND) }),
     table: {
       columns: [{ name: t('bandsColCond') }, { name: t('bandsColBand') }, { name: t('bandsColN'), numeric: true }, { name: t('bandsColShare'), numeric: true }, { name: t('bandsColFrom'), numeric: true }, { name: t('bandsColTo'), numeric: true }],
       rows: b.table.filter((r) => r.n > 0).map((r) => [
