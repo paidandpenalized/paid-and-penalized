@@ -3,9 +3,9 @@
 // rows that pass. No DOM here.
 import { CCN } from '../../../engine/js/ccn.js';
 import { bedBand } from '../../../engine/js/hrrp/filters.js';
+import { STATE_OF } from '../web/figures/glyph.js';
 import { PLACE_ROW_FIELDS } from '../web/figures/place-table-data.js';
 
-const STATE_OF = { c: 'counted', b: 'below', f: 'few', n: 'none' };
 const norm = (s) => String(s ?? '').toLowerCase();
 
 // asset: the parsed JSON; scope: { cbsa } or { states: [codes] } (the page's data attributes). Returns [{ h, states, rank, text }] in the

@@ -4,7 +4,7 @@
 // ratio over its peer median to the median. Without this script the sliders stay disabled at the actual ratios.
 import { mountCharts } from '../../../web/client/figure.js';
 import { peerMedian } from '../../../engine/js/hrrp/formula.js';
-import { WI_STEP, clientHospital, liveWords, resultWords, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
+import { WHATIF_DATA_ID, WI_STEP, clientHospital, liveWords, resultWords, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
 import { waterfallPair } from '../web/figures/waterfall.js';
 import { t } from '../web/hospital/copy.js';
 import { ratio } from '../web/numbers.js';
@@ -13,7 +13,7 @@ const hook = (root, name) => root.querySelector(`[data-wi="${name}"]`);
 
 export function mountWhatIf() {
   const root = document.querySelector('[data-hosp-whatif]');
-  const script = document.getElementById('hrrp-hospital');
+  const script = document.getElementById(WHATIF_DATA_ID);
   if (!root || !script) return;
   const data = JSON.parse(script.textContent);
   const { h, meta } = clientHospital(data);
@@ -40,26 +40,26 @@ export function mountWhatIf() {
   const paint = () => { frame ||= requestAnimationFrame(draw); };
   const announce = () => { hook(root, 'live').textContent = liveWords(whatIfState(h, meta, over)); };
 
-  // A slider sets its condition's ratio; one left at the actual ratio (to the step) is not "moved".
-  const set = (row, value) => {
-    if (value === null || Math.abs(value - row.err) < WI_STEP / 2) delete over[row.cond]; else over[row.cond] = value;
-    row.val.textContent = ratio(over[row.cond] ?? row.err, 3);
+  // A condition's ratio set to value, or back to the actual one (null); one left at the actual ratio (to the step) is not "moved",
+  // unless exact. move: also put the slider's thumb there (a button's doing; a drag has put it where it is).
+  const set = (row, value, { exact = false, move = false } = {}) => {
+    if (value === null || (!exact && Math.abs(value - row.err) < WI_STEP / 2)) delete over[row.cond]; else over[row.cond] = value;
+    const shown = over[row.cond] ?? row.err;
+    row.val.textContent = ratio(shown, 3);
+    if (move) row.range.value = String(shown);
   };
   for (const row of rows) {
     row.range.addEventListener('input', () => { set(row, Number(row.range.value)); paint(); });
     row.range.addEventListener('change', announce);
   }
-  const place = (row, value) => { row.range.value = String(value); };
   hook(root, 'reset').addEventListener('click', () => {
-    for (const row of rows) { set(row, null); place(row, row.err); }
+    for (const row of rows) set(row, null, { move: true });
     paint();
     announce();
   });
   hook(root, 'median').addEventListener('click', () => {
-    for (const row of rows) {
-      // The median itself, exactly: a ratio over it by less than half a step still comes down to it.
-      if (row.err > row.med) { over[row.cond] = row.med; row.val.textContent = ratio(row.med, 3); place(row, row.med); } else { set(row, null); place(row, row.err); }
-    }
+    // The median itself, exactly: a ratio over it by less than half a step still comes down to it.
+    for (const row of rows) set(row, row.err > row.med ? row.med : null, { exact: true, move: true });
     paint();
     announce();
   });

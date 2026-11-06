@@ -4,23 +4,29 @@
 // filters, a sort and Previous/Next. Both tables get a "Copy as CSV" button: the child table's file, and the hospitals table's file cut
 // to the rows that pass the filters, in the current sort. Everything is hidden in the page until here, and without this script a reader
 // has the first page and the CSV.
+import { copyOrSelect } from '../../../web/client/clipboard.js';
+import { count } from '../../../web/client/format.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
 import { mountPager } from './pager.js';
 
-// Copies the text copyText() gives (a promise) and says how it went in the box's status line.
+// Copies the text copyText() gives (a promise) and says how it went in the box's status line; where the browser refuses, the box's
+// table is selected for the reader to copy by hand.
 function mountCopy(box, copyText) {
   const button = box.querySelector('button[data-copy]');
   const status = box.querySelector('[data-copy-status]');
-  if (!button || !status) return;
+  const table = box.querySelector('table');
+  if (!button || !status || !table) return;
   button.hidden = false;
   button.addEventListener('click', async () => {
+    let text;
     try {
-      await navigator.clipboard.writeText(await copyText());
-      status.textContent = status.dataset.copied;
+      text = await copyText();
     } catch {
       status.textContent = status.dataset.failed;
+      return;
     }
+    await copyOrSelect({ text, node: table, status, copied: status.dataset.copied, failed: status.dataset.failed });
   });
 }
 
@@ -37,15 +43,19 @@ function mountKids(box) {
   mountCopy(box, () => fetchText(box.dataset.csv, '/data/hrrp/'));
 }
 
-const fmt = (n) => n.toLocaleString('en-US');
-
 function mountHospitals(box) {
   const body = box.querySelector('table.ph__table')?.tBodies[0];
   const controls = box.querySelector('.ph__controls');
   const status = box.querySelector('.ph__status');
   const [prev, next] = [box.querySelector('[data-prev]'), box.querySelector('[data-next]')];
   const size = Number(box.dataset.pageSize);
-  if (!body || !controls || !status || !size || !box.dataset.src?.startsWith('/assets/')) return;
+  if (!body || !controls || !status || !size) return;
+  // A table that fits on one page has every row and names no asset: only its copy button.
+  if (!box.dataset.src) {
+    mountCopy(box, () => fetchText(box.dataset.csv, '/data/hrrp/'));
+    return;
+  }
+  if (!box.dataset.src.startsWith('/assets/')) return;
   const el = (id) => box.querySelector(`#${id}`);
   const f = { text: el('ph-text'), st: el('ph-state'), peer: el('ph-peer'), cond: el('ph-cond'), teach: el('ph-teach'), beds: el('ph-beds'), loc: el('ph-loc'), pen: el('ph-pen'), sort: el('ph-sort') };
   const scope = box.dataset.cbsa ? { cbsa: box.dataset.cbsa } : { states: (box.dataset.states ?? '').split(',') };
@@ -63,7 +73,7 @@ function mountHospitals(box) {
     body.innerHTML = shown.slice(from, to).map((r) => String(hospitalRow(r, conditions))).join('');
     box.querySelector('.ht-empty').hidden = shown.length > 0;
     body.closest('.printout').hidden = shown.length === 0;
-    status.textContent = shown.length ? status.dataset.template.replace('{from}', fmt(from + 1)).replace('{to}', fmt(to)).replace('{n}', fmt(shown.length)) : '';
+    status.textContent = shown.length ? status.dataset.template.replace('{from}', count(from + 1)).replace('{to}', count(to)).replace('{n}', count(shown.length)) : '';
     prev.disabled = page <= 1;
     next.disabled = page >= pages;
   }
