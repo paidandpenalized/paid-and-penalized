@@ -264,6 +264,15 @@ class RollUp(unittest.TestCase):
         self.assertAlmostEqual(t["lost"], 2000000)
         self.assertAlmostEqual(t["net_patient_revenue"], 100000000)
 
+    def test_filing_errors_leave_the_margin_sums(self):
+        a = exposure.hospital_base(hcris_row())
+        b = exposure.hospital_base(hcris_row(ccn="990002", medicaid_net_revenue="200000000"))  # above patient revenue
+        self.assertFalse(b["scored"])
+        t = rollup.roll_up([(x, exposure.scenario(x, 0.25, 0.4)) for x in (a, b)])
+        self.assertEqual((t["hospitals"], t["margin_hospitals"]), (2, 1))
+        self.assertAlmostEqual(t["net_patient_revenue"], 100000000)
+        self.assertAlmostEqual(t["medicaid_revenue"], 10000000)
+
     def test_an_operating_margin_counts_without_net_income(self):
         b = exposure.hospital_base(hcris_row(net_income="", net_patient_revenue="20000000"))
         t = rollup.roll_up([(b, exposure.scenario(b, 0.25, 0.9))])
