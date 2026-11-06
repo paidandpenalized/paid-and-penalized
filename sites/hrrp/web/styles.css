@@ -137,6 +137,12 @@
   .place__fig.pic--side > .fig > .fig__cap { grid-column: 1 / -1; grid-row: 1; }
   .place__fig.pic--side > .fig > .chart { grid-row: 2 / span 4; }
   .pic--side > .fig > .fig__table[open] { grid-column: 1 / -1; grid-row: 6; }
+  /* Words left, chart right, on the half grid of the pair above (.pic--rside): what 0.01 of ratio is worth sits under the flags and
+     dollars it explains, not under the conditions-measured figure it resembles. */
+  .pic--rside > .fig { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pic--rside > .fig > :is(.fig__cap, .fig__key, .fig__note, .fig__source, .fig__table) { grid-column: 1; }
+  .pic--rside > .fig > .chart { grid-column: 2; }
+  .page--prog .pic--rside > .fig > .fig__table:not([open]) { grid-column: 1; }
 }
 /* Two figures side by side from 980px, each at its own drawing's width; one alone takes the row. */
 .picpair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 40px; }
@@ -181,9 +187,9 @@
 .strip__median { stroke-width: 3.5px; }
 .strip__halo { stroke: var(--paper); stroke-width: 7px; }
 .flips__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-/* What 0.01 of ratio is worth: the middle half of hospitals a grey bar (the rule grey, darker than text grey in dark mode, so the dot
-   and the size bands' ink tick stand out on it), the typical hospital a dot in penalty ink. */
-.worth__bar { fill: var(--line); }
+/* What 0.01 of ratio is worth: the middle half of hospitals a grey bar (the section's bar grey, 3:1 or more on the paper in both modes),
+   the typical hospital a dot in penalty ink on a paper ring. */
+.worth__bar { fill: var(--ink-3); }
 .worth__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 /* The size bands' tier names: note type set apart from the bold condition names. */
 .bands__tier { font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
@@ -191,7 +197,7 @@
 .bands__line { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .bands__half { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .bands__zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.bands__mid { fill: var(--line); }
+.bands__mid { fill: var(--ink-3); }
 .bands__grid { stroke: var(--ink-3); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* An end share's words stay legible where a line runs under them. */
 .bands__value { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }

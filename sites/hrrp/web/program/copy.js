@@ -250,7 +250,7 @@ export const COPY = {
   flipsTakeawayOn: { text: 'Against one national median, peer grouping puts about {onN} flags on {on}.', claim: 'HRRP-05' },
   flipsTakeawayEven: { text: 'Against one national median, peer grouping moves flags between hospitals, but no group gains or loses on balance.', claim: 'HRRP-05' },
   flipsTakeawayNone: { text: 'Against one national median, peer grouping changes no flag.', claim: 'HRRP-05' },
-  worthTakeaway: { text: 'Each {step} of ratio costs a typical hospital about {hiDollars} on {hi} but {loDollars} on {lo}.', claim: null },
+  worthTakeaway: { text: 'Each {step} of excess readmission ratio costs a typical hospital about {hiDollars} on {hi} but {loDollars} on {lo}.', claim: null },
   worthTakeawayNone: { text: 'No condition has a modeled dollar value for its ratio.', claim: null },
   worthKeyDot: { text: 'typical hospital', claim: null },
   worthKeyBar: { text: 'middle half of hospitals', claim: null },

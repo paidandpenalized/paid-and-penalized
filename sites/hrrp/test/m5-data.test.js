@@ -257,7 +257,7 @@ test('#4 drawing: six panels in a row on the wide drawing, two to a row on a pho
   assert.match(wide, /chart-share__dot chart-share__dot--pen/, 'over half: penalty ink');
   const narrow = String(drawSizeBands({ panels, width: 300, labels, format: (v) => `${v}`, signed: String }));
   assert.match(narrow, />top</);
-  assert.match(narrow, /viewBox="0 0 300 682"/, 'a two-line header and three rows of two');
+  assert.match(narrow, /viewBox="0 0 300 646"/, 'a two-line header and three rows of two');
 });
 
 test('real data: the Picture Part draws #10 beside the peer strips and #4 after the traits; Methods names #4\'s trap', async () => {
@@ -280,7 +280,7 @@ import { drawWorth } from '../web/figures/picture-draw.js';
 
 test('#2 takeaway: the dearest and cheapest condition by the typical hospital, to the nearest hundred dollars', () => {
   const w = { takeaway: { hi: { cond: 'CABG', median: 9759.4 }, lo: { cond: 'COPD', median: 2487 } } };
-  assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of ratio costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
+  assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of excess readmission ratio costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
   assert.match(worthTakeaway({ takeaway: null }, CONDITIONS), /No condition/);
 });
 

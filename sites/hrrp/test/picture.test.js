@@ -271,7 +271,8 @@ test('the Part: the lede in words and the table with the six-cell glyph, its key
   const csvOrder = [...html.matchAll(/data-figure-csv="(hrrp-[a-z-]+)\.csv"/g)].map((x) => x[1]);
   assert.deepEqual(csvOrder, ['hrrp-size-of-cuts', 'hrrp-share-cut-by-conditions', 'hrrp-flags-and-dollars-by-condition', 'hrrp-dollars-per-step', 'hrrp-cuts-by-peer-group', 'hrrp-flags-without-peer-groups', 'hrrp-share-cut-by-trait', 'hrrp-largest-penalties']);
   assert.equal([...html.matchAll(/class="pic"/g)].length, 5, 'the two pairs\' four and the largest cuts');
-  assert.equal([...html.matchAll(/class="pic pic--side"/g)].length, 3, 'the cuts, what 0.01 is worth, the traits');
+  assert.equal([...html.matchAll(/class="pic pic--side"/g)].length, 2, 'the cuts and the traits');
+  assert.equal([...html.matchAll(/class="pic pic--side pic--rside"/g)].length, 1, 'what 0.01 is worth: words left, chart right');
   assert.equal([...html.matchAll(/class="picpair"/g)].length, 1);
   assert.equal([...html.matchAll(/class="picpair picpair--rows picpair--side"/g)].length, 1);
   // the cuts' swarm labels its pile with the count of hospitals measured and not cut (one in POOL)

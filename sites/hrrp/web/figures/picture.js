@@ -294,7 +294,7 @@ function worthFigure({ w, conditions, edition, n }) {
   const blank = w.rows.reduce((s, r) => s + r.blank, 0);
   return figure({
     n: n(), takeaway: worthTakeaway(w, conditions), source: fill('pictSourceDollars', { edition }), claimLevel: 'estimate', csvName: 'hrrp-dollars-per-step',
-    chart: imagePair(drawn(draw, SIDE), fill('worthAlt', { step: STEP_TEXT })), note: fill(blank ? 'worthNote' : 'worthNoteAll', { cap: String(CAP_PCT), zero: roundedDollars(0) }),
+    chart: imagePair(drawn(draw, HALF), fill('worthAlt', { step: STEP_TEXT })), note: fill(blank ? 'worthNote' : 'worthNoteAll', { cap: String(CAP_PCT), zero: roundedDollars(0) }),
     table: {
       columns: [{ name: t('worthColCond') }, { name: t('worthColN'), numeric: true }, { name: t('worthColMedian'), numeric: true }, { name: t('worthColP25'), numeric: true }, { name: t('worthColP75'), numeric: true }, { name: t('worthColCapped'), numeric: true }, { name: t('worthColBlank'), numeric: true }],
       rows: w.table.map((r) => [
@@ -382,14 +382,15 @@ function barsFigure({ b, conditions, edition, n }) {
 
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
 // numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
-// conditions measured beside the conditions' share of flags and dollars, what 0.01 of ratio is worth (words beside), the cuts by peer group beside what peer grouping changed, the traits'
+// conditions measured beside the conditions' share of flags and dollars, what 0.01 of ratio is worth (its words left, its chart under the
+// flags and dollars), the cuts by peer group beside what peer grouping changed, the traits'
 // ranges (words beside), the share flagged by size band across the page, then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
   const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
-  const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), true);
+  const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), 'right');
   const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
   const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
