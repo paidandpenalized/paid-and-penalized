@@ -79,7 +79,7 @@ export function rulersFigure(d, { view, n }) {
     return html`<li class="${cls}">
 <div class="rul__name"><p class="rul__short">${row.short}</p><p class="rul__sub">${words.cases}</p></div>
 <div class="rul__ruler">${rulerSvg(row, WIDTH, 'narrow')}${rulerSvg(row, RULER_WIDE, 'wide')}</div>
-${cells.map((cell, i) => html`<p class="rul__num"><span class="rul__k">${heads[i]}</span><span>${cell}</span></p>`)}
+${cells.map((cell) => html`<p class="rul__num">${cell}</p>`)}
 </li>`;
   });
   const capNote = d.capNote ? ` ${fill('rulersCapNote', { points: d.capPoints, cap: String(CAP_PCT) })}` : '';

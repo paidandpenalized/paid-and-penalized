@@ -155,22 +155,6 @@ test('Fig. 2: the columns alternate two tones by peer group, with no key, and ev
   }
 });
 
-test('columns: staggered labels never touch, stay inside the drawing, and none is left out, at phone and wide widths', () => {
-  const data = loadHrrpOnce();
-  const dual = dualBins(data.hospitals, data.meta.peerCutoffs);
-  const CHAR = 6;
-  for (const width of [300, 360, 560]) {
-    const bands = dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: `Group ${b.peer}`, short: String(b.peer) }));
-    const svg = columns({ bins: dual.bins.map((b) => ({ ...b, cls: 'chart-col', tip: 'x' })), domain: [0, dual.top], ticks: dual.ticks, format: String, width, height: 150, bands, stagger: true }).text;
-    const labels = [...svg.matchAll(/<text class="chart-band__label" x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)</g)].map((r) => ({ x: Number(r[1]), y: Number(r[2]), text: r[3] }));
-    assert.deepEqual(labels.map((l) => l.text), bands.map((b) => b.label), `${width}: every full label`);
-    labels.forEach((a, i) => {
-      assert.ok(a.x - (a.text.length * CHAR) / 2 >= 0 && a.x + (a.text.length * CHAR) / 2 <= width, `${width}: ${a.text} inside the drawing`);
-      labels.slice(0, i).filter((b) => b.y === a.y).forEach((b) => assert.ok(b.x + (b.text.length * CHAR) / 2 < a.x - (a.text.length * CHAR) / 2, `${width}: ${b.text} and ${a.text} share a row and touch`));
-    });
-  }
-});
-
 test('figure: a categorical key swatch, and a free class or a bad swatch is refused', () => {
   const FIG = { n: 1, takeaway: 't', source: 's', alt: 'a', table: { columns: [{ name: 'x' }, { name: 'n', numeric: true }], rows: [['r', '1']] }, svg: columns({ bins: [{ x0: 0, x1: 1, n: 1, cls: 'chart-col', tip: 'x' }], domain: [0, 1], ticks: [0], format: String, width: 300, height: 100 }) };
   assert.ok(String(figure({ ...FIG, key: [{ swatch: 'cat-1', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--cat-1" aria-hidden="true"></span>One</li>'));

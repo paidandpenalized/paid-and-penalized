@@ -19,14 +19,13 @@ import { hospitals, inSentence } from '../wording.js';
 import { worksheetHtml } from '../worksheet.js';
 import { swarmFigure } from './swarm.js';
 import { waterfallFigure } from './waterfall.js';
+import { STEP } from './layout.js';
 
 // Punch card: the largest sets each get a column; the rest are pooled.
 const KEEP = 12;
 // The least width, in drawing units, between two labeled cutoffs on the dual-share axis; a closer one goes unlabeled.
 const TICK_GAP = 24;
 const COLUMNS_HEIGHT = 180;
-// Step 3's wide drawing: the width of the step's figure column at 1280, so its labels keep their size.
-const DUAL_WIDE = 620;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
@@ -35,9 +34,8 @@ const BAR_CLASS = 'chart-col';
 const abbr = (key) => key.replace('_', '/');
 
 // A step of the Part: its number, heading and words beside its figure (stacked on a phone).
-// wide: the figure runs the page's width under the words (a table or a worksheet, too wide for the right column).
 // below: a block that runs the page's width under the words and the figure (Step 5's worksheet).
-const step = ({ n, id, heading, text, fig = null, wide = false, below = '' }) => html`<section class="hstep${wide ? ' hstep--wide' : ''}" id="${id}" aria-labelledby="${id}-h">
+const step = ({ n, id, heading, text, fig = null, below = '' }) => html`<section class="hstep" id="${id}" aria-labelledby="${id}-h">
 <div class="hstep__text">
 <p class="hstep__n" aria-hidden="true">${String(n)}</p>
 <p class="hstep__label vh">${fill('stepLabel', { n: String(n) })}</p>
@@ -114,7 +112,7 @@ function dualFigure({ dual, edition, n }) {
   const fig = figure({
     n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share',
     takeaway: fill('fig2Takeaway', { min: fmtInt(Math.min(...sizes)), max: fmtInt(Math.max(...sizes)), n: fmtInt(dual.n) }),
-    ...drawn(draw, DUAL_WIDE),
+    ...drawn(draw, STEP),
     table: {
       columns: [{ name: t('fig2ColShare') }, { name: t('fig2ColN'), numeric: true }],
       rows: dual.bins.map((b) => [fill('dualRange', { from: `${b.x0}%`, to: `${b.x1}%` }), num(count(b.n), b.n)]),

@@ -21,11 +21,9 @@ import { fill as placeFill, t as placeT } from '../place/copy.js';
 import { fyLabel } from '../copy.js';
 import { hospitals as hospitalsText } from '../wording.js';
 import { yearAxis } from './year-axis.js';
+import { RAIL } from './layout.js';
 
 const pct0 = (share) => fmtPct(share * 100, 0);
-// The size of the cuts and the peer groups sit in the narrow column beside the map at 1280 (5 of 12 columns): drawn at its width,
-// their labels keep their size.
-const SIDE_WIDE = 450;
 
 // ---------- the map ----------
 
@@ -134,7 +132,7 @@ export function sizeFigure(sd, { name, id, edition, n }) {
         : ['sizeTakeaway', { hospitals: hospitalsText(sd.n), zero: fmtInt(sd.nNone), average: fmtPct(sd.avg) }];
   return figure({
     n: n(), takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition }), csvName: `hrrp-${id}-cuts`,
-    ...drawn(draw, SIDE_WIDE), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
+    ...drawn(draw, RAIL), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
     table: {
       columns: [{ name: placeT('sizeColFrom'), numeric: true }, { name: placeT('sizeColTo'), numeric: true }, { name: placeT('sizeColN'), numeric: true }, { name: placeT('sizeColShare'), numeric: true }, { name: placeT('sizeColNation'), numeric: true }],
       rows: sd.rows.map((r) => [
@@ -219,7 +217,7 @@ export function peersFigure(pd, { id, edition, total, n }) {
       : placeFill('peerTakeawayLargest', { group, n: fmtInt(top.n), hospitals: hospitalsText(total) });
   return figure({
     n: n(), takeaway, source: placeFill('peerSource', { edition }), csvName: `hrrp-${id}-peer-groups`,
-    ...drawn(draw, SIDE_WIDE), alt: placeT('peerAlt'),
+    ...drawn(draw, RAIL), alt: placeT('peerAlt'),
     note: placeFill('peerNote', { first: String(pd.rows[0].peer), last: String(pd.rows[pd.rows.length - 1].peer) }),
     table: {
       columns: [{ name: placeT('peerColGroup') }, { name: placeT('peerColN'), numeric: true }, { name: placeT('peerColAvg'), numeric: true }],

@@ -19,6 +19,7 @@ import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN } from './picture-data.js';
 import { drawCuts, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
+import { FULL, HALF, SIDE, pic } from './layout.js';
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -67,13 +68,6 @@ function penFigure({ rows, conditions, edition, n }) {
 
 // ---------- the size of the cuts ----------
 
-// The wide drawings' widths, by where a figure sits at 1280 (styles.css .pic): beside its words (SIDE, the chart's 7 of 12
-// columns), half of a pair (HALF) or across the page (FULL). A figure keeps its drawing's size, so its text stays text-sized.
-const SIDE = 640;
-const HALF = 540;
-const FULL = 1120;
-// A figure kept at its drawing's size; side: its words beside the chart where there is room. Nothing when it has none.
-const pic = (fig, side = false) => (fig ? html`<div class="pic${side ? ' pic--side' : ''}">${fig}</div>` : '');
 // Two figures side by side where there is room (one alone takes the row).
 const pair = (a, b) => (a || b ? html`<div class="picpair">${a}${b}</div>` : '');
 const pct0 = (fraction) => pct(fraction, 0);
@@ -283,6 +277,6 @@ ${cuts}
 ${pair(measured, bars)}
 ${peers}
 ${types}
-${largest.length ? html`<div class="pic pic--table">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
+${largest.length ? html`<div class="pic">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
 <p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}`;
 }

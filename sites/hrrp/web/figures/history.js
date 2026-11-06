@@ -11,6 +11,7 @@ import { fyLabel } from '../copy.js';
 import { fill, t } from '../program/copy.js';
 import { fmtInt, fmtPct } from '../numbers.js';
 import { drawHistory, usdM } from './history-draw.js';
+import { FULL, SIDE, pic } from './layout.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
 const span = (kind, fy, [start, end]) => ({ kind, start: ymd(start), end: ymd(end), tip: fill('winTip', { label: t(kind === 'perf' ? 'winPerf' : 'winPay'), fy: fyLabel(fy), start: isoDate(start), end: isoDate(end) }) });
@@ -19,11 +20,6 @@ const range = ([start, end]) => `${isoDate(start)} – ${isoDate(end)}`;
 // The source line of an entry: a link when the address is https, else the label as plain text.
 const sourceOf = ({ label, url }) => (url ? externalLink(url, label) : label);
 
-// A figure kept at its drawing's size; side: its words beside the chart where there is room.
-const pic = (fig, side = false) => (fig ? html`<div class="pic${side ? ' pic--side' : ''}">${fig}</div>` : '');
-// The data windows' wide drawing sits beside its words (7 of 12 columns at 1280); the small multiples run the page's width.
-const WIN_WIDE = 640;
-const HIST_WIDE = 1120;
 
 // entries: history-data.js timelineData().
 export function timeline(entries) {
@@ -50,7 +46,7 @@ export function windowsFigure(rows, { n }) {
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
-    ...drawn(draw, WIN_WIDE),
+    ...drawn(draw, SIDE),
     table: {
       columns: [{ name: t('winColFy') }, { name: t('winColPerf') }, { name: t('winColPay') }],
       rows: rows.map((r) => [fyLabel(r.fy), r.perf ? range(r.perf) : t('winNone'), range(r.pay)]),
@@ -71,7 +67,7 @@ export function historyFigure(lines, { n }) {
     n: n(), takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
     alt: t('histAlt'), note: note || null,
     key: [{ swatch: 'bar-dark', label: t('histKeyCms') }, { swatch: 'bar-light', label: t('histKeyKff') }],
-    ...drawn((width) => drawHistory({ lines, width }), HIST_WIDE),
+    ...drawn((width) => drawHistory({ lines, width }), FULL),
     table: {
       columns: [{ name: t('histColFy') }, { name: t('histColN'), numeric: true }, { name: t('histColShare'), numeric: true }, { name: t('histColAvgPen'), numeric: true },
         { name: t('histColAvgAll'), numeric: true }, { name: t('histColTotal'), numeric: true }, { name: t('histColSource') }],
