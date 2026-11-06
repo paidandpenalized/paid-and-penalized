@@ -31,6 +31,14 @@ test('ruler: a ▲ at a value (in the penalty ink when marked), a note without o
   assert.equal(d.match(/z/g).length, 3, 'one box per column with a count; an empty column draws nothing');
 });
 
+test('ruler: end labels along the top only when asked for', () => {
+  const base = { id: 'r', domain: [0, 2], counts: [1, 3, 0, 2], floor: 0, cap: 2, median: 0.6, labels: { median: 'median 0.6', value: 'This', same: 'Same', note: 'no value' }, format: String, value: 0.9 };
+  assert.doesNotMatch(String(ruler(base)), /chart-end/, 'none by default');
+  const s = String(ruler({ ...base, ends: ['0.00', '2.00'] }));
+  assert.match(s, /<text class="chart-end" x="6" y="12" text-anchor="start">0\.00<\/text>/);
+  assert.match(s, /<text class="chart-end" x="294" y="12" text-anchor="end">2\.00<\/text>/);
+});
+
 test('waterfall: each part starts where the last ended, the sum bar starts at zero, and the line is a mark', () => {
   const svg = String(waterfall({
     id: 'w', band: [0.29, 0.3], labels: { line: 'Line', lineTip: 'Line', zone: 'cut' },

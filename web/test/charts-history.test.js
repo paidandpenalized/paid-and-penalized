@@ -449,6 +449,13 @@ test('rankYears: each year with a cut line is shaded from the line up; a year wi
   assert.ok(Number(/r="(\d+)"/.exec(tags(s, 'chart-rank__dot')[0])[1]) === 4, 'smaller dots on a phone');
 });
 
+test('rankYears: a break marked left runs its label left of the rule even with no break after it', () => {
+  const years = Array.from({ length: 10 }, (_, i) => rankYear(String(15 + i), (i % 5) / 4));
+  const caps = (left) => textTags(String(rankYears({ years, breaks: [{ at: 9, label: 'changed', left }], labels: RANK_LABELS, width: 300 })), 'chart-cap').map((c) => c.anchor);
+  assert.deepEqual(caps(undefined), ['start']);
+  assert.deepEqual(caps(true), ['end']);
+});
+
 test('rankYears: rule changes are dashed lines with their labels; a phone with many years labels every other one', () => {
   const years = Array.from({ length: 10 }, (_, i) => rankYear(String(15 + i), (i % 5) / 4));
   const narrow = String(rankYears({ years, breaks: [{ at: 3, label: 'z-scores' }, { at: 5, label: 'equal' }], labels: RANK_LABELS, width: 300 }));

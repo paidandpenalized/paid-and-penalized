@@ -1,11 +1,14 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/hospital.js at 33d1959), after HACRP's hospital page (the
 // record card, the stamp, the verdict beside it). The top of a hospital's page: the breadcrumb, the record card
 // (name, place, metro area, type, peer group, stars) beside the verdict (the stamps, the summary, the inactive note,
-// the factor and the estimated dollars, the rank, the report link). The figures that follow come in a later batch.
+// the factor and the estimated dollars, the rank, the report link). Then the figures: where the penalty came from, the penalty
+// history and the full worksheet (the what-if, the metro table and the nearby map come in the next batch).
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
+import { counter } from '../../../../web/charts/figure.js';
+import { historyFigure, rulersFigure, worksheetDisclosure } from '../figures/hospital.js';
 import { t } from '../hospital/copy.js';
 import { hospitalPath } from '../links.js';
 import { breadcrumb, estimateTag, followed, shellOf } from './parts.js';
@@ -57,12 +60,19 @@ ${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html
 export function hospitalPage({ view, robots, assets }) {
   const path = hospitalPath(view.ccn);
   const title = `${view.heading} · ${SITE.name}`;
+  const n = counter();
+  const { rulers, history, sheet } = view.figures;
   const body = html`<article class="wrap page page--hosp hosp">
 ${breadcrumb(view.crumbs, view.name)}
 <div class="hosp__top">
 ${recordCard(view)}
 ${verdict(view, path)}
 </div>
+${rulersFigure(rulers, { view, n: n() })}
+<div class="hosp__pair">
+${historyFigure(history, { view, n: n() })}
+</div>
+${worksheetDisclosure(sheet, view.edition)}
 <p class="small muted hosp__source">${view.source}</p>
 </article>`;
   return page({
@@ -71,6 +81,7 @@ ${verdict(view, path)}
     path,
     robots,
     body,
+    scripts: [assets.js.figure],
     assets,
     ...shellOf({ edition: view.edition, current: 'explore', hospital: followed(view) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + path },

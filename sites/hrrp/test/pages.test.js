@@ -22,7 +22,8 @@ const crumbsOf = (text) => /<nav class="crumbs"[\s\S]*?<\/nav>/.exec(text)[0];
 test('the record card holds the six numbered fields under its title bar', () => {
   const text = render(CUT);
   assert.match(text, /<p class="form__title"><span>Hospital record · FY2027<\/span><span>CCN 990001<\/span><\/p>/);
-  const labels = [...text.matchAll(/<p class="field__label"><span class="field__no">([^<]+)<\/span>([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
+  // The record card and the verdict: what comes before the figures (Worksheet R, further down, has lettered fields of its own).
+  const labels = [...text.slice(0, text.indexOf('<figure')).matchAll(/<p class="field__label"><span class="field__no">([^<]+)<\/span>([^<]+)<\/p>/g)].map((m) => `${m[1]} ${m[2]}`);
   assert.deepEqual(labels, ['1 Hospital', '2 Location', '3 Metro area', '4 Type', '5 Peer group', '6 Care Compare stars', 'A Payment adjustment factor', 'B Estimated dollars']);
   assert.match(text, new RegExp(`<h1 class="field__value hosp__name">${NAME}</h1>`));
   assert.equal(text.match(/<h1/g).length, 1, 'one h1');

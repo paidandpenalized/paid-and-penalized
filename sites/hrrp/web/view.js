@@ -9,7 +9,8 @@ import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, spelled } from '../../../web/render/format.js';
 import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
-import { edition as editionOf } from './derive.js';
+import { edition as editionOf, meanCutByYear, pafByYear } from './derive.js';
+import { historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
@@ -22,6 +23,7 @@ import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
 import { fyLabel } from './copy.js';
+import { worksheetRows } from './worksheet.js';
 import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, rankContext, rankLine, summarySentence, vsLabel } from './wording.js';
 
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
@@ -35,6 +37,12 @@ export function hospitalContext({ hospitals, meta, history, conditions, master =
     master,
     dollars,
     rank: rankContext(hospitals, meta.states),
+    // The figures' shared numbers: each peer group's ratios, each year's cuts and the all-hospital average cut by year.
+    history,
+    rulers: rulerScales(hospitals, meta),
+    yearRanks: yearRanks(hospitals, history, meta),
+    avgCut: meanCutByYear(hospitals, [...history.years, meta.fy], pafByYear({ history, meta })),
+    lines: smallLines({ history }),
   };
 }
 
@@ -137,6 +145,7 @@ export function hospitalView(h, ctx) {
       note: h.base != null ? fill('dollarsNote', { base: fmtMoney(h.base) }) : t('dollarsNoVolume'),
     },
     rank: rankLine(h, ctx.rank),
+    figures: { rulers: rulersData(h, ctx), history: historyData(h, ctx), sheet: { rows: worksheetRows(h, ctx.meta), conditions: edition.conditions } },
     crumbs: crumbsOf(h, ctx),
     source: fill('source', { edition: edition.label, date: fmtDate(ctx.meta.fileDate, 'long') }),
   };

@@ -11,6 +11,8 @@
 //   labels                 { median, value, same, note }: the median's label (with its number), the ▲'s tooltip
 //                          name, the hatch's tooltip name, the text in the ▲'s place when value is null
 //   format                 value -> text
+//   ends                   optional [low, high] texts: the axis's end values, small, along the top (a page whose rulers
+//                          each have their own axis); none by default
 import { html } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, mark, r2, text, triangle } from './svg.js';
 
@@ -21,7 +23,7 @@ const HATCH = 6;
 const MARK = AXIS + 3;
 const HEIGHT = AXIS + 18;
 
-export function ruler({ id, domain: [lo, hi], counts, floor, cap, median, value, labels, format, width = 300, pen = false, ghost = false }) {
+export function ruler({ id, domain: [lo, hi], counts, floor, cap, median, value, labels, format, width = 300, pen = false, ghost = false, ends = null }) {
   checkId(id, 'ruler');
   const x = (v) => r2(PAD + ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (width - 2 * PAD));
   const step = (width - 2 * PAD) / counts.length;
@@ -61,6 +63,7 @@ ${mark({
     body: html`<line class="chart-median" x1="${xm}" x2="${xm}" y1="${COL_TOP - 3}" y2="${AXIS + 5}"/>`,
   })}
 ${text({ x: xm + (nearRight ? -4 : 4), y: COL_TOP - 4, anchor: nearRight ? 'end' : 'start', cls: 'chart-note chart-label--halo', body: labels.median })}
-${hospital}`,
+${hospital}${ends && html`
+${text({ x: PAD, y: COL_TOP - 4, anchor: 'start', cls: 'chart-end', body: ends[0] })}${text({ x: width - PAD, y: COL_TOP - 4, anchor: 'end', cls: 'chart-end', body: ends[1] })}`}`,
   });
 }
