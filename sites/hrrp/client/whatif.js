@@ -57,7 +57,8 @@ export function mountWhatIf() {
   });
   hook(root, 'median').addEventListener('click', () => {
     for (const row of rows) {
-      if (row.err > row.med) { set(row, row.med); place(row, row.med); } else { set(row, null); place(row, row.err); }
+      // The median itself, exactly: a ratio over it by less than half a step still comes down to it.
+      if (row.err > row.med) { over[row.cond] = row.med; row.val.textContent = ratio(row.med, 3); place(row, row.med); } else { set(row, null); place(row, row.err); }
     }
     paint();
     announce();

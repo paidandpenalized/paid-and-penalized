@@ -354,7 +354,7 @@
 .wi__title { margin: 6px 0 0; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 .wi__parts { min-width: 0; }
 .wi__parts .chart { max-width: none; }
-.hosp__nowi { max-width: 40rem; }
+.hosp__nowi { max-width: 40rem; margin-top: 28px; }
 
 /* The other hospitals in the area (figures/neighbors.js): the table with a bar behind each cut, this hospital's row marked, the
    pager a script shows, and the nearby map beside it where there is room. */

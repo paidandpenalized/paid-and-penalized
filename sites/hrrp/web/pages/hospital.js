@@ -73,8 +73,9 @@ ${recordCard(view)}
 ${verdict(view, path)}
 </div>
 ${rulersFigure(rulers, { view, n: n() })}
+${interactive ? '' : whatIfNone()}
 <div class="hosp__pair">
-${interactive ? whatIfFigure(whatIf, { view, n: n() }) : whatIfNone()}
+${interactive ? whatIfFigure(whatIf, { view, n: n() }) : ''}
 ${historyFigure(history, { view, n: n() })}
 </div>
 ${interactive ? whatIfScriptData(whatIf) : ''}

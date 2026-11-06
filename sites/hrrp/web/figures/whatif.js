@@ -21,6 +21,7 @@ export function escapeWords(row) {
   if (!row.over) return t('wiEscapeAlready');
   const e = row.escape;
   const median = ratio(e.ratio);
+  if (e.noWeight) return fill('wiEscapeNoWeight', { median });
   if (e.saveCut <= 0) return fill(e.atCap ? 'wiEscapeNothingCap' : 'wiEscapeNothing', { median });
   return e.saveDollars === null ? fill('wiEscapeNoDollars', { median, cut: fmtPct(e.saveCut) })
     : fill('wiEscape', { median, cut: fmtPct(e.saveCut), dollars: fmtMoney(e.saveDollars) });
@@ -78,7 +79,7 @@ ${fields}
       rows: wi.sliders.map((row) => [
         row.short, num(ratio(row.err), row.err),
         row.over ? num(ratio(row.escape.ratio), row.escape.ratio) : dash,
-        row.over ? num(fmtPct(row.escape.saveCut), row.escape.saveCut) : dash,
+        row.over && row.escape.saveCut !== null ? num(fmtPct(row.escape.saveCut), row.escape.saveCut) : dash,
         row.over && row.escape.saveDollars !== null ? num(fmtMoney(row.escape.saveDollars), row.escape.saveDollars) : dash,
       ]),
     },

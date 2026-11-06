@@ -2,7 +2,7 @@
 // One function, whatIfPaf (engine/js/hrrp/whatif.js), gives the factor for any set of ratios; the browser calls the same one, so
 // the page as built and the page as moved agree to the digit. Peer medians, payment weights and the neutrality modifier stay at
 // their edition values (the what-if is an approximation, and says so). Pure.
-import { CAP, CONDS, cutPct, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
+import { CAP, CONDS, cutPct, isMeasured, peerMedian, weightPublished } from '../../../../engine/js/hrrp/formula.js';
 import { sliderRange, whatIfPaf } from '../../../../engine/js/hrrp/whatif.js';
 import { conditionShort } from '../derive.js';
 import { fill, t } from '../hospital/copy.js';
@@ -65,8 +65,10 @@ export function sliderRows(h, meta, conditions) {
       const now = dollars(h.paf);
       escape = {
         ratio: med,
-        saveCut: Math.round((cutPct(h.paf) - cutPct(paf)) * 100) / 100,
-        saveDollars: after === null || now === null ? null : now - after,
+        // CMS counted it, but without a published payment weight its share cannot be recomputed here.
+        noWeight: !weightPublished(c),
+        saveCut: weightPublished(c) ? Math.round((cutPct(h.paf) - cutPct(paf)) * 100) / 100 : null,
+        saveDollars: !weightPublished(c) || after === null || now === null ? null : now - after,
         // Nothing saved while the other conditions alone keep the cut at its cap.
         atCap: paf < 1 && 1 - paf >= CAP - 1e-9,
       };

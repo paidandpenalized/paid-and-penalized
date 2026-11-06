@@ -162,6 +162,7 @@ export const COPY = {
   wiEscapeAlready: { text: 'At or under the median already.', claim: null },
   wiEscape: { text: 'Down to {median}, it adds nothing: the cut shrinks by {cut} of base payments, about {dollars}.', claim: null },
   wiEscapeNoDollars: { text: 'Down to {median}, it adds nothing: the cut shrinks by {cut} of base payments.', claim: null },
+  wiEscapeNoWeight: { text: 'CMS counted this one, but its payment weight is not published, so what reaching {median} would save cannot be worked out here.', claim: null },
   wiEscapeNothing: { text: 'Down to {median}, it adds nothing, but the cut does not change.', claim: null },
   wiEscapeNothingCap: { text: 'Down to {median}, it adds nothing, but the other conditions still keep the cut at its maximum.', claim: null },
   wiColCond: { text: 'Condition', claim: null },

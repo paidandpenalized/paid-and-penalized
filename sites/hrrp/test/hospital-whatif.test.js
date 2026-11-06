@@ -226,6 +226,7 @@ test('on the data: each escape value is the peer median and what it saves is wha
       if (!s.over) { assert.equal(s.escape, null); continue; }
       const paf = whatIfPaf(h, DATA.meta, { [s.cond]: s.med });
       assert.equal(s.escape.ratio, s.med);
+      if (s.escape.noWeight) { assert.deepEqual([s.escape.saveCut, s.escape.saveDollars], [null, null]); continue; }
       assert.equal(s.escape.saveCut, Math.round((cutPct(h.paf) - cutPct(paf)) * 100) / 100, `${h.id} ${s.cond}`);
       assert.ok(s.escape.saveCut >= 0, 'bringing a ratio down never makes the cut larger');
       checked += 1;
@@ -266,4 +267,40 @@ test('on the data: the page data for the browser rebuild the same hospital, and 
   assert.equal(json.base, h.base);
   assert.equal(json.meta.nm, DATA.meta.nm);
   assert.ok(text.length < 240000, `page is ${text.length} bytes`);
+});
+
+test('on the data: a condition CMS flagged with no published payment weight says it cannot be recomputed, and its table row has dashes', () => {
+  const rows = DATA.hospitals.flatMap((h) => whatIfData(h, SHARED).sliders.filter((s) => s.escape?.noWeight).map((s) => [h, s]));
+  assert.ok(rows.length >= 4, `${rows.length} rows`);
+  for (const [h] of rows.slice(0, 4)) {
+    const fig = figureOf(render(h), 2);
+    assert.match(fig, /CMS counted this one, but its payment weight is not published/);
+    assert.ok(!/it adds nothing, but the cut does not change/.test(fig.split('wi__escape').filter((p) => /not published/.test(p)).join('')), h.id);
+  }
+  const [h, s] = rows[0];
+  const tr = new RegExp(`<tr><th[^>]*>${s.short}</th>[\\s\\S]*?</tr>`).exec(figureOf(render(h), 2))[0];
+  assert.ok(!tr.includes('0.00%') && !tr.includes('$0<'), tr);
+});
+
+test('on the data: a ratio over its median by under half a step still comes to no cut at the median (Bring all to median)', () => {
+  const close = DATA.hospitals.filter((h) => CONDS.some((k) => isMeasured(h.c[k]) && h.c[k].err > peerMedian(DATA.meta, h.peer, k) && h.c[k].err - peerMedian(DATA.meta, h.peer, k) < WI_STEP / 2));
+  assert.ok(close.length > 10);
+  for (const h of close.slice(0, 50)) {
+    const all = {};
+    for (const k of CONDS) if (isMeasured(h.c[k])) all[k] = Math.min(h.c[k].err, peerMedian(DATA.meta, h.peer, k));
+    assert.equal(whatIfState(h, DATA.meta, all).paf, 1, h.id);
+  }
+});
+
+test('on the data: with nothing to simulate the words sit above the pair and the history alone fills it', () => {
+  const none = DATA.hospitals.find((h) => !CONDS.some((k) => isMeasured(h.c[k])));
+  const text = render(none);
+  const nowi = text.indexOf('hosp__nowi');
+  const pair = text.indexOf('<div class="hosp__pair">');
+  assert.ok(nowi > 0 && nowi < pair, 'the words come before the pair');
+  const inside = text.slice(pair, text.indexOf('</div>', text.indexOf('id="figure-2"')));
+  assert.ok(!inside.includes('hosp__nowi'));
+  assert.equal((text.slice(pair).match(/<figure class="fig"/g) ?? []).length >= 1, true);
+  const pairHtml = /<div class="hosp__pair">([\s\S]*?)<\/figure>\s*<\/div>/.exec(text)[1];
+  assert.equal((pairHtml.match(/<figure class="fig"/g) ?? []).length, 1, 'one child in the pair');
 });
