@@ -89,6 +89,7 @@ ${formField({ no: fb.no, label: fb.label, value: fb.value, note: fb.note, size: 
 ${formField({ no: fc.no, label: fc.label, value: fc.value, note: fc.note, size: 'sm', fieldCls: SHEET_FIELD })}
 </div>
 ${printout(html`<table class="gb wsr__table">
+<caption class="vh" id="wsr-cap">${t('wsTitle')}</caption>
 <thead><tr><th scope="col">${t('wsColCondition')}</th>${head(1, t('wsColCases'))}${head(2, t('wsColRatio'))}${head(3, t('wsColMedian'))}${head(4, fill('wsColExcess', { a: '2', b: '3' }))}${head(5, t('wsColWeight'))}${head(6, fill('wsColPart', { c: 'C', a: '4', b: '5' }))}</tr></thead>
 <tbody>
 ${body}

@@ -11,7 +11,7 @@ import { shellOf } from './parts.js';
 
 // text: the filled Markdown (csv.js dictionaryText), as the downloadable file holds it; edition: the edition's label;
 // csvHref and markdownHref: the files' addresses; robots: null for an indexable page.
-export function dictionaryPage({ text, edition, csvHref, markdownHref, robots, assets }) {
+export function dictionaryPage({ text, edition, csvHref, markdownHref, robots, assets, hospitalsUrl = null }) {
   const { title, intro, sections } = markdownSections(text, { idPrefix: 'dict', tableClass: 'gb gb--dict' });
   if (!title || !intro) throw new RangeError('dictionaryPage: the dictionary needs a "# " title and an opening paragraph');
   const body = html`<article class="wrap page page--article dict">
@@ -34,5 +34,5 @@ ${s.body}
 </section>
 </article>`;
   // The figure script makes the wide table's scroll box keyboard-reachable, as on HACRP's dictionary page.
-  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, scripts: [assets.js.figure], assets, ...shellOf({ edition }) });
+  return page({ title: `${title} · ${SITE.name}`, description: intro, path: DICTIONARY_PAGE, robots, body, scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : [])], assets, ...shellOf({ edition, searchUrl: hospitalsUrl }) });
 }

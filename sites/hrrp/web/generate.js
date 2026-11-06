@@ -60,31 +60,31 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const dictionaryFilled = dictionaryText(data.dictionary, { edition: program.edition, fy, minCases: MIN_DISCHARGES });
   ctx.emit({ path: csvHref, noindex: robots !== null, text: hospitalCsv(hospitals) });
   ctx.emit({ path: dictionaryPath(fy), noindex: robots !== null, text: dictionaryFilled });
-  ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets }) });
+  ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets, hospitalsUrl }) });
   // One file for each area a hospital page tables (a metro, or a state outside its metros), shared by every hospital in it.
   for (const group of shared.areas.values()) {
     ctx.emit({ path: csvPath(fy, group.csvName), noindex: robots !== null, text: hospitalCsv(group.rows.map((r) => r.h)) });
   }
   for (const hospital of hospitals) {
-    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
+    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, hospitalsUrl }) });
   }
   for (const place of places.list) {
     const view = placeView(place, area);
-    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl }) });
+    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl, hospitalsUrl }) });
     // The files its two tables link: the places inside it, and its hospitals (a metro area's are the area file written above).
     if (view.children) ctx.emit({ path: csvPath(fy, view.children.csvName), noindex: robots !== null, text: placeCsv(view.children.csvRows, view.children.column) });
     if (view.hospitals.csvOwn) ctx.emit({ path: csvPath(fy, view.hospitals.csvName), noindex: robots !== null, text: hospitalCsv(view.hospitals.rows.map((r) => r.h)) });
   }
   // Methods last, with the count of the pages under the program.
-  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
+  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets, hospitalsUrl }) });
   log(`HRRP: ${1 + hospitals.length + places.list.length + 2} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 
-// The Readmissions site's build manifest. Three browser scripts: the program page's (search, Worksheet R's box, the map, the swarms), the hospital page's (the what-if and the area table's pager) and the place page's (its map's dots open their hospitals).
+// The Readmissions site's build manifest. Four browser scripts (the last, the top bar's search, rides on the pages that have none of its own): the program page's (search, Worksheet R's box, the map, the swarms), the hospital page's (the what-if and the area table's pager) and the place page's (its map's dots open their hospitals).
 export const HRRP = {
   id: 'hrrp',
-  entries: { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js', 'hrrp-place': 'sites/hrrp/client/place.js' },
+  entries: { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js', 'hrrp-place': 'sites/hrrp/client/place.js', 'hrrp-search': 'sites/hrrp/client/bar.js' },
   styles: [...KIT_STYLES, 'sites/hrrp/web/styles.css'],
   generate: (ctx) => generateHrrp(ctx),
 };

@@ -32,6 +32,8 @@ export const COPY = {
   // The search box (render/shell.js searchForm) and the words its script (client/search.js) shows.
   searchHeading: { text: 'Find a hospital', claim: null },
   searchFind: { text: 'Find', claim: null },
+  searchFindRest: { text: 'a hospital or place by name, city, state, ZIP code or CCN', claim: null },
+  searchPlaceholder: { text: 'Hospital, city or state', claim: null },
   searchKindHospital: { text: 'Hospital', claim: null },
   searchKindState: { text: 'State', claim: null },
   searchKindMetro: { text: 'Metro area', claim: null },

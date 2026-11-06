@@ -1,9 +1,11 @@
 // The Readmissions pages' shared parts: the family shell's fields (the section menu to the program page's Parts and
 // Methods), and the hospital the header follows.
 import { html } from '../../../../web/render/html.js';
+import { searchForm } from '../../../../web/render/shell.js';
 import { estTag, formField, formTitle, lastCall } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fill, t } from '../copy.js';
+import { t as searchWord } from '../program/copy.js';
 import { DOLLARS_HREF, METHODS_PATH, PROGRAM_PATH } from '../links.js';
 
 // The program page's Parts the section menu links to, by id (the program page gives each Part its id), then Methods.
@@ -15,7 +17,12 @@ export const labelOf = (id, edition) => (id === 'picture' ? fill('navPicture', {
 // the site's stylesheet, the Readmissions tab and the numbered section menu, the "picture" Part labeled with the
 // edition ("The FY2027 picture"). current: the id to mark, or null. The parts every page of a build shares are built
 // once for each current item. edition: the edition's label.
-const shellParts = lastCall(({ edition, current }) => [edition, current], ({ edition, current }) => ({
+// The bar's search box (render/shell.js searchForm) in Readmissions' words: the hospitals asset (searchUrl) that client/search.js mounts.
+const searchBox = (searchUrl) => searchForm({
+  id: 'omni', src: searchUrl, label: searchWord('searchHeading'), find: searchWord('searchFind'), findRest: searchWord('searchFindRest'), placeholder: searchWord('searchPlaceholder'),
+});
+
+const shellParts = lastCall(({ edition, current, searchUrl }) => [edition, current, searchUrl], ({ edition, current, searchUrl }) => ({
   sheets: ['hrrp'],
   program: 'hrrp',
   sections: [
@@ -23,8 +30,9 @@ const shellParts = lastCall(({ edition, current }) => [edition, current], ({ edi
     { id: 'methods', label: SHARED.methods, href: METHODS_PATH },
   ],
   current,
+  search: searchUrl ? searchBox(searchUrl) : '',
 }));
-export const shellOf = ({ edition, current = null, hospital = null }) => ({ ...shellParts({ edition, current }), hospital });
+export const shellOf = ({ edition, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ edition, current, searchUrl }), hospital });
 
 // The hospital a Readmissions hospital page's header follows (render/shell.js familyHeader): its CCN, name and
 // estimated net across the programs (the hospital view's net, as HACRP's pages show it; null without an estimate). Every hospital with a page here is in

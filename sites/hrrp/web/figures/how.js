@@ -124,6 +124,7 @@ function dualFigure({ dual, edition, n }) {
 // and the note; with collapsed (Methods) it sits in a disclosure. rows: how-data.js mediansRows().
 export function mediansTable({ rows, conditions, edition, collapsed = false }) {
   const table = printout(html`<table class="gb meds__table">
+<caption class="vh" id="meds-cap">${fill('medsSummary', { edition })}</caption>
 <thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
 <tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: pct(r.lo, 0), to: pct(r.hi, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
 </table>`);

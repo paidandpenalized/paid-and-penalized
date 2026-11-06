@@ -38,7 +38,7 @@ ${conditions}
 // view: placeView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
 // shared: areaContext()'s result (the outlines the map draws), or null for a page without a map; rowsUrl: the hospitals tables' rows
 // asset (generate.js), or null for none.
-export function placePage({ view, robots, assets, shared = null, rowsUrl = null }) {
+export function placePage({ view, robots, assets, shared = null, rowsUrl = null, hospitalsUrl = null }) {
   const { deck } = view;
   const body = html`<article class="wrap page page--place">
 ${breadcrumb(view.crumbs, view.name)}
@@ -64,8 +64,8 @@ ${hospitalsSection(view.hospitals, { name: view.name, conditions: view.figures.c
     path: view.path,
     robots,
     body,
-    scripts: [assets.js.figure, assets.js['hrrp-place']],
+    scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : []), assets.js['hrrp-place']],
     assets,
-    ...shellOf({ edition: view.edition, current: 'explore' }),
+    ...shellOf({ edition: view.edition, current: 'explore', searchUrl: hospitalsUrl }),
   });
 }

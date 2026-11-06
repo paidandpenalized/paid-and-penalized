@@ -18,7 +18,7 @@ const quiet = { log: () => {} };
 
 test('the manifest: id hrrp, the program page\'s one script, the kit and the site\'s own sheet', () => {
   assert.equal(HRRP.id, 'hrrp');
-  assert.deepEqual(HRRP.entries, { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js', 'hrrp-place': 'sites/hrrp/client/place.js' });
+  assert.deepEqual(HRRP.entries, { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js', 'hrrp-place': 'sites/hrrp/client/place.js', 'hrrp-search': 'sites/hrrp/client/bar.js' });
   assert.equal(HRRP.styles.at(-1), 'sites/hrrp/web/styles.css');
 });
 

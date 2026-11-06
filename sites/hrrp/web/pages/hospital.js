@@ -59,7 +59,7 @@ ${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html
 }
 
 // view: hospitalView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
-export function hospitalPage({ view, robots, assets }) {
+export function hospitalPage({ view, robots, assets, hospitalsUrl = null }) {
   const path = hospitalPath(view.ccn);
   const title = `${view.heading} · ${SITE.name}`;
   const n = counter();
@@ -88,9 +88,9 @@ ${area && neighborsFigure(area, { view, n: n() })}
     path,
     robots,
     body,
-    scripts: interactive || area ? [assets.js.figure, assets.js['hrrp-hospital']] : [assets.js.figure],
+    scripts: [assets.js.figure, ...(hospitalsUrl ? [assets.js['hrrp-search']] : []), ...(interactive || area ? [assets.js['hrrp-hospital']] : [])],
     assets,
-    ...shellOf({ edition: view.edition, current: 'explore', hospital: followed(view) }),
+    ...shellOf({ edition: view.edition, current: 'explore', searchUrl: hospitalsUrl, hospital: followed(view) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + path },
   });
 }

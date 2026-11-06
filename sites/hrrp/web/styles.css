@@ -428,3 +428,6 @@
 .chart-pin--sm { r: 5px; }
 @media (forced-colors: active) { .nb__bar { background: Highlight; } .nb__table tr.is-current > * { background: transparent; } .nb__table tr.is-current { box-shadow: inset 4px 0 0 CanvasText; } }
 .ph .ht__check label { display: flex; align-items: center; gap: 8px; }
+
+/* A download link on a line of its own meets the 24 px touch target (WCAG 2.5.8). */
+.pen__csv a, .states__csv a { display: inline-block; min-height: 24px; line-height: 24px; }

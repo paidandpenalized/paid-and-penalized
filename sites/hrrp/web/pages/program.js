@@ -79,6 +79,6 @@ ${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition), bodies[id])
     body,
     scripts: hospitalsUrl ? [assets.js['hrrp-program']] : [],
     assets,
-    ...shellOf({ edition: view.edition }),
+    ...shellOf({ edition: view.edition, searchUrl: hospitalsUrl }),
   });
 }
