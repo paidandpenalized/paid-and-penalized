@@ -369,6 +369,42 @@ side at 1280 and 360, light and dark (`.superpowers/run3/vshot.mjs <url> <width>
 
 ---
 
+## Milestone 2c: the explorer, browser checks, deferred minors (added 2026-11-05, overnight)
+
+### Task 35: History totals from the rule PDFs (main thread research; Sonnet for the pin change)
+
+- [ ] Read the FY2024 and FY2026 IPPS final rules' HRRP effect tables from the govinfo PDFs. If a total for that year is
+      printed, add it to the curated totals pin with its source (table, FR page, URL), re-pin and re-emit with a reason on
+      record; the history figure draws it. Else the figure keeps "No total for …".
+
+### Task 36: The program explorer in the browser (Sonnet)
+
+- [ ] "Every hospital" (Part `explore`): the filters (text including aliases, state, peer group, penalized on, teaching,
+      beds, location, penalized only = factor below 1), the table (hospital with inactive tag and place · CCN, cut with bar,
+      estimated dollars, peer group, the six-condition strip with a text alternative, beds with "cost rpt"), 25 per page,
+      sort (name A→Z first, others high to low, blanks last), status "1–25 of N", the empty state, copy and download CSV of
+      the filtered rows in the current sort. Rows load near scroll from the hospitals asset; one filter rule set with the
+      place tables (engine `applyFilters`; the condition filter follows the counted conditions). Without the script the
+      Part says where the full list is (the hospitals CSV). Tests; a browser check; commit.
+
+### Task 37: Browser checks for the run-3 controls (Sonnet)
+
+- [ ] Add `tools/e2e` checks (the existing harness, Chromium) for: the hero search, Worksheet R's hospital swap and its
+      waterfall, Step 2's condition switch and lazy swarms, the map's measure switch and dots toggle and the "Every state"
+      pager, the hospital what-if (drag, Reset, Bring all to median), the neighbors pager, the place hospitals table
+      (filters, sort, pager, copy, lazy rows), and the explorer. Each check asserts behavior and values, not pixels.
+      `npm run e2e` green.
+
+### Task 38: Deferred minors (Sonnet)
+
+- [ ] The ledger's deferred minor findings for this plan that are still open and cheap: fix, or record why not.
+
+### Checkpoint M2c (main thread)
+
+- [ ] `/simplify`, `make test`, `npm run e2e`, `/code-review`, `/security-review`; fix and repeat until clean.
+
+---
+
 ## Milestone 3: hospital and place figures
 
 ### Task 13: Hospital figures (Sonnet; Opus reviewer for the what-if numbers)
