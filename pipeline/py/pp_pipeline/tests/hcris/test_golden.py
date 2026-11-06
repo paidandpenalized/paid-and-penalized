@@ -31,7 +31,7 @@ class Golden(unittest.TestCase):
         for year, path in sorted(self.emitted.items()):
             with self.subTest(year=year):
                 text = path.read_text(encoding="utf-8")
-                fresh = emit.build(year, self.manifest, json.loads(text)["built_at"])
+                fresh = emit.build(year, self.manifest, json.loads(text)["built_at"], entry=self.pinned[year])
                 self.assertEqual(format_emitted(fresh), text)
 
     def test_sizes(self):
@@ -46,7 +46,7 @@ class Golden(unittest.TestCase):
         self.assertTrue(sample)
         for year, records in sorted(sample.items()):
             with self.subTest(year=year):
-                reports, values = puf.pinned_reports(year)
+                reports, values = puf.pinned_reports(self.pinned[year], year)
                 out = puf.compare(reports, values, records)
                 self.assertEqual(out["differences"], [])
                 self.assertGreaterEqual(out["same_report"], MIN_SAME_REPORT)

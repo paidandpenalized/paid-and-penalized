@@ -42,7 +42,8 @@ def plan(zips, manifest, archived=frozenset(), derive_fn=derive):
             action, why = "upload", f"FY{year} has no pin yet"
         elif entry["derivedFrom"]["sha256"] == digest:
             action, why = "upload", f"backs the FY{year} pin"
-        elif not all(pid in by_id and pin_matches(by_id[pid], data) for pid, data in derive_fn(z)[1].items()):
+        elif not all(pid in by_id and pin_matches(by_id[pid], data)
+                     for pid, data in derive_fn(z, (digest, size))[1].items()):
             action, why = "upload", f"FY{year}'s tables changed: a new pin"
         elif all(archive_key(e["derivedFrom"]["sha256"]) in archived
                  for e in (entry, by_id.get(line24_pin_id(year))) if e is not None):

@@ -27,11 +27,13 @@ from pp_engine.hcris.cells import SHEET_OF, sheets_expected
 from pp_pipeline.hcris_extract import _member_rows as member_rows
 
 MEMBER = re.compile(r"HOSP10_(\d{4})_(rpt|nmrc|alpha)\.csv", re.IGNORECASE)
-REPORT_COLUMNS = ("rpt_rec_num", "ccn", "year", "status", "period_begin", "period_end", "control", "util", "npr_date")
+REPORT_COLUMNS = (*tidy.PIN_REPORT_COLUMNS[:2], "year", *tidy.PIN_REPORT_COLUMNS[2:])  # report_rows' order
 # A file with fewer reports is the newest year's, a handful of short periods; it may lack a worksheet.
 MIN_REPORTS_FOR_SHEET_CHECK = 100
-OUTPUTS = {"hcris_wide.csv": tidy.WIDE_COLUMNS, "hcris_long.csv": tidy.LONG_COLUMNS,
-           "hcris_reports.csv": REPORT_COLUMNS}
+# The hospital-year tables (write_tables): each file's header and its rows from a year's hospital-year rows.
+TABLES = {"hcris_wide.csv": (tidy.WIDE_COLUMNS, tidy.wide_rows), "hcris_long.csv": (tidy.LONG_COLUMNS, tidy.long_rows)}
+REPORTS = "hcris_reports.csv"
+OUTPUTS = (*TABLES, REPORTS)
 
 
 def members(zf):
@@ -77,33 +79,55 @@ def report_rows(year, reports):
     return [[*r[:2], str(year), *r[2:]] for r in rows]
 
 
+def _csv_writer(stack, path, header):
+    w = csv.writer(stack.enter_context(open(path, "w", newline="", encoding="ascii")), lineterminator="\n")
+    w.writerow(header)
+    return w
+
+
+def write_tables(out_dir, years):
+    """Writes `TABLES` to `out_dir` from `years`, an iterable of (year, hospital-year rows), each year's rows as soon
+    as they come, so a caller that builds them lazily holds one year at a time. ({year: hospital-years},
+    {file name: rows written})."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    by_year, by_file = {}, dict.fromkeys(TABLES, 0)
+    with contextlib.ExitStack() as stack:
+        writers = {name: (_csv_writer(stack, out_dir / name, header), to_rows)
+                   for name, (header, to_rows) in TABLES.items()}
+        for year, rows in years:
+            for name, (w, to_rows) in writers.items():
+                out = to_rows(rows)
+                w.writerows(out)
+                by_file[name] += len(out)
+            by_year[year] = len(rows)
+    return by_year, by_file
+
+
 def run(zip_paths, out_dir):
     """Writes each year's rows as soon as they are built, so a run holds one year at a time. `sources.json` is written
     last, and removed first: a run that stops partway leaves tables with no `sources.json` claiming them."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "sources.json").unlink(missing_ok=True)
-    sources, counts, years = [], dict.fromkeys(OUTPUTS, 0), set()
+    sources = []
     with contextlib.ExitStack() as stack:
-        writers = {}
-        for name, header in OUTPUTS.items():
-            w = csv.writer(stack.enter_context(open(out_dir / name, "w", newline="", encoding="ascii")),
-                           lineterminator="\n")
-            w.writerow(header)
-            writers[name] = w
-        for path in sorted(zip_paths):
-            digest, size = sha256(path)  # before parsing, so the pin is of the bytes read (and they are cached)
-            year, reports, values = read_year(path)
-            if year in years:
-                raise tidy.HcrisError(f"two zips for FY{year}")
-            years.add(year)
-            rows = tidy.hospital_years(reports, values, year)
-            for name, out in (("hcris_wide.csv", tidy.wide_rows(rows)), ("hcris_long.csv", tidy.long_rows(rows)),
-                              ("hcris_reports.csv", report_rows(year, reports))):
-                writers[name].writerows(out)
-                counts[name] += len(out)
-            sources.append({"file": Path(path).name, "year": year, "bytes": size, "sha256": digest,
-                            "reports": len(reports), "hospital_years": len(rows)})
+        reports_out = _csv_writer(stack, out_dir / REPORTS, REPORT_COLUMNS)
+
+        def years():
+            for path in sorted(zip_paths):
+                digest, size = sha256(path)  # before parsing, so the pin is of the bytes read (and they are cached)
+                year, reports, values = read_year(path)
+                if any(s["year"] == year for s in sources):
+                    raise tidy.HcrisError(f"two zips for FY{year}")
+                rows = tidy.hospital_years(reports, values, year)
+                reports_out.writerows(report_rows(year, reports))
+                sources.append({"file": Path(path).name, "year": year, "bytes": size, "sha256": digest,
+                                "reports": len(reports), "hospital_years": len(rows)})
+                yield year, rows
+
+        _, counts = write_tables(out_dir, years())
+    counts[REPORTS] = sum(s["reports"] for s in sources)  # one row per report
     outputs = {name: {"bytes": (out_dir / name).stat().st_size, "rows": counts[name]} for name in OUTPUTS}
     (out_dir / "sources.json").write_text(json.dumps({"sources": sources, "outputs": outputs}, indent=2) + "\n")
     return sources, outputs

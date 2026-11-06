@@ -9,9 +9,9 @@ from pp_engine.hcris.tidy import HcrisError, collect, hospital_years, parse_repo
 from pp_engine.tests.hcris.test_tidy import cell, report
 
 
-def build(report_rows, number_rows, year=2024, **kw):
+def build(report_rows, number_rows, year=2024):
     reports = parse_reports(report_rows, year)
-    return {r["ccn"]: r for r in hospital_years(reports, collect(number_rows, reports), year, **kw)}
+    return {r["ccn"]: r for r in hospital_years(reports, collect(number_rows, reports), year)}
 
 
 # A change of fiscal year: a 9-month period, then a 12-month one, both beginning in FY2024 (639 days in all).
@@ -29,14 +29,6 @@ class LongYears(unittest.TestCase):
         self.assertEqual((r["period_begin"], r["period_end"], r["period_days"]), ("2024-07-01", "2025-06-30", 365))
         self.assertEqual((r["net_income"], r["beds"], r["days_total"]), (Decimal("100"), Decimal("32"), None))
         self.assertEqual(r["status_label"], "as filed")
-
-    def test_the_raw_sum_is_still_available(self):
-        r = build(LONG, LONG_CELLS, long_rule="sum")["990003"]
-        self.assertEqual((r["basis"], r["reports"], r["period_days"], r["period_begin"]), ("sum", "1 2", 639,
-                                                                                          "2023-10-01"))
-        self.assertEqual((r["net_income"], r["days_total"]), (Decimal("190"), Decimal("900")))
-        with self.assertRaises(ValueError):
-            build(LONG, LONG_CELLS, long_rule="annualize")
 
     def test_overlaps_and_long_gaps_keep_the_fullest_short_gaps_and_splits_add_up(self):
         cases = {

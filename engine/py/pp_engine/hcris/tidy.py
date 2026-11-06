@@ -43,7 +43,9 @@ RATIO_PLACES = Decimal("0.0001")
 # the HCRIS table still calls rural primary care hospitals, the program critical access hospitals replaced.
 KINDS = (("acute", 1, 899), ("critical_access", 1300, 1399))
 CCN = re.compile(r"[0-9A-Z]{6}")
-DATE = re.compile(r"(\d{2})/(\d{2})/(\d{4})")
+# The two date layouts the layer reads: HCRIS's report file writes MM/DD/YYYY, the pinned cells table YYYY-MM-DD.
+DATE_FORMATS = {"MM/DD/YYYY": re.compile(r"(?P<m>\d{2})/(?P<d>\d{2})/(?P<y>\d{4})"),
+                "YYYY-MM-DD": re.compile(r"(?P<y>\d{4})-(?P<m>\d{2})-(?P<d>\d{2})")}
 NUMBER = other_income.NUMBER
 
 Report = namedtuple("Report", "rpt ccn status begin end control util npr")
@@ -53,15 +55,18 @@ class HcrisError(ValueError):
     pass
 
 
-def _date(text, what, rpt, required=True):
-    text = text.strip()
+def _date(text, fmt, where, required=True):
+    """The date `text` holds in `fmt` (a DATE_FORMATS key), or None for a blank one that isn't `required`. `where`
+    begins the error."""
     if not text and not required:
         return None
-    m = DATE.fullmatch(text)
-    if not m:
-        raise HcrisError(f"report {rpt}: {what} {text!r} is not MM/DD/YYYY")
-    month, day, year = (int(g) for g in m.groups())
-    return datetime.date(year, month, day)
+    m = DATE_FORMATS[fmt].fullmatch(text)
+    try:
+        if m:
+            return datetime.date(int(m["y"]), int(m["m"]), int(m["d"]))
+    except ValueError:  # a day or month out of range
+        pass
+    raise HcrisError(f"{where} {text!r} is not a date in {fmt}")
 
 
 def kind_of(ccn):
@@ -114,10 +119,11 @@ def parse_reports(rows, year):
         rpt, ccn, status = r[0].strip(), r[2].strip(), r[4].strip()
         if not rpt.isdigit() or rpt in reports:
             raise HcrisError(f"report file: report number {rpt!r} is not a number or appears twice")
-        begin, end = _date(r[5], "FY_BGN_DT", rpt), _date(r[6], "FY_END_DT", rpt)
+        begin = _date(r[5].strip(), "MM/DD/YYYY", f"report {rpt}: FY_BGN_DT")
+        end = _date(r[6].strip(), "MM/DD/YYYY", f"report {rpt}: FY_END_DT")
         _check_report("report file", rpt, ccn, status, begin, end, year)
         reports[rpt] = Report(rpt, ccn, status, begin, end, r[1].strip(), r[14].strip(),
-                              _date(r[15], "NPR_DT", rpt, required=False))
+                              _date(r[15].strip(), "MM/DD/YYYY", f"report {rpt}: NPR_DT", required=False))
     return reports
 
 
@@ -133,9 +139,8 @@ def collect(number_rows, reports, line24=None):
             raise HcrisError(f"numeric file: a row of {len(r)} fields, not {NMRC_FIELDS}")
         if r[1] not in SHEETS_READ:
             continue
-        line, column = r[2].strip(), r[3].strip()
+        rpt, line, column, text = r[0].strip(), r[2].strip(), r[3].strip(), r[4].strip()
         if line24 is not None and r[1] == G3 and column == "00100" and other_income.is_line24(line):
-            rpt, text = r[0].strip(), r[4].strip()
             if rpt not in reports or not NUMBER.fullmatch(text) or (rpt, line) in line24:
                 raise HcrisError(f"numeric file: report {rpt!r}, G-3 line {line}: unknown report, not a number, "
                                  "or twice")
@@ -143,7 +148,6 @@ def collect(number_rows, reports, line24=None):
         cell = BY_KEY.get((r[1], line, column))
         if cell is None:
             continue
-        rpt, text = r[0].strip(), r[4].strip()
         if rpt not in reports:
             raise HcrisError(f"numeric file: report {rpt!r} is not in the report file")
         if not NUMBER.fullmatch(text):
@@ -156,7 +160,6 @@ def collect(number_rows, reports, line24=None):
 
 
 MAX_YEAR_DAYS = 366  # periods adding up to more than this are a `long` year (two periods' starts in one year)
-LONG_RULES = ("fullest", "sum")
 
 
 def _days(report):
@@ -180,7 +183,7 @@ def _fullest(reps):
     return max(reps, key=lambda r: (_days(r), r.end, int(r.rpt)))
 
 
-def hospital_years(reports, values, year, long_rule="fullest", line24=None):
+def hospital_years(reports, values, year, line24=None):
     """One row per CCN for the year, from its reports, with what was combined. `shape` names the case: `one` (a single
     report), `split` (periods that meet end to start and cover at most 366 days: a change of ownership, say), `long`
     (more than 366 days in all: a change of fiscal year puts two periods' starts in one year), `gap` or `overlap`
@@ -189,13 +192,11 @@ def hospital_years(reports, values, year, long_rule="fullest", line24=None):
     `basis` says how the values were made. Periods that don't overlap and cover at most 366 days in all are added up
     (`sum`: flows added, stocks from the last period that has them); a single report is `report`. Otherwise (`long`,
     `overlap`, a `gap` over 366 days) adding would count more than a year, up to ~90% more, so the row keeps the
-    fullest report alone (`fullest`): real filed numbers for one period, one status. `long_rule="sum"` adds them up
-    anyway (the spike's table; the raw sum). `reports`, `status` and the period describe the reports used;
-    `n_reports` counts every report the CCN filed in the year. `line24`: {report number: {LINE24_METRICS column:
-    Decimal}} (other_income.report_sums), added up like flows; without it those columns are blank."""
+    fullest report alone (`fullest`): real filed numbers for one period, one status. `reports`, `status` and the
+    period describe the reports used; `n_reports` counts every report the CCN filed in the year. `line24`: {report
+    number: {LINE24_METRICS column: Decimal}} (other_income.report_sums), added up like flows; without it those
+    columns are blank."""
     line24 = line24 or {}
-    if long_rule not in LONG_RULES:
-        raise ValueError(f"long_rule {long_rule!r} is not one of {LONG_RULES}")
     by_ccn = {}
     for rep in reports.values():
         by_ccn.setdefault(rep.ccn, []).append(rep)
@@ -206,7 +207,7 @@ def hospital_years(reports, values, year, long_rule="fullest", line24=None):
         shape = _shape(reps, days)
         if len(reps) == 1:
             basis, used = "report", reps
-        elif long_rule == "sum" or (shape in ("split", "gap") and days <= MAX_YEAR_DAYS):
+        elif shape in ("split", "gap") and days <= MAX_YEAR_DAYS:
             basis, used = "sum", reps
         else:
             basis, used = "fullest", [_fullest(reps)]
@@ -272,6 +273,8 @@ FORMULAS = {
     "medicaid_revenue_share": lambda g: _ratio(g("medicaid_net_revenue"), g("net_patient_revenue")),
     "uncompensated_share_of_expenses": lambda g: _ratio(g("uncompensated_cost"), g("operating_expenses")),
 }
+if list(FORMULAS) != [name for name, _ in DERIVED]:  # derive runs them in DERIVED's order; later ones read earlier
+    raise ValueError("tidy.FORMULAS and cells.DERIVED must name the same metrics in the same order")
 
 
 def derive(row):
@@ -316,7 +319,6 @@ def long_rows(rows):
 # the layer's scope, sorted by report number, each cell as `text` writes it. The hospital-year table is rebuilt from it.
 PIN_REPORT_COLUMNS = ("rpt_rec_num", "ccn", "status", "period_begin", "period_end", "control", "util", "npr_date")
 PIN_COLUMNS = PIN_REPORT_COLUMNS + tuple(c.metric for c in CELLS)
-ISO = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 
 def report_cells(r):
@@ -332,17 +334,6 @@ def pin_rows(reports, values):
         r, v = reports[rpt], values.get(rpt, {})
         out.append([*report_cells(r), *(text(v.get(c.metric)) for c in CELLS)])
     return out
-
-
-def _iso_date(text, what, rpt, required=True):
-    if not text and not required:
-        return None
-    try:
-        if ISO.fullmatch(text):
-            return datetime.date.fromisoformat(text)
-    except ValueError:
-        pass
-    raise HcrisError(f"cells table: report {rpt}: {what} {text!r} is not a YYYY-MM-DD date")
 
 
 def from_pin_rows(rows, year):
@@ -361,8 +352,10 @@ def from_pin_rows(rows, year):
         rpt, ccn, status, begin, end, control, util, npr = r[:n]
         if not rpt.isdigit() or rpt in reports:
             raise HcrisError(f"cells table: report number {rpt!r} is not a number or appears twice")
-        rep = Report(rpt, ccn, status, _iso_date(begin, "period_begin", rpt), _iso_date(end, "period_end", rpt),
-                     control, util, _iso_date(npr, "npr_date", rpt, required=False))
+        where = f"cells table: report {rpt}:"
+        rep = Report(rpt, ccn, status, _date(begin, "YYYY-MM-DD", f"{where} period_begin"),
+                     _date(end, "YYYY-MM-DD", f"{where} period_end"), control, util,
+                     _date(npr, "YYYY-MM-DD", f"{where} npr_date", required=False))
         _check_report("cells table", rpt, ccn, status, rep.begin, rep.end, year)
         reports[rpt] = rep
         got = {}
