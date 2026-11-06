@@ -6,6 +6,7 @@
 // has the first page and the CSV.
 import { copyOrSelect } from '../../../web/client/clipboard.js';
 import { count } from '../../../web/client/format.js';
+import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
 import { mountPager } from './pager.js';
@@ -23,12 +24,16 @@ function mountCopy(box, copyText) {
     try {
       text = await copyText();
     } catch {
+      // Cleared first, so a repeat is announced again.
+      status.textContent = '';
       status.textContent = status.dataset.failed;
       return;
     }
     await copyOrSelect({ text, node: table, status, copied: status.dataset.copied, failed: status.dataset.failed });
   });
 }
+
+const RETRY = ['pointerdown', 'focusin'];
 
 // A same-site data file's text (only /data/hrrp/ and /assets/ paths).
 async function fetchText(href, prefix) {
@@ -38,9 +43,12 @@ async function fetchText(href, prefix) {
   return res.text();
 }
 
+// A box's CSV file: fetched once, and again on the next click after a failure.
+const csvOf = (box) => once(() => fetchText(box.dataset.csv, '/data/hrrp/'));
+
 function mountKids(box) {
   mountPager({ table: box.querySelector('table.kids__table'), pager: box.querySelector('.kids__pager'), status: box.querySelector('.kids__status') });
-  mountCopy(box, () => fetchText(box.dataset.csv, '/data/hrrp/'));
+  mountCopy(box, csvOf(box));
 }
 
 function mountHospitals(box) {
@@ -50,18 +58,19 @@ function mountHospitals(box) {
   const [prev, next] = [box.querySelector('[data-prev]'), box.querySelector('[data-next]')];
   const size = Number(box.dataset.pageSize);
   if (!body || !controls || !status || !size) return;
-  // A table that fits on one page has every row and names no asset: only its copy button.
-  if (!box.dataset.src) {
-    mountCopy(box, () => fetchText(box.dataset.csv, '/data/hrrp/'));
-    return;
-  }
+  // Copy works from the CSV alone, so it is there whether or not the rows load: the whole file until the table's rows are drawn, then
+  // the rows that pass the filters.
+  const csv = csvOf(box);
+  let shown = null;
+  mountCopy(box, async () => (shown ? csvSubset(await csv(), shown.map((r) => r.h.id)) : csv()));
+  // A table that fits on one page has every row and names no asset.
+  if (!box.dataset.src) return;
   if (!box.dataset.src.startsWith('/assets/')) return;
   const el = (id) => box.querySelector(`#${id}`);
   const f = { text: el('ph-text'), st: el('ph-state'), peer: el('ph-peer'), cond: el('ph-cond'), teach: el('ph-teach'), beds: el('ph-beds'), loc: el('ph-loc'), pen: el('ph-pen'), sort: el('ph-sort') };
   const scope = box.dataset.cbsa ? { cbsa: box.dataset.cbsa } : { states: (box.dataset.states ?? '').split(',') };
   let all = [];
   let conditions = [];
-  let shown = [];
   let page = 1;
 
   const want = () => ({ text: f.text.value, st: f.st?.value, peer: f.peer.value, cond: f.cond.value, teach: f.teach.value, beds: f.beds.value, loc: f.loc.value, pen: f.pen.checked });
@@ -78,13 +87,21 @@ function mountHospitals(box) {
     next.disabled = page >= pages;
   }
 
+  // The rows asset, fetched once; a failure is tried again on the reader's next touch of the table.
+  const loadRows = once(async () => {
+    const asset = JSON.parse(await fetchText(box.dataset.src, '/assets/'));
+    all = placeRows(asset, scope);
+    conditions = asset.conditions;
+  });
+
   async function load() {
     try {
-      const asset = JSON.parse(await fetchText(box.dataset.src, '/assets/'));
-      all = placeRows(asset, scope);
-      conditions = asset.conditions;
+      await loadRows();
     } catch {
-      return; // the first page and the CSV stay
+      // The first page and the CSV stay.
+      const retry = () => { for (const type of RETRY) box.removeEventListener(type, retry); load(); };
+      for (const type of RETRY) box.addEventListener(type, retry);
+      return;
     }
     box.querySelector('.ph__more')?.setAttribute('hidden', '');
     for (const e of [controls, status, prev, next]) e.hidden = false;
@@ -92,7 +109,6 @@ function mountHospitals(box) {
     prev.addEventListener('click', () => { page -= 1; render(); });
     next.addEventListener('click', () => { page += 1; render(); });
     render();
-    mountCopy(box, async () => csvSubset(await fetchText(box.dataset.csv, '/data/hrrp/'), shown.map((r) => r.h.id)));
   }
 
   if ('IntersectionObserver' in window) {

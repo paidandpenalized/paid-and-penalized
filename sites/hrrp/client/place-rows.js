@@ -2,11 +2,10 @@
 // rows asset (figures/place-table-data.js placeRowsAsset) kept for one place, filtered and sorted, and the CSV file cut down to the
 // rows that pass. No DOM here.
 import { CCN } from '../../../engine/js/ccn.js';
-import { bedBand } from '../../../engine/js/hrrp/filters.js';
+import { CONDS } from '../../../engine/js/hrrp/formula.js';
+import { applyFilters } from '../../../engine/js/hrrp/filters.js';
 import { STATE_OF } from '../web/figures/glyph.js';
 import { PLACE_ROW_FIELDS } from '../web/figures/place-table-data.js';
-
-const norm = (s) => String(s ?? '').toLowerCase();
 
 // asset: the parsed JSON; scope: { cbsa } or { states: [codes] } (the page's data attributes). Returns [{ h, states, rank, text }] in the
 // asset's order (largest cut first), ranked from 1 within the place. A row with a bad CCN or condition string is dropped; an asset
@@ -18,17 +17,21 @@ export function placeRows(asset, scope) {
   const kept = asset.rows.filter((r) => CCN.test(r[at.id]) && /^[cbfn]{6}$/.test(r[at.conds]) && (scope.cbsa ? r[at.cbsa] === scope.cbsa : states.has(r[at.st])));
   return kept.map((r, i) => {
     const h = Object.fromEntries(PLACE_ROW_FIELDS.filter((k) => k !== 'conds').map((k) => [k, r[at[k]]]));
-    return { h, states: [...r[at.conds]].map((c) => STATE_OF[c]), rank: i + 1, text: norm(`${h.name} ${h.alias ?? ''} ${h.city} ${h.st} ${h.id}`) };
+    const states = [...r[at.conds]].map((c) => STATE_OF[c]);
+    // The shape applyFilters reads: a condition "counts" for the filter when the glyph shows it counted (the same word the reader sees).
+    h.c = Object.fromEntries(CONDS.map((k, j) => [k, { flag: states[j] === 'counted' ? 1 : 0 }]));
+    return { h, states, rank: i + 1 };
   });
 }
 
 // want: { text, st, peer, cond (a condition's index in program order), teach, beds (a band), loc ('urban' | 'rural'), pen (penalized only) };
-// an empty value filters nothing. Same rules as the program page's explorer (engine/js/hrrp/filters.js applyFilters).
+// an empty value filters nothing. The program page's rules, not a copy of them: engine/js/hrrp/filters.js applyFilters.
 export function filterRows(rows, want) {
-  const text = norm(want.text).trim();
-  return rows.filter(({ h, states, text: hay }) => (!want.pen || h.paf < 1) && (!want.st || h.st === want.st) && (!want.peer || String(h.peer) === want.peer)
-    && (!want.teach || h.teach === want.teach) && (!want.beds || bedBand(h.beds) === want.beds) && (!want.loc || h.urban === (want.loc === 'urban'))
-    && (!want.cond || states[Number(want.cond)] === 'counted') && (!text || hay.includes(text)));
+  const kept = new Set(applyFilters(rows.map((r) => r.h), {
+    text: want.text, penalized: Boolean(want.pen), st: want.st || null, peer: want.peer ? Number(want.peer) : null, teach: want.teach || null,
+    beds: want.beds || null, urban: want.loc ? want.loc === 'urban' : null, cond: want.cond ? CONDS[Number(want.cond)] : null,
+  }));
+  return rows.filter((r) => kept.has(r.h));
 }
 
 // Highest first, a blank last, ties in the table's own order (rank: cut, then dollars, then CCN).

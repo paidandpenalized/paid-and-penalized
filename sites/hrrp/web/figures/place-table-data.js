@@ -5,7 +5,7 @@
 import { PAGE_SIZE } from '../constants.js';
 import { pagesOf } from '../numbers.js';
 import { STATE_LETTER } from './glyph.js';
-import { areaCsvName, sizedRows } from './neighbors-data.js';
+import { areaCsvName, inMetro, sizedRows } from './neighbors-data.js';
 
 // The hospitals table's first page is in the place page; the rest come from one asset the page's script fetches near the table.
 export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds']);
@@ -51,7 +51,7 @@ export function placeRowsAsset(hospitals, meta, conditions) {
     fields: PLACE_ROW_FIELDS,
     conditions: conditions.map(({ key, short }) => ({ key, short })),
     rows: sizedRows(hospitals, meta).map(({ h, states }) => [
-      h.id, h.name, h.alias ?? null, h.city, h.st, h.cbsa && h.cbsaName ? h.cbsa : null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
+      h.id, h.name, h.alias ?? null, h.city, h.st, inMetro(h) ? h.cbsa : null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
       states.map((x) => STATE_LETTER[x]).join(''),
     ]),
   };

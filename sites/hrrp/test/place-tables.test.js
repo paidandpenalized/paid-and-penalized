@@ -145,9 +145,9 @@ test('the rows asset holds every hospital once, largest cut first, and the scrip
 
 test('copy after filtering: the file cut to the rows shown, in their order, header and each line as written', async () => {
   const { csvSubset } = await import('../client/place-rows.js');
-  const text = 'CCN,Hospital\r\n010001,"A, B"\r\n010002,"line\nbreak"\r\n010003,C\r\n';
-  assert.equal(csvSubset(text, ['010003', '010001']), 'CCN,Hospital\r\n010003,C\r\n010001,"A, B"\r\n');
-  assert.equal(csvSubset(text, ['010002']), 'CCN,Hospital\r\n010002,"line\nbreak"\r\n');
+  const text = 'CCN,Hospital\r\n990001,"A, B"\r\n990002,"line\nbreak"\r\n990003,C\r\n';
+  assert.equal(csvSubset(text, ['990003', '990001']), 'CCN,Hospital\r\n990003,C\r\n990001,"A, B"\r\n');
+  assert.equal(csvSubset(text, ['990002']), 'CCN,Hospital\r\n990002,"line\nbreak"\r\n');
   assert.equal(csvSubset(text, ['999999']), 'CCN,Hospital\r\n');
   const real = hospitalCsvOf([hospital({ id: '990001' }), hospital({ id: '990002', name: '=SUM(A1)' })]);
   const cut = csvSubset(real, ['990002']);

@@ -149,7 +149,7 @@ test('reuse: the CCN is plain text to open as text, never the spreadsheet formul
   const html = page();
   const t = textOf(html);
   assert.ok(t.includes('the CCN is plain text, so open its column as text in a spreadsheet to keep the leading zero'));
-  assert.ok(!html.includes('="010001"') && !html.includes('=&quot;'));
+  assert.ok(!html.includes('="990001"') && !html.includes('=&quot;'));
   assert.ok(t.includes('fewer than 25 cases'));
   assert.match(html, /<section class="meth__sec" id="methods-dollars"/);
 });
