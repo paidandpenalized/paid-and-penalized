@@ -132,10 +132,10 @@
 @media (min-width: 980px) {
   .pic--side > .fig { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: repeat(4, auto) 1fr; column-gap: 40px; align-items: start; }
   .pic--side > .fig > :is(.fig__cap, .fig__key, .fig__note, .fig__source, .fig__table) { grid-column: 2; }
-  .pic--side > .fig > :is(.chart, .pen) { grid-column: 1; grid-row: 1 / span 5; }
+  .pic--side > .fig > .chart { grid-column: 1; grid-row: 1 / span 5; }
   /* On a place page the figure's title is above it, so its takeaway runs across both columns under the title, then the chart and its notes. */
   .place__fig.pic--side > .fig > .fig__cap { grid-column: 1 / -1; grid-row: 1; }
-  .place__fig.pic--side > .fig > .chart { grid-row: 2 / span 5; }
+  .place__fig.pic--side > .fig > .chart { grid-row: 2 / span 4; }
   .pic--side > .fig > .fig__table[open] { grid-column: 1 / -1; grid-row: 6; }
 }
 /* Two figures side by side from 980px, each at its own drawing's width; one alone takes the row. */
@@ -162,9 +162,9 @@
 /* The interval line through the share-cut dots, the strip plot's shaded dots, row bands and median tick (the old
    site's look: the penalty's screens, darker for a bigger cut), and the trait ranges' rules and large spread numbers. */
 .cond-ci { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.strip-dot { stroke-opacity: 0.8; }
+.strip-dot { stroke-opacity: 0.9; }
 .strip-dot--0 { stroke: var(--ink-3); stroke-opacity: 0.55; }
-.strip-dot--1 { stroke: var(--pen-seq-2); }
+.strip-dot--1 { stroke: var(--pen-seq-1); }
 .strip-dot--2 { stroke: var(--pen-seq-2); }
 .strip-dot--3 { stroke: var(--pen-seq-3); }
 .strip-dot--4 { stroke: var(--pen-seq-4); }
@@ -277,7 +277,6 @@
 /* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
 /* The whole sheet framed in the form's red rule, closed on every side; the title bar's and fields' own right borders sit on the frame's. */
 .wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; border: var(--rule) solid var(--pen); border-top: 0; }
-.wsr__note { max-width: none; padding-inline: 10px; }
 .wsr__id > .form__title { box-shadow: inset 4px 0 0 var(--pen); padding-left: 14px; }
 .wsr-holder { min-width: 0; }
 .omni#ws-pick { max-width: 640px; margin-bottom: 14px; }
@@ -289,7 +288,7 @@
 .wsr__table tr.is-off td { color: var(--ink-3); }
 .wsr__table tr.is-on { background: var(--pen-tint); }
 .wsr__table .strong { font-weight: 700; }
-.wsr__note { margin: 0; padding: 8px 2px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.wsr__note { max-width: none; margin: 0; padding: 8px 10px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
 .wsr__totals { max-width: none; list-style: none; margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); }
 .wsr__totals li { max-width: none; display: flex; justify-content: space-between; gap: 16px; padding: 8px 10px; border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-type); }
 .wsr__totals li:last-child { border-bottom: 0; }
@@ -445,6 +444,10 @@
   .ht select, .ht input[type="search"] { font-size: 1rem; }
 }
 @media (forced-colors: active) {
+  .chart--compare .chart-col:not(.chart-col--pen) { fill: Canvas; stroke: CanvasText; }
+  .chart--compare .chart-col--pen { fill: CanvasText; }
+  .page--hosp .chart-rank__zone { fill: GrayText; }
+  .page--prog .fig__swatch--bar-dark { background: CanvasText; }
   .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
   .chart-periods__perf { fill: CanvasText; }
   .hist-covid { fill: GrayText; fill-opacity: 0.15; }
@@ -482,11 +485,14 @@
 @media (forced-colors: active) { .rul__row:nth-child(even) { background: transparent; } .rul__gap { color: LinkText; } }
 
 /* The penalty history: the bars and the place among the years' cuts, side by side where there is room (a column's width, not the screen's). */
-/* Each panel's title, drawing and note on rows the two panels share, so the drawings and the notes start level. */
-.hosphist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 6px 32px; }
-.hosphist__panel { display: grid; grid-row: span 3; grid-template-rows: subgrid; align-content: start; min-width: 0; }
-.hosphist__panel > p { max-width: none; font-size: var(--fs-note); line-height: 1.45; }
-@media (max-width: 760px) { .hosphist__panel + .hosphist__panel > .hosphist__title { margin-top: 22px; } }
+.hosphist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 20px 32px; }
+.hosphist__panel { min-width: 0; }
+/* The hospital's history: each panel's title, drawing and note on rows the two panels share, so the drawings and the notes start
+   level; a panel stacked under the other (the figure narrower than two panels) sits apart from it. */
+.page--hosp .hosphist { row-gap: 6px; container-type: inline-size; }
+.page--hosp .hosphist__panel { display: grid; grid-row: span 3; grid-template-rows: subgrid; align-content: start; }
+@container (max-width: 704px) { .page--hosp .hosphist__panel + .hosphist__panel > .hosphist__title { margin-top: 22px; } }
+.page--hosp .hosphist__panel > p { max-width: none; font-size: var(--fs-note); line-height: 1.45; }
 /* The place panel's "cut" years shaded in a neutral, so red stays this hospital's line and dots. */
 .page--hosp .chart-rank__zone { fill: var(--paper-2); }
 .hosphist__title { margin: 0 0 6px; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
@@ -551,7 +557,6 @@
 .nb > * { min-width: 0; }
 .nb__table { min-width: 38rem; }
 @media (min-width: 1100px) { .nb__table tbody th { min-width: 15rem; } }
-/* The number columns' headings wrap, so the hospital's name keeps the room. */
 /* These tables' headings wrap, so the hospital's name keeps the room (.gb sets headings, numbers' included, on one line). */
 .gb:is(.meds__table, .pen__table, .nb__table) thead th { white-space: normal; }
 .nb__rank { color: var(--ink-2); }

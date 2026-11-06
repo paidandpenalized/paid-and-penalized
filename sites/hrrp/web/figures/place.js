@@ -114,7 +114,8 @@ ${keyOf({ dense: md.dense, around })}`, note, table,
 
 // The figures below take n, the page's counter, and call it only when they draw (as mapFigure does).
 // sd: place-data sizeData(); edition: the edition's label; name: the place's.
-export function sizeFigure(sd, { name, id, edition, n }) {
+// wide: the wide drawing's width (layout.js: RAIL beside the map, HALF in a pair).
+export function sizeFigure(sd, { name, id, edition, n, wide = RAIL }) {
   const tip = (i) => {
     const r = sd.rows[i];
     const words = { n: fmtInt(r.n), share: pct0(r.share), nation: pct0(r.nationShare) };
@@ -132,7 +133,7 @@ export function sizeFigure(sd, { name, id, edition, n }) {
         : ['sizeTakeaway', { hospitals: hospitalsText(sd.n), zero: fmtInt(sd.nNone), average: fmtPct(sd.avg) }];
   return figure({
     n: n(), takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition }), csvName: `hrrp-${id}-cuts`,
-    ...drawn(draw, RAIL), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
+    ...drawn(draw, wide), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
     table: {
       columns: [{ name: placeT('sizeColFrom'), numeric: true }, { name: placeT('sizeColTo'), numeric: true }, { name: placeT('sizeColN'), numeric: true }, { name: placeT('sizeColShare'), numeric: true }, { name: placeT('sizeColNation'), numeric: true }],
       rows: sd.rows.map((r) => [
@@ -198,7 +199,7 @@ ${hasDollars ? panel(placeT('condTitleRight'), right, placeT('condAltRight')) : 
 
 // ---------- peer groups ----------
 
-export function peersFigure(pd, { id, edition, total, n }) {
+export function peersFigure(pd, { id, edition, total, n, wide = RAIL }) {
   const draw = (width) => {
     const labels = pd.rows.map((r) => placeFill('peerGroup', { n: String(r.peer) }));
     const wide = labelWidth([...labels, placeFill('peerSub', { pct: '0.00%' })]);
@@ -217,7 +218,7 @@ export function peersFigure(pd, { id, edition, total, n }) {
       : placeFill('peerTakeawayLargest', { group, n: fmtInt(top.n), hospitals: hospitalsText(total) });
   return figure({
     n: n(), takeaway, source: placeFill('peerSource', { edition }), csvName: `hrrp-${id}-peer-groups`,
-    ...drawn(draw, RAIL), alt: placeT('peerAlt'),
+    ...drawn(draw, wide), alt: placeT('peerAlt'),
     note: placeFill('peerNote', { first: String(pd.rows[0].peer), last: String(pd.rows[pd.rows.length - 1].peer) }),
     table: {
       columns: [{ name: placeT('peerColGroup') }, { name: placeT('peerColN'), numeric: true }, { name: placeT('peerColAvg'), numeric: true }],

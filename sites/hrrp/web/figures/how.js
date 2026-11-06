@@ -6,7 +6,7 @@
 // that swaps the hospital in the browser (client/worksheet.js) and redraws the waterfall with the sheet.
 import { CAP_PCT, CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { columns } from '../../../../web/charts/columns.js';
-import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
+import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { punchCard } from '../../../../web/charts/punchCard.js';
 import { searchForm } from '../../../../web/render/shell.js';
 import { printout } from '../../../../web/render/components.js';
@@ -79,7 +79,7 @@ function punchFigure({ sets, conditions, edition, n }) {
       top: conditionShort(conditions, top[0]), nTop: count(top[1]), bottom: inSentence(conditionShort(conditions, bottom[0])), nBottom: count(bottom[1]),
       measured: count(sets.measured), n: count(sets.measured + sets.none), none: count(sets.none),
     }),
-    ...drawn((width) => punchCard({ rows, columns: cols, labels, width }), WIDE),
+    ...drawn((width) => punchCard({ rows, columns: cols, labels, width }), STEP),
     table: { columns: [{ name: t('fig1ColSet') }, { name: t('fig1ColN'), numeric: true }, { name: t('fig1ColYes'), numeric: true }], rows: tableRows },
   });
   // The note on reading the holes goes with the step's words, not under the chart: it would stretch the figure's column.

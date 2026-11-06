@@ -1,6 +1,7 @@
 // Worksheet R's hospital box (Step 5): pick a hospital and the sheet below is worked out again in the browser, by the
 // same code as the server's (worksheet.js), from the worksheet asset (figures/worksheet-data.js), which is fetched when
-// the first hospital is picked; the waterfall under the sheet (figures/waterfall.js) is drawn again from the same rows.
+// the first hospital is picked; Step 5's waterfall, beside the step's words above the sheet (figures/waterfall.js), is drawn again
+// from the same rows.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
 import { mountFigure, mountScroll, unmountScroll } from '../../../web/client/figure.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';

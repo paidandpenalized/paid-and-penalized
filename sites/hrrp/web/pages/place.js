@@ -13,6 +13,7 @@ import { PROGRAM_PATH } from '../links.js';
 import { t } from '../place/copy.js';
 import { estimateTag } from '../estimate-tag.js';
 import { breadcrumb, recordCard, shellOf } from './parts.js';
+import { HALF, RAIL } from '../figures/layout.js';
 
 // A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number. side: its words beside
 // its chart where there is room (styles.css .pic--side).
@@ -28,8 +29,9 @@ function figuresOf(view, shared) {
   const n = counter();
   const edition = view.edition;
   const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n) : '';
-  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n }));
-  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n }));
+  const wide = map ? RAIL : HALF;
+  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n, wide }));
+  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n, wide }));
   const conditions = f.conditions.measuredAny
     ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n }))
     : html`<section class="place__fig"><h2 class="place__figh">${t('figCondTitle')}</h2><p class="small muted">${t('condNoMeasured')}</p></section>`;
