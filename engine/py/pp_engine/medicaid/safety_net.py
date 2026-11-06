@@ -9,6 +9,8 @@ A hospital is flagged when either holds:
   pipeline pins as `state_stats` rows by postal state (CMS's provider file);
 - its Medicaid revenue (S-10 I lines 2 + 5) is more than 25% of its net patient revenue (G-3 line 3): the statute's
   low-income utilization rate without its charity term, which the form doesn't split by inpatient and outpatient.
+  A hospital whose line 2 fails the exposure screen (negative, or above net patient revenue: a filing error; not
+  scored) has no low-income share; its MIUR, from S-3 days, still counts.
 """
 import statistics
 
@@ -25,9 +27,10 @@ def state_stats(miurs):
 
 
 def low_income_share(base):
-    """S-10 I lines 2 + 5 over G-3 line 3, or None without both (an exposure base, pp_engine.medicaid.exposure)."""
+    """S-10 I lines 2 + 5 over G-3 line 3 (an exposure base, pp_engine.medicaid.exposure), or None without both or
+    when the base isn't scored (a filing error in line 2)."""
     npr, rev = base["net_patient_revenue"], base["revenue_line2_5"]
-    return rev / npr if npr and npr > 0 and rev is not None else None
+    return rev / npr if base["scored"] and npr and npr > 0 and rev is not None else None
 
 
 def reasons(miur, cut, low_income):

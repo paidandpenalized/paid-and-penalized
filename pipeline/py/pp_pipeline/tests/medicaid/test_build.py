@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from pp_engine.hcris import tidy
-from pp_engine.medicaid import shares
+from pp_engine.medicaid import params, shares
 from pp_pipeline.medicaid import build, inputs, safety_net
 
 FY2023 = ("09/30/2022", "12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
@@ -106,7 +106,7 @@ class Records(unittest.TestCase):
         rows = {c: hcris(c) for c in ("990001", "991301", "990002", "994001")}
         rows["990005"] = hcris("990005", net_income_patients="-9000000")  # a -90% margin: outside the fence
         rows["990001"].update(medicaid_days_maternity="500", medicaid_day_share="0.5")  # half maternity; high MIUR
-        rows["990003"] = hcris("990003", medicaid_days_all="3000")  # no maternity days
+        rows["990003"] = hcris("990003", medicaid_days_all="3000", medicaid_supplemental="500000")  # no maternity days
         progs = {"990001": {"hrrp": -10, "hac": 0, "hvbp": 1, "net": -9, "hrrp_factor": 0.99, "hac_cut": False}}
         self.records = build.hospital_records(m, rows, STATES, progs, {"AK": 0.4}, fence=(-0.5, 0.5))
 
@@ -134,6 +134,24 @@ class Records(unittest.TestCase):
         self.assertEqual(by["990001"]["safety_net"], ("miur",))  # 0.5 >= the cut of 0.4
         self.assertEqual(by["990003"]["safety_net"], ())  # 0.1; Medicaid revenue 10% of patient revenue
 
+    def test_a_filing_error_in_line_2_gives_no_low_income_reason(self):
+        m = master({"ccn": "990011", "state": "AK", "kind": "acute"}, {"ccn": "990012", "state": "AK", "kind": "acute"})
+        rows = {c: hcris(c, medicaid_net_revenue="20000000", medicaid_day_share=miur)  # line 2 above patient revenue
+                for c, miur in (("990011", "0.1"), ("990012", "0.5"))}
+        by = {r["ccn"]: r for r in build.hospital_records(m, rows, STATES, {}, {"AK": 0.4}, fence=(-0.5, 0.5))}
+        self.assertFalse(by["990011"]["base"]["scored"])
+        self.assertEqual(by["990011"]["safety_net"], ())
+        self.assertEqual(by["990012"]["safety_net"], ("miur",))  # the MIUR test doesn't read line 2
+
+    def test_the_explorer_carries_the_floors_day_count(self):
+        floor = params.MIN_MEDICAID_DAYS
+        m = master({"ccn": "990021", "state": "AK", "kind": "acute"})
+        rows = {"990021": hcris("990021", medicaid_days_all=str(floor - 50), days_medicaid_labor_delivery="60")}
+        rec = build.hospital_records(m, rows, STATES, {}, {}, fence=(-0.5, 0.5))[0]
+        self.assertNotIn("few_medicaid_days", rec["base"]["flags"])  # lines 14 + 2 + 32: above the floor
+        out = build.explorer_record(rec)
+        self.assertEqual((out["md"], out["ma"]), (floor - 50, floor + 10))  # md: lines 14 + 2, the MIUR's
+
     def test_scenarios_run_only_in_scenario_states(self):
         by = {r["ccn"]: r for r in self.records}
         self.assertAlmostEqual(by["990001"]["results"]["middle"]["lost"], 1000000 * by["990001"]["share"] * 0.2)
@@ -151,6 +169,8 @@ class Records(unittest.TestCase):
         factors = self.records[0]["share_factor"] + self.records[3]["share_factor"]
         self.assertAlmostEqual(sens["share_net_of_dsh"]["low"]["lost"], 1000000 * (1000 / 3600) * factors * 0.1,
                                places=4)
+        self.assertAlmostEqual(nat["middle"]["medicaid_revenue"], 5 * 1000000)
+        self.assertAlmostEqual(sens["line2_5"]["middle"]["medicaid_revenue"], 5 * 1000000 + 500000)  # lines 2 + 5
         self.assertEqual(groups["critical_access"]["low"]["hospitals"], 1)
         self.assertEqual(groups["safety_net"]["low"]["hospitals"], 1)
         self.assertEqual(set(by_state), {"AK", "WI", "TX"})

@@ -21,10 +21,12 @@ class SafetyNet(unittest.TestCase):
         self.assertEqual(safety_net.reasons(None, None, None), ())
 
     def test_low_income_share(self):
-        self.assertAlmostEqual(safety_net.low_income_share(
-            {"net_patient_revenue": 100.0, "revenue_line2_5": 30.0}), 0.3)
-        self.assertIsNone(safety_net.low_income_share({"net_patient_revenue": 0.0, "revenue_line2_5": 30.0}))
-        self.assertIsNone(safety_net.low_income_share({"net_patient_revenue": 100.0, "revenue_line2_5": None}))
+        def share(npr, rev, scored=True):
+            return safety_net.low_income_share({"net_patient_revenue": npr, "revenue_line2_5": rev, "scored": scored})
+        self.assertAlmostEqual(share(100.0, 30.0), 0.3)
+        self.assertIsNone(share(0.0, 30.0))
+        self.assertIsNone(share(100.0, None))
+        self.assertIsNone(share(100.0, 200.0, scored=False))  # line 2 a filing error: no low-income share
 
 
 if __name__ == "__main__":

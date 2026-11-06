@@ -182,6 +182,29 @@ class Scenario(unittest.TestCase):
         self.assertEqual(exposure.scenario(b, 0.25, 0.4)["lost"], 0.0)
         self.assertTrue(self.base["scored"])
 
+    def test_the_filing_error_screens_run_without_a_usable_margin(self):
+        for over in ({"net_income_patients": ""},  # no line 5
+                     {"other_operating_income": "-200"}):  # no operating revenue left
+            with self.subTest(**over):
+                b = exposure.hospital_base(hcris_row(medicaid_net_revenue="200", net_patient_revenue="100",
+                                                     medicaid_supplemental="", **over))
+                self.assertFalse(b["has_margin"])
+                self.assertIn("no_margin", b["flags"])
+                self.assertIn("medicaid_exceeds_patient_revenue", b["flags"])
+                self.assertEqual((b["scored"], b["scored_line2_5"]), (False, False))
+                self.assertEqual(exposure.scenario(b, 0.25, 0.4)["lost"], 0.0)
+        b25 = exposure.hospital_base(hcris_row(medicaid_net_revenue="60", medicaid_supplemental="50",
+                                               net_patient_revenue="100", net_income_patients=""))
+        self.assertIn("medicaid_2_5_exceeds_patient_revenue", b25["flags"])
+        self.assertEqual((b25["scored"], b25["scored_line2_5"]), (True, False))
+
+    def test_no_patient_revenue_no_screen(self):
+        for npr in ("", "0", "-5"):
+            with self.subTest(npr=npr):
+                b = exposure.hospital_base(hcris_row(net_patient_revenue=npr))
+                self.assertEqual((b["scored"], b["scored_line2_5"]), (True, True))
+                self.assertNotIn("medicaid_exceeds_patient_revenue", b["flags"])
+
     def test_margin_fence(self):
         lo, hi = exposure.margin_fence([0.0, 0.01, 0.02, 0.03, 0.04, None])
         self.assertLess(lo, 0.0)
@@ -247,6 +270,18 @@ class RollUp(unittest.TestCase):
         self.assertEqual((t["margin_hospitals"], t["falls_1pp"], t["into_red"]), (1, 1, 0))
         self.assertIsNotNone(t["operating_margin_after"])
         self.assertIsNone(t["total_margin"])
+
+    def test_the_lines_2_and_5_roll_up_divides_by_lines_2_and_5_of_its_own_hospitals(self):
+        a = exposure.hospital_base(hcris_row())  # lines 2 + 5: 12M
+        b = exposure.hospital_base(hcris_row(ccn="990002", medicaid_net_revenue="60000000",
+                                             medicaid_supplemental="50000000"))  # out of the lines 2 + 5 comparison
+        line2 = rollup.roll_up([(x, exposure.scenario(x, 0.25, 0.4)) for x in (a, b)])
+        self.assertAlmostEqual(line2["medicaid_revenue"], 70000000)
+        self.assertAlmostEqual(line2["lost_share_of_medicaid"], 0.25 * 0.4)
+        both = rollup.roll_up([(x, exposure.scenario(x, 0.25, 0.4, line2_5=True)) for x in (a, b)], line2_5=True)
+        self.assertAlmostEqual(both["medicaid_revenue"], 12000000)
+        self.assertAlmostEqual(both["lost"], 12000000 * 0.25 * 0.4)
+        self.assertAlmostEqual(both["lost_share_of_medicaid"], 0.25 * 0.4)
 
     def test_empty(self):
         t = rollup.roll_up([])

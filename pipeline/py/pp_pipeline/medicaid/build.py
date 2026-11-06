@@ -178,7 +178,7 @@ def roll(records, scenario_id, states=None, where=None, **override):
         res = (score(r, states.get(r["state"], {}), scenario_id, **{"factor": r["share_factor"], **override})
                if override else r["results"][scenario_id])
         pairs.append((r["base"], res))
-    return rollup.roll_up(pairs)
+    return rollup.roll_up(pairs, line2_5=override.get("line2_5", False))
 
 
 def roll_by_state(records, scenario_id):
@@ -245,7 +245,10 @@ def hospital_rows(records):
 
 
 def explorer_record(r):
-    """The compact record the explorer recomputes from: its inputs, not its results (the page reruns steps 1 to 4)."""
+    """The compact record the explorer recomputes from: its inputs, not its results (the page reruns steps 1 to 4).
+    Days: `md` and `dt` are the MIUR's (S-3 I lines 14 + 2 col 7, line 14 col 8); `ma` is the day-count floor's and
+    the maternity share's (exposure.medicaid_days: lines 14 + 2 + 32 col 7; null when the hospital keeps its state's
+    share for want of days), so few_medicaid_days is `ma` below params.MIN_MEDICAID_DAYS."""
     b = r["base"]
     out = {"c": r["ccn"], "n": r["name"], "ci": r["city"], "s": r["state"], "k": "C" if r["kind"] == "critical_access"
            else "A", "u": r["urban"], "bd": r["beds"], "o": r["own"], "cl": r["cls"],
@@ -258,6 +261,7 @@ def explorer_record(r):
                    npr=_r(b["net_patient_revenue"]), nip=_r(b["net_income_patients"]),
                    oo=_r(b["other_operating_income"]), ni=_r(b["net_income"]), oi=_r(b["other_income"]),
                    uc=_r(b["uncompensated_cost"]), md=_r(b["medicaid_days_all"]), dt=_r(b["days_total"]),
+                   ma=None if days is None else _r(days[0]),
                    mt=None if days is None else _r(1 - days[1] / days[0], 4), af=_r(r["share_factor"], 6),
                    sn=list(r["safety_net"]), hm=b["has_margin"], sc=b["scored"], mo=b["margin_outlier"])
     return out
@@ -277,7 +281,8 @@ def main(argv):
     ap.add_argument("--master", default=str(MASTER))
     ap.add_argument("--dollars", default=str(DOLLARS))
     a = ap.parse_args(argv)
-    states = state_table(inputs.read_csv(inputs.VIII), inputs.read_csv(inputs.URBAN), inputs.read_csv(inputs.FMR))
+    pins = inputs.sources()  # sources.json, read once
+    states = state_table(*(inputs.read_csv(p, pins=pins) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
     master, dollars = read_json(a.master), read_json(a.dollars)
     year, hcris_sha256 = read_hcris(a.hcris)
     hcris = {r["ccn"]: r for r in year.rows}
@@ -285,7 +290,7 @@ def main(argv):
         print(f"medicaid: no FY{params.BASE_YEAR} rows in the HCRIS layer", file=sys.stderr)
         return 1
     records = hospital_records(master, hcris, states, program_dollars(dollars),
-                               read_cuts(inputs.read_csv(inputs.STATE_MIUR)))
+                               read_cuts(inputs.read_csv(inputs.STATE_MIUR, pins=pins)))
     for r in records:  # each state's ratio, as hospital_records set it, on its existing entry
         if r["state"] in states and r["state_ratio"] is not None:
             states[r["state"]]["nonmaternity_ratio"] = r["state_ratio"]
@@ -307,7 +312,7 @@ def main(argv):
                        "max_cost_ratio": params.MAX_COST_RATIO, "min_medicaid_days": params.MIN_MEDICAID_DAYS,
                        "scenarios": dict(params.SCENARIOS)},
             "counts": counts, "flags": flags,
-            "inputs": {"pinned": inputs.sources(),
+            "inputs": {"pinned": pins,
                        "hcris": {"path": _shown(a.hcris), "sha256": hcris_sha256,
                                  "methods_version": year.methods_version},
                        "master": {"path": _shown(a.master), "fy": master["fy"], "built_at": master["built_at"]},

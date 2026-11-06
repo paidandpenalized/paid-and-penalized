@@ -11,11 +11,13 @@ def into_red(result):
     return before is not None and after is not None and before >= 0 > after
 
 
-def roll_up(pairs):
+def roll_up(pairs, line2_5=False):
     """Totals over (base, result) pairs. Operating-margin sums cover hospitals with usable patient revenue whose
     operating margin isn't an outlier; total-margin sums, those of them that also report net income; the
     uncompensated-care percent, those that report a positive uncompensated care cost. The revenue and income after
-    are exposure.scenario's; this only sums them."""
+    are exposure.scenario's; this only sums them. `line2_5`: the results are the lines 2 + 5 comparison's, so the
+    Medicaid revenue they are a share of is lines 2 + 5, over the hospitals scored for that comparison."""
+    revenue_key, scored_key = ("revenue_line2_5", "scored_line2_5") if line2_5 else ("medicaid_net_revenue", "scored")
     out = {k: 0.0 for k in DOLLARS}
     out.update(hospitals=0, exposed=0, medicaid_revenue=0.0, uncompensated_cost=0.0, uc_added_where_reported=0.0,
                margin_hospitals=0, into_red=0, falls_1pp=0)
@@ -25,8 +27,8 @@ def roll_up(pairs):
     for base, res in pairs:
         out["hospitals"] += 1
         out["exposed"] += res["lost"] > 0
-        if base["scored"]:
-            out["medicaid_revenue"] += base["medicaid_net_revenue"] or 0.0
+        if base[scored_key]:
+            out["medicaid_revenue"] += base[revenue_key] or 0.0
         for k in DOLLARS:
             out[k] += res[k] or 0.0
         if (base["uncompensated_cost"] or 0) > 0:

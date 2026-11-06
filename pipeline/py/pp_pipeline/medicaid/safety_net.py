@@ -19,6 +19,7 @@ from pathlib import Path
 from pp_engine.hcris import tidy
 from pp_engine.medicaid import params, safety_net
 from pp_pipeline.hcris.extract import read_year
+from pp_pipeline.hcris.pins import _csv_bytes
 
 COLUMNS = ("state", "hospitals", "mean", "sd", "cut")
 PROVIDERS = "HOSP10_PRVDR_ID_INFO.CSV"
@@ -53,10 +54,8 @@ def derive(zip_path, reports_zip):
     year, reports, values = read_year(zip_path)
     if year != params.BASE_YEAR:
         raise tidy.HcrisError(f"{zip_path}: FY{year}, not the base year FY{params.BASE_YEAR}")
-    out = io.StringIO()
     rows = tidy.hospital_years(reports, values, year)
-    csv.writer(out, lineterminator="\n").writerows(state_rows(rows, provider_states(reports_zip)))
-    return out.getvalue().encode("ascii")
+    return _csv_bytes(state_rows(rows, provider_states(reports_zip)))
 
 
 def read_cuts(rows):

@@ -100,13 +100,14 @@ def _cost_ratio(cost, revenue, flags=None):
     missing, capped at MAX_COST_RATIO. Notes either case in `flags` when given."""
     if revenue is None or revenue <= 0:
         return None
-    flags = [] if flags is None else flags
     if cost is None or cost <= 0:
-        flags.append("cost_missing")
+        if flags is not None:
+            flags.append("cost_missing")
         return 1.0
     ratio = cost / revenue
     if ratio > params.MAX_COST_RATIO:
-        flags.append("cost_ratio_capped")
+        if flags is not None:
+            flags.append("cost_ratio_capped")
         return params.MAX_COST_RATIO
     return ratio
 
@@ -134,13 +135,15 @@ def hospital_base(row):
     rev25 = None if rev is None and base["medicaid_supplemental"] is None else (
         (rev or 0.0) + (base["medicaid_supplemental"] or 0.0))
     npr = base["net_patient_revenue"]
+    positive_npr = npr is not None and npr > 0
     # A usable margin needs positive patient revenue, and positive operating revenue with other operating income.
-    has_margin = (npr is not None and npr > 0 and base["net_income_patients"] is not None
+    has_margin = (positive_npr and base["net_income_patients"] is not None
                   and npr + base["other_operating_income"] > 0)
-    exceeds = has_margin and rev is not None and rev > npr
     if not has_margin:
         flags.append("no_margin")
-    elif exceeds:
+    # The filing-error screens need only positive patient revenue, not a usable margin.
+    exceeds = positive_npr and rev is not None and rev > npr
+    if exceeds:
         flags.append("medicaid_exceeds_patient_revenue")
     if base["uncompensated_cost"] is None:
         flags.append("no_uncompensated_cost")
@@ -156,7 +159,7 @@ def hospital_base(row):
     # at risk, but its line 5 can be in the lines 2 + 5 comparison.
     scored = not (negative_revenue or exceeds)
     # The same screen for the lines 2 + 5 comparison: lines 2 + 5 above net patient revenue leave that version only.
-    exceeds25 = scored and has_margin and rev25 is not None and rev25 > npr
+    exceeds25 = scored and positive_npr and rev25 is not None and rev25 > npr
     if exceeds25:
         flags.append("medicaid_2_5_exceeds_patient_revenue")
     base.update(
@@ -182,9 +185,9 @@ def flag_margin_outliers(bases, fence=None):
     """Marks, in place, each base whose operating margin falls outside `fence` (default: margin_fence over these
     bases' margins). An outlier stays in the dollar sums but leaves the margin roll-ups. Returns the fence used."""
     bases = list(bases)
-    fence = fence or margin_fence(operating_margin(b) for b in bases)
-    for b in bases:
-        m = operating_margin(b)
+    margins = [operating_margin(b) for b in bases]
+    fence = fence or margin_fence(margins)
+    for b, m in zip(bases, margins):
         if m is not None and not fence[0] <= m <= fence[1]:
             b["margin_outlier"] = True
             b["flags"].append("margin_outlier")
