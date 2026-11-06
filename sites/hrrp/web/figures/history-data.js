@@ -100,17 +100,21 @@ export function rollCall({ hospitals, history, meta }) {
 // table: counts.
 export function yearsCut(roll) {
   const nYears = roll.years.length;
-  const cutIn = (marks) => [...marks].filter((m) => m === ROLL.cut).length;
-  const presentIn = (marks) => [...marks].filter((m) => m !== ROLL.absent).length;
-  const full = roll.records.filter((r) => presentIn(r.marks) === nYears);
-  const part = roll.records.filter((r) => presentIn(r.marks) > 0 && presentIn(r.marks) < nYears);
-  const counts = Array.from({ length: nYears + 1 }, (_, cut) => ({ cut, n: full.filter((r) => cutIn(r.marks) === cut).length }));
+  // Each record's years in the file and years cut, counted once.
+  const tallies = roll.records.map(({ marks }) => {
+    const all = [...marks];
+    return { present: all.filter((m) => m !== ROLL.absent).length, cut: all.filter((m) => m === ROLL.cut).length };
+  });
+  const full = tallies.filter((r) => r.present === nYears);
+  const part = tallies.filter((r) => r.present > 0 && r.present < nYears);
+  const counts = Array.from({ length: nYears + 1 }, (_, cut) => ({ cut, n: 0 }));
+  for (const r of full) counts[r.cut].n += 1;
   return {
     nYears,
     n: roll.records.length,
     full: full.length,
     counts,
-    partial: { n: part.length, everyYear: part.filter((r) => cutIn(r.marks) === presentIn(r.marks)).length, never: part.filter((r) => cutIn(r.marks) === 0).length },
+    partial: { n: part.length, everyYear: part.filter((r) => r.cut === r.present).length, never: part.filter((r) => r.cut === 0).length },
     takeaway: { every: counts[nYears].n, never: counts[0].n, share: full.length ? counts[nYears].n / full.length : null },
     table: counts,
   };

@@ -2,7 +2,7 @@
 // kit's periods chart: for each fiscal year the care its ratios are worked out from and the year its payments change), and the
 // timeline (dated entries with their sources, years not yet in effect marked). figures/history-data.js holds their numbers.
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
-import { periodsChart } from '../../../../web/charts/periods.js';
+import { periodsChart, periodsPlotBase } from '../../../../web/charts/periods.js';
 import { isoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink } from '../../../../web/render/layout.js';
@@ -11,7 +11,7 @@ import { fill, t } from '../program/copy.js';
 import { fmtInt, fmtPct } from '../numbers.js';
 import { hospitals } from '../wording.js';
 import { drawHistory, drawYearsCut, usdM } from './history-draw.js';
-import { FULL, HALF, pic } from './layout.js';
+import { FULL, HALF, pair, pic } from './layout.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
 const span = (kind, fy, [start, end]) => ({ kind, start: ymd(start), end: ymd(end), tip: fill('winTip', { label: t(kind === 'perf' ? 'winPerf' : 'winPay'), fy: fyLabel(fy), start: isoDate(start), end: isoDate(end) }) });
@@ -36,14 +36,10 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 }
 
 // rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws.
-// The data windows' drawing at a width (null with no rows).
-const windowsDraw = (rows) => (rows.length ? (width) => periodsChart({ rows: rows.map((r) => ({ label: fyLabel(r.fy), spans: [...(r.perf ? [span('perf', r.fy, r.perf)] : []), span('pay', r.fy, r.pay)] })), kinds: ['perf', 'pay'], width }) : null);
-// A periods chart's plot base: where its year gridlines end and its year labels hang (the kit's chart-grid lines).
-const plotBaseOf = (svg) => Number(String(svg).match(/class="chart-grid"[^>]*y2="([\d.]+)"/)[1]);
-
 export function windowsFigure(rows, { n }) {
-  const draw = windowsDraw(rows);
-  if (!draw) return '';
+  if (!rows.length) return '';
+  const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...(r.perf ? [span('perf', r.fy, r.perf)] : []), span('pay', r.fy, r.pay)] }));
+  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width });
   const newest = rows[0];
   return figure({
     n: n(), source: t('winSource'), csvName: 'hrrp-data-windows', alt: t('winAlt'), note: t('winKey'),
@@ -112,17 +108,14 @@ export function historyFigure(lines, { n }) {
   });
 }
 
-// Two figures side by side where there is room (one alone takes the row).
-const pair = (a, b) => (a || b ? html`<div class="picpair picpair--rows">${a}${b}</div>` : '');
-
 // history: view.history ({ lines, escapes (a function; none: no years-cut figure), timeline, windows }); figure: the page's figure counter. The small multiples, then the years
 // cut beside the data windows, then the timeline.
 export function historyPart(history, { figure: nextFigure }) {
-  // The years cut stand on the data windows' plot base beside them, their charts starting level (.picpair--rows), so the two axes' labels share a line.
-  const winDraw = windowsDraw(history.windows);
-  const winBase = winDraw ? plotBaseOf(winDraw(HALF)) : null;
+  // The years cut stand on the data windows' plot base beside them, their charts starting level (shared rows), so the two axes'
+  // labels share a line.
+  const winBase = history.windows.length ? periodsPlotBase(history.windows.length) : null;
   return html`<p class="part__intro">${t('historyIntro')}</p>
 ${pic(historyFigure(history.lines, { n: nextFigure }))}
-${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, base: winBase })), pic(windowsFigure(history.windows, { n: nextFigure })))}
+${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, base: winBase })), pic(windowsFigure(history.windows, { n: nextFigure })), { rows: true })}
 ${timeline(history.timeline)}`;
 }

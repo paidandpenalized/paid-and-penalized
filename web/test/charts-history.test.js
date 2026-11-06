@@ -9,7 +9,7 @@ import { barRows } from '../charts/barRows.js';
 import { dotsD } from '../charts/dots.js';
 import { absoluteD } from '../charts/pathd.js';
 import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../charts/geo.js';
-import { periodsChart } from '../charts/periods.js';
+import { periodsChart, periodsPlotBase } from '../charts/periods.js';
 import { proofBins, proofStrips } from '../charts/proofStrips.js';
 import { rankYears } from '../charts/rankYears.js';
 import { everBrackets, rollCall, rollParts } from '../charts/rollCall.js';
@@ -873,4 +873,12 @@ test('usYearMap: the land as a faint path for each state and DC, then one path o
   assert.equal(attr(tags(s, 'chart-years__dots')[0], 'data-size'), '4.2');
   assert.equal(String(usYearMap({ shapes, groups, size: 4.2, width: 960 })), s, 'the same call gives the same markup');
   assert.equal(count(String(usYearMap({ shapes, groups: [], size: 4.2, width: 960 })), /chart-dots /g), 0);
+});
+
+test('periodsPlotBase: the line where a periods chart of n rows ends its rows, its gridlines stop and its year labels hang', () => {
+  const chart = String(periodsChart(PERIODS()));
+  const n = PERIODS().rows.length;
+  const y2 = Number(chart.match(/class="chart-grid"[^>]*y2="([\d.]+)"/)[1]);
+  assert.equal(periodsPlotBase(n), y2);
+  assert.ok(periodsPlotBase(n + 1) > periodsPlotBase(n));
 });

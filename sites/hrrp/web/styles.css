@@ -142,6 +142,7 @@
   .pic--rside > .fig { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pic--rside > .fig > :is(.fig__cap, .fig__key, .fig__note, .fig__source, .fig__table) { grid-column: 1; }
   .pic--rside > .fig > .chart { grid-column: 2; }
+  /* The figure-text rule above sets a closed table's toggle in the words' second column (.pic--side's); here the words are column 1. */
   .page--prog .pic--rside > .fig > .fig__table:not([open]) { grid-column: 1; }
 }
 /* Two figures side by side from 980px, each at its own drawing's width; one alone takes the row. */
@@ -186,22 +187,23 @@
 .strip__band { fill: var(--paper-2); }
 .strip__median { stroke-width: 3.5px; }
 .strip__halo { stroke: var(--paper); stroke-width: 7px; }
-.flips__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.flips__zero, .worth__dot, .bands__line, .bands__half, .bands__zero, .bands__grid, .bands__med { vector-effect: non-scaling-stroke; }
+.flips__zero { stroke: var(--ink); stroke-width: 1.5px; }
 /* What 0.01 of ratio is worth: the middle half of hospitals a grey bar (the section's bar grey, 3:1 or more on the paper in both modes),
    the typical hospital a dot in penalty ink on a paper ring. */
 .worth__bar { fill: var(--ink-3); }
-.worth__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.worth__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; }
 /* The size bands' tier names: note type set apart from the bold condition names. */
 .bands__tier { font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 /* The size bands' panels: the share line in ink, half dashed, the middle-half bars grey with an ink median tick, the peer median a thin ink line. */
-.bands__line { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.bands__half { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
-.bands__zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.bands__line { fill: none; stroke: var(--ink); stroke-width: 1.5px; }
+.bands__half { stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; }
+.bands__zero { stroke: var(--ink); stroke-width: 1px; }
 .bands__mid { fill: var(--ink-3); }
-.bands__grid { stroke: var(--ink-3); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.bands__grid { stroke: var(--ink-3); stroke-opacity: 0.35; stroke-width: 1px; }
 /* An end share's words stay legible where a line runs under them. */
 .bands__value { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
-.bands__med { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.bands__med { stroke: var(--ink); stroke-width: 2px; }
 .spread__rule { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .chart-spread { fill: var(--ink); font: 400 20px/1 var(--font-display); }
 /* Step 5: the waterfall beside the step's words; the hospital box and Worksheet R under both. */

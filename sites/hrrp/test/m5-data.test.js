@@ -29,12 +29,12 @@ test('peerFlips: over the peer median but under the national median is added; th
   // peer 2 (median 1.0): 1.05 over now, tie with the national median 1.05 so not over alone: added twice; 1.15 over both.
   assert.deepEqual([row(2).measured, row(2).now, row(2).alone, row(2).added], [3, 3, 1, 2]);
   assert.deepEqual(f.totals, { measured: 5, added: 3, removed: 1, flips: 4 });
-  assert.equal(f.takeaway.on.peer, 2);
-  assert.equal(f.takeaway.off.peer, 3);
-  assert.equal(f.takeaway.flips, 4);
+  const byNet = [...f.rows].sort((a, b) => b.net - a.net);
+  assert.equal(byNet[0].peer, 2, 'peer grouping puts the most flags on group 2');
+  assert.equal(byNet[byNet.length - 1].peer, 3, 'and takes the most off group 3');
 });
 
-test('peerFlips: a tie with the peer median is not over; unmeasured and null-median conditions are skipped; no flips, no takeaway', () => {
+test('peerFlips: a tie with the peer median is not over; unmeasured and null-median conditions are skipped; no flips', () => {
   const tie = hf(1.0); // peer 2 median 1
   const few = hospital({ id: id(), peer: 2, c: { HF: { n: 24, err: 1.5, flag: 1, ratio: 0.1 } } });
   const noMed = hospital({ id: id(), peer: 2, c: { HF: { n: 40, err: 1.5, flag: 1, ratio: 0.1 } } });
@@ -44,7 +44,7 @@ test('peerFlips: a tie with the peer median is not over; unmeasured and null-med
   assert.equal(f.rows[1].measured, 2);
   const g = peerFlips([tie, few, noMed], m);
   assert.equal(g.totals.measured, 0);
-  assert.equal(g.takeaway, null);
+  assert.equal(g.totals.flips, 0);
   assert.equal(g.national.HF, 1.25, 'the national median still counts every measured hospital');
 });
 
@@ -215,14 +215,17 @@ test('swarmData close: |gap| <= 0.001 counts (exactly 0.001 in, 0.0011 out)', ()
 import { flipsTakeaway } from '../web/figures/picture.js';
 import { drawFlips } from '../web/figures/picture-draw.js';
 
-const flipRows = (rows) => ({ takeaway: {}, rows: rows.map(([added, removed], i) => ({ peer: i + 1, added, removed, net: added - removed })) });
+const flipRows = (rows) => {
+  const r = rows.map(([added, removed], i) => ({ peer: i + 1, added, removed, net: added - removed }));
+  return { rows: r, totals: { flips: r.reduce((s, x) => s + x.added + x.removed, 0) } };
+};
 test('#10 takeaway: from peer grouping\'s side, as drawn, with the bars\' own counts (grey taken off, red put on); "about", to the nearest ten from 20; a run of groups as a run; no dollars', () => {
   const real = flipRows([[49, 0], [59, 9], [34, 0], [22, 18], [2, 168]]);
   assert.equal(flipsTakeaway(real), 'Against one national median, peer grouping takes about 170 flags off group 5 and puts about 160 on groups 1 to 4.');
   assert.equal(flipsTakeaway(flipRows([[3, 0], [0, 0], [0, 2], [0, 0], [0, 0]])), 'Against one national median, peer grouping takes about 2 flags off group 3 and puts about 3 on group 1.');
   assert.match(flipsTakeaway(flipRows([[5, 0], [0, 9], [5, 0], [0, 0], [0, 0]])), /puts about 10 on groups 1 and 3\.$/);
   assert.match(flipsTakeaway(flipRows([[0, 0], [0, 0], [0, 0], [0, 0], [0, 4]])), /takes about 4 flags off group 5\.$/);
-  assert.match(flipsTakeaway({ takeaway: null, rows: [] }), /changes no flag/);
+  assert.match(flipsTakeaway({ totals: { flips: 0 }, rows: [] }), /changes no flag/);
   assert.doesNotMatch(flipsTakeaway(real), /\$/);
 });
 

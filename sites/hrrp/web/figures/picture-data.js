@@ -173,9 +173,8 @@ export function peerGroups(hospitals, meta) {
 // median of this file's measured errs for that condition, as if there were no peer groups), added (now and not alone: flags peer
 // grouping puts on), removed (alone and not now: flags it takes off) and net (added - removed). national: { [cond]: median } of
 // err over every hospital measured on it; this file's median, not CMS's (CMS's peer medians are not this file's medians), so words
-// say "about". totals: { measured, added, removed, flips: added + removed } over all groups. takeaway: null when flips is 0, else
-// { off (the row with the most negative net), on (the row with the most positive net), flips, measured }; ties go to the earlier group.
-// Counts of hospital-conditions, no dollars. table: the rows' fields.
+// say "about". totals: { measured, added, removed, flips: added + removed } over all groups (the figure's words come from the rows and
+// totals). Counts of hospital-conditions, no dollars. table: the rows.
 export function peerFlips(hospitals, meta) {
   const national = {};
   for (const k of CONDS) {
@@ -185,11 +184,12 @@ export function peerFlips(hospitals, meta) {
   const rows = PEERS.map((peer, i) => {
     const cutoff = meta.peerCutoffs?.[i];
     const row = { peer, lo: cutoff?.[0] ?? null, hi: cutoff?.[1] ?? null, measured: 0, now: 0, alone: 0, added: 0, removed: 0, net: 0 };
+    const medians = Object.fromEntries(CONDS.map((k) => [k, peerMedian(meta, peer, k)]));
     for (const h of hospitals) {
       if (h.peer !== peer) continue;
       for (const k of CONDS) {
         const c = h.c[k];
-        const med = peerMedian(meta, peer, k);
+        const med = medians[k];
         if (!isMeasured(c) || med == null) continue;
         const now = c.err - med > 0;
         const alone = c.err - national[k] > 0;
@@ -205,13 +205,7 @@ export function peerFlips(hospitals, meta) {
   });
   const sum = (key) => rows.reduce((s, r) => s + r[key], 0);
   const totals = { measured: sum('measured'), added: sum('added'), removed: sum('removed'), flips: sum('added') + sum('removed') };
-  const off = rows.reduce((a, b) => (b.net < a.net ? b : a));
-  const on = rows.reduce((a, b) => (b.net > a.net ? b : a));
-  return {
-    rows, totals, national,
-    takeaway: totals.flips ? { off, on, flips: totals.flips, measured: totals.measured } : null,
-    table: rows.map((r) => ({ peer: r.peer, lo: r.lo, hi: r.hi, measured: r.measured, now: r.now, alone: r.alone, added: r.added, removed: r.removed, net: r.net })),
-  };
+  return { rows, totals, national, table: rows };
 }
 
 // ---------- what is 0.01 of ratio worth? ----------

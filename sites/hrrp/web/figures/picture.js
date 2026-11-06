@@ -20,7 +20,7 @@ import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN, MIN_BAND } from './picture-data.js';
 import { PER_STEP } from './hospital-data.js';
 import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
-import { BESIDE, FULL, HALF, SIDE, pic } from './layout.js';
+import { BESIDE, FULL, HALF, SIDE, pair, pic } from './layout.js';
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -69,8 +69,6 @@ function penFigure({ rows, conditions, edition, n }) {
 
 // ---------- the size of the cuts ----------
 
-// Two figures side by side where there is room (one alone takes the row); side: 7 to 5 columns, their text and charts on shared rows.
-const pair = (a, b, side = false) => (a || b ? html`<div class="picpair${side ? ' picpair--rows picpair--side' : ''}">${a}${b}</div>` : '');
 const pct0 = (fraction) => pct(fraction, 0);
 const CUT_TICKS = [0, 0.5, 1, 1.5, 2, 2.5, CAP_PCT];
 const cutTicks = (width) => (isNarrow(width) ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
@@ -200,7 +198,7 @@ function groupsText(peers) {
 }
 
 export function flipsTakeaway(f) {
-  if (!f.takeaway) return t('flipsTakeawayNone');
+  if (!f.totals.flips) return t('flipsTakeawayNone');
   // Said from peer grouping's side, as the drawing has it: the groups it takes flags off on balance, with the flags their grey bars take
   // off, then the groups it puts flags on, with the flags their red bars put on (the numbers a reader adds up from the bars).
   const side = (keep, key) => {
@@ -226,7 +224,7 @@ function flipsFigure({ f, edition, n }) {
     chart: imagePair(drawn(draw, BESIDE), t('flipsAlt')), note: t('flipsNote'),
     table: {
       columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('flipsColMeasured'), numeric: true }, { name: t('flipsColNow'), numeric: true }, { name: t('flipsColAlone'), numeric: true }, { name: t('flipsColOn'), numeric: true }, { name: t('flipsColOff'), numeric: true }],
-      rows: f.table.map((r) => [
+      rows: f.rows.map((r) => [
         fill('peerLabel', { n: String(r.peer) }), r.lo === null ? '—' : fill('peerDualRange', { from: pct0(r.lo), to: pct0(r.hi) }), num(fmtInt(r.measured), r.measured),
         num(fmtInt(r.now), r.now), num(fmtInt(r.alone), r.alone), num(fmtInt(r.added), r.added), num(fmtInt(r.removed), r.removed),
       ]),
@@ -297,7 +295,7 @@ function worthFigure({ w, conditions, edition, n }) {
     chart: imagePair(drawn(draw, HALF), fill('worthAlt', { step: STEP_TEXT })), note: fill(blank ? 'worthNote' : 'worthNoteAll', { cap: String(CAP_PCT), zero: roundedDollars(0) }),
     table: {
       columns: [{ name: t('worthColCond') }, { name: t('worthColN'), numeric: true }, { name: t('worthColMedian'), numeric: true }, { name: t('worthColP25'), numeric: true }, { name: t('worthColP75'), numeric: true }, { name: t('worthColCapped'), numeric: true }, { name: t('worthColBlank'), numeric: true }],
-      rows: w.table.map((r) => [
+      rows: w.rows.map((r) => [
         conditionShort(conditions, r.cond), num(fmtInt(r.priced), r.priced),
         ...[r.median, r.p25, r.p75].map((v) => (v === null ? num('—', null) : num(roundedDollars(v), v))),
         num(fmtInt(r.capped), r.capped), num(fmtInt(r.blank), r.blank),
@@ -387,19 +385,19 @@ function barsFigure({ b, conditions, edition, n }) {
 // ranges (words beside), the share flagged by size band across the page, then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
-  const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
+  const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), 'side');
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
-  const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), 'right');
+  const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), 'rside');
   const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
   const flips = pic(flipsFigure({ f: picture.flips(), edition, n: nextFigure }));
-  const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
+  const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), 'side');
   const bands = pic(bandsFigure({ b: picture.bands(), conditions, edition, n: nextFigure }));
   return html`<p class="part__intro">${ledeText(picture)}</p>
 ${cuts}
 ${pair(measured, bars)}
 ${worth}
-${pair(peers, flips, true)}
+${pair(peers, flips, { side: true })}
 ${types}
 ${bands}
 ${largest.length ? html`<div class="pic">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>

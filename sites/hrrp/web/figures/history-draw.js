@@ -248,12 +248,14 @@ export function drawYearsCut({ counts, width, labels, base: wideBase = null }) {
       body: html`${c.n ? html`<path class="${pen ? 'chart-col--pen' : 'chart-col'}" d="${columnPath(cx, w, base, Math.min(base - 1, y(c.n)))}"/>` : ''}${shown(c) ? text({ x: cx + w / 2, y: y(c.n) - 4, cls: `chart-value${pen ? ' chart-label--pen' : ''}`, body: String(c.n) }) : ''}`,
     });
   });
-  const tick = (c) => text({ x: x(c.cut) + x.bandwidth() / 2, y: base + 14, cls: 'chart-axis__label', body: String(c.cut) });
-  const ticks = counts.filter((c) => !narrow || c.cut % 5 === 0 || c.cut === last).map(tick);
-  const under = base + 30;
+  const ticks = counts.filter((c) => !narrow || c.cut % 5 === 0 || c.cut === last)
+    .map((c) => text({ x: x(c.cut) + x.bandwidth() / 2, y: base + 14, cls: 'chart-axis__label', body: String(c.cut) }));
+  const under = base + UNDER - 6;
   return frame({
     kind: 'yearscut', width, height: base + UNDER, body: html`${cols}
 <line class="chart-baseline" x1="4" x2="${width - 4}" y1="${base}" y2="${base}"/>${ticks}
-${text({ x: 4, y: under, anchor: 'start', cls: 'chart-note', body: labels.never })}${text({ x: width / 2, y: under, cls: 'chart-note', body: labels.axis })}${text({ x: width - 4, y: under, anchor: 'end', cls: 'chart-note chart-label--pen', body: labels.every })}`,
+${text({ x: 4, y: under, anchor: 'start', cls: 'chart-note', body: labels.never })}
+${text({ x: width / 2, y: under, cls: 'chart-note', body: labels.axis })}
+${text({ x: width - 4, y: under, anchor: 'end', cls: 'chart-note chart-label--pen', body: labels.every })}`,
   });
 }

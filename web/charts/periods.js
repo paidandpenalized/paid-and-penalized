@@ -20,6 +20,10 @@ const day = ([y, m, d]) => Date.UTC(y, m - 1, d) / 86400000;
 // The least width of a year, in drawing units, that holds a four-digit label with room either side.
 const SHORT_BELOW = 36;
 
+// The y where a periods chart of rowCount rows ends its rows: its year gridlines stop there and its year labels hang under it. A
+// figure set beside one stands its own axis on this line.
+export const periodsPlotBase = (rowCount) => TOP + rowCount * ROW;
+
 export function periodsChart({ rows, kinds, width }) {
   if (!rows.length || !kinds.length) throw new RangeError('periodsChart: rows and kinds');
   const all = rows.flatMap((r) => r.spans.flatMap((s) => [day(s.start), day(s.end)]));
@@ -28,13 +32,14 @@ export function periodsChart({ rows, kinds, width }) {
   const lo = day([y0, 1, 1]);
   const hi = day([y1, 1, 1]);
   const x = (d) => LABEL + ((d - lo) / (hi - lo)) * (width - LABEL);
-  const height = TOP + rows.length * ROW + AXIS;
+  const base = periodsPlotBase(rows.length);
+  const height = base + AXIS;
   const years = Array.from({ length: y1 - y0 + 1 }, (_, i) => y0 + i);
   const every = isNarrow(width) ? 2 : 1;
   const short = isNarrow(width) || x(day([y0 + 1, 1, 1])) - x(lo) < SHORT_BELOW;
-  const grid = years.map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(TOP + rows.length * ROW)}"/>`);
+  const grid = years.map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(base)}"/>`);
   const tickLabels = years.slice(0, -1).filter((_, i) => i % every === 0)
-    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: TOP + rows.length * ROW + 15, cls: 'chart-tick', body: String(yr).slice(short ? 2 : 0) }));
+    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: base + 15, cls: 'chart-tick', body: String(yr).slice(short ? 2 : 0) }));
   const body = rows.map((r, i) => {
     const mid = TOP + i * ROW + ROW / 2;
     const bars = r.spans.map((s) => {

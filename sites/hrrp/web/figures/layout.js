@@ -17,6 +17,12 @@ export const BESIDE = Math.round((SIDE * 5) / 7);
 export const RAIL = 450;
 export const RESULT = 460;
 
-// A figure kept at its drawing's size; side: its words beside the chart where there is room (true: chart left in 7 of 12 columns;
-// 'right': words left, chart right on halves). Nothing when it has none.
-export const pic = (fig, side = false) => (fig ? html`<div class="pic${side ? ` pic--side${side === 'right' ? ' pic--rside' : ''}` : ''}">${fig}</div>` : '');
+// A figure kept at its drawing's size; side: its words beside the chart where there is room: 'side', the chart left in 7 of 12
+// columns; 'rside', the words left and the chart right on halves. Nothing when it has none.
+const SIDE_CLASS = { side: ' pic--side', rside: ' pic--side pic--rside' };
+export const pic = (fig, side = null) => (fig ? html`<div class="pic${SIDE_CLASS[side] ?? ''}">${fig}</div>` : '');
+
+// Two figures side by side where there is room (one alone takes the row). rows: their text and charts on shared rows, so the charts
+// start level; side: 7 to 5 columns (with rows). Nothing when both are empty.
+export const pair = (a, b, { rows = false, side = false } = {}) =>
+  (a || b ? html`<div class="picpair${rows || side ? ' picpair--rows' : ''}${side ? ' picpair--side' : ''}">${a}${b}</div>` : '');

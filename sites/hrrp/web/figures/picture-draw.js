@@ -176,9 +176,7 @@ export function drawWorth({ rows, width, labels, format }) {
     const cy = r2(narrow ? y0 + 22 : y0 + rowH / 2);
     const body = html`<line class="chart-share__track" x1="${left}" x2="${r2(right)}" y1="${cy}" y2="${cy}"/>
 ${r.p25 === null ? '' : html`<rect class="worth__bar" x="${r2(x(r.p25))}" y="${r2(cy - 5)}" width="${r2(Math.max(1, x(r.p75) - x(r.p25)))}" height="10"/><circle class="worth__dot" cx="${r2(x(r.median))}" cy="${cy}" r="5"/>`}
-${narrow
-    ? html`${text({ x: 0, y: y0 + 11, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen', body: r.valueText })}`
-    : html`${text({ x: 0, y: cy + 4, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen', body: r.valueText })}`}`;
+${text({ x: 0, y: narrow ? y0 + 11 : cy + 4, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen', body: r.valueText })}`;
     return mark({ tip: r.tip, value: r.p25 === null ? null : [r.median, r.p25, r.p75], hit: { x: 0, y: y0, width, height: rowH }, body });
   });
   // The first priced row's dot and bar named over them: the dot's words ending at the dot, the bar's ending at the bar's end (its short
@@ -207,6 +205,23 @@ ${narrow
 // The middle-half tier's scale step: the shared reach rounds up to one, and a faint line marks each.
 const BAND_GRID = 0.1;
 
+// An end band's share, written over or under its dot (at x, y), whichever crosses less: the line to its neighbour (next: its x, y)
+// and the neighbour's dot weigh most, then the dashed half line (at half), then the wrong side of half (a share over half written
+// under the half line reads as under it). The label runs about 24 units from its dot, to the right (anchor 'start') or the left.
+function endLabelY({ x, y, share, next, half, anchor }) {
+  const dir = anchor === 'start' ? 1 : -1;
+  const span = [x + dir * 2, x + dir * 26].sort((a, c) => a - c);
+  const segY = (at) => (next ? y + ((next.y - y) * (at - x)) / (next.x - x) : null);
+  const score = (ly) => {
+    const hits = (v) => v !== null && v >= ly - 10 && v <= ly + 2;
+    const onDot = next && next.x + 4 >= span[0] && next.x - 4 <= span[1] && next.y + 4 >= ly - 10 && next.y - 4 <= ly + 2;
+    const crosses = Array.from({ length: 7 }, (_, k) => span[0] + (k * (span[1] - span[0])) / 6).some((at) => hits(segY(at)));
+    return (crosses || onDot ? 10 : 0) + (hits(half) ? 4 : 0) + (share > 0.5 && ly > half ? 3 : 0) + (share < 0.5 && ly < half ? 1 : 0);
+  };
+  const [over, under] = [r2(y - 8), r2(y + 15)];
+  return score(over) <= score(under) ? over : under;
+}
+
 export function drawSizeBands({ panels, width, labels, format, signed }) {
   const narrow = isNarrow(width);
   const cols = narrow ? 2 : panels.length;
@@ -233,31 +248,18 @@ export function drawSizeBands({ panels, width, labels, format, signed }) {
   const out = panels.map((p, i) => {
     const px = gutter + (i % cols) * (pw + gap);
     const py = head + Math.floor(i / cols) * T.h;
-    const xs = (j) => r2(px + 8 + (j * (pw - 16)) / Math.max(1, n - 1));
+    const step = (pw - 16) / Math.max(1, n - 1);
+    const xs = (j) => r2(px + 8 + j * step);
     const [ys, yg] = [ysAt(py), ygAt(py)];
     const drawn = shown(p);
     const pts = drawn.map((b) => ({ x: xs(b.j), y: r2(ys(b.share)) }));
     const [first, last] = [drawn[0], drawn[drawn.length - 1]];
-    // An end's share over or under its dot, whichever crosses less: the line to its neighbour and the neighbour's dot, the dashed half
-    // line, and the wrong side of half (a share over half written under the half line reads as under it).
-    const valueAt = (b, next, anchor) => {
-      const dir = anchor === 'start' ? 1 : -1;
-      const x0 = xs(b.j) + dir * 2;
-      const span = [x0, x0 + dir * 24].sort((a, c) => a - c);
-      const segY = (x) => (next ? ys(b.share) + ((ys(next.share) - ys(b.share)) * (x - xs(b.j))) / (xs(next.j) - xs(b.j)) : null);
-      const score = (y) => {
-        const box = [y - 10, y + 2];
-        const hits = (v) => v !== null && v >= box[0] && v <= box[1];
-        const onDot = next && xs(next.j) + 4 >= span[0] && xs(next.j) - 4 <= span[1] && ys(next.share) + 4 >= box[0] && ys(next.share) - 4 <= box[1];
-        const half = ys(0.5);
-        const crosses = Array.from({ length: 7 }, (_, k) => span[0] + (k * (span[1] - span[0])) / 6).some((x) => hits(segY(x)));
-        return (crosses || onDot ? 10 : 0) + (hits(half) ? 4 : 0) + (b.share > 0.5 && y > half ? 3 : 0) + (b.share < 0.5 && y < half ? 1 : 0);
-      };
-      const [over, under] = [r2(ys(b.share) - 8), r2(ys(b.share) + 15)];
-      return text({ x: x0, y: score(over) <= score(under) ? over : under, anchor, cls: `chart-value bands__value${b.share > 0.5 ? ' chart-label--pen' : ''}`, body: format(b.share) });
-    };
+    const valueAt = (b, next, anchor) => text({
+      x: xs(b.j) + (anchor === 'start' ? 2 : -2), anchor, cls: `chart-value bands__value${b.share > 0.5 ? ' chart-label--pen' : ''}`, body: format(b.share),
+      y: endLabelY({ x: xs(b.j), y: ys(b.share), share: b.share, next: next && { x: xs(next.j), y: ys(next.share) }, half: ys(0.5), anchor }),
+    });
     const marks = drawn.map((b) => mark({
-      tip: b.tip, value: [b.share, b.p25, b.p75], hit: { x: xs(b.j) - (pw - 16) / (2 * Math.max(1, n - 1)), y: py + T.top - 6, width: (pw - 16) / Math.max(1, n - 1), height: T.mid + T.midH - T.top + 12 },
+      tip: b.tip, value: [b.share, b.p25, b.p75], hit: { x: xs(b.j) - step / 2, y: py + T.top - 6, width: step, height: T.mid + T.midH - T.top + 12 },
       body: html`<rect class="bands__mid" x="${r2(xs(b.j) - 3.5)}" y="${r2(yg(b.p75))}" width="7" height="${r2(Math.max(1, yg(b.p25) - yg(b.p75)))}"/><line class="bands__med" x1="${r2(xs(b.j) - 6)}" x2="${r2(xs(b.j) + 6)}" y1="${r2(yg(b.median))}" y2="${r2(yg(b.median))}"/>
 <circle class="chart-share__dot${b.share > 0.5 ? ' chart-share__dot--pen' : ''}" cx="${xs(b.j)}" cy="${r2(ys(b.share))}" r="3.5"/>`,
     }));
