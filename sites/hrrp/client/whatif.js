@@ -1,10 +1,10 @@
 // A hospital page's what-if (figures/whatif.js): the sliders move the ratios, and the cut, the factor, the dollars and the
 // waterfall under them are worked out again in the browser by the same functions the page was built with (whatif-data.js:
 // whatIfPaf for the factor, Worksheet R's rows for the parts). "Reset" puts every ratio back; "Bring all to median" sets each
-// ratio over its peer median to the median. Without this script the sliders stay disabled at the actual ratios.
+// ratio now over its peer median to the median and leaves the rest. Without this script the sliders stay disabled at the actual ratios.
 import { mountCharts } from '../../../web/client/figure.js';
 import { peerMedian } from '../../../engine/js/hrrp/formula.js';
-import { WHATIF_DATA_ID, WI_STEP, clientHospital, liveWords, resultWords, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
+import { WHATIF_DATA_ID, WI_STEP, clientHospital, liveWords, medianTarget, resultWords, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
 import { waterfallPair } from '../web/figures/waterfall.js';
 import { t } from '../web/hospital/copy.js';
 import { ratio } from '../web/numbers.js';
@@ -58,8 +58,12 @@ export function mountWhatIf() {
     announce();
   });
   hook(root, 'median').addEventListener('click', () => {
-    // The median itself, exactly: a ratio over it by less than half a step still comes down to it.
-    for (const row of rows) set(row, row.err > row.med ? row.med : null, { exact: true, move: true });
+    // Each slider where it is now: one over its median comes down to the median itself, exactly (even by less than half a step); one at
+    // or under it stays where the reader put it.
+    for (const row of rows) {
+      const target = medianTarget(over[row.cond] ?? row.err, row.med);
+      if (target !== null) set(row, target, { exact: true, move: true });
+    }
     paint();
     announce();
   });

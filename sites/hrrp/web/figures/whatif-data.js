@@ -30,6 +30,10 @@ export const liveWords = (state) => {
 };
 
 // The hospital as the what-if holds it: the conditions it can move (measured ones), by key.
+// "Bring all to median" for one slider: where a ratio at its current value goes. Over its peer median (to the median itself, exactly)
+// it comes down to the median; at or under it, or with no median published, null: it stays where the reader put it.
+export const medianTarget = (current, median) => (median !== null && median !== undefined && current > median ? median : null);
+
 export const measuredKeys = (h) => CONDS.filter((k) => isMeasured(h.c[k]));
 
 // The state at these ratios (over: { condition: ratio } for the ones moved; the rest stay at the hospital's own): CMS's factor moved

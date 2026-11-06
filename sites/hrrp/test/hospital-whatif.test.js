@@ -9,7 +9,7 @@ import { sliderRange, whatIfPaf } from '../../../engine/js/hrrp/whatif.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { generateHrrp } from '../web/generate.js';
 import { areaGroups, areaKeyOf } from '../web/figures/neighbors-data.js';
-import { WI_STEP, movedHospital, whatIfData, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
+import { WI_STEP, medianTarget, movedHospital, whatIfData, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
 import { HOSPITAL_COLUMNS, hospitalCsv } from '../web/csv.js';
 import { csvPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -260,7 +260,7 @@ test('on the data: every page builds its what-if and area table by property, wit
 });
 
 test('on the data: the page data for the browser rebuild the same hospital, and the page is within its budget in plain bytes', () => {
-  const h = DATA.hospitals.find((x) => x.id === '330023') ?? DATA.hospitals[100];
+  const h = DATA.hospitals.find((x) => x.c?.HF?.flag === 1 && x.pen > 0) ?? DATA.hospitals[100];
   const text = render(h);
   const json = JSON.parse(/<script type="application\/json" id="hrrp-hospital">([\s\S]*?)<\/script>/.exec(text)[1]);
   assert.equal(json.row[0], h.id);
@@ -290,6 +290,14 @@ test('on the data: a ratio over its median by under half a step still comes to n
     for (const k of CONDS) if (isMeasured(h.c[k])) all[k] = Math.min(h.c[k].err, peerMedian(DATA.meta, h.peer, k));
     assert.equal(whatIfState(h, DATA.meta, all).paf, 1, h.id);
   }
+});
+
+test('Bring all to median acts on the current value: over the median it comes down to it, at or under it stays', () => {
+  assert.equal(medianTarget(1.2, 1.0), 1.0);
+  assert.equal(medianTarget(1.0004, 1.0), 1.0, 'over by under half a step still comes to it');
+  assert.equal(medianTarget(1.0, 1.0), null);
+  assert.equal(medianTarget(0.8, 1.0), null, 'dragged under the median: stays');
+  assert.equal(medianTarget(1.2, null), null, 'no median published');
 });
 
 test('on the data: with nothing to simulate the words sit above the pair and the history alone fills it', () => {
