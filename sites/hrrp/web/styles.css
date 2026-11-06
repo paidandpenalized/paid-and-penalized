@@ -191,13 +191,19 @@
    average cut over time where there is room (the old state page's rows), and the map's dots shaded by cut, sized by volume. */
 /* A long metro name wraps in the card's title bar instead of pushing the page sideways. */
 .place__card .prog__summary > .form__title { flex-wrap: wrap; white-space: normal; }
-.place__fig { min-width: 0; margin-top: 40px; }
-.place__figh { margin: 0 0 4px; font: 400 clamp(1.4rem, 3vw, 1.9rem)/1.1 var(--font-display); }
+/* Each figure under a title set as Thirty Day Readmissions sets a figure's (bold, the body's size), the "FIGURE N." label leading
+   the takeaway's line. */
+.place__fig { min-width: 0; margin-top: 36px; }
+.place__figh { margin: 0 0 4px; font: 700 var(--fs-md)/1.25 var(--font-body); }
+.page--place .fig__n { display: inline; margin: 0 6px 0 0; }
+.page--place .fig__cap { font-weight: 400; font-size: var(--fs-base); line-height: 1.4; }
 .place__pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 40px; }
 .place__pair > * { min-width: 0; }
+.place__stack { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; align-content: start; }
 @media (min-width: 980px) {
-  .place__pair:has(> :nth-child(2)) { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
-  .place__pair--rev:has(> :nth-child(2)) { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  .place__pair:has(> :nth-child(2)) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+  .place__pair--even:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pic--side.place__fig > .fig { grid-template-rows: repeat(4, auto) 1fr; }
 }
 .page--place .fig .chart { max-width: none; }
 .place__keybox { display: grid; gap: 6px; margin-top: 10px; }

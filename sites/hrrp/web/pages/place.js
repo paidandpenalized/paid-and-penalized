@@ -14,26 +14,32 @@ import { t } from '../place/copy.js';
 import { estimateTag } from '../estimate-tag.js';
 import { breadcrumb, recordCard, shellOf } from './parts.js';
 
-// A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number.
-const titled = (id, title, figureHtml) => (figureHtml ? html`<section class="place__fig" aria-labelledby="pf-${id}"><h2 class="place__figh" id="pf-${id}">${title}</h2>
+// A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number. side: its words beside
+// its chart where there is room (styles.css .pic--side).
+const titled = (id, title, figureHtml, side = false) => (figureHtml ? html`<section class="place__fig${side ? ' pic--side' : ''}" aria-labelledby="pf-${id}"><h2 class="place__figh" id="pf-${id}">${title}</h2>
 ${figureHtml}</section>` : '');
 
-// The page's figures in order, two to a row where the old state page had them (the map beside the size of the cuts, the peer
-// groups beside the average cut over time). shared: the area context (the state outlines, the edition's label); null draws no map.
+// The page's figures in order, composed against Thirty Day Readmissions' state page: the map beside the size of the cuts with the
+// peer groups under it (a place without a map has those two side by side), which conditions drive the penalties across the
+// page, then the average cut over time with its words beside it. shared: the area context (the state outlines, the edition's
+// label); null draws no map.
 function figuresOf(view, shared) {
   const f = view.figures;
   const n = counter();
   const edition = view.edition;
   const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n) : '';
   const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n }));
+  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n }));
   const conditions = f.conditions.measuredAny
     ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n }))
     : html`<section class="place__fig"><h2 class="place__figh">${t('figCondTitle')}</h2><p class="small muted">${t('condNoMeasured')}</p></section>`;
-  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n }));
-  const trend = titled('trend', t('figTrendTitle'), trendFigure(f.trend, { name: view.name, id: f.id, edition, span: f.span, n }));
-  return html`${map ? html`<div class="place__pair">${titled('map', t('figMapTitle'), map)}${size}</div>` : size}
+  const trend = titled('trend', t('figTrendTitle'), trendFigure(f.trend, { name: view.name, id: f.id, edition, span: f.span, n }), true);
+  const top = map
+    ? html`<div class="place__pair">${titled('map', t('figMapTitle'), map)}<div class="place__stack">${size}${peers}</div></div>`
+    : html`<div class="place__pair place__pair--even">${size}${peers}</div>`;
+  return html`${top}
 ${conditions}
-<div class="place__pair place__pair--rev">${peers}${trend}</div>`;
+${trend}`;
 }
 
 // view: placeView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
