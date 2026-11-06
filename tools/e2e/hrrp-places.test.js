@@ -211,11 +211,13 @@ describe('the explorer when the rows do not come', () => {
     await eventually(async () => /try again/.test(await note.innerText()), 'the failure is said');
     assert.doesNotMatch(await note.innerText(), /reload/i, 'the words match the behavior: a touch, not a reload');
     assert.equal(await page.locator('#explore-table').isHidden(), true, 'the table stays hidden');
+    assert.equal(await page.locator('#ex-csv a[download]').isVisible(), true, 'the full CSV stays a visible link while the rows are down');
     assert.equal(await page.locator('.ht-nojs').isHidden(), true, 'the needs-JavaScript sentence is not shown to a reader with the script');
     fail = false;
     await note.click();
     await page.locator('#explore-table').waitFor({ state: 'visible' });
     assert.equal(await note.innerText(), '', 'the line clears once the rows are in');
+    assert.equal(await page.locator('#ex-csv').isHidden(), true, 'the box\'s own link takes over');
   }));
 
   it('a failed filtered download says so, and the whole list stays a visible link', () => withPage(tabs, { path: HRRP_PROGRAM_PATH }, async (page) => {

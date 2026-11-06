@@ -321,6 +321,7 @@
 .ht { display: grid; gap: 12px; }
 .ht[hidden], .ht-empty[hidden] { display: none; }
 .ht-nojs { margin-top: 12px; max-width: 52ch; color: var(--ink-2); }
+.ht-csv { margin-top: 8px; max-width: 52ch; }
 .ht-retry:empty { display: none; }
 .ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }
 .ht__field { display: grid; gap: 4px; margin: 0; }

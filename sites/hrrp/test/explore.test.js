@@ -51,7 +51,7 @@ test('the controls\' options come from the hospitals: states, peer groups, teach
 
 test('the shell: every filter control, an empty table body, the asset address, hidden until a script has the rows', () => {
   const text = explorePart(exploreControls(HOSPITALS, CONDITIONS, META.fy), { url: '/assets/hrrp-hospitals.abc.json' }).text;
-  assert.match(text, /<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-nojs="ex-nojs" data-note="ex-note" data-csv="[^"]+\.csv" data-src="\/assets\/hrrp-hospitals\.abc\.json" data-page-size="25" hidden>/);
+  assert.match(text, /<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-nojs="ex-nojs" data-note="ex-note" data-csvline="ex-csv" data-csv="[^"]+\.csv" data-src="\/assets\/hrrp-hospitals\.abc\.json" data-page-size="25" hidden>/);
   for (const id of ['ex-text', 'ex-state', 'ex-peer', 'ex-cond', 'ex-teach', 'ex-beds', 'ex-loc', 'ex-pen', 'ex-sort']) assert.ok(text.includes(`id="${id}"`), id);
   assert.match(text, /<tbody><\/tbody>/);
   assert.ok(!text.includes('<tr><th scope="row"'), 'no data row in the page');
@@ -61,7 +61,7 @@ test('the shell: every filter control, an empty table body, the asset address, h
   assert.match(text, /<option value="cut">Cut, highest first<\/option>/);
   assert.match(text, /id="ex-empty" hidden>No hospital matches these filters\./);
   assert.match(text, /data-template="\{from\}–\{to\} of \{n\}"/);
-  assert.match(text, /class="ht-nojs" id="ex-nojs">The searchable table needs JavaScript\.[^<]*<a href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>/);
+  assert.match(text, /class="ht-nojs" id="ex-nojs">The searchable table needs JavaScript\.[^<]*<\/p>\s*<p[^>]*id="ex-note"[^>]*><\/p>\s*<p class="ht-csv" id="ex-csv"><a href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>/);
   assert.match(text, /<th scope="col" class="num">Peer group<\/th>/, 'the peer column is a number column, as in the place table');
   assert.match(text, /id="ex-note" role="status" data-loading="Loading[^"]*" data-text="[^"]*try again[^"]*"/, 'the loading line is the retry line');
   assert.match(text, /<a class="fig__btn" href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>[^<]+<\/a>/, 'the whole list stays a visible link beside the download button');

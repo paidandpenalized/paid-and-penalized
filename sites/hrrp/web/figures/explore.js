@@ -2,7 +2,7 @@
 // the page's browser script (client/place-tables.js, the code the place pages' hospitals tables use) reads them from the rows
 // asset (data-src; figures/place-table-data.js placeRowsAsset) and fills the table, so the page's HTML holds no row. Without a
 // script the shell stays hidden and a sentence points to the full hospitals CSV; with one, that sentence goes and a line takes its
-// place (data-nojs and data-note name the two), saying the list is loading, or that it did not load and a touch tries again.
+// place (data-nojs and data-note name the two; the link to the whole CSV stays in every state until the table is up, data-csvline), saying the list is loading, or that it did not load and a touch tries again.
 // After sites/hacrp/web/pages/parts.js hospitalTable. filterControls is the filter row both hospitals tables use.
 import { html } from '../../../../web/render/html.js';
 import { printout } from '../../../../web/render/components.js';
@@ -42,9 +42,10 @@ const WORDS = () => ({
 // controls: explore-data.js exploreControls(); url: the rows asset's path (null: none, the shell has no source).
 export function explorePart(controls, { url = null } = {}) {
   return html`<p class="part__intro">${t('exploreIntro')}</p>
-<p class="ht-nojs" id="ex-nojs">${t('exploreNoScript')} <a href="${controls.csvHref}" download>${t('exploreNoScriptCsv')}</a></p>
+<p class="ht-nojs" id="ex-nojs">${t('exploreNoScript')}</p>
 <p class="ht-retry small" id="ex-note" role="status" data-loading="${t('exploreLoading')}" data-text="${t('exploreRetry')}"></p>
-<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-nojs="ex-nojs" data-note="ex-note" data-csv="${controls.csvHref}"${url ? html` data-src="${url}"` : ''} data-page-size="${controls.pageSize}" hidden>
+<p class="ht-csv" id="ex-csv"><a href="${controls.csvHref}" download>${t('exploreNoScriptCsv')}</a></p>
+<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-nojs="ex-nojs" data-note="ex-note" data-csvline="ex-csv" data-csv="${controls.csvHref}"${url ? html` data-src="${url}"` : ''} data-page-size="${controls.pageSize}" hidden>
 ${filterControls({ prefix: 'ex', w: WORDS(), states: controls.states, peers: controls.peers, conds: controls.conds, teach: controls.teach, beds: controls.beds, sorts: controls.sorts })}
 <p class="small ph__status" id="ex-status" aria-live="polite" data-template="${statusTemplate()}"></p>
 ${printout(html`<table class="gb gb--hospitals explore__table ph__table">

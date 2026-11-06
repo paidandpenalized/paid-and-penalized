@@ -140,6 +140,7 @@ export function mountHospitals(box) {
       return;
     }
     if (note) note.textContent = '';
+    if (box.dataset.csvline) document.getElementById(box.dataset.csvline)?.setAttribute('hidden', ''); // the box's own buttons carry the link now
     box.querySelector('.ph__more')?.setAttribute('hidden', '');
     box.hidden = false;
     for (const e of [controls, status, prev, next]) e.hidden = false;

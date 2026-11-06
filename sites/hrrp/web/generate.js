@@ -6,6 +6,7 @@ import { MIN_DISCHARGES, contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
+import { PAGE_SIZE } from './constants.js';
 import { dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv } from './csv.js';
 import { hospitalsAsset } from './figures/explore-data.js';
 import { placeRowsAsset } from './figures/place-table-data.js';
@@ -72,7 +73,8 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   }
   for (const place of places.list) {
     const view = placeView(place, area);
-    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl, hospitalsUrl: placeRowsUrl }) });
+    // A place whose table fits a page never reads the rows asset, so its search reads the small one.
+    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl, hospitalsUrl: view.hospitals.rows.length > PAGE_SIZE ? placeRowsUrl : hospitalsUrl }) });
     // The files its two tables link: the places inside it, and its hospitals (a metro area's are the area file written above).
     if (view.children) ctx.emit({ path: csvPath(fy, view.children.csvName), noindex: robots !== null, text: placeCsv(view.children.csvRows, view.children.column) });
     if (view.hospitals.csvOwn) ctx.emit({ path: csvPath(fy, view.hospitals.csvName), noindex: robots !== null, text: hospitalCsv(view.hospitals.rows.map((r) => r.h)) });
