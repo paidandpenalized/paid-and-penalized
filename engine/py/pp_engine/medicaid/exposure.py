@@ -21,13 +21,14 @@ report's as filed (base-year dollars, no projection, no annualizing).
 """
 import statistics
 
+from pp_engine.hcris.tidy import STATUS_LABEL
 from pp_engine.medicaid import params
 
 # The HCRIS layer's columns this module reads (S-10 Part I, G-3, S-3 Part I).
 FLOWS = ("medicaid_net_revenue", "medicaid_supplemental", "medicaid_cost", "net_patient_revenue",
          "net_income_patients", "net_income", "other_income", "other_operating_income", "uncompensated_cost",
          "medicaid_days_all", "days_medicaid_labor_delivery", "medicaid_days_maternity", "days_total")
-STATUS_LABELS = ("settled", "as filed")
+STATUS_LABELS = frozenset(STATUS_LABEL.values())
 
 
 class ExposureError(ValueError):
@@ -112,8 +113,10 @@ def _cost_ratio(cost, revenue, flags=None):
 
 def hospital_base(row):
     """The measured base for one hospital-year row of the HCRIS layer (a dict; numbers, or text as in the CSV
-    download): flows as filed, the cost ratios for both revenue bases, the report's status label and flags naming
-    anything unusual. `share_factor` starts at 1; the caller sets it from its state's ratio."""
+    download): flows as filed, the cost ratios for both revenue bases, the report's status label, whether it is scored
+    (`scored`, and `scored_line2_5` for the lines 2 + 5 comparison) and flags naming anything unusual. The expansion
+    share's factor depends on the hospital's state, so the caller computes it (share_factor) and passes it to
+    scoring."""
     days = int(row["period_days"])
     if days <= 0:
         raise ExposureError(f"period of {days} days")
@@ -123,9 +126,10 @@ def hospital_base(row):
     base = {k: _number(row.get(k)) for k in FLOWS}
     base["other_operating_income"] = base["other_operating_income"] or 0.0  # blank counts as zero
     rev = base["medicaid_net_revenue"]
+    negative_revenue = rev is not None and rev < 0
     if rev is None:
         flags.append("no_medicaid_revenue")
-    elif rev < 0:
+    elif negative_revenue:
         flags.append("negative_medicaid_revenue")
     rev25 = None if rev is None and base["medicaid_supplemental"] is None else (
         (rev or 0.0) + (base["medicaid_supplemental"] or 0.0))
@@ -133,9 +137,10 @@ def hospital_base(row):
     # A usable margin needs positive patient revenue, and positive operating revenue with other operating income.
     has_margin = (npr is not None and npr > 0 and base["net_income_patients"] is not None
                   and npr + base["other_operating_income"] > 0)
+    exceeds = has_margin and rev is not None and rev > npr
     if not has_margin:
         flags.append("no_margin")
-    elif rev is not None and rev > npr:
+    elif exceeds:
         flags.append("medicaid_exceeds_patient_revenue")
     if base["uncompensated_cost"] is None:
         flags.append("no_uncompensated_cost")
@@ -149,15 +154,17 @@ def hospital_base(row):
     # Not scored: Medicaid revenue below zero, or above the hospital's whole net patient revenue (filing errors; the
     # scenario would remove more revenue than the hospital has). A blank line 2 is scored: it has no line-2 revenue
     # at risk, but its line 5 can be in the lines 2 + 5 comparison.
-    scored = not {"negative_medicaid_revenue", "medicaid_exceeds_patient_revenue"} & set(flags)
+    scored = not (negative_revenue or exceeds)
     # The same screen for the lines 2 + 5 comparison: lines 2 + 5 above net patient revenue leave that version only.
-    if scored and has_margin and rev25 is not None and rev25 > npr:
+    exceeds25 = scored and has_margin and rev25 is not None and rev25 > npr
+    if exceeds25:
         flags.append("medicaid_2_5_exceeds_patient_revenue")
     base.update(
         ccn=row["ccn"], period_begin=row["period_begin"], period_end=row["period_end"], period_days=days,
         status=row["status_label"], miur=_number(row.get("medicaid_day_share")),
-        patient_margin=_number(row.get("patient_margin")), revenue_line2_5=rev25, has_margin=has_margin, scored=scored, margin_outlier=False,
-        share_factor=1.0, cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
+        patient_margin=_number(row.get("patient_margin")), revenue_line2_5=rev25, has_margin=has_margin, scored=scored,
+        scored_line2_5=scored and not exceeds25, margin_outlier=False,
+        cost_ratio=_cost_ratio(base["medicaid_cost"], rev, flags),
         cost_ratio_line2_5=_cost_ratio(base["medicaid_cost"], rev25), flags=flags)
     return base
 
@@ -188,17 +195,17 @@ def revenue_at_risk(base, share, line2_5=False):
     """Step 1: the Medicaid revenue base times the hospital's expansion share; 0 when the base is missing or not
     positive."""
     revenue = base["revenue_line2_5"] if line2_5 else base["medicaid_net_revenue"]
-    screened = line2_5 and "medicaid_2_5_exceeds_patient_revenue" in base["flags"]
-    if share is None or not base["scored"] or screened or revenue is None or revenue <= 0:
+    scored = base["scored_line2_5"] if line2_5 else base["scored"]
+    if share is None or not scored or revenue is None or revenue <= 0:
         return 0.0
     if not 0 <= share <= 1:
         raise ExposureError(f"VIII share {share} outside 0..1")
     return revenue * share
 
 
-def margin_fence(margins, width=2.0):
+def margin_fence(margins, width=params.MARGIN_FENCE_IQR):
     """The (low, high) range outside which an operating margin is an outlier: the first and third quartiles widened by
-    `width` interquartile ranges (Commonwealth Fund's 2025 screen, Q1 - 2 IQR to Q3 + 2 IQR)."""
+    `width` interquartile ranges (params.MARGIN_FENCE_IQR)."""
     values = sorted(m for m in margins if m is not None)
     if len(values) < 4:
         raise ExposureError("too few margins for a fence")
@@ -214,7 +221,9 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     """Steps 1 to 4 for one hospital. `share`: its expansion share (`hospital_share`; None: no expansion group);
     `decline`: the
     state's expansion-enrollment decline for the scenario, a fraction (0.32 for Urban's -32%); `use`: the reader's
-    use multiple. Returns the step results; margins are None when the base has no usable patient revenue."""
+    use multiple. Returns the step results, with the revenue and income before and after that the roll-ups sum
+    (operating: G-3 lines 3 and 5, each plus other operating income; total: line 3 and line 29 after); margins and
+    those amounts are None when the base has no usable patient revenue, and line 29 after also without net income."""
     if not params.USE_MIN <= use <= params.USE_MAX:
         raise ExposureError(f"use multiple {use} outside {params.USE_MIN}..{params.USE_MAX}")
     if not 0 <= decline <= 1:
@@ -233,13 +242,20 @@ def scenario(base, share, decline, use=params.USE_DEFAULT, line2_5=False):
     npr, oth, oo = base["net_patient_revenue"], base["other_income"] or 0.0, base["other_operating_income"]
     if base["has_margin"]:
         npr_after = npr - lost + replaced
-        nip, ni = base["net_income_patients"], base["net_income"]
-        out.update(operating_margin=operating_margin(base),
-                   operating_margin_after=_margin(nip + oo + income_change, npr_after + oo),
+        ni = base["net_income"]
+        ni_after = None if ni is None else ni + income_change
+        rev, inc = npr + oo, base["net_income_patients"] + oo
+        rev_after, inc_after = npr_after + oo, inc + income_change
+        out.update(operating_revenue=rev, operating_income=inc, operating_revenue_after=rev_after,
+                   operating_income_after=inc_after, net_patient_revenue_after=npr_after, net_income_after=ni_after,
+                   operating_margin=_margin(inc, rev), operating_margin_after=_margin(inc_after, rev_after),
                    total_margin=_margin(ni, npr + oth),
-                   total_margin_after=None if ni is None else _margin(ni + income_change, npr_after + oth))
+                   total_margin_after=None if ni is None else _margin(ni_after, npr_after + oth))
     else:
-        out.update(operating_margin=None, operating_margin_after=None, total_margin=None, total_margin_after=None)
+        out.update({k: None for k in ("operating_revenue", "operating_income", "operating_revenue_after",
+                                      "operating_income_after", "net_patient_revenue_after", "net_income_after",
+                                      "operating_margin", "operating_margin_after", "total_margin",
+                                      "total_margin_after")})
     uc = base["uncompensated_cost"]
     out["uncompensated_change"] = added_uc / uc if uc and uc > 0 else None
     return out

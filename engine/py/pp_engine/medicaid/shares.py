@@ -46,11 +46,6 @@ def quarter_end(text):
     return datetime.date(year, month, day)
 
 
-def federal_fy(day):
-    """The federal fiscal year a date falls in (October through September)."""
-    return day.year + 1 if day.month >= 10 else day.year
-
-
 def fy_quarter_ends(fy):
     """The four quarter-end dates of a federal fiscal year, in order."""
     return (datetime.date(fy - 1, 12, 31), datetime.date(fy, 3, 31), datetime.date(fy, 6, 30), datetime.date(fy, 9, 30))

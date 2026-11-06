@@ -26,7 +26,7 @@ class Base(unittest.TestCase):
 
     def test_a_full_year_is_left_as_filed(self):
         b = exposure.hospital_base(hcris_row())
-        self.assertEqual((b["share_factor"], b["flags"], b["status"]), (1.0, [], "settled"))
+        self.assertEqual((b["flags"], b["status"], b["scored"], b["scored_line2_5"]), ([], "settled", True, True))
         self.assertAlmostEqual(b["cost_ratio"], 1.5)
         self.assertAlmostEqual(b["cost_ratio_line2_5"], 1.25)
         self.assertEqual(b["revenue_line2_5"], 12000000.0)
@@ -96,7 +96,7 @@ class LinesTwoAndFive(unittest.TestCase):
     def test_lines_2_and_5_above_patient_revenue_leave_that_comparison_only(self):
         b = exposure.hospital_base(hcris_row(medicaid_net_revenue="60000000", medicaid_supplemental="50000000"))
         self.assertIn("medicaid_2_5_exceeds_patient_revenue", b["flags"])
-        self.assertTrue(b["scored"])
+        self.assertEqual((b["scored"], b["scored_line2_5"]), (True, False))
         self.assertEqual(exposure.revenue_at_risk(b, 0.25), 15000000)
         self.assertEqual(exposure.revenue_at_risk(b, 0.25, line2_5=True), 0.0)
 
@@ -178,7 +178,7 @@ class Scenario(unittest.TestCase):
 
     def test_inconsistent_inputs_are_not_scored(self):
         b = exposure.hospital_base(hcris_row(net_patient_revenue="9000000"))
-        self.assertFalse(b["scored"])
+        self.assertEqual((b["scored"], b["scored_line2_5"]), (False, False))
         self.assertEqual(exposure.scenario(b, 0.25, 0.4)["lost"], 0.0)
         self.assertTrue(self.base["scored"])
 

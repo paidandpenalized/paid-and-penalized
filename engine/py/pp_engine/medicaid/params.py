@@ -41,6 +41,11 @@ PART_YEAR_DAYS = 360
 # with size (4.9, 3.8 to 4.7, 2.5 to 2.8, 1.6 and 0.7 points for 200-299, 300-499, 500-999, 1,000-4,999 and 5,000+).
 MIN_MEDICAID_DAYS = 200
 
+# The operating-margin outlier screen: a margin below Q1 - MARGIN_FENCE_IQR x IQR or above Q3 + MARGIN_FENCE_IQR x IQR
+# (over the hospitals rolled up) stays in the dollar sums but leaves the margin roll-ups. Commonwealth Fund's 2025
+# screen, Q1 - 2 IQR to Q3 + 2 IQR.
+MARGIN_FENCE_IQR = 2.0
+
 # Medicaid cost (S-10 line 7) per dollar of Medicaid net revenue (line 2) above this is treated as a data error and
 # capped here (about the 98th percentile of FY2023 acute and critical access hospitals); the hospital is flagged.
 MAX_COST_RATIO = 5.0

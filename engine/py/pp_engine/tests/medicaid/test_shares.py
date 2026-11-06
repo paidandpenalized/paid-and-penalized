@@ -1,6 +1,8 @@
 """The VIII group's share of state Medicaid spending (pp_engine.medicaid.shares), on invented CMS-64 rows."""
+import datetime
 import unittest
 
+from pp_engine.hcris.tidy import federal_fy
 from pp_engine.medicaid import shares
 from pp_engine.medicaid.shares import SharesError
 
@@ -23,9 +25,10 @@ class Amounts(unittest.TestCase):
             shares.amount("12x")
 
     def test_dates_and_fiscal_years(self):
-        self.assertEqual(shares.federal_fy(shares.quarter_end("12/31/2022")), 2023)
-        self.assertEqual(shares.federal_fy(shares.quarter_end("09/30/2023")), 2023)
-        self.assertEqual(shares.federal_fy(shares.quarter_end("10/31/2023")), 2024)
+        self.assertEqual(shares.quarter_end("3/31/2014"), datetime.date(2014, 3, 31))  # the file's unpadded month
+        self.assertEqual(federal_fy(shares.quarter_end("12/31/2022")), 2023)
+        self.assertEqual(federal_fy(shares.quarter_end("09/30/2023")), 2023)
+        self.assertEqual(federal_fy(shares.quarter_end("10/31/2023")), 2024)
         with self.assertRaises(SharesError):
             shares.quarter_end("2023-09-30")
 

@@ -123,7 +123,7 @@ class Records(unittest.TestCase):
         by = {r["ccn"]: r for r in self.records}
         ratio = (500 + 3000) / (1000 + 3000)  # Alaska's two hospitals with a report, weighted by Medicaid days
         self.assertAlmostEqual(by["990001"]["state_ratio"], ratio)
-        self.assertAlmostEqual(by["990001"]["base"]["share_factor"], 0.5 / ratio)
+        self.assertAlmostEqual(by["990001"]["share_factor"], 0.5 / ratio)
         self.assertAlmostEqual(by["990001"]["share"], 0.25 * 0.5 / ratio)
         self.assertAlmostEqual(by["990003"]["share"], 0.25 / ratio)
         self.assertAlmostEqual(by["990001"]["state_share"], 0.25)
@@ -148,7 +148,7 @@ class Records(unittest.TestCase):
         self.assertAlmostEqual(nat["high"]["lost"], both * 0.3, places=4)  # roll-ups are rounded to 6 places
         self.assertAlmostEqual(sens["use_1.25"]["high"]["lost"], both * 0.3 * 1.25, places=4)
         self.assertAlmostEqual(sens["state_share_only"]["high"]["lost"], 2 * 1000000 * 0.25 * 0.3)
-        factors = self.records[0]["base"]["share_factor"] + self.records[3]["base"]["share_factor"]
+        factors = self.records[0]["share_factor"] + self.records[3]["share_factor"]
         self.assertAlmostEqual(sens["share_net_of_dsh"]["low"]["lost"], 1000000 * (1000 / 3600) * factors * 0.1,
                                places=4)
         self.assertEqual(groups["critical_access"]["low"]["hospitals"], 1)
