@@ -56,10 +56,9 @@ ${section(DOLLARS_ID, t('dollarsHeading'), html`<p>${t('dollarsIntro')}</p>
 ${view.totals && html`<p>${view.totals.text}${view.totals.url && html` ${externalLink(view.totals.url, t('cmsSourceLink'))}`}</p>`}
 ${view.accuracy && html`<h3>${t('accuracyHeading')}</h3>
 <p>${view.accuracy}</p>`}
-<h3>${t('assumeHeading')}</h3>
+<h3 id="assume-h">${t('assumeHeading')}</h3>
 <p>${t('assumeIntro')}</p>
-${printout(html`<table class="gb assume">
-<caption class="vh" id="assume-cap">${t('assumeHeading')}</caption>
+${printout(html`<table class="gb assume" aria-labelledby="assume-h">
 <thead><tr><th scope="col">${t('assumeColA')}</th><th scope="col">${t('assumeColE')}</th></tr></thead>
 <tbody>${view.assumptions.map(([a, e]) => html`<tr><th scope="row">${a}</th><td>${e}</td></tr>`)}</tbody>
 </table>`)}
@@ -76,8 +75,7 @@ ${section('places', t('placesHeading'), html`${view.places && html`<p>${view.pla
 ${section('history', t('historyHeading'), html`<p>${view.history}</p>
 <p>${view.historyListed}</p>
 <p>${view.historyTotals.text}${view.historyTotals.noTotal && html` ${view.historyTotals.noTotal}`}</p>
-${printout(html`<table class="gb">
-<caption class="vh" id="history-cap">${t('historyHeading')}</caption>
+${printout(html`<table class="gb" aria-labelledby="history-h">
 <thead><tr><th scope="col">${t('historyColYear')}</th><th scope="col" class="num">${t('historyColTotal')}</th><th scope="col">${t('historyColSource')}</th></tr></thead>
 <tbody>${view.historyTotals.rows.map((r) => html`<tr><th scope="row">${r.fy}</th><td class="num">${r.total ?? t('historyNone')}</td><td>${r.source ? (r.source.url && r.source.name ? externalLink(r.source.url, r.source.name) : r.source.name ?? '') : ''}</td></tr>`)}</tbody>
 </table>`)}`)}
@@ -85,8 +83,7 @@ ${section('more', t('moreHeading'), html`<p>${view.feedback}</p>
 <p>${more}</p>`)}
 ${section('access', t('accessHeading'), html`<p>${t('accessText')}</p>`)}
 ${section('pins', t('pinsHeading'), html`<p>${t('pinsText')}</p>
-${printout(html`<table class="gb receipts">
-<caption class="vh" id="pins-cap">${t('pinsHeading')}</caption>
+${printout(html`<table class="gb receipts" aria-labelledby="pins-h">
 <thead><tr><th scope="col">${t('pinColFile')}</th><th scope="col" class="num">${t('pinColBytes')}</th><th scope="col">${t('pinColHash')}</th><th scope="col">${t('pinColGot')}</th></tr></thead>
 <tbody>${view.pins.map((p) => html`<tr><th scope="row">${p.url ? externalLink(p.url, p.title) : p.title}</th><td class="num">${p.bytes}</td><td><code>${p.hash}</code></td><td>${p.retrieved}</td></tr>`)}</tbody>
 </table>`)}`)}

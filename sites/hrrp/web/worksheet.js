@@ -4,7 +4,7 @@
 // whether the two agree, and the dollars line. worksheetRows is pure; worksheetHtml draws it on the server. waterfallData
 // is the numbers for the figure that shows the parts adding up to the cap (not drawn yet).
 import { CAP, CAP_PCT, CONDS, MIN_DISCHARGES, PEERS, WEIGHT_MISSING, condState, contrib, peerMedian, round4, weightPublished } from '../../../engine/js/hrrp/formula.js';
-import { formField, formTitle, printout } from '../../../web/render/components.js';
+import { formField, printout } from '../../../web/render/components.js';
 import { placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { conditionShort } from './derive.js';
@@ -81,15 +81,15 @@ export function worksheetHtml(rows, { compact = false, dollars = null, edition =
   const pay = dollars && !compact
     ? html`<li><span>${fill('wsDollars', { pay: dollars.payShort })}</span><b>${rows.dollars != null ? html`${fill('wsDollarsValue', { money: fmtMoney(rows.dollars) })}${dollars.tag}` : t('wsDollarsNone')}</b></li>`
     : '';
+  // The title bar is formTitle's markup with an id on its left run, which names the table below (a shared component stays as HACRP has it).
   return html`<div class="wsr">
 <div class="form wsr__id">
-${formTitle(t('wsTitle'), edition)}
+<p class="form__title"><span id="wsr-title">${t('wsTitle')}</span>${edition == null ? '' : html`<span>${edition}</span>`}</p>
 ${formField({ no: fa.no, label: fa.label, value: html`<a href="${hospitalPath(fa.id)}">${fa.value}</a>`, note: fa.note, size: 'sm', fieldCls: SHEET_FIELD })}
 ${formField({ no: fb.no, label: fb.label, value: fb.value, note: fb.note, size: 'sm', fieldCls: SHEET_FIELD })}
 ${formField({ no: fc.no, label: fc.label, value: fc.value, note: fc.note, size: 'sm', fieldCls: SHEET_FIELD })}
 </div>
-${printout(html`<table class="gb wsr__table">
-<caption class="vh" id="wsr-cap">${t('wsTitle')}</caption>
+${printout(html`<table class="gb wsr__table" aria-labelledby="wsr-title">
 <thead><tr><th scope="col">${t('wsColCondition')}</th>${head(1, t('wsColCases'))}${head(2, t('wsColRatio'))}${head(3, t('wsColMedian'))}${head(4, fill('wsColExcess', { a: '2', b: '3' }))}${head(5, t('wsColWeight'))}${head(6, fill('wsColPart', { c: 'C', a: '4', b: '5' }))}</tr></thead>
 <tbody>
 ${body}

@@ -105,7 +105,7 @@ test('Worksheet R runs the page width: no cap on its parts, and the step is one 
 test('Step 4: the medians table is not behind a disclosure, and the step gives it the full width', () => {
   const text = page();
   const step = between(text, 'id="step-4"', 'id="step-5"');
-  assert.ok(step.includes('<table class="gb meds__table">'), 'the table is in the step');
+  assert.ok(step.includes('<table class="gb meds__table" aria-labelledby="meds-title">'), 'the table is in the step');
   assert.ok(!step.includes('<details'), 'no collapsed disclosure around it');
   assert.match(step, /^id="step-4"/);
   assert.match(text, /<section class="hstep hstep--wide" id="step-4"/);
@@ -185,4 +185,18 @@ test('figure: a categorical key swatch, and a free class or a bad swatch is refu
 test('a Part spaces its blocks itself: one 28px rule, and the old lede-to-figure patch is gone', () => {
   assert.match(CSS, /\.part > :is\([^)]*\.pic[^)]*\.fig[^)]*\.mapcols[^)]*\.rsgrid[^)]*\)\s*\{\s*margin-top: 28px;/);
   assert.ok(!CSS.includes('.part__intro + .fig'), 'the sibling-only patch is removed');
+});
+
+test('a table beside a visible title is named by it (aria-labelledby), not by a hidden caption that says it a second time', () => {
+  for (const [what, text] of [['the program page', page()]]) {
+    const tables = [...text.matchAll(/<table class="gb [^"]*"([^>]*)>/g)];
+    assert.ok(tables.length > 0, `${what} has tables`);
+    for (const [tag, attrs] of tables) {
+      const id = /aria-labelledby="([^"]+)"/.exec(attrs)?.[1];
+      if (!id) continue;
+      assert.ok(text.includes(`id="${id}"`), `${what}: ${tag.slice(0, 40)} is named by an element that exists (${id})`);
+    }
+    for (const id of ['wsr-title', 'meds-title']) assert.ok(text.includes(`id="${id}"`) && text.includes(`aria-labelledby="${id}"`), `${what}: ${id} names its table`);
+    assert.ok(!/<caption class="vh" id="(?:wsr|meds)-cap"/.test(text), 'no second caption');
+  }
 });

@@ -123,18 +123,17 @@ function dualFigure({ dual, edition, n }) {
 // decimals, as CMS publishes them; a median above one is shaded. On the program page the table is open under its title
 // and the note; with collapsed (Methods) it sits in a disclosure. rows: how-data.js mediansRows().
 export function mediansTable({ rows, conditions, edition, collapsed = false }) {
-  const table = printout(html`<table class="gb meds__table">
-<caption class="vh" id="meds-cap">${fill('medsSummary', { edition })}</caption>
+  const table = printout(html`<table class="gb meds__table" aria-labelledby="meds-title">
 <thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
 <tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: pct(r.lo, 0), to: pct(r.hi, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
 </table>`);
   return collapsed
     ? html`<details class="meds">
-<summary>${fill('medsSummary', { edition })}</summary>
+<summary id="meds-title">${fill('medsSummary', { edition })}</summary>
 ${table}
 </details>`
     : html`<div class="meds">
-<p class="meds__title">${fill('medsTitle', { edition })}</p>
+<p class="meds__title" id="meds-title">${fill('medsTitle', { edition })}</p>
 <p class="meds__note">${fill('medsNote', { one: ratio(1, 1) })}</p>
 ${table}
 </div>`;

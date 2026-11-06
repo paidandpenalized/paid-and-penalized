@@ -25,7 +25,7 @@ const PINS = [
 const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed });
 const page = (ctx = ctxOf()) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const rowsOf = (text) => [...text.matchAll(/<tr><th scope="row">([^<]*(?:<[^>]+>[^<]*)*?)<\/th><td>(.*?)<\/td><\/tr>/gs)].map(([, a, e]) => [textOf(a), textOf(e)]);
-const assumptions = (text) => rowsOf(text.slice(text.indexOf('<table class="gb assume">'), text.indexOf('</table>', text.indexOf('<table class="gb assume">'))));
+const assumptions = (text) => rowsOf(text.slice(text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'), text.indexOf('</table>', text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'))));
 
 test('the accuracy line states the check against cost reports, and is dropped without the dollar check', () => {
   const text = textOf(page());
@@ -94,7 +94,7 @@ test('the modeled totals against CMS’s, with only an https source linked', () 
 test('the peer-group medians table sits in the formula section, collapsed', () => {
   const text = page();
   const formula = text.slice(text.indexOf('id="formula"'), text.indexOf('id="methods-dollars"'));
-  assert.match(formula, /<details class="meds">\s*<summary>Peer-group medians for FY2027<\/summary>/);
+  assert.match(formula, /<details class="meds">\s*<summary id="meds-title">Peer-group medians for FY2027<\/summary>/);
   assert.equal(formula.match(/<tbody>[\s\S]*?<\/tbody>/)[0].match(/<tr>/g).length, 5);
 });
 
