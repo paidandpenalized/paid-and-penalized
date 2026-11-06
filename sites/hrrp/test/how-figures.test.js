@@ -82,6 +82,8 @@ test('Step 2: the closest gap prints at four decimals, a sliver as "< 0.0001"', 
   assert.equal(hf.sliver, 5, '5 hospitals over the line by less than 0.0001');
   const figure = swarmFigure({ how, n: 2, edition: 'FY2027' }).text;
   assert.match(figure, /Closest over the line: &lt; 0\.0001\. CMS compares the stored values, so gaps print to four decimals\. 5 hospitals over the line by less than 0\.0001\./);
+  assert.equal(hf.close.n, 54, 'heart failure: 54 hospitals within 0.001 of the line');
+  assert.match(figure, /less than 0\.0001\. 54 hospitals sit within 0\.001 of the line, over or under\./, 'the count within 0.001 follows the slivers');
   assert.equal(how.swarm('CABG').closestOver, 0.000227);
   assert.match(figure, /Closest over the line: \+0\.0002\./, 'a condition whose closest dot is not a sliver prints the gap');
 });

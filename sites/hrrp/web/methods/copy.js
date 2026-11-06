@@ -139,6 +139,16 @@ export const COPY = {
   },
   readWindow: { text: 'The data window is {window}, so the cut reflects care from roughly one to three years before it takes effect.', claim: null },
 
+  figuresHeading: { text: 'Reading the figures', claim: null },
+  figuresRoundedOne: {
+    text: '{hospitals} comes in above a peer-group median on at least one condition yet takes no cut: the condition’s share of its Medicare payments is small enough that the reduction rounds to zero. The share cut by number of conditions measured counts it as not cut.',
+    claim: 'HRRP-04',
+  },
+  figuresRounded: {
+    text: '{hospitals} come in above a peer-group median on at least one condition yet take no cut: the condition’s share of the hospital’s Medicare payments is small enough that the reduction rounds to zero. The share cut by number of conditions measured counts them as not cut.',
+    claim: 'HRRP-04',
+  },
+
   placesHeading: { text: 'Places', claim: null },
   placesGeocode: {
     text: 'Map dots come from each hospital’s street address, geocoded with the U.S. Census Bureau Geocoder ({address} hospitals). When an address does not match, or its point falls far outside the hospital’s county, the dot goes to the center of its ZIP code ({zip}) or, failing that, its county ({county}).',

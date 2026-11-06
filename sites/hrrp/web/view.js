@@ -3,7 +3,7 @@
 // page's hero and card; a place's deck and card; Methods' filled sentences,
 // as plain strings (pages escape them). Pure.
 import { TEACH_LABEL, slug } from '../../../engine/js/hrrp/filters.js';
-import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS } from '../../../engine/js/hrrp/formula.js';
+import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS, verdict } from '../../../engine/js/hrrp/formula.js';
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
@@ -399,6 +399,14 @@ function historyTotals(history) {
   };
 }
 
+// The Methods page's notes on reading the program page's figures, each an accuracy trap worked out from the data: hospitals flagged
+// on a condition whose cut rounds to zero (counted as not cut by the share cut by conditions measured). A note with nothing to say
+// is left out.
+export function figureLimits({ hospitals: all, meta }) {
+  const rounded = all.filter((h) => verdict(h, meta).status === 'none-rounded').length;
+  return [rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null].filter(Boolean);
+}
+
 // The Methods page's words as plain strings, filled from the data: the edition's phrases, the neutrality modifier at four
 // decimals, how many hospitals the recomputation reproduces, the sources the data file names.
 export function methodsView(ctx) {
@@ -428,6 +436,7 @@ export function methodsView(ctx) {
     },
     accuracy: accuracyLine(meta.dollarCheck, edition),
     assumptions: assumptionRows(ctx),
+    figures: figureLimits(ctx),
     read: {
       readmission: methodsT('readReadmission'),
       small: methodsFill('readSmall', { minCases: String(MIN_DISCHARGES) }),

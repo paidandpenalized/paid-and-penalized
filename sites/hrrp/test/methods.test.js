@@ -7,6 +7,7 @@ import { textOf } from '../../../pipeline/site/html.js';
 import { ASSETS } from '../../../pipeline/test/helpers.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { NTAP_AMOUNT } from '../web/constants.js';
+import { verdict } from '../../../engine/js/hrrp/formula.js';
 import { buildPlaces } from '../web/places.js';
 import { areaContext, methodsView } from '../web/view.js';
 import { ALL, CONDITIONS, CUT, HISTORY, META, hospital, loadHrrpOnce } from './fixtures.js';
@@ -172,4 +173,17 @@ test('on the data: Methods holds every pin the data read, each claim sentence re
   assert.match(t, /\d+% of estimates land within 15%/);
   assert.match(t, /about \d\.\d% low overall/);
   assert.ok(html.length < 200000);
+});
+
+test('reading the figures: hospitals flagged on a condition whose cut rounds to zero are counted (one is said in the singular), and the section is left out with none', () => {
+  const rounded = (list) => list.filter((h) => verdict(h, META).status === 'none-rounded');
+  const many = rounded(ALL);
+  assert.ok(many.length > 1);
+  assert.match(methodsView(ctxOf()).figures[0], new RegExp(`^${many.length} hospitals come in above a peer-group median .* counts them as not cut\\.$`));
+  assert.match(textOf(page()), /Reading the figures/);
+  const one = ctxOf({ hospitals: ALL.filter((h) => !many.slice(1).includes(h)) });
+  assert.match(methodsView(one).figures[0], /^1 hospital comes in above .* yet takes no cut: .* counts it as not cut\.$/);
+  const none = ctxOf({ hospitals: ALL.filter((h) => !many.includes(h)) });
+  assert.deepEqual(methodsView(none).figures, []);
+  assert.doesNotMatch(textOf(page(none)), /Reading the figures/);
 });

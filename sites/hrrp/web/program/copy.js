@@ -122,6 +122,7 @@ export const COPY = {
   swarmMarkShort: { text: 'The example, {gap}', claim: null },
   swarmClosest: { text: 'Closest over the line: {gap}. CMS compares the stored values, so gaps print to four decimals.', claim: null },
   swarmSliver: { text: '{hospitals} over the line by less than {tiny}.', claim: null },
+  swarmClose: { text: '{hospitals} sit within {close} of the line, over or under.', claim: null },
   swarmKey: { text: "Red: over its own peer group's median, counted toward the cut. Gray: at or under.", claim: 'HRRP-04' },
   swarmClipLow: { text: '{n} below {lo}', claim: null },
   swarmClipHigh: { text: '{n} above {hi}', claim: null },

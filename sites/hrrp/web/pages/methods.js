@@ -71,6 +71,7 @@ ${section('read', t('readHeading'), html`<ul>
 <li>${view.read.window}</li>
 <li>${fillCopy(SHARED, 'notInHrrp')}</li>
 </ul>`)}
+${view.figures.length ? section('figures', t('figuresHeading'), html`<ul>${view.figures.map((line) => html`<li>${line}</li>`)}</ul>`) : ''}
 ${section('places', t('placesHeading'), html`${view.places && html`<p>${view.places}</p>`}<p>${t('placesText')}</p>`)}
 ${section('history', t('historyHeading'), html`<p>${view.history}</p>
 <p>${view.historyListed}</p>

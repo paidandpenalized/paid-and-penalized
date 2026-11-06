@@ -18,7 +18,7 @@ import { conditionShort } from '../derive.js';
 import { SLIVER, gapText, ratio, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence } from '../wording.js';
-import { BAND, SWARM_ORDER, swarmDomain } from './how-data.js';
+import { BAND, CLOSE, SWARM_ORDER, swarmDomain } from './how-data.js';
 
 // How many columns each drawing holds at most (the narrowest bin that fits), and the share of dots a phone folds into each end column.
 const MAX_BINS = { wide: 56, narrow: 40 };
@@ -106,12 +106,12 @@ export function drawSwarm({ sw, width, name, cond }) {
   return { svg, below: dom.below, above: dom.above, lo: dom.lo, hi: dom.hi };
 }
 
-// The words under one condition's swarm: the closest gap and the slivers, the key to the colors, and a note when the example
+// The words under one condition's swarm: the closest gap, the slivers and the count within CLOSE of the line, the key to the colors, and a note when the example
 // hospital is not measured on the condition.
 function notesOf({ sw, cond }) {
   const lines = [];
   if (sw.closestOver !== null) {
-    lines.push(`${fill('swarmClosest', { gap: gapText(sw.closestOver) })}${sw.sliver ? ` ${fill('swarmSliver', { hospitals: hospitals(sw.sliver), tiny: ratio(SLIVER) })}` : ''}`);
+    lines.push(`${fill('swarmClosest', { gap: gapText(sw.closestOver) })}${sw.sliver ? ` ${fill('swarmSliver', { hospitals: hospitals(sw.sliver), tiny: ratio(SLIVER) })}` : ''}${sw.close.n ? ` ${fill('swarmClose', { hospitals: hospitals(sw.close.n), close: ratio(CLOSE, 3) })}` : ''}`);
   }
   lines.push(t('swarmKey'));
   if (!sw.example) lines.push(fill('swarmNoExample', { cond }));
