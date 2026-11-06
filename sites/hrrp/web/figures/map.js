@@ -16,6 +16,7 @@ import { GE_CUT_PCT, STATES_PAGE_SIZE } from '../constants.js';
 import { fmtInt, fmtMoney, fmtPct, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { DOT_TIERS, MILLION } from './map-data.js';
+import { pagerNav } from './pager.js';
 
 // The wide drawing's width: about the page's content on a wide screen. The dots are drawn on it only; a phone shows the shading.
 export const MAP_WIDE = 1180;
@@ -168,7 +169,7 @@ ${printout(html`<table class="gb states__table" data-page-size="${STATES_PAGE_SI
 <thead><tr><th scope="col">${t('statesColState')}</th><th scope="col" class="num">${t('statesColHospitals')}</th><th scope="col" class="num" title="${t('statesPenalizedTitle')}">${t('statesColPenalized')}</th><th scope="col" class="num">${t('statesColAvg')}</th><th scope="col" class="num">${ge}</th><th scope="col" class="num">${t('statesColDollars')}</th></tr></thead>
 ${data.pages.map((page, i) => html`<tbody data-page="${i + 1}">${page.map((r) => html`<tr><th scope="row"><a href="${r.path}">${r.name}</a></th><td class="num">${fmtInt(r.s.n)}</td><td class="num">${r.s.pctPen == null ? '—' : fmtPct(r.s.pctPen, 0)}</td><td class="num">${fmtPct(r.s.meanRed, 2)}</td><td class="num">${fmtInt(r.s.nGe1)}</td><td class="num">${r.nEstimated ? fmtMoney(r.s.penTotal) : '—'}</td></tr>`)}</tbody>
 `)}</table>`)}
-<nav class="seg states__pager" aria-label="${t('statesPager')}" hidden>${data.pages.map((_, i) => html`<button type="button" class="btn" data-to-page="${i + 1}" aria-pressed="${i === 0 ? 'true' : 'false'}">${fill('statesPage', { n: String(i + 1) })}</button>`)}</nav>
+${pagerNav({ cls: 'states', label: t('statesPager'), pages: data.pages, status: false })}
 <p class="small states__csv"><a href="${data.csvHref}" download>${t('statesDownload')}</a></p>
 </div>`;
 }

@@ -3,9 +3,10 @@
 // are never in the page's HTML) and the filter controls' options, read from the same hospitals. Pure.
 import { CONDS, condState, contrib } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL } from '../../../../engine/js/hrrp/filters.js';
-import { EXPLORE_PAGE_SIZE } from '../constants.js';
+import { PAGE_SIZE } from '../constants.js';
 import { conditionShort } from '../derive.js';
 import { HOSPITALS_PATH } from '../links.js';
+import { STATE_LETTER } from './glyph.js';
 import { byId } from '../numbers.js';
 
 // An asset row's fields, in order. name: the hospital as CMS lists it; alias: its former or other name, or null; red: the
@@ -14,7 +15,6 @@ import { byId } from '../numbers.js';
 // c counted toward the cut, b measured and below the peer median, f too few cases, n none; inactive: 1 when CMS lists the
 // hospital's agreement as ended.
 export const FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'zip', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive']);
-const LETTER = { counted: 'c', below: 'b', few: 'f', none: 'n' };
 
 const byNameThenId = (a, b) => a[1].localeCompare(b[1], 'en') || byId(a[0], b[0]);
 
@@ -24,9 +24,9 @@ export function hospitalsAsset(hospitals, meta, places = []) {
   const rows = hospitals.map((h) => {
     const { byCond } = contrib(h, meta);
     return [h.id, h.name, h.alias ?? null, h.city, h.st, h.zip ?? null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
-      CONDS.map((k) => LETTER[condState(h, k, meta, byCond)]).join(''), h.inactive ? 1 : 0];
+      CONDS.map((k) => STATE_LETTER[condState(h, k, meta, byCond)]).join(''), h.inactive ? 1 : 0];
   }).sort(byNameThenId);
-  return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, conds: CONDS, pageSize: EXPLORE_PAGE_SIZE, rows, places };
+  return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, conds: CONDS, pageSize: PAGE_SIZE, rows, places };
 }
 
 // The sorts the explorer offers (name A to Z first, the rest high to low, blanks last): the key is a FIELDS name.
@@ -44,5 +44,5 @@ export function exploreControls(hospitals, conditions) {
   const states = [...new Set(hospitals.map((h) => h.st))].sort();
   const peers = [...new Set(hospitals.map((h) => h.peer).filter((p) => p != null))].sort((a, b) => a - b);
   const teach = Object.keys(TEACH_LABEL).filter((k) => hospitals.some((h) => h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
-  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: EXPLORE_PAGE_SIZE, sorts: SORTS };
+  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: SORTS };
 }

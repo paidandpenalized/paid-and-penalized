@@ -9,7 +9,7 @@ import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, spelled } from '../../../web/render/format.js';
 import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
-import { edition as editionOf, meanCutByYear, pafByYear } from './derive.js';
+import { edition as editionOf } from './derive.js';
 import { historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
 import { childTable, hospitalsTable } from './figures/place-table-data.js';
@@ -35,22 +35,23 @@ import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, r
 // the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital, and
 // the family's dollar estimates (a Map of CCN to row; optional), whose net the header chip shows.
 export function hospitalContext({ hospitals, meta, history, conditions, master = null, dollars = null, shapes = null, counties = [] }) {
+  const side = nationalSide({ hospitals, meta, history });
   return {
     meta,
     edition: { ...editionOf(meta, history), conditions },
     master,
     dollars,
     rank: rankContext(hospitals, meta.states),
-    // The figures' shared numbers: each peer group's ratios, each year's cuts and the all-hospital average cut by year.
+    // The figures' shared numbers: each peer group's ratios, each year's cuts and the all-hospital average cut by year (the place
+    // pages' comparison side, which holds it: areaContext takes this one and the lines rather than work them out again).
     history,
     rulers: rulerScales(hospitals, meta),
     yearRanks: yearRanks(hospitals, history, meta),
-    avgCut: meanCutByYear(hospitals, [...history.years, meta.fy], pafByYear({ history, meta })),
+    side,
+    avgCut: side.avgCut,
     lines: smallLines({ history }),
-    // The areas' hospital tables (each area once), and the outlines the nearby map draws (none: no map).
-    areas: areaGroups(hospitals, meta),
-    shapes,
-    counties,
+    // The areas' hospital tables (each area once), with what the nearby map and the table's glyphs are drawn from (shapes null: no map).
+    areas: areaGroups(hospitals, meta, { shapes, counties, conditions }),
   };
 }
 
@@ -86,8 +87,6 @@ function starsOf(h) {
     href,
   };
 }
-
-export { inMetro };
 
 // Nation, then the hospital's region, division, state and metro area, each only when the row names it.
 function crumbsOf(h, ctx) {
@@ -166,15 +165,16 @@ export function hospitalView(h, ctx) {
 
 // What the program page and the place pages share, built once: the edition's phrases, the nation's summary and the states'
 // average cuts (descending, for a state's rank among them). places: buildPlaces()'s result. conditions are kept on the edition;
-// the rest (the content files, the state outlines) passes through as given.
-export function areaContext({ hospitals, meta, history, conditions, places, pinsUsed = [], ...content }) {
+// the rest (the content files, the state outlines) passes through as given. side and lines: the hospital pages' (hospitalContext's),
+// when the build has them, so the nation's side and the history's marks are worked out once.
+export function areaContext({ hospitals, meta, history, conditions, places, pinsUsed = [], side = nationalSide({ hospitals, meta, history }), lines = smallLines({ history }), ...content }) {
   const edition = { ...editionOf(meta, history), conditions };
   const states = places.list.filter((p) => p.kind === 'state');
   const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
   const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
-  // What a place page compares itself with, once for the build: the nation's cuts, condition shares and average cut by year, and the cap and pandemic marks.
-  const side = nationalSide({ hospitals, meta, history });
-  return { ...content, hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, history, pinsUsed, side, lines: smallLines({ history }) };
+  // side (what a place page compares itself with, once for the build): the nation's cuts, condition shares and average cut by year;
+  // lines: the cap and pandemic marks.
+  return { ...content, hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, history, pinsUsed, side, lines };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -225,7 +225,7 @@ export function programView(ctx) {
     how: howData(ctx),
     picture: pictureData(ctx),
     map: mapData(ctx),
-    history: { lines: smallLines(ctx), windows: windowRows(ctx), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
+    history: { lines: ctx.lines, windows: windowRows(ctx), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
     explore: exploreControls(ctx.hospitals, edition.conditions),
     research: researchData(ctx.research),
   };
@@ -253,7 +253,7 @@ const stateRank = (place, S, ctx) => {
 // outside its metro areas (a row with no link). Largest first.
 function childRows(place) {
   const st = place.key.toUpperCase();
-  const make = (label, href, list) => ({ label, href, n: list.length, count: hospitals(list.length), s: summarize(list), nEstimated: list.filter((h) => h.pen != null).length });
+  const make = (label, href, list) => ({ label, href, n: list.length, s: summarize(list), nEstimated: list.filter((h) => h.pen != null).length });
   const rows = place.children.map((p) => {
     const list = place.kind === 'state' ? p.hospitals.filter((h) => h.st === st) : p.hospitals;
     return make(place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st }) : p.name, p.path, list);

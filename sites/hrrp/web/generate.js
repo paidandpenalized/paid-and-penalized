@@ -39,7 +39,7 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const { assets } = ctx;
   const shared = hospitalContext(data);  // data.shapes and data.counties: the outlines the nearby map draws
   const places = buildPlaces(hospitals, meta);
-  const area = areaContext({ ...data, places });  // data.shapes: the state outlines the map draws
+  const area = areaContext({ ...data, places, side: shared.side, lines: shared.lines });  // data.shapes: the state outlines the map draws
   const program = programView(area);
   // The explorer's rows are a content-hashed asset the page reads, not part of the page.
   const placeRows = places.list.map((p) => [p.kind, p.key, p.name, p.path, p.hospitals.length]);
@@ -61,11 +61,11 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   ctx.emit({ path: dictionaryPath(fy), noindex: robots !== null, text: dictionaryFilled });
   ctx.emit({ path: DICTIONARY_PAGE, robots, text: dictionaryPage({ text: dictionaryFilled, edition: program.edition, csvHref, markdownHref: dictionaryPath(fy), robots, assets }) });
   // One file for each area a hospital page tables (a metro, or a state outside its metros), shared by every hospital in it.
-  for (const area of shared.areas.values()) {
-    ctx.emit({ path: csvPath(fy, area.csvName), noindex: robots !== null, text: hospitalCsv(area.rows.map((r) => r.h)) });
+  for (const group of shared.areas.values()) {
+    ctx.emit({ path: csvPath(fy, group.csvName), noindex: robots !== null, text: hospitalCsv(group.rows.map((r) => r.h)) });
   }
   for (const hospital of hospitals) {
-    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, shared }) });
+    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets }) });
   }
   for (const place of places.list) {
     const view = placeView(place, area);

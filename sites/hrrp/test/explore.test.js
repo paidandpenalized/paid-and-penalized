@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { EXPLORE_PAGE_SIZE } from '../web/constants.js';
+import { PAGE_SIZE } from '../web/constants.js';
 import { FIELDS, SORTS, exploreControls, hospitalsAsset } from '../web/figures/explore-data.js';
 import { explorePart } from '../web/figures/explore.js';
 import { generateHrrp } from '../web/generate.js';
@@ -25,7 +25,7 @@ const HOSPITALS = [
 test('the hospitals asset: one row per hospital in the table\'s first order (name A to Z), fields in the documented order', () => {
   const a = hospitalsAsset(HOSPITALS, META);
   assert.equal(a.hospitalPath, HOSPITALS_PATH);
-  assert.equal(a.pageSize, EXPLORE_PAGE_SIZE);
+  assert.equal(a.pageSize, PAGE_SIZE);
   assert.deepEqual(a.rows.map((r) => r[0]), ['990012', '990013', '990011']);
   assert.ok(a.rows.every((r) => r.length === FIELDS.length));
   const zeta = a.rows.find((r) => r[0] === '990011');

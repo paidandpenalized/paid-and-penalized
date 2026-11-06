@@ -9,7 +9,7 @@ import { hospitalContext, hospitalView } from '../web/view.js';
 import { ASSETS, CONDITIONS, CUT, HISTORY, INACTIVE, META, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, OTHERS, hospital, loadHrrpOnce } from './fixtures.js';
 
 const ctxFor = (hospitals, history = HISTORY) => hospitalContext({ hospitals, meta: META, history, conditions: CONDITIONS });
-const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS, shared: ctx });
+const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS });
 const figureOf = (text, n) => new RegExp(`<figure class="fig" id="figure-${n}"[\\s\\S]*?</figure>`).exec(text)?.[0] ?? '';
 // The history is figure 3 after the what-if, figure 2 on a page with nothing to simulate.
 const historyOf = (text) => figureOf(text, text.includes('data-hosp-whatif') ? 3 : 2);
@@ -224,7 +224,7 @@ const DATA = loadHrrpOnce();
 const SHARED = hospitalContext(DATA);
 const BY = new Map();
 const PAGES = DATA.hospitals.map((h) => {
-  const text = hospitalPage({ view: hospitalView(h, SHARED), robots: null, assets: ASSETS, shared: SHARED });
+  const text = hospitalPage({ view: hospitalView(h, SHARED), robots: null, assets: ASSETS });
   return [h, text];
 });
 const pick = (name, pickFn) => {

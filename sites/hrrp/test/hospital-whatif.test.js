@@ -18,7 +18,7 @@ import { ASSETS, CONDITIONS, CUT, HISTORY, META, NONE_MEASURED, OTHERS, hospital
 import { withTemp } from '../../../pipeline/test/helpers.js';
 
 const ctxFor = (hospitals, extra = {}) => hospitalContext({ hospitals, meta: META, history: HISTORY, conditions: CONDITIONS, ...extra });
-const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS, shared: ctx });
+const pageOf = (h, ctx) => hospitalPage({ view: hospitalView(h, ctx), robots: null, assets: ASSETS });
 const figureOf = (text, n) => new RegExp(`<figure class="fig" id="figure-${n}"[\\s\\S]*?</figure>`).exec(text)?.[0] ?? '';
 const ALL = [CUT, NONE_MEASURED, ...OTHERS];
 const ctx = ctxFor(ALL);
@@ -226,7 +226,7 @@ test('on the data: each escape value is the peer median and what it saves is wha
       if (!s.over) { assert.equal(s.escape, null); continue; }
       const paf = whatIfPaf(h, DATA.meta, { [s.cond]: s.med });
       assert.equal(s.escape.ratio, s.med);
-      if (s.escape.noWeight) { assert.deepEqual([s.escape.saveCut, s.escape.saveDollars], [null, null]); continue; }
+      if (s.escape.saveCut === null) { assert.deepEqual([s.escape.saveCut, s.escape.saveDollars], [null, null]); continue; }
       assert.equal(s.escape.saveCut, Math.round((cutPct(h.paf) - cutPct(paf)) * 100) / 100, `${h.id} ${s.cond}`);
       assert.ok(s.escape.saveCut >= 0, 'bringing a ratio down never makes the cut larger');
       checked += 1;
@@ -270,7 +270,7 @@ test('on the data: the page data for the browser rebuild the same hospital, and 
 });
 
 test('on the data: a condition CMS flagged with no published payment weight says it cannot be recomputed, and its table row has dashes', () => {
-  const rows = DATA.hospitals.flatMap((h) => whatIfData(h, SHARED).sliders.filter((s) => s.escape?.noWeight).map((s) => [h, s]));
+  const rows = DATA.hospitals.flatMap((h) => whatIfData(h, SHARED).sliders.filter((s) => s.escape?.saveCut === null).map((s) => [h, s]));
   assert.ok(rows.length >= 4, `${rows.length} rows`);
   for (const [h] of rows.slice(0, 4)) {
     const fig = figureOf(render(h), 2);

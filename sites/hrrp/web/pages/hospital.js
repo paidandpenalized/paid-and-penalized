@@ -58,9 +58,8 @@ ${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html
 </section>`;
 }
 
-// view: hospitalView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths; shared:
-// hospitalContext()'s result (the outlines the nearby map draws, the edition's conditions).
-export function hospitalPage({ view, robots, assets, shared }) {
+// view: hospitalView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
+export function hospitalPage({ view, robots, assets }) {
   const path = hospitalPath(view.ccn);
   const title = `${view.heading} · ${SITE.name}`;
   const n = counter();
@@ -80,7 +79,7 @@ ${historyFigure(history, { view, n: n() })}
 </div>
 ${interactive ? whatIfScriptData(whatIf) : ''}
 ${worksheetDisclosure(sheet, view.edition)}
-${area && neighborsFigure(area, { view, ctx: shared, n: n() })}
+${area && neighborsFigure(area, { view, n: n() })}
 <p class="small muted hosp__source">${view.source}</p>
 </article>`;
   return page({

@@ -11,17 +11,14 @@ import { fill, t } from '../hospital/copy.js';
 import { estimateTag } from '../pages/parts.js';
 import { factor4, fmtMoney, fmtPct, ratio } from '../numbers.js';
 import { waterfallPair } from './waterfall.js';
-import { WI_STEP, resultWords } from './whatif-data.js';
-
-// The page data's script id.
-export const WHATIF_DATA_ID = 'hrrp-hospital';
+import { WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';
 
 // The words under a slider about getting its condition to the median.
 export function escapeWords(row) {
   if (!row.over) return t('wiEscapeAlready');
   const e = row.escape;
   const median = ratio(e.ratio);
-  if (e.noWeight) return fill('wiEscapeNoWeight', { median });
+  if (e.saveCut === null) return fill('wiEscapeNoWeight', { median });
   if (e.saveCut <= 0) return fill(e.atCap ? 'wiEscapeNothingCap' : 'wiEscapeNothing', { median });
   return e.saveDollars === null ? fill('wiEscapeNoDollars', { median, cut: fmtPct(e.saveCut) })
     : fill('wiEscape', { median, cut: fmtPct(e.saveCut), dollars: fmtMoney(e.saveDollars) });
@@ -49,7 +46,7 @@ ${formField({ no: 'W2', label: t('wiFieldFactor'), value: html`<span data-wi="fa
 ${formField({ no: 'W3', label: t('wiFieldDollars'), value: html`<span data-wi="dollars">${words.dollars}</span>${priced ? estimateTag : ''}`, note: priced ? fill('wiActualDollars', { value: fmtMoney(wi.start.pen) }) : t('wiNoEstimate') })}`;
   const chart = html`<div class="wi" data-hosp-whatif>
 <p class="small muted wi__nojs" data-wi="nojs">${t('wiNoScript')}</p>
-<div class="wi__controls">
+<div>
 <fieldset class="wi__fields" data-wi="fields" disabled>
 <legend class="vh">${t('wiSlidersLabel')}</legend>
 <ul class="wi__rows" role="list">
@@ -74,7 +71,7 @@ ${fields}
     csvName: `hrrp-${view.ccn.toLowerCase()}-what-if`,
     chart,
     table: {
-      columns: [{ name: t('wiColCond') }, { name: t('wiColRatio'), numeric: true }, { name: t('wiColEscape'), numeric: true },
+      columns: [{ name: t('colCondition') }, { name: t('colRatio'), numeric: true }, { name: t('wiColEscape'), numeric: true },
         { name: t('wiColSaveCut'), numeric: true }, { name: t('wiColSaveDollars'), numeric: true }],
       rows: wi.sliders.map((row) => [
         row.short, num(ratio(row.err), row.err),

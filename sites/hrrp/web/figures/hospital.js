@@ -3,22 +3,22 @@
 // year as bars against the average of every hospital, and its place among the year's cuts) and the full worksheet. Data in from
 // figures/hospital-data.js (the view's `figures`); the words are in hospital/copy.js.
 import { scaleLinear } from 'd3-scale';
-import { WIDE, figure, imageOf, num } from '../../../../web/charts/figure.js';
+import { WIDE, drawn, figure, imageOf, imagePair, num } from '../../../../web/charts/figure.js';
 import { rankYears } from '../../../../web/charts/rankYears.js';
 import { ruler } from '../../../../web/charts/ruler.js';
-import { WIDTH, capsWidth, columnPath, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
+import { WIDTH, columnPath, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
 import { decimal, pct, pctFloor, roundedDollars } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { fill, t } from '../hospital/copy.js';
 import { MIN_DISCHARGES, CAP_PCT } from '../../../../engine/js/hrrp/formula.js';
-import { fmtInt, fmtPct, gapText, ratio } from '../numbers.js';
+import { fmtInt, fmtPct, gapText, ratio, roundTo } from '../numbers.js';
 import { worksheetHtml } from '../worksheet.js';
 import { PER_STEP } from './hospital-data.js';
+import { yearAxis, yy } from './year-axis.js';
 
 const RULER_WIDE = 480;
 const STEP = ratio(PER_STEP, 2);
 const slug = (cond) => cond.toLowerCase().replace(/_/g, '-');
-const cents = (v) => Math.round(v * 100) / 100;
 
 // ---------- where the penalty came from ----------
 
@@ -104,9 +104,9 @@ ${rows}
         { name: t('colGap'), numeric: true }, { name: fill('colPer', { step: STEP }), numeric: true }, { name: t('colCut'), numeric: true }],
       rows: d.rows.map((row) => [
         row.short, num(fmtInt(row.n), row.n), num4(row.err), num4(row.med),
-        row.gap === null ? num(t('rowNotCounted'), null) : num(gapText(row.gap), Number(row.gap.toFixed(6))),
-        row.per === null ? num(perWords(row), null) : num(roundedDollars(row.per), cents(row.per)),
-        row.cut === null ? num(t('cellNone'), null) : num(roundedDollars(row.cut), cents(row.cut)),
+        row.gap === null ? num(t('rowNotCounted'), null) : num(gapText(row.gap), roundTo(row.gap, 6)),
+        row.per === null ? num(perWords(row), null) : num(roundedDollars(row.per), r2(row.per)),
+        row.cut === null ? num(t('cellNone'), null) : num(roundedDollars(row.cut), r2(row.cut)),
       ]),
     },
   });
@@ -115,7 +115,6 @@ ${rows}
 // ---------- the penalty history ----------
 
 const BAR = { top: 26, bottom: 26, left: 40, right: 8, h: 130 };
-const yy = (fy) => `’${String(fy).slice(-2)}`;
 
 // This hospital's cut in each year as bars, the average cut of every hospital as a dashed line, the cap's steps as dashed rules and
 // the pandemic years shaded; a year the hospital is not in the file says "n/a", never a zero bar.
@@ -132,17 +131,10 @@ function cutBars({ hd, width }) {
   const narrow = isNarrow(width);
   const bw = Math.max(6, colW * 0.62);
   const every = narrow && n > 8 ? 2 : 1;
-  const [c0, c1] = [covid.fys[0], covid.fys[covid.fys.length - 1]].map((fy) => years.findIndex((yr) => yr.fy === fy));
-  const band = covid.fys.length && c0 >= 0
-    ? mark({ tip: covid.note, hit: null, body: html`<rect class="hist-covid" x="${r2(M.left + c0 * colW)}" y="${M.top}" width="${r2((c1 - c0 + 1) * colW)}" height="${M.h}"/>` }) : '';
-  const tag = band && !narrow ? text({ x: M.left + ((c0 + c1 + 1) / 2) * colW, y: M.top + 12, cls: 'chart-cap', body: covid.label }) : '';
-  const capAt = caps.map((c) => ({ ...c, x: M.left + years.findIndex((yr) => yr.fy === c.fy) * colW })).filter((c) => c.x >= M.left);
-  const rules = capAt.map((c, i) => {
-    // The longer label only where the next rule leaves it room.
-    const room = i < capAt.length - 1 ? capAt[i + 1].x - c.x : Infinity;
-    const word = narrow || room < capsWidth(c.label) + 8 ? c.short : c.label;
-    // A label the next rule leaves no room for is left off (the rule stays).
-    return html`<line class="chart-rank__break" x1="${r2(c.x)}" x2="${r2(c.x)}" y1="${M.top - 12}" y2="${M.top + M.h}"/>${room < capsWidth(word) + 6 ? '' : text({ x: c.x + 3, y: M.top - 4, anchor: 'start', cls: 'chart-cap', body: word })}`;
+  const axis = yearAxis({
+    M, width, narrow, years, caps, covid, y, ticks, tickText: (v) => `${decimal(v, v % 1 ? 1 : 0)}%`, every,
+    bandAt: (c0, c1) => ({ x: M.left + c0 * colW, w: (c1 - c0 + 1) * colW, mid: M.left + ((c0 + c1 + 1) / 2) * colW }),
+    xAt: cx, ruleAt: (i) => M.left + i * colW,
   });
   const bars = years.map((yr, i) => {
     const x = cx(i) - bw / 2;
@@ -160,13 +152,11 @@ function cutBars({ hd, width }) {
   const avg = lineD(years.map((yr, i) => ({ x: i, y: yr.avg })), cx, y);
   const height = M.top + M.h + M.bottom;
   return frame({
-    kind: 'cutbars', width, height, body: html`${band}${tag}
-${ticks.map((v) => html`${v === 0 ? '' : html`<line class="chart-grid" x1="${M.left}" x2="${width - M.right}" y1="${r2(y(v))}" y2="${r2(y(v))}"/>`}${text({ x: M.left - 6, y: y(v) + 4, anchor: 'end', cls: 'chart-tick', body: `${decimal(v, v % 1 ? 1 : 0)}%` })}`)}
-<line class="chart-axis__line" x1="${M.left}" x2="${width - M.right}" y1="${r2(y(0))}" y2="${r2(y(0))}"/>
-${rules}
+    kind: 'cutbars', width, height, body: html`${axis.head}
+${axis.rules}
 ${bars}
 <path class="chart-lines__under" d="${avg}"/>
-${years.map((yr, i) => ((n - 1 - i) % every === 0 ? text({ x: cx(i), y: M.top + M.h + 16, cls: 'chart-tick', body: yy(yr.fy) }) : ''))}`,
+${axis.yearLabels}`,
   });
 }
 
@@ -174,7 +164,7 @@ ${years.map((yr, i) => ((n - 1 - i) % every === 0 ? text({ x: cx(i), y: M.top + 
 function placeDots({ hd, width }) {
   const years = hd.years.map((yr) => ({
     label: yy(yr.fy),
-    share: yr.share === null ? null : Number(yr.share.toFixed(4)),
+    share: yr.share === null ? null : roundTo(yr.share, 4),
     cut: yr.cut !== null && yr.cut > 0,
     line: yr.line,
     tip: yr.cut === null ? fill('histHospTipAbsent', { fy: yr.label })
@@ -193,10 +183,9 @@ export function historyFigure(hd, { view, n }) {
   const [takeawayKey, words] = hd.nWith === 1 ? [hd.nCut ? 'histHospOne' : 'histHospOneNone', {}]
     : !hd.nCut ? ['histHospNever', { n: String(hd.nWith) }]
       : hd.nCut === hd.nWith ? ['histHospAll', { n: String(hd.nWith) }] : ['histHospSome', { n: String(hd.nWith), pen: String(hd.nCut) }];
-  const pair = (draw, alt) => html`${imageOf(draw(WIDTH), alt, 'narrow')}${imageOf(draw(WIDE), alt, 'wide')}`;
   const chart = html`<div class="hosphist">
-<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospBarsTitle')}</h3>${pair((width) => cutBars({ hd, width }), t('histHospBarsAlt'))}<p class="small muted hosphist__note">${fill('histHospNote', { edition: view.edition })}${hd.covid.fys.length ? ` ${hd.covid.note}` : ''}</p></div>
-<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospRankTitle')}</h3>${pair((width) => placeDots({ hd, width }), t('histHospRankAlt'))}<p class="small muted hosphist__note">${fill('histHospRankNote', { edition: view.edition })}</p></div>
+<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospBarsTitle')}</h3>${imagePair(drawn((width) => cutBars({ hd, width }), WIDE), t('histHospBarsAlt'))}<p class="small muted">${fill('histHospNote', { edition: view.edition })}${hd.covid.fys.length ? ` ${hd.covid.note}` : ''}</p></div>
+<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospRankTitle')}</h3>${imagePair(drawn((width) => placeDots({ hd, width }), WIDE), t('histHospRankAlt'))}<p class="small muted">${fill('histHospRankNote', { edition: view.edition })}</p></div>
 </div>`;
   return figure({
     n,
@@ -210,8 +199,8 @@ export function historyFigure(hd, { view, n }) {
       rows: hd.years.map((yr) => [
         yr.label,
         yr.cut === null ? num(t('cellNa'), null) : num(fmtPct(yr.cut), yr.cut),
-        yr.avg === null ? num(t('cellNa'), null) : num(fmtPct(yr.avg), Number(yr.avg.toFixed(4))),
-        yr.cut === null || !(yr.cut > 0) ? num(yr.cut === null ? t('cellNa') : t('cellNone'), null) : num(pctFloor(yr.share), Number((yr.share * 100).toFixed(1))),
+        yr.avg === null ? num(t('cellNa'), null) : num(fmtPct(yr.avg), roundTo(yr.avg, 4)),
+        yr.cut === null || !(yr.cut > 0) ? num(yr.cut === null ? t('cellNa') : t('cellNone'), null) : num(pctFloor(yr.share), roundTo(yr.share * 100, 1)),
       ]),
     },
   });

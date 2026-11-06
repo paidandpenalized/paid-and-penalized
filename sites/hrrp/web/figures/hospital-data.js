@@ -1,6 +1,7 @@
 // The numbers behind a hospital page's figures, as plain data (no markup): the rulers ("where the penalty came from") and the
 // penalty history. What every hospital shares is built once for the build (hospitalContext in ../view.js): each peer group's
 // distribution of ratios on each condition, and each year's cuts across the hospitals in that year's file. Pure.
+import { r2 } from '../../../../web/charts/svg.js';
 import { CAP, CAP_PCT, CONDS, condState, contrib, cutPct, isMeasured, peerMedian, weightPublished } from '../../../../engine/js/hrrp/formula.js';
 import { HISTORY_MARKS } from '../constants.js';
 import { fyLabel } from '../copy.js';
@@ -13,9 +14,8 @@ export const RULER_STEP = 0.05;
 // A ratio's change that the "worth per" column prices.
 export const PER_STEP = 0.01;
 
-const round2 = (v) => Math.round(v * 100) / 100;
-const snapDown = (v) => round2(Math.floor(v / RULER_STEP + 1e-9) * RULER_STEP);
-const snapUp = (v) => round2(Math.ceil(v / RULER_STEP - 1e-9) * RULER_STEP);
+const snapDown = (v) => r2(Math.floor(v / RULER_STEP + 1e-9) * RULER_STEP);
+const snapUp = (v) => r2(Math.ceil(v / RULER_STEP - 1e-9) * RULER_STEP);
 const quantile = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))];
 
 // Hospitals' values counted in RULER_BINS equal columns over [lo, hi]; a value past either end counts in the end column.
@@ -44,7 +44,7 @@ export function rulerScales(hospitals, meta) {
     const med = peerMedian(meta, Number(peer), cond);
     let lo = snapDown(Math.min(quantile(values, 0.01), med ?? Infinity));
     let hi = snapUp(Math.max(quantile(values, 0.99), med ?? -Infinity));
-    if (hi - lo < RULER_STEP) hi = round2(lo + RULER_STEP);
+    if (hi - lo < RULER_STEP) hi = r2(lo + RULER_STEP);
     scales.set(key, { values, lo, hi, counts: countBins(values, lo, hi) });
   }
   return scales;

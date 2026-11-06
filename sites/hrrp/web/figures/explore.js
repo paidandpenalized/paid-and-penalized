@@ -5,10 +5,11 @@
 import { html } from '../../../../web/render/html.js';
 import { printout } from '../../../../web/render/components.js';
 import { fill, t } from '../program/copy.js';
+import { statusTemplate } from './pager.js';
 
-const option = (value, label) => html`<option value="${value}">${label}</option>`;
-const field = (id, label, control) => html`<p class="ht__field"><label for="${id}">${label}</label> ${control}</p>`;
-const select = (id, any, options) => html`<select id="${id}">${option('', any)}${options}</select>`;
+export const option = (value, label) => html`<option value="${value}">${label}</option>`;
+export const field = (id, label, control) => html`<p class="ht__field"><label for="${id}">${label}</label> ${control}</p>`;
+export const select = (id, any, options) => html`<select id="${id}">${option('', any)}${options}</select>`;
 
 // controls: explore-data.js exploreControls(); url: the hospitals asset's path (null: none, the shell has no source).
 export function explorePart(controls, { url = null } = {}) {
@@ -28,7 +29,7 @@ ${field('ex-loc', t('exploreLocation'), select('ex-loc', any, [option('urban', t
 <p class="ht__field ht__check"><label><input id="ex-pen" type="checkbox"> ${t('explorePenalized')}</label></p>
 ${field('ex-sort', t('exploreSort'), html`<select id="ex-sort">${controls.sorts.map((s) => option(`${s.key}:${s.dir}`, t(s.copy)))}</select>`)}
 </div>
-<p class="small" id="ex-status" aria-live="polite" data-template="${fill('exploreStatus', { from: '{from}', to: '{to}', n: '{n}' })}"></p>
+<p class="small" id="ex-status" aria-live="polite" data-template="${statusTemplate()}"></p>
 ${printout(html`<table class="gb gb--hospitals explore__table">
 <caption class="vh">${t('exploreCaption')}</caption>
 <thead><tr><th scope="col">${t('exploreColHospital')}</th><th scope="col" class="num">${t('exploreColCut')}</th><th scope="col" class="num">${t('exploreColDollars')}</th><th scope="col">${t('exploreColPeer')}</th><th scope="col">${t('exploreColConds')}</th><th scope="col" class="num">${t('exploreColBeds')}</th></tr></thead>

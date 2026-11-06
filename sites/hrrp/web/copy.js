@@ -68,6 +68,10 @@ export const COPY = {
   capMark: { text: '{cap}% cap', claim: null },
   capMarkShort: { text: '{cap}%', claim: null },
 
+  // A paged table's pager and status line (figures/pager.js); the table's own words say what the pages hold.
+  pagerPage: { text: 'Page {n}', claim: null },
+  pagerStatus: { text: 'Showing {from} to {to} of {n}', claim: null },
+
   // The section menu (pages/parts.js): the six Parts of the program page, then Methods (web/copy.js).
   navHow: { text: 'How it works', claim: null },
   navPicture: { text: 'The {edition} picture', claim: null },

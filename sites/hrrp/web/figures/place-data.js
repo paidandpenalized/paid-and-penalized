@@ -6,6 +6,7 @@
 // condition; the like-for-like caution on the conditions is in the figure's words. Pure.
 import { CAP_PCT, CONDS, PEERS } from '../../../../engine/js/hrrp/formula.js';
 import { mean } from '../../../../engine/js/stats.js';
+import { pointOf } from '../../../../web/charts/geo.js';
 import { r2 } from '../../../../web/charts/svg.js';
 import { PLACE_CUT_BIN, PLACE_DENSE, PLACE_SHADES, PLACE_SIZES, PLACE_ZERO_WIDTH } from '../constants.js';
 import { meanCutByYear, pafByYear } from '../derive.js';
@@ -117,15 +118,12 @@ export function trendData(list, ctx) {
 // A hospital's cut shade 0..PLACE_SHADES.length + 1: 0 no cut, then one for each range the thresholds make.
 export const shadeOf = (red) => (red > 0 ? 1 + PLACE_SHADES.filter((t) => red >= t).length : 0);
 
-// A hospital's dot size step 1..PLACE_SIZES from its base payments, against the nation's top.
-export const sizeOf = (h, top) => volumeTier(h, top, PLACE_SIZES);
-
 // The place's map points (hospitals with a location), each { h, shade, size }, and what the map draws around them: the
 // place's own, and for a metro area the other hospitals in the states it reaches (faint). dense: a hospital count over PLACE_DENSE.
 export function mapData(place, ctx) {
-  const placed = (list) => list.filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon));
+  const placed = (list) => list.filter((h) => pointOf(h));
   const top = ctx.side.volumeTop;
-  const own = placed(place.hospitals).map((h) => ({ h, shade: shadeOf(h.red), size: sizeOf(h, top) }));
+  const own = placed(place.hospitals).map((h) => ({ h, shade: shadeOf(h.red), size: volumeTier(h, top, PLACE_SIZES) }));
   const ids = new Set(place.hospitals.map((h) => h.id));
   // Others only near the metro (within about a degree of its hospitals): the map's frame is fitted around them, and a dot far outside
   // it would only add markup.
@@ -134,7 +132,7 @@ export function mapData(place, ctx) {
   const [west, east, south, north] = [Math.min(...lons) - NEAR_DEGREES, Math.max(...lons) + NEAR_DEGREES, Math.min(...lats) - NEAR_DEGREES, Math.max(...lats) + NEAR_DEGREES];
   const near = (h) => h.lon >= west && h.lon <= east && h.lat >= south && h.lat <= north;
   const around = place.kind === 'metro' && own.length
-    ? placed(place.states.flatMap((code) => ctx.places.byKey.get(`state:${code.toLowerCase()}`)?.hospitals ?? [])).filter((h) => !ids.has(h.id) && near(h)).map((h) => ({ h, shade: -1, size: sizeOf(h, top) }))
+    ? placed(place.states.flatMap((code) => ctx.places.byKey.get(`state:${code.toLowerCase()}`)?.hospitals ?? [])).filter((h) => !ids.has(h.id) && near(h)).map((h) => ({ h, shade: -1, size: volumeTier(h, top, PLACE_SIZES) }))
     : [];
   // The tallies the table and the legend share: hospitals here at each shade (index 0..PLACE_SHADES.length + 1).
   const tally = new Array(PLACE_SHADES.length + 2).fill(0);

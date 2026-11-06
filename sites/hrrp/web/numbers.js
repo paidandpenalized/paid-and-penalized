@@ -34,6 +34,9 @@ export const countBy = (list, key) => {
   return n;
 };
 
+// A list in pages of `size`: [[...], [...]], none for an empty list.
+export const pagesOf = (list, size) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
+
 // The tie-break every sort here ends on: ids (CCNs, codes) in order, 0 only for equal ones.
 export const byId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 

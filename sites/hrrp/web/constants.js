@@ -83,11 +83,11 @@ export const HISTORY_MARKS = Object.freeze([
 export const COVID_FYS = Object.freeze([2022, 2024]);
 export const COVID_EXCLUDED = Object.freeze(['2020-01-01', '2020-06-30']);
 
-// The explorer's table shows this many rows to a page (design: 25).
-export const EXPLORE_PAGE_SIZE = 25;
+// Every paged table of hospitals or places (the explorer, a hospital page's area table, a place page's two tables) shows this many
+// rows to a page (design: 25). The program page's "Every state" table has its own size below.
+export const PAGE_SIZE = 25;
 
-// The other-hospitals table on a hospital page: rows to a page, and the drawing width of its map.
-export const NEIGHBORS_PAGE_SIZE = 25;
+// The drawing width of the nearby map on a hospital page.
 export const NEARBY_MAP_WIDTH = 460;
 
 // A place page's figures. The cut histogram's bins (percentage points) and the width of the "no cut" pile drawn before the scale's
@@ -99,6 +99,4 @@ export const PLACE_ZERO_WIDTH = 0.3;
 export const PLACE_SHADES = Object.freeze([0.25, 0.5, 1, 2]);
 export const PLACE_SIZES = 4;
 export const PLACE_DENSE = 160;
-// A place page's child table (divisions, states or metro areas) shows this many rows to a page; its hospitals table shows EXPLORE_PAGE_SIZE.
-export const PLACE_KIDS_PAGE_SIZE = 25;
 export const PLACE_MAP_WIDE = 560;

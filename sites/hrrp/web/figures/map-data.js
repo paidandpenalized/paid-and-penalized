@@ -9,10 +9,12 @@
 //   ge1      hospitals cut GE_CUT_PCT percent or more / ALL the state's hospitals, as Thirty Day Readmissions had it (the
 //            old site's printed numbers are the floor). This one share differs from the picture Part's shares, which
 //            are over hospitals measured on at least one condition.
+import { pointOf } from '../../../../web/charts/geo.js';
 import { CONDS, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { summarize } from '../../../../engine/js/hrrp/summary.js';
 import { csvPath } from '../links.js';
 import { MAP_RAMPS, NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '../constants.js';
+import { pagesOf } from '../numbers.js';
 
 export const MILLION = 1e6;
 
@@ -53,7 +55,7 @@ export function stateRows({ places, stateSummaries }) {
 // The "Every state" rows: average cut, highest first (ties by name), cut into pages of STATES_PAGE_SIZE.
 export function everyState(rows, size = STATES_PAGE_SIZE) {
   const sorted = [...rows].sort((a, b) => b.s.meanRed - a.s.meanRed || a.name.localeCompare(b.name));
-  return Array.from({ length: Math.ceil(sorted.length / size) }, (_, i) => sorted.slice(i * size, (i + 1) * size));
+  return pagesOf(sorted, size);
 }
 
 // The states' CSV rows (csv.js placeCsv) in the table's order: the label and summarize()'s fields.
@@ -80,12 +82,10 @@ export const volumeTier = (h, top, tiers = DOT_TIERS) => (h.base > 0 ? Math.min(
 // [{ id, point: [lon, lat], kind, tier }], hospitals without a location left out.
 export function dotPoints(hospitals) {
   const top = volumeTop(hospitals);
-  return hospitals.filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon)).map((h) => ({
-    id: h.id,
-    point: [h.lon, h.lat],
-    kind: dotKind(h),
-    tier: volumeTier(h, top),
-  }));
+  return hospitals.flatMap((h) => {
+    const point = pointOf(h);
+    return point ? [{ id: h.id, point, kind: dotKind(h), tier: volumeTier(h, top) }] : [];
+  });
 }
 
 // ---------- the regions to browse ----------

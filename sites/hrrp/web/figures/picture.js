@@ -19,7 +19,6 @@ import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN } from './picture-data.js';
-export { countedNames, glyph };
 import { drawCuts, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
 
 // The Part's lede paragraph.
@@ -227,9 +226,6 @@ function typeFigure({ ty, edition, n }) {
 
 // ---------- which conditions cost the most ----------
 
-// The condition names on the paired bars: a phone has the room for shorter names only, keyed by condition key (the display names are CMS's words and may change).
-export const NARROW_NAME = { THA_TKA: 'Hip/knee', CABG: 'Bypass (CABG)' };
-
 export function barsTakeaway(b, conditions) {
   if (!b.takeaway) return '';
   const { up, down } = b.takeaway;
@@ -250,7 +246,7 @@ function barsFigure({ b, conditions, edition, n }) {
       rows: b.rows.map((r) => {
         const name = conditionShort(conditions, r.cond);
         return {
-          label: isNarrow(width) ? NARROW_NAME[r.cond] ?? name : name, a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
+          label: conditionShort(conditions, r.cond, { narrow: isNarrow(width) }), a: r.shareOfFlags, b: r.shareOfDollars, aText: pct0(r.shareOfFlags), bText: pct0(r.shareOfDollars),
           tipA: fill('barsTipFlags', { cond: name, flags: fmtInt(r.flags), all: fmtInt(b.totalFlags), share: pct0(r.shareOfFlags) }),
           tipB: fill('barsTipDollars', { cond: name, dollars: fmtMoney(r.dollars), share: pct0(r.shareOfDollars) }),
         };

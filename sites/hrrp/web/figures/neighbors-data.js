@@ -3,8 +3,8 @@
 // area's hospitals, largest cut first (then modeled dollars, then CCN), each with the state of its six conditions for the
 // glyph. The CSV of the same rows is one file for the area, not one for each hospital in it. Pure.
 import { CONDS, condState, contrib } from '../../../../engine/js/hrrp/formula.js';
-import { NEIGHBORS_PAGE_SIZE } from '../constants.js';
-import { byId } from '../numbers.js';
+import { PAGE_SIZE } from '../constants.js';
+import { byId, pagesOf } from '../numbers.js';
 
 // A hospital is in a metro area when the row names both its code and its name; otherwise it is outside the metro areas.
 export const inMetro = (h) => Boolean(h.cbsa && h.cbsaName);
@@ -26,10 +26,11 @@ export function sizedRows(list, meta) {
   }).sort(bySize).map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-// hospitals: the file's rows; meta: its meta. Returns a Map of area key -> { key, metro, name, state, rows, pages, nCut, csvName }
+// hospitals: the file's rows; meta: its meta; drawing: { shapes (null: no map), counties, conditions }, kept on each area as `nearby` for
+// the figure that draws it. Returns a Map of area key -> { key, metro, name, state, rows, pages, nCut, csvName, nearby }
 // for each area with more than one hospital. rows: [{ h, states (condState for each condition, in CONDS order), rank (1-based) }];
-// pages: rows in chunks of NEIGHBORS_PAGE_SIZE.
-export function areaGroups(hospitals, meta) {
+// pages: rows in chunks of PAGE_SIZE.
+export function areaGroups(hospitals, meta, drawing = { shapes: null, counties: [], conditions: [] }) {
   const groups = new Map();
   for (const h of hospitals) {
     const key = areaKeyOf(h);
@@ -41,11 +42,9 @@ export function areaGroups(hospitals, meta) {
     if (list.length < 2) continue;
     const metro = key.startsWith('metro-');
     const rows = sizedRows(list, meta);
-    const pages = [];
-    for (let i = 0; i < rows.length; i += NEIGHBORS_PAGE_SIZE) pages.push(rows.slice(i, i + NEIGHBORS_PAGE_SIZE));
     out.set(key, {
-      key, metro, name: metro ? list[0].cbsaName : (meta.states[list[0].st] ?? list[0].st), rows, pages,
-      nCut: rows.filter((r) => r.h.red > 0).length, csvName: areaCsvName(meta.fy, key),
+      key, metro, name: metro ? list[0].cbsaName : (meta.states[list[0].st] ?? list[0].st), rows, pages: pagesOf(rows, PAGE_SIZE),
+      nCut: rows.filter((r) => r.h.red > 0).length, csvName: areaCsvName(meta.fy, key), nearby: { ...drawing, fy: meta.fy },
     });
   }
   return out;

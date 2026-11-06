@@ -11,6 +11,7 @@ import { textWidth, wrapText } from '../../../../web/charts/text.js';
 import { fyLabel } from '../copy.js';
 import { fmtPct } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
+import { yy } from './year-axis.js';
 
 const RIGHT = 8;
 const LINE_H = 12;
@@ -21,7 +22,6 @@ const CROSSES_LINE = 1;
 const OVERLAPS_WORDS = 10;
 
 export const usdM = (v) => `$${Math.round(v / 1e6)}M`;
-const yy = (fy) => `’${String(fy).slice(-2)}`;
 
 // ---------- placing words beside a point ----------
 

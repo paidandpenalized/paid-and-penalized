@@ -34,11 +34,15 @@ export function edition(meta, history) {
   };
 }
 
-// A condition's short name from the data file's condition list ([{ key, short }]); an unknown key stops the build.
-export function conditionShort(conditions, key) {
+// The condition names on a phone's bars: it has the room for shorter names only, keyed by condition key (the display names are CMS's words and may change).
+const NARROW_NAME = { THA_TKA: 'Hip/knee', CABG: 'Bypass (CABG)' };
+
+// A condition's short name from the data file's condition list ([{ key, short }]); an unknown key stops the build. narrow: the name
+// for a phone's drawing, where it has one.
+export function conditionShort(conditions, key, { narrow = false } = {}) {
   const found = conditions.find((c) => c.key === key);
   if (!found) throw new RangeError(`conditionShort: no condition "${key}" in the data's condition list`);
-  return found.short;
+  return narrow ? NARROW_NAME[key] ?? found.short : found.short;
 }
 
 // The row with each condition's part of the cut (cx), the conditions CMS flagged and its place line. The row itself is not changed.
