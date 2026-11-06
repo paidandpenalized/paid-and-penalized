@@ -257,7 +257,7 @@ test('#4 drawing: six panels in a row on the wide drawing, two to a row on a pho
   assert.match(wide, /chart-share__dot chart-share__dot--pen/, 'over half: penalty ink');
   const narrow = String(drawSizeBands({ panels, width: 300, labels, format: (v) => `${v}`, signed: String }));
   assert.match(narrow, />top</);
-  assert.match(narrow, /viewBox="0 0 300 634"/, 'a two-line header and three rows of two');
+  assert.match(narrow, /viewBox="0 0 300 682"/, 'a two-line header and three rows of two');
 });
 
 test('real data: the Picture Part draws #10 beside the peer strips and #4 after the traits; Methods names #4\'s trap', async () => {

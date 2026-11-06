@@ -159,8 +159,9 @@ ${body}
 // ---------- what is 0.01 of ratio worth? ----------
 
 // For each condition, what 0.01 more of its ratio costs in modeled dollars across hospitals: a grey bar over the middle half of hospitals
-// (25th to 75th percentile) and an ink dot at the typical (median) hospital, its value at the right. The first row names its dot and
-// its bar in place, over them. A phone's row sets its name and value over its bar. rows: [{ label, median, p25, p75, valueText, tip }]
+// (25th to 75th percentile) and a dot in penalty ink at the typical (median) hospital, its value at the right in the same ink (the
+// dollars a hospital loses, as the flags-and-dollars figure draws them). The first row names its dot and its bar in place, over them;
+// a phone, on a line of their own over the first row. A phone's row sets its name and value over its bar. rows: [{ label, median, p25, p75, valueText, tip }]
 // in order; labels: { dot, bar } (a phone's bar label is the short one, barShort).
 export function drawWorth({ rows, width, labels, format }) {
   const narrow = isNarrow(width);
@@ -169,20 +170,20 @@ export function drawWorth({ rows, width, labels, format }) {
   const most = Math.max(1, ...rows.map((r) => r.p75 ?? 0));
   const x = scaleLinear().domain([0, most]).range([left, right]).nice(4);
   const rowH = narrow ? 42 : 32;
-  const top = narrow ? 30 : 22;
+  const top = 22;
   const out = rows.map((r, i) => {
     const y0 = top + i * rowH;
     const cy = r2(narrow ? y0 + 28 : y0 + rowH / 2);
     const body = html`<line class="chart-share__track" x1="${left}" x2="${r2(right)}" y1="${cy}" y2="${cy}"/>
 ${r.p25 === null ? '' : html`<rect class="worth__bar" x="${r2(x(r.p25))}" y="${r2(cy - 5)}" width="${r2(Math.max(1, x(r.p75) - x(r.p25)))}" height="10"/><circle class="worth__dot" cx="${r2(x(r.median))}" cy="${cy}" r="5"/>`}
 ${narrow
-    ? html`${text({ x: 0, y: y0 + 13, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: y0 + 13, anchor: 'end', cls: 'chart-value', body: r.valueText })}`
-    : html`${text({ x: 0, y: cy + 4, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value', body: r.valueText })}`}`;
+    ? html`${text({ x: 0, y: y0 + 13, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: y0 + 13, anchor: 'end', cls: 'chart-value chart-label--pen', body: r.valueText })}`
+    : html`${text({ x: 0, y: cy + 4, anchor: 'start', cls: 'chart-label', body: r.label })}${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen', body: r.valueText })}`}`;
     return mark({ tip: r.tip, value: r.p25 === null ? null : [r.median, r.p25, r.p75], hit: { x: 0, y: y0, width, height: rowH }, body });
   });
   // The first priced row's dot and bar named over them: the dot's words ending at the dot, the bar's ending at the bar's end.
   const first = rows.find((r) => r.p25 !== null);
-  const y = first ? r2(top + rows.indexOf(first) * rowH + (narrow ? 28 : rowH / 2) - 10) : 0;
+  const y = first ? (narrow ? 12 : r2(top + rows.indexOf(first) * rowH + rowH / 2 - 10)) : 0;
   const named = first ? html`${text({ x: r2(x(first.median) - 4), y, anchor: 'end', cls: 'chart-note', body: labels.dot })}${text({ x: r2(x(first.p75)), y, anchor: 'end', cls: 'chart-note', body: narrow ? labels.barShort : labels.bar })}` : '';
   const base = top + rows.length * rowH + 4;
   return frame({
@@ -213,19 +214,20 @@ export function drawSizeBands({ panels, width, labels, format, signed }) {
   const head = narrow ? 34 : 0;
   // A panel's rows: its name, the share tier, the middle-half tier, the band labels.
   const T = narrow
-    ? { name: 12, top: 24, topH: 64, mid: 100, midH: 64, ends: 180, h: 200 }
-    : { name: 12, top: 24, topH: 72, mid: 110, midH: 84, ends: 208, h: 222 };
-  // The share tier spans the shares shown, rounded out a tenth past each end (half always inside it): a line, so it needn't start at zero.
+    ? { name: 12, top: 24, topH: 84, mid: 124, midH: 56, ends: 196, h: 216 }
+    : { name: 12, top: 24, topH: 96, mid: 136, midH: 60, ends: 212, h: 226 };
+  // The share tier spans the shares shown, rounded out to the tenth (half always inside it): a line, so it needn't start at zero.
   const shown = (p) => p.bands.map((b, j) => ({ ...b, j })).filter((b) => b.shown);
   const shares = panels.flatMap((p) => shown(p).map((b) => b.share));
-  const hiShare = Math.min(1, Math.ceil(Math.max(0.5, ...shares) * 10 - 1e-9) / 10 + 0.1);
-  const loShare = Math.max(0, Math.floor(Math.min(0.5, ...shares) * 10 + 1e-9) / 10 - 0.1);
+  const hiShare = Math.min(1, Math.ceil(Math.max(0.5, ...shares) * 10 - 1e-9) / 10);
+  const loShare = Math.max(0, Math.floor(Math.min(0.5, ...shares) * 10 + 1e-9) / 10);
   const reach = Math.max(0.01, ...panels.flatMap((p) => shown(p).flatMap((b) => [Math.abs(b.p25), Math.abs(b.p75)])));
   const m = Math.ceil(reach / BAND_GRID - 1e-9) * BAND_GRID;
   const grid = Array.from({ length: Math.round(m / BAND_GRID) * 2 + 1 }, (_, k) => r2(-m + k * BAND_GRID)).filter((v) => Math.abs(v) > 1e-9);
   const n = panels[0]?.bands.length ?? 0;
   const ysAt = (py) => scaleLinear().domain([loShare, hiShare]).range([py + T.top + T.topH, py + T.top]);
-  const ygAt = (py) => scaleLinear().domain([-m, m]).range([py + T.mid + T.midH, py + T.mid]);
+  // The strip's scale sits 4 px inside its edges, so a bar that reaches the scale's end doesn't read as cut off.
+  const ygAt = (py) => scaleLinear().domain([-m, m]).range([py + T.mid + T.midH - 4, py + T.mid + 4]);
   const out = panels.map((p, i) => {
     const px = gutter + (i % cols) * (pw + gap);
     const py = head + Math.floor(i / cols) * T.h;
@@ -266,8 +268,8 @@ ${narrow && i === 0 ? text({ x: px, y: r2(yg(m) + 4), anchor: 'start', cls: 'cha
   });
   const rows = Math.ceil(panels.length / cols);
   const [ys0, yg0] = [ysAt(head), ygAt(head)];
-  const gutterText = narrow ? '' : html`${text({ x: 0, y: head + T.top + 10, anchor: 'start', cls: 'chart-label', body: labels.flagged })}${text({ x: gutter - 8, y: r2(ys0(0.5) + 4), anchor: 'end', cls: 'chart-note', body: labels.half })}
-${text({ x: 0, y: head + T.mid - 8, anchor: 'start', cls: 'chart-label', body: labels.middle })}${text({ x: gutter - 8, y: r2(yg0(m) + 9), anchor: 'end', cls: 'chart-axis__label', body: signed(m) })}${text({ x: gutter - 8, y: r2(yg0(0) + 4), anchor: 'end', cls: 'chart-note', body: labels.median })}${text({ x: gutter - 8, y: r2(yg0(-m) + 4), anchor: 'end', cls: 'chart-axis__label', body: signed(-m) })}
+  const gutterText = narrow ? '' : html`${text({ x: 0, y: head + T.top + 10, anchor: 'start', cls: 'chart-note bands__tier', body: labels.flagged })}${text({ x: gutter - 8, y: r2(ys0(0.5) + 4), anchor: 'end', cls: 'chart-note', body: labels.half })}
+${text({ x: 0, y: head + T.mid - 6, anchor: 'start', cls: 'chart-note bands__tier', body: labels.middle })}${text({ x: gutter - 8, y: r2(yg0(m) + 9), anchor: 'end', cls: 'chart-axis__label', body: signed(m) })}${text({ x: gutter - 8, y: r2(yg0(0) + 4), anchor: 'end', cls: 'chart-note', body: labels.median })}${text({ x: gutter - 8, y: r2(yg0(-m) + 4), anchor: 'end', cls: 'chart-axis__label', body: signed(-m) })}
 ${text({ x: gutter - 8, y: head + T.ends, anchor: 'end', cls: 'chart-note', body: labels.cases })}`;
   const header = narrow ? html`${text({ x: 0, y: 11, anchor: 'start', cls: 'chart-note', body: labels.headTop })}${text({ x: 0, y: 25, anchor: 'start', cls: 'chart-note', body: labels.headBottom })}` : '';
   return frame({ kind: 'bands', width, height: head + rows * T.h, body: html`${header}${gutterText}${out}` });
