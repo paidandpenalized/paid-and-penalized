@@ -11,6 +11,7 @@ import { clamp, median } from '../../../../engine/js/stats.js';
 import { r2 } from '../../../../web/charts/svg.js';
 import { GE_CUT_PCT } from '../constants.js';
 import { csvPath } from '../links.js';
+import { statesOf } from './neighbors-data.js';
 import { binIndex, byId, countBy } from '../numbers.js';
 
 // ---------- the lede ----------
@@ -223,10 +224,7 @@ export function largestPenalties(hospitals, meta, n = LARGEST_N) {
   return hospitals.filter((h) => h.red > 0)
     .sort((a, b) => b.red - a.red || dollars(b) - dollars(a) || byId(a.id, b.id))
     .slice(0, n)
-    .map((h) => {
-      const { byCond } = contrib(h, meta);
-      return { h, states: CONDS.map((k) => condState(h, k, meta, byCond)) };
-    });
+    .map((h) => ({ h, states: statesOf(h, meta) }));
 }
 
 // ---------- the Part ----------

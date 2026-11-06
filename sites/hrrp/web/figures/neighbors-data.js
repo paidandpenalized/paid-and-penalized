@@ -20,10 +20,21 @@ const bySize = (a, b) => b.h.red - a.h.red || (b.h.pen ?? -1) - (a.h.pen ?? -1) 
 // A list of hospitals as table rows, largest cut first (then modeled dollars, then CCN): { h, states (condState for each
 // condition, in CONDS order), rank (1-based) }. A hospital page's area table and a place page's hospitals table share it.
 export function sizedRows(list, meta) {
-  return list.map((h) => {
+  return list.map((h) => ({ h, states: statesOf(h, meta) })).sort(bySize).map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
+// A hospital's six condition states, worked out once for a build: a place page, the rows asset, an area table and the worksheets
+// all ask for the same hospital. Kept by meta, then hospital, so nothing outlives the data it came from.
+const STATES = new WeakMap();
+export function statesOf(h, meta) {
+  let byHospital = STATES.get(meta);
+  if (!byHospital) STATES.set(meta, byHospital = new WeakMap());
+  let states = byHospital.get(h);
+  if (!states) {
     const { byCond } = contrib(h, meta);
-    return { h, states: CONDS.map((k) => condState(h, k, meta, byCond)) };
-  }).sort(bySize).map((r, i) => ({ ...r, rank: i + 1 }));
+    byHospital.set(h, states = CONDS.map((k) => condState(h, k, meta, byCond)));
+  }
+  return states;
 }
 
 // hospitals: the file's rows; meta: its meta; drawing: { shapes (null: no map), counties, conditions }, kept on each area as `nearby` for

@@ -1,12 +1,13 @@
 // The numbers behind the program page's "Every hospital" Part, as plain data: the hospitals asset (one row for each
 // hospital, written to /assets/hrrp-hospitals.<hash>.json by the build and read by the page's browser script, so the rows
 // are never in the page's HTML) and the filter controls' options, read from the same hospitals. Pure.
-import { CONDS, condState, contrib } from '../../../../engine/js/hrrp/formula.js';
+import { CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL } from '../../../../engine/js/hrrp/filters.js';
 import { PAGE_SIZE } from '../constants.js';
 import { conditionShort } from '../derive.js';
 import { HOSPITALS_PATH } from '../links.js';
 import { STATE_LETTER } from './glyph.js';
+import { statesOf } from './neighbors-data.js';
 import { byId } from '../numbers.js';
 
 // An asset row's fields, in order. name: the hospital as CMS lists it; alias: its former or other name, or null; red: the
@@ -22,9 +23,8 @@ const byNameThenId = (a, b) => a[1].localeCompare(b[1], 'en') || byId(a[0], b[0]
 // search box finds them). Rows come in the table's first order: name A to Z, then CCN.
 export function hospitalsAsset(hospitals, meta, places = []) {
   const rows = hospitals.map((h) => {
-    const { byCond } = contrib(h, meta);
     return [h.id, h.name, h.alias ?? null, h.city, h.st, h.zip ?? null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
-      CONDS.map((k) => STATE_LETTER[condState(h, k, meta, byCond)]).join(''), h.inactive ? 1 : 0];
+      statesOf(h, meta).map((x) => STATE_LETTER[x]).join(''), h.inactive ? 1 : 0];
   }).sort(byNameThenId);
   return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, conds: CONDS, pageSize: PAGE_SIZE, rows, places };
 }
