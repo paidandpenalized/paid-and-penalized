@@ -216,11 +216,12 @@ import { flipsTakeaway } from '../web/figures/picture.js';
 import { drawFlips } from '../web/figures/picture-draw.js';
 
 const flipRows = (nets) => ({ takeaway: {}, rows: nets.map((net, i) => ({ peer: i + 1, net })) });
-test('#10 takeaway: says "about", rounds a count of 20 or more to ten, names a run of groups as a run; no dollars', () => {
-  assert.equal(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), 'Against one national median instead of five peer medians, group 5 would carry about 170 more flags and groups 1 to 4 about 140 fewer.');
-  assert.equal(flipsTakeaway(flipRows([3, 0, -2, 0, 0])), 'Against one national median instead of five peer medians, group 3 would carry about 2 more flags and group 1 about 3 fewer.');
-  assert.match(flipsTakeaway(flipRows([5, -9, 5, 0, 0])), /groups 1 and 3 about 10 fewer/);
-  assert.match(flipsTakeaway({ takeaway: null, rows: [] }), /no flag would change/);
+test('#10 takeaway: from peer grouping\'s side, as drawn; says "about", rounds a count of 20 or more to ten, names a run of groups as a run; no dollars', () => {
+  assert.equal(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), 'Against one national median, peer grouping takes about 170 flags off group 5 and puts about 140 on groups 1 to 4.');
+  assert.equal(flipsTakeaway(flipRows([3, 0, -2, 0, 0])), 'Against one national median, peer grouping takes about 2 flags off group 3 and puts about 3 on group 1.');
+  assert.match(flipsTakeaway(flipRows([5, -9, 5, 0, 0])), /puts about 10 on groups 1 and 3\.$/);
+  assert.match(flipsTakeaway(flipRows([0, 0, 0, 0, -4])), /takes about 4 flags off group 5\.$/);
+  assert.match(flipsTakeaway({ takeaway: null, rows: [] }), /changes no flag/);
   assert.doesNotMatch(flipsTakeaway(flipRows([49, 50, 34, 4, -166])), /\$/);
 });
 

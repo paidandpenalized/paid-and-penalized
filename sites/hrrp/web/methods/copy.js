@@ -148,6 +148,10 @@ export const COPY = {
     text: 'What peer grouping changed: each condition’s flags are drawn again against one median over every hospital measured on it in this file. CMS sets its peer medians itself, so the medians here differ slightly from any CMS would set, and the counts are approximate. Only flags move; no dollars are modeled for a world without peer groups.',
     claim: 'HRRP-05',
   },
+  figuresEscapes: {
+    text: 'Years cut: the counts are of today’s hospitals, so a hospital that has left the program is missing and the shares can run above CMS’s for a year. A year a hospital was not in the file is left out, never counted as not cut, which is why {inFile} hospitals were cut in every year they appear but {all} in all {years} years.',
+    claim: null,
+  },
   figuresRounded: {
     text: '{hospitals} come in above a peer-group median on at least one condition yet take no cut: the condition’s share of the hospital’s Medicare payments is small enough that the reduction rounds to zero. The share cut by number of conditions measured counts them as not cut.',
     claim: 'HRRP-04',

@@ -4,9 +4,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { COVID_FYS } from '../web/constants.js';
 import { capMarks } from '../web/derive.js';
-import { historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
+import { escapesFigure, historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
 import { drawHistory } from '../web/figures/history-draw.js';
-import { ROLL, noTotalText, researchData, rollCall, rollText, smallLines, timelineData, windowRows } from '../web/figures/history-data.js';
+import { ROLL, noTotalText, researchData, rollCall, rollText, smallLines, timelineData, windowRows, yearsCut } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
 import { FUTURE_WORDS } from '../../../pipeline/test/helpers.js';
@@ -352,6 +352,25 @@ test('the History Part holds the small multiples, the windows figure (both numbe
   assert.match(text, /id="figure-9"/);
   assert.match(text, /<ol class="tl"/);
   assert.equal((text.match(/<figure /g) ?? []).length, 2);
+});
+
+test('the History Part with the years cut: small multiples, then the years cut beside the data windows, numbered in that order', () => {
+  let n = 11;
+  const escapes = () => yearsCut(rollCall({ hospitals: ROLL_HOSPITALS, history: ROLL_HISTORY, meta: META }));
+  const text = historyPart({ lines: smallLines({ history: HISTORY }), escapes, windows: windowRows({ history: HISTORY }), timeline: [] }, { figure: () => ++n }).text;
+  assert.deepEqual([...text.matchAll(/id="figure-(\d+)"/g)].map((m) => Number(m[1])), [12, 13, 14]);
+  assert.match(text, /<div class="picpair">\s*<div class="pic">\s*<figure class="fig" id="figure-13"[\s\S]*hrrp-years-cut\.csv[\s\S]*<div class="pic">\s*<figure class="fig" id="figure-14"[\s\S]*hrrp-data-windows\.csv/);
+});
+
+test('#6, the years cut: "of today\'s hospitals"; counts only hospitals in the file every year (an absent year is never "not cut"); the note counts the rest and those cut in every year they appear', () => {
+  const e = yearsCut(rollCall({ hospitals: ROLL_HOSPITALS, history: ROLL_HISTORY, meta: META }));
+  const text = escapesFigure(e, { n: () => 13 }).text;
+  assert.match(text, /Of today’s 4 hospitals in the file all 3 years, 1 \(25%\) were cut every year; 1 never were\./);
+  assert.match(text, /left out: 2 of today’s, 1 of them cut in every year they appear\./);
+  assert.match(text, /data-value="1"/);
+  assert.match(text, />cut every year</);
+  assert.match(text, />In the file fewer years: cut in every year it appears<\/th><td class="num" data-value="1">/);
+  assert.equal(escapesFigure(undefined, { n: () => 1 }), '', 'no roll call, no figure');
 });
 
 // ---------- the research ----------

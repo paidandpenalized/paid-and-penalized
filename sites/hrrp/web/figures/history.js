@@ -1,7 +1,6 @@
-// The program page's History Part, so far: its lede, the timeline (dated entries with their sources, years not yet in effect
-// marked) and the data windows (the kit's periods chart: for each fiscal year the care its ratios are worked out from and the
-// year its payments change). The small multiples and the roll call are not drawn yet; figures/history-data.js holds their
-// numbers.
+// The program page's History Part: its lede, the small multiples, the years cut of today's hospitals beside the data windows (the
+// kit's periods chart: for each fiscal year the care its ratios are worked out from and the year its payments change), and the
+// timeline (dated entries with their sources, years not yet in effect marked). figures/history-data.js holds their numbers.
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { periodsChart } from '../../../../web/charts/periods.js';
 import { isoDate } from '../../../../web/render/format.js';
@@ -10,8 +9,9 @@ import { externalLink } from '../../../../web/render/layout.js';
 import { fyLabel } from '../copy.js';
 import { fill, t } from '../program/copy.js';
 import { fmtInt, fmtPct } from '../numbers.js';
-import { drawHistory, usdM } from './history-draw.js';
-import { FULL, SIDE, pic } from './layout.js';
+import { hospitals } from '../wording.js';
+import { drawHistory, drawYearsCut, usdM } from './history-draw.js';
+import { FULL, HALF, pic } from './layout.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
 const span = (kind, fy, [start, end]) => ({ kind, start: ymd(start), end: ymd(end), tip: fill('winTip', { label: t(kind === 'perf' ? 'winPerf' : 'winPay'), fy: fyLabel(fy), start: isoDate(start), end: isoDate(end) }) });
@@ -46,10 +46,37 @@ export function windowsFigure(rows, { n }) {
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
-    ...drawn(draw, SIDE),
+    ...drawn(draw, HALF),
     table: {
       columns: [{ name: t('winColFy') }, { name: t('winColPerf') }, { name: t('winColPay') }],
       rows: rows.map((r) => [fyLabel(r.fy), r.perf ? range(r.perf) : t('winNone'), range(r.pay)]),
+    },
+  });
+}
+
+// "Has this hospital ever escaped?" [#6]: today's hospitals in the file every year, by how many of those years they were cut. e:
+// history-data.js yearsCut(); n: the figure counter, called only when the figure draws. Its words always say "of today's hospitals";
+// the hospitals in the file fewer years are counted in the note (a year out of the file is never "not cut").
+export function escapesFigure(e, { n }) {
+  if (!e?.full) return '';
+  const years = String(e.nYears);
+  const counts = e.counts.map((c) => ({ ...c, tip: fill('escTip', { hospitals: hospitals(c.n), k: String(c.cut), years }) }));
+  const draw = (width) => drawYearsCut({ counts, width, labels: { never: t('escNever'), every: t('escEvery'), axis: fill('escAxis', { years }) } });
+  const { every, never, share } = e.takeaway;
+  const { partial } = e;
+  return figure({
+    n: n(), source: t('winSource'), claimLevel: 'recomputed', csvName: 'hrrp-years-cut', alt: fill('escAlt', { years }),
+    takeaway: fill('escTakeaway', { full: fmtInt(e.full), years, every: fmtInt(every), share: fmtPct(share * 100, 0), never: fmtInt(never) }),
+    note: partial.n ? fill('escNote', { partial: fmtInt(partial.n), every: fmtInt(partial.everyYear) }) : null,
+    ...drawn(draw, HALF),
+    table: {
+      columns: [{ name: fill('escColK', { years }) }, { name: t('escColN'), numeric: true }],
+      rows: [
+        ...e.counts.map((c) => [String(c.cut), num(fmtInt(c.n), c.n)]),
+        [t('escRowPartEvery'), num(fmtInt(partial.everyYear), partial.everyYear)],
+        [t('escRowPartNever'), num(fmtInt(partial.never), partial.never)],
+        [t('escRowPartRest'), num(fmtInt(partial.n - partial.everyYear - partial.never), partial.n - partial.everyYear - partial.never)],
+      ],
     },
   });
 }
@@ -80,10 +107,14 @@ export function historyFigure(lines, { n }) {
   });
 }
 
-// history: view.history ({ lines, timeline, windows }); figure: the page's figure counter.
+// Two figures side by side where there is room (one alone takes the row).
+const pair = (a, b) => (a || b ? html`<div class="picpair">${a}${b}</div>` : '');
+
+// history: view.history ({ lines, escapes (a function; none: no years-cut figure), timeline, windows }); figure: the page's figure counter. The small multiples, then the years
+// cut beside the data windows, then the timeline.
 export function historyPart(history, { figure: nextFigure }) {
   return html`<p class="part__intro">${t('historyIntro')}</p>
 ${pic(historyFigure(history.lines, { n: nextFigure }))}
-${pic(windowsFigure(history.windows, { n: nextFigure }), true)}
+${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure })), pic(windowsFigure(history.windows, { n: nextFigure })))}
 ${timeline(history.timeline)}`;
 }

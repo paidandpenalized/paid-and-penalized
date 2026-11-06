@@ -115,25 +115,26 @@ ${body}${dots}
 // the bars. rows: [{ label, sub, added, removed, tip }] in group order; labels: { off, on } over the line.
 export function drawFlips({ rows, width, labels }) {
   const narrow = isNarrow(width);
-  const rowH = narrow ? 44 : STRIP_ROW;
+  // A phone's row: its label, then its bars just under it, then air before the next row's label.
+  const rowH = narrow ? 42 : STRIP_ROW;
   const top = STRIP_TOP;
   // Room at the left for the row labels and the largest number taken off, at the right for the largest put on.
   const left = narrow ? 30 : 100;
-  const right = width - (narrow ? 24 : 30);
+  const right = width - (narrow ? 24 : 34);
   const most = (key) => Math.max(1, ...rows.map((r) => r[key]));
   const x = scaleLinear().domain([-most('removed'), most('added')]).range([left, right]);
   const x0 = r2(x(0));
   const barH = narrow ? 12 : 14;
   const body = rows.map((r, row) => {
     const y0 = top + row * rowH;
-    const yb = narrow ? y0 + 22 : y0 + rowH / 2 - 2 - barH / 2;
+    const yb = narrow ? y0 + 17 : y0 + rowH / 2 - 2 - barH / 2;
     const [xOff, xOn] = [r2(x(-r.removed)), r2(x(r.added))];
     const value = (v, at, anchor) => (v ? text({ x: at, y: yb + barH / 2 + 4, anchor, cls: 'chart-value', body: String(v) }) : '');
     return mark({
       tip: r.tip, value: [r.added, r.removed], hit: { x: 0, y: y0, width, height: rowH },
       body: html`${narrow || row % 2 ? '' : html`<rect class="strip__band" x="${left}" y="${y0 + 2}" width="${r2(right - left)}" height="${rowH - 4}"/>`}
 ${narrow
-    ? text({ x: 0, y: y0 + 13, anchor: 'start', cls: 'chart-label', body: html`${r.label} <tspan class="chart-note">${r.sub}</tspan>` })
+    ? text({ x: 0, y: y0 + 12, anchor: 'start', cls: 'chart-label', body: html`${r.label} <tspan class="chart-note">${r.sub}</tspan>` })
     : text({ x: 0, y: y0 + rowH / 2 + 2, anchor: 'start', cls: 'chart-label', body: r.label })}
 <path class="chart-bar" d="${barPath(x0, xOff, yb, barH)}"/><path class="chart-col--pen" d="${barPath(x0, xOn, yb, barH)}"/>
 ${value(r.removed, xOff - 5, 'end')}${value(r.added, xOn + 5, 'start')}`,

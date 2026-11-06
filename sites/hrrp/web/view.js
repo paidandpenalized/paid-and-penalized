@@ -401,12 +401,15 @@ function historyTotals(history) {
 
 // The Methods page's notes on reading the program page's figures, each a figure's accuracy trap: hospitals flagged on a condition
 // whose cut rounds to zero (counted as not cut by the share cut by conditions measured); what peer grouping changed (approximate
-// medians, no dollars). A note with nothing to say is left out.
-export function figureLimits({ hospitals: all, meta }) {
+// medians, no dollars); the years cut (today's hospitals only; an absent year is not "not cut", so two counts differ). A note with
+// nothing to say is left out.
+export function figureLimits({ hospitals: all, meta, history }) {
   const rounded = all.filter((h) => verdict(h, meta).status === 'none-rounded').length;
+  const { counts } = rollCall({ hospitals: all, history, meta });
   return [
     rounded ? methodsFill(rounded === 1 ? 'figuresRoundedOne' : 'figuresRounded', { hospitals: hospitals(rounded) }) : null,
     methodsT('figuresFlips'),
+    counts.cutEveryYearInFile > counts.cutAllYears ? methodsFill('figuresEscapes', { inFile: fmtInt(counts.cutEveryYearInFile), all: fmtInt(counts.cutAllYears), years: String(counts.nYears) }) : null,
   ].filter(Boolean);
 }
 

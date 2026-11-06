@@ -143,9 +143,10 @@
 .picpair > * { min-width: 0; }
 @media (min-width: 980px) { .picpair:has(> :nth-child(2)) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 /* A 7-to-5 pair whose figures share rows (takeaway, chart, note, source, an open table), so their charts start level: the peer-group
-   strips and what peer grouping changed, drawn at one row pitch (layout.js SIDE and BESIDE), keep each group on one line across. */
+   strips and what peer grouping changed, drawn at one row pitch (layout.js SIDE and BESIDE), keep each group on one line across.
+   A wider gutter than a pair's keeps the two figures apart where their rows run level. */
 @media (min-width: 980px) {
-  .picpair--side:has(> :nth-child(2)) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); row-gap: 10px; }
+  .picpair--side:has(> :nth-child(2)) { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 10px 64px; }
   .picpair--side > .pic, .picpair--side > .pic > .fig { display: grid; grid-row: span 5; grid-template-rows: subgrid; align-content: start; }
 }
 /* Figure 3's dual-share columns: two tones alternate by peer group (the group numbers above the chart name them). */

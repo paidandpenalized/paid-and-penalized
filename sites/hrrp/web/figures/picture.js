@@ -204,10 +204,11 @@ export function flipsTakeaway(f) {
     const rows = f.rows.filter(keep);
     return rows.length ? { groups: groupsText(rows.map((r) => r.peer)), n: about(Math.abs(rows.reduce((s, r) => s + r.net, 0))) } : null;
   };
-  const [more, fewer] = [side((r) => r.net < 0), side((r) => r.net > 0)];
-  if (more && fewer) return fill('flipsTakeaway', { more: more.groups, moreN: more.n, fewer: fewer.groups, fewerN: fewer.n });
-  if (more) return fill('flipsTakeawayMore', { more: more.groups, moreN: more.n });
-  if (fewer) return fill('flipsTakeawayFewer', { fewer: fewer.groups, fewerN: fewer.n });
+  // Said from peer grouping's side, as the drawing has it: the groups it takes flags off on balance, then those it puts flags on.
+  const [off, on] = [side((r) => r.net < 0), side((r) => r.net > 0)];
+  if (off && on) return fill('flipsTakeaway', { off: off.groups, offN: off.n, on: on.groups, onN: on.n });
+  if (off) return fill('flipsTakeawayOff', { off: off.groups, offN: off.n });
+  if (on) return fill('flipsTakeawayOn', { on: on.groups, onN: on.n });
   return t('flipsTakeawayEven');
 }
 

@@ -4,9 +4,9 @@
 // panel. The wide drawing sets the large panel left and the two small ones stacked right; the phone's stacks all three. A year with
 // no value breaks a line and draws no bar: never a zero. Plain data in (figures/history-data.js smallLines()), SVG out; the kit's
 // classes are reused where one fits, the few new ones (hist-*) are in sites/hrrp/web/styles.css. Words come from program/copy.js.
-import { scaleLinear } from 'd3-scale';
+import { scaleBand, scaleLinear } from 'd3-scale';
 import { html } from '../../../../web/render/html.js';
-import { NOTE_PX, capsWidth, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
+import { NOTE_PX, capsWidth, columnPath, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
 import { textWidth, wrapText } from '../../../../web/charts/text.js';
 import { fyLabel } from '../copy.js';
 import { fmtPct } from '../numbers.js';
@@ -217,4 +217,38 @@ export function drawHistory({ lines, width }) {
 ${avgPanel(lines, { ...slot.avg, title: t('histTitleAvg') }, narrow)}
 ${totalPanel(lines, { ...slot.total, title: t('histTitleTotal') }, narrow)}`;
   return frame({ kind: 'history', width, height: narrow ? hBig + 2 * hSmall + 24 : hBig + 4, body });
+}
+
+// ---------- has this hospital ever escaped? ----------
+
+// Today's hospitals that were in the file every year, counted by how many of those years they were cut: a column for each count
+// from none to every year, the every-year column in penalty ink, the rest grey, each column's count over it (on a phone only the
+// two ends', which the takeaway names). Under the axis, its two ends named and what it counts. counts: yearsCut().counts ([{ cut, n,
+// tip }]); labels: { never, every, axis }.
+export function drawYearsCut({ counts, width, labels }) {
+  const narrow = isNarrow(width);
+  const last = counts.length - 1;
+  const top = 18;
+  const base = narrow ? 150 : 230;
+  const x = scaleBand().domain(counts.map((c) => c.cut)).range([4, width - 4]).paddingInner(narrow ? 0.18 : 0.22);
+  const max = Math.max(1, ...counts.map((c) => c.n));
+  const y = (n) => base - (n / max) * (base - top);
+  const shown = (c) => !narrow || c.cut === 0 || c.cut === last;
+  const cols = counts.map((c) => {
+    const cx = x(c.cut);
+    const w = x.bandwidth();
+    const pen = c.cut === last;
+    return mark({
+      tip: c.tip, value: c.n, hit: { x: cx, y: top - 14, width: w, height: base - top + 14 },
+      body: html`${c.n ? html`<path class="${pen ? 'chart-col--pen' : 'chart-col'}" d="${columnPath(cx, w, base, Math.min(base - 1, y(c.n)))}"/>` : ''}${shown(c) ? text({ x: cx + w / 2, y: y(c.n) - 4, cls: `chart-value${pen ? ' chart-label--pen' : ''}`, body: String(c.n) }) : ''}`,
+    });
+  });
+  const tick = (c) => text({ x: x(c.cut) + x.bandwidth() / 2, y: base + 14, cls: 'chart-axis__label', body: String(c.cut) });
+  const ticks = counts.filter((c) => !narrow || c.cut % 5 === 0 || c.cut === last).map(tick);
+  const under = base + 30;
+  return frame({
+    kind: 'yearscut', width, height: under + 6, body: html`${cols}
+<line class="chart-baseline" x1="4" x2="${width - 4}" y1="${base}" y2="${base}"/>${ticks}
+${text({ x: 4, y: under, anchor: 'start', cls: 'chart-note', body: labels.never })}${text({ x: width / 2, y: under, cls: 'chart-note', body: labels.axis })}${text({ x: width - 4, y: under, anchor: 'end', cls: 'chart-note chart-label--pen', body: labels.every })}`,
+  });
 }

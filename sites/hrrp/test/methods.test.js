@@ -184,6 +184,16 @@ test('reading the figures: hospitals flagged on a condition whose cut rounds to 
   const one = ctxOf({ hospitals: ALL.filter((h) => !many.slice(1).includes(h)) });
   assert.match(methodsView(one).figures[0], /^1 hospital comes in above .* yet takes no cut: .* counts it as not cut\.$/);
   const none = ctxOf({ hospitals: ALL.filter((h) => !many.includes(h)) });
-  assert.equal(methodsView(none).figures.length, 1, 'only the notes that always apply');
-  assert.match(methodsView(none).figures[0], /^What peer grouping changed: .* no dollars are modeled/);
+  const lines = methodsView(none).figures;
+  assert.ok(!lines.some((l) => /rounds to zero/.test(l)), 'no rounded line with none');
+  assert.match(lines[0], /^What peer grouping changed: .* no dollars are modeled/);
+});
+
+test('reading the figures, real data: the years-cut trap names the two counts, cut in every year in the file above cut in all years', () => {
+  const data = loadHrrpOnce();
+  const v = methodsView(areaContext({ ...data, places: buildPlaces(data.hospitals, data.meta) }));
+  const line = v.figures.find((f) => f.startsWith('Years cut:'));
+  const [inFile, all] = line.match(/([\d,]+) hospitals were cut in every year they appear but ([\d,]+) in all (\d+) years/).slice(1, 3).map((x) => Number(x.replace(/,/g, '')));
+  assert.ok(inFile > all);
+  assert.match(line, /today’s hospitals/);
 });
