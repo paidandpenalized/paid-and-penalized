@@ -89,3 +89,14 @@ export const EXPLORE_PAGE_SIZE = 25;
 // The other-hospitals table on a hospital page: rows to a page, and the drawing width of its map.
 export const NEIGHBORS_PAGE_SIZE = 25;
 export const NEARBY_MAP_WIDTH = 460;
+
+// A place page's figures. The cut histogram's bins (percentage points) and the width of the "no cut" pile drawn before the scale's
+// zero; the dots on a place's map shaded by the cut at these thresholds (percent: under the first, up to each next, the last
+// and over) and sized by Medicare volume in this many steps; a place with more hospitals than DENSE draws its dots as one
+// path for each shade and size, with no tooltips (the page's table lists them all).
+export const PLACE_CUT_BIN = 0.1;
+export const PLACE_ZERO_WIDTH = 0.3;
+export const PLACE_SHADES = Object.freeze([0.25, 0.5, 1, 2]);
+export const PLACE_SIZES = 4;
+export const PLACE_DENSE = 160;
+export const PLACE_MAP_WIDE = 560;

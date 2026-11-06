@@ -133,6 +133,42 @@
 .place__intro { display: grid; gap: 14px; align-content: start; }
 .place__title { font: 400 clamp(2.4rem, 7vw, 5rem)/0.98 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .place__deck { max-width: 36em; font-size: var(--fs-md); line-height: 1.45; }
+/* A place page's figures (figures/place.js): each under its title, the map beside the size of the cuts and the peer groups beside the
+   average cut over time where there is room (the old state page's rows), and the map's dots shaded by cut, sized by volume. */
+/* A long metro name wraps in the card's title bar instead of pushing the page sideways. */
+.place__card .prog__summary > .form__title { flex-wrap: wrap; white-space: normal; }
+.place__fig { min-width: 0; margin-top: 40px; }
+.place__figh { margin: 0 0 4px; font: 400 clamp(1.4rem, 3vw, 1.9rem)/1.1 var(--font-display); }
+.place__pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 40px; }
+.place__pair > * { min-width: 0; }
+@media (min-width: 980px) {
+  .place__pair:has(> :nth-child(2)) { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+  .place__pair--rev:has(> :nth-child(2)) { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+}
+.page--place .fig .chart { max-width: none; }
+.place__keybox { display: grid; gap: 6px; margin-top: 10px; }
+.place__keytitle { margin: 0; font: 600 var(--fs-sm)/1.2 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.place__key:not(.place__key--dense) .usmap__sw--ring { box-sizing: border-box; border: 1.5px solid var(--ink); background: var(--paper); opacity: 1; }
+.place__sw--cut-1 { background: var(--pen-seq-1); }
+.place__sw--cut-2 { background: var(--pen-seq-2); }
+.place__sw--cut-3 { background: var(--pen-seq-3); }
+.place__sw--cut-4 { background: var(--pen-seq-4); }
+.place__sw--cut-5 { background: var(--pen-seq-5); }
+.chart-place__dot--cut-1 { fill: var(--pen-seq-1); stroke: var(--ink-3); }
+.chart-place__dot--cut-2 { fill: var(--pen-seq-2); stroke: var(--ink-3); }
+.chart-place__dot--cut-3 { fill: var(--pen-seq-3); stroke: var(--paper); }
+.chart-place__dot--cut-4 { fill: var(--pen-seq-4); stroke: var(--paper); }
+.chart-place__dot--cut-5 { fill: var(--pen-seq-5); stroke: var(--paper); }
+.chart-dots--cut-1 { stroke: var(--pen-seq-1); }
+.chart-dots--cut-2 { stroke: var(--pen-seq-2); }
+.chart-dots--cut-3 { stroke: var(--pen-seq-3); }
+.chart-dots--cut-4 { stroke: var(--pen-seq-4); }
+.chart-dots--cut-5 { stroke: var(--pen-seq-5); }
+@media (forced-colors: active) {
+  .chart-place__dot--cut-1, .chart-place__dot--cut-2, .chart-place__dot--cut-3, .chart-place__dot--cut-4, .chart-place__dot--cut-5, .place__sw--cut-1, .place__sw--cut-2, .place__sw--cut-3, .place__sw--cut-4, .place__sw--cut-5 { forced-color-adjust: none; fill: CanvasText; background: CanvasText; stroke: Canvas; }
+  .chart-dots--cut-1, .chart-dots--cut-2, .chart-dots--cut-3, .chart-dots--cut-4, .chart-dots--cut-5 { stroke: CanvasText; }
+  .place__key:not(.place__key--dense) .usmap__sw--ring { background: Canvas; border-color: CanvasText; }
+}
 .place__kids { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
 .kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 6px 24px; margin: 12px 0 0; padding: 0; list-style: none; }
 .kids a { display: inline-block; padding-block: 4px; }

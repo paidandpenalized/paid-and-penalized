@@ -36,7 +36,7 @@ const MARKS = [
   '.chart-punch__bar', '.chart-punch__yes', '.chart-ref', '.chart-same', '.chart-sil', '.chart-pull__line', '.chart-slide__stock', '.chart-slide__hair',
   '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
   '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
-  '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
+  '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring', '.chart-bartick',
   // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
@@ -56,6 +56,8 @@ const MARKS = [
   '.meds__table td.hi',
   // the picture's figures: the interval line, the strip plot's dots, bands and median tick, the trait ranges' rule (sites/hrrp/web/styles.css)
   '.cond-ci', '.strip-dot--0', '.strip-dot--1', '.strip-dot--2', '.strip-dot--3', '.strip-dot--4', '.strip-dot--5', '.strip__band', '.strip__median', '.spread__rule',
+  // a place page's dots shaded by cut and their key (sites/hrrp/web/styles.css)
+  '.chart-place__dot--cut-1', '.chart-place__dot--cut-5', '.chart-dots--cut-1', '.chart-dots--cut-5', '.place__sw--cut-1', '.place__sw--cut-5',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

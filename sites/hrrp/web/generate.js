@@ -64,17 +64,17 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, shared }) });
   }
-  for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets }) });
+  for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets, shared: area }) });
   // Methods last, with the count of the pages under the program.
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
   log(`HRRP: ${1 + hospitals.length + places.list.length + 2} pages under ${PROGRAM_PATH}`);
   return { updated: { cmsReleased: data.cmsReleased, changed: data.changedOn } };
 }
 
-// The Readmissions site's build manifest. Two browser scripts: the program page's (search, Worksheet R's box, the map, the swarms) and the hospital page's (the what-if and the area table's pager).
+// The Readmissions site's build manifest. Three browser scripts: the program page's (search, Worksheet R's box, the map, the swarms), the hospital page's (the what-if and the area table's pager) and the place page's (its map's dots open their hospitals).
 export const HRRP = {
   id: 'hrrp',
-  entries: { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js' },
+  entries: { 'hrrp-program': 'sites/hrrp/client/program.js', 'hrrp-hospital': 'sites/hrrp/client/hospital.js', 'hrrp-place': 'sites/hrrp/client/place.js' },
   styles: [...KIT_STYLES, 'sites/hrrp/web/styles.css'],
   generate: (ctx) => generateHrrp(ctx),
 };

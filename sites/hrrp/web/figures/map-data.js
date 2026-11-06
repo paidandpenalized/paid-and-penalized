@@ -66,18 +66,25 @@ export const DOT_TIERS = 6;
 // A hospital's dot kind: cut, measured and not cut, or measured on nothing.
 export const dotKind = (h) => (h.red > 0 ? 'cut' : CONDS.some((k) => isMeasured(h.c?.[k])) ? 'kept' : 'none');
 
-// Dot area follows base payments: a tier 1..DOT_TIERS from the square root of the base over that of the 99th percentile
-// (so one very large hospital does not shrink the rest); the diameter at a tier is tier / DOT_TIERS of the largest. A
-// hospital with no base takes the smallest tier. Returns [{ id, point: [lon, lat], kind, tier }], hospitals without a
-// location left out.
-export function dotPoints(hospitals) {
+// The base payment a hospital's dot size is measured against: the 99th percentile (so one very large hospital does not
+// shrink the rest).
+export function volumeTop(hospitals) {
   const bases = hospitals.map((h) => h.base).filter((b) => b > 0).sort((a, b) => a - b);
-  const top = bases.length ? bases[Math.min(bases.length - 1, Math.floor(0.99 * bases.length))] : 1;
+  return bases.length ? bases[Math.min(bases.length - 1, Math.floor(0.99 * bases.length))] : 1;
+}
+
+// A hospital's dot tier 1..DOT_TIERS from the square root of its base over that of the top; no base takes the smallest.
+export const volumeTier = (h, top, tiers = DOT_TIERS) => (h.base > 0 ? Math.min(tiers, Math.max(1, Math.ceil(Math.sqrt(h.base / top) * tiers))) : 1);
+
+// Dot area follows base payments (volumeTier; the diameter at a tier is tier / DOT_TIERS of the largest). Returns
+// [{ id, point: [lon, lat], kind, tier }], hospitals without a location left out.
+export function dotPoints(hospitals) {
+  const top = volumeTop(hospitals);
   return hospitals.filter((h) => Number.isFinite(h.lat) && Number.isFinite(h.lon)).map((h) => ({
     id: h.id,
     point: [h.lon, h.lat],
     kind: dotKind(h),
-    tier: h.base > 0 ? Math.min(DOT_TIERS, Math.max(1, Math.ceil(Math.sqrt(h.base / top) * DOT_TIERS))) : 1,
+    tier: volumeTier(h, top),
   }));
 }
 

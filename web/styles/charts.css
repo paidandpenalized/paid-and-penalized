@@ -304,6 +304,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-place__dot--faint { fill: var(--ink-3); stroke: var(--paper); opacity: 0.6; }
 .chart--place-map .chart-mark[data-href] { cursor: pointer; }
 .chart--place-map .chart-mark.is-active .chart-place__dot { stroke-width: 3px; }
+.chart-bartick { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .chart-outline { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 
 /* Forced colors for those marks: the cut in CanvasText, everything else in GrayText, frames and rules in CanvasText,
@@ -315,7 +316,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
   .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
   .chart-card__a { stroke: CanvasText; }
-  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
+  .chart-bartick, .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
   .chart-agree__cell.is-picked { stroke: Highlight; }
 }
 

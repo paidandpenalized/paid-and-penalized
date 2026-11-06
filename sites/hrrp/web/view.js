@@ -17,6 +17,7 @@ import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
 import { noTotalText, researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
+import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
 import { pictureData } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
@@ -170,7 +171,9 @@ export function areaContext({ hospitals, meta, history, conditions, places, pins
   const states = places.list.filter((p) => p.kind === 'state');
   const stateSummaries = new Map(states.map((p) => [p.key, summarize(p.hospitals)]));
   const stateMeans = [...stateSummaries.values()].map((s) => s.meanRed).sort((a, b) => b - a);
-  return { ...content, hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, history, pinsUsed };
+  // What a place page compares itself with, once for the build: the nation's cuts, condition shares and average cut by year, and the cap and pandemic marks.
+  const side = nationalSide({ hospitals, meta, history });
+  return { ...content, hospitals, meta, edition, nation: summarize(hospitals), stateSummaries, stateMeans, hasDc: stateSummaries.has('dc'), places, history, pinsUsed, side, lines: smallLines({ history }) };
 }
 
 // The place with the most hospitals of a kind (ties: the first by name), which the hero's suggestions link. Picked from
@@ -302,6 +305,17 @@ export function placeView(place, ctx) {
       ],
     },
     children,
+    figures: {
+      id: `${place.kind}-${place.key}`,
+      place: { kind: place.kind, key: place.key, name: place.name, states: place.states, hospitals: place.hospitals },
+      conditionList: edition.conditions,
+      span: edition.span,
+      map: placeMapData(place, ctx),
+      size: sizeData(place.hospitals, ctx.side),
+      conditions: conditionsData(place.hospitals, ctx.meta, ctx.side),
+      peers: peersData(place.hospitals),
+      trend: trendData(place.hospitals, ctx),
+    },
     back: placeT('back'),
   };
 }

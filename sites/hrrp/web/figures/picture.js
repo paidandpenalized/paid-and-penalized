@@ -240,7 +240,7 @@ function typeFigure({ ty, edition, n }) {
 // ---------- which conditions cost the most ----------
 
 // The condition names on the paired bars: a phone has the room for shorter names only, keyed by condition key (the display names are CMS's words and may change).
-const NARROW_NAME = { THA_TKA: 'Hip/knee', CABG: 'Bypass (CABG)' };
+export const NARROW_NAME = { THA_TKA: 'Hip/knee', CABG: 'Bypass (CABG)' };
 
 export function barsTakeaway(b, conditions) {
   if (!b.takeaway) return '';
