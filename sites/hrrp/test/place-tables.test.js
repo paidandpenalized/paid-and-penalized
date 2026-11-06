@@ -11,7 +11,7 @@ import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
 import { generateHrrp } from '../web/generate.js';
 import { csvPath, hospitalPath } from '../web/links.js';
 import { buildPlaces } from '../web/places.js';
-import { placeColumns } from '../web/csv.js';
+import { hospitalCsv as hospitalCsvOf, placeColumns } from '../web/csv.js';
 import { areaCsvName } from '../web/figures/neighbors-data.js';
 import { placePage } from '../web/pages/place.js';
 import { areaContext, placeView } from '../web/view.js';
@@ -55,15 +55,16 @@ test('the hospitals table: every hospital, largest cut first, linked; the state 
   const ctx = areaOf();
   const one = pageOf(ctx, placeOf(ctx, 'state', 'zz'));
   const spans = pageOf(ctx, placeOf(ctx, 'metro', '99901'));
-  const rowsOf = (text) => [...text.matchAll(/<tr data-red="([^"]*)"|<tr[^>]* data-red="([^"]*)"/g)].map((m) => Number(m[1] ?? m[2]));
-  const reds = rowsOf(one);
+  const reds = [...one.slice(one.indexOf('class="gb ph__table"')).matchAll(/<tr><th scope="row"><a href="\/hrrp\/hospital[^]*?<span>([\d.]+)%<\/span>/g)].map((m) => Number(m[1]));
   assert.equal(reds.length, placeOf(ctx, 'state', 'zz').hospitals.length);
   assert.deepEqual(reds, [...reds].sort((a, b) => b - a), 'largest cut first');
   assert.match(one, /<h2 id="ph-h">Hospitals in Zedland<\/h2>/);
   for (const h of placeOf(ctx, 'state', 'zz').hospitals) assert.ok(one.includes(`href="${hospitalPath(h.id)}"`), h.id);
   assert.ok(!one.includes('id="ph-state"'), 'one state: no state filter');
   assert.ok(spans.includes('id="ph-state"'), 'a metro across a state line: the filter');
-  assert.match(spans, /data-st="ZY"/);
+  assert.match(spans, /data-cbsa="99901"/);
+  assert.match(one, /data-states="ZY,ZZ"|data-states="ZZ"/);
+  assert.ok(!one.includes('ph__more'), 'few hospitals: no "more" line');
   for (const id of ['ph-text', 'ph-peer', 'ph-cond', 'ph-teach', 'ph-beds', 'ph-loc', 'ph-pen', 'ph-sort']) assert.ok(one.includes(`id="${id}"`), id);
   assert.match(one, /class="ht__controls ph__controls"[^>]* hidden/, 'the filters are the script\'s to show');
   assert.ok(!JUNK.test(one.slice(one.indexOf('<main'), one.indexOf('</main>'))));
@@ -102,4 +103,53 @@ test('the build writes each place\'s files: the child table\'s CSV with the plac
     assert.deepEqual(read(areaCsvName(data.meta.fy, `metro-${metro.key}`)).map((r) => r.CCN).sort(), metro.hospitals.map((h) => h.id).sort());
     const page = readFileSync(join(dir, state.path, 'index.html'), 'utf8');
     assert.ok(page.includes(`href="${csvPath(data.meta.fy, `hrrp-fy${data.meta.fy}-place-state-${state.key}-hospitals`)}" download`));
+    // only the first page of rows is in the page; the line says the rest are in the file; the rows asset is linked
+    assert.equal([...page.matchAll(/<tr><th scope="row"><a href="\/hrrp\/hospital\//g)].length, 25);
+    assert.match(page, /Showing the 25 largest cuts of [\d,]+ hospitals\. The whole list is in the CSV\./);
+    assert.match(page, /data-src="\/assets\/hrrp-place-rows\.[0-9a-f]+\.json"/);
+    // the heaviest place page stays light (raw HTML; the budget test counts brotli): the largest region was 2.3 MB with every row in it
+    const south = readFileSync(join(dir, places.list.filter((p) => p.kind === 'region').sort((a, b) => b.hospitals.length - a.hospitals.length)[0].path, 'index.html'), 'utf8');
+    assert.ok(Buffer.byteLength(south) < 450_000, `the largest region's page is ${Buffer.byteLength(south)} bytes`);
   }));
+
+test('the rows asset holds every hospital once, largest cut first, and the script keeps one place\'s', async () => {
+  const data = loadHrrpOnce();
+  const { placeRowsAsset } = await import('../web/figures/place-table-data.js');
+  const { placeRows, filterRows, sortRows } = await import('../client/place-rows.js');
+  const asset = JSON.parse(JSON.stringify(placeRowsAsset(data.hospitals, data.meta, areaContext({ ...data, places: buildPlaces(data.hospitals, data.meta) }).edition.conditions)));
+  assert.equal(asset.rows.length, data.hospitals.length);
+  const places = buildPlaces(data.hospitals, data.meta);
+  const metro = places.list.find((p) => p.kind === 'metro' && p.states.length > 1);
+  const mine = placeRows(asset, { cbsa: metro.key });
+  assert.deepEqual(mine.map((r) => r.h.id).sort(), metro.hospitals.map((h) => h.id).sort());
+  assert.deepEqual(mine.map((r) => r.rank), mine.map((_, i) => i + 1));
+  const reds = mine.map((r) => r.h.red);
+  assert.deepEqual(reds, [...reds].sort((a, b) => b - a));
+  const region = places.list.find((p) => p.kind === 'region');
+  assert.equal(placeRows(asset, { states: region.states }).length, region.hospitals.length);
+  // filters and sorts
+  const some = placeRows(asset, { states: region.states });
+  const st = region.states[0];
+  assert.ok(filterRows(some, { st }).every((r) => r.h.st === st));
+  assert.ok(filterRows(some, { pen: true }).every((r) => r.h.paf < 1));
+  assert.ok(filterRows(some, { cond: '2' }).every((r) => r.states[2] === 'counted'));
+  assert.ok(filterRows(some, { loc: 'rural' }).every((r) => r.h.urban === false));
+  const one = some[5];
+  assert.ok(filterRows(some, { text: ` ${one.h.id.toLowerCase()} ` }).some((r) => r.h.id === one.h.id), 'search by CCN');
+  const byName = sortRows(some, 'name').map((r) => r.h.name);
+  assert.deepEqual(byName, [...byName].sort((a, b) => a.localeCompare(b, 'en')));
+  const beds = sortRows(some, 'beds').map((r) => r.h.beds ?? -1);
+  assert.deepEqual(beds, [...beds].sort((a, b) => b - a));
+  assert.throws(() => placeRows({ fields: ['id'], rows: [], conditions: [] }, { cbsa: '1' }), /missing fields/);
+});
+
+test('copy after filtering: the file cut to the rows shown, in their order, header and each line as written', async () => {
+  const { csvSubset } = await import('../client/place-rows.js');
+  const text = 'CCN,Hospital\r\n010001,"A, B"\r\n010002,"line\nbreak"\r\n010003,C\r\n';
+  assert.equal(csvSubset(text, ['010003', '010001']), 'CCN,Hospital\r\n010003,C\r\n010001,"A, B"\r\n');
+  assert.equal(csvSubset(text, ['010002']), 'CCN,Hospital\r\n010002,"line\nbreak"\r\n');
+  assert.equal(csvSubset(text, ['999999']), 'CCN,Hospital\r\n');
+  const real = hospitalCsvOf([hospital({ id: '990001' }), hospital({ id: '990002', name: '=SUM(A1)' })]);
+  const cut = csvSubset(real, ['990002']);
+  assert.ok(cut.startsWith('CCN,Hospital,') && cut.includes("'=SUM(A1)") && !cut.includes('990001'), 'the guard on a text cell is kept');
+});

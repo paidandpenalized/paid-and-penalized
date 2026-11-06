@@ -202,6 +202,7 @@ export const COPY = {
   hosSortName: { text: 'Name, A to Z', claim: null },
   hosSortBeds: { text: 'Beds, most first', claim: null },
   hosStatus: { text: 'Showing {from} to {to} of {n}', claim: null },
+  hosMore: { text: 'Showing the {shown} largest cuts of {n} hospitals. The whole list is in the CSV.', claim: null },
   hosEmpty: { text: 'No hospital here matches these filters.', claim: null },
   hosCaption: { text: 'Hospitals in {name}, largest cut first', claim: null },
   hosColHospital: { text: 'Hospital', claim: null },
@@ -215,7 +216,7 @@ export const COPY = {
   hosPrev: { text: 'Previous page', claim: null },
   hosNext: { text: 'Next page', claim: null },
   hosDownload: { text: 'Download these hospitals as a CSV', claim: null },
-  hosCopy: { text: 'Copy these hospitals as CSV', claim: null },
+  hosCopy: { text: 'Copy the filtered hospitals as CSV', claim: null },
   csvCopied: { text: 'Copied.', claim: null },
   csvFailed: { text: 'The file could not be copied. Use the download instead.', claim: null },
 

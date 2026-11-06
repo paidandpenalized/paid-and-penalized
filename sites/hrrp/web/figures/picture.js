@@ -17,14 +17,10 @@ import { hospitalPath } from '../links.js';
 import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
+import { countedNames, glyph } from './glyph.js';
 import { CUT_BIN } from './picture-data.js';
+export { countedNames, glyph };
 import { drawCuts, drawMeasured, drawSpread, drawStrip } from './picture-draw.js';
-
-// The glyph's drawing width in units: six boxes and their padding.
-const GLYPH_WIDTH = 96;
-// A condition's state in the glyph: counted fills the box, below hatches it, few and none leave it empty.
-const CELL = { counted: 'm', below: 'a', few: '', none: '' };
-const TIP = { counted: 'penTipCounted', below: 'penTipBelow', few: 'penTipNone', none: 'penTipNone' };
 
 // The Part's lede paragraph.
 export function ledeText({ lede }) {
@@ -36,14 +32,6 @@ export function ledeText({ lede }) {
     some(lede.nCap, 'pictureCap', 'pictureCapOne', { cap: String(lede.cap) }),
   ].join(' ');
 }
-
-// One row's glyph: the six boxes in program order, a tooltip on the card naming each condition's state.
-export function glyph(row, rank, conditions, prefix = 'pen') {
-  const tip = CONDS.map((k, i) => fill(TIP[row.states[i]], { c: conditionShort(conditions, k) })).join('; ');
-  return miniCards({ id: `${prefix}-${rank}`, width: GLYPH_WIDTH, cols: 1, cards: [{ cells: row.states.map((s) => CELL[s]), yes: row.h.red > 0, tip }] });
-}
-
-export const countedNames = (row, conditions) => CONDS.filter((_, i) => row.states[i] === 'counted').map((k) => conditionShort(conditions, k));
 
 // The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page, then its cut, its
 // modeled dollars and the glyph (with the conditions in words for a screen reader).

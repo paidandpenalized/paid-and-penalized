@@ -8,6 +8,7 @@ import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { dictionaryText, hospitalCsv, hospitalsCsvName, placeCsv } from './csv.js';
 import { hospitalsAsset } from './figures/explore-data.js';
+import { placeRowsAsset } from './figures/place-table-data.js';
 import { statesCsvRows } from './figures/map-data.js';
 import { swarmRest } from './figures/swarm.js';
 import { worksheetAsset } from './figures/worksheet-data.js';
@@ -47,6 +48,8 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const worksheetUrl = ctx.asset('hrrp-worksheet', 'json', JSON.stringify(worksheetAsset(hospitals, meta)));
   // Step 2's swarms past heart failure's: drawn here, fetched by the page when a condition is first picked.
   const swarmUrl = ctx.asset('hrrp-swarm', 'json', JSON.stringify(swarmRest({ how: program.how })));
+  // The place pages' hospitals tables carry their first page; the rest are read from this asset near the table.
+  const placeRowsUrl = ctx.asset('hrrp-place-rows', 'json', JSON.stringify(placeRowsAsset(hospitals, meta, area.edition.conditions)));
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl, worksheetUrl, swarmUrl }) });
   ctx.emit({ path: program.picture.csvHref, noindex: robots !== null, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, noindex: robots !== null, text: placeCsv(statesCsvRows(program.map.pages)) });
@@ -66,7 +69,7 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   }
   for (const place of places.list) {
     const view = placeView(place, area);
-    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area }) });
+    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl }) });
     // The files its two tables link: the places inside it, and its hospitals (a metro area's are the area file written above).
     if (view.children) ctx.emit({ path: csvPath(fy, view.children.csvName), noindex: robots !== null, text: placeCsv(view.children.csvRows, view.children.column) });
     if (view.hospitals.csvOwn) ctx.emit({ path: csvPath(fy, view.hospitals.csvName), noindex: robots !== null, text: hospitalCsv(view.hospitals.rows.map((r) => r.h)) });

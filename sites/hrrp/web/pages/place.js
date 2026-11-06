@@ -36,8 +36,9 @@ ${conditions}
 }
 
 // view: placeView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
-// shared: areaContext()'s result (the outlines the map draws), or null for a page without a map.
-export function placePage({ view, robots, assets, shared = null }) {
+// shared: areaContext()'s result (the outlines the map draws), or null for a page without a map; rowsUrl: the hospitals tables' rows
+// asset (generate.js), or null for none.
+export function placePage({ view, robots, assets, shared = null, rowsUrl = null }) {
   const { deck } = view;
   const body = html`<article class="wrap page page--place">
 ${breadcrumb(view.crumbs, view.name)}
@@ -52,8 +53,8 @@ ${recordCard(view.card)}
 </div>
 </header>
 ${figuresOf(view, shared)}
-${view.children ? kidsTable(view.children, { fy: view.fy, crossState: view.children.rows.some((r) => r.label.endsWith(' part)')) }) : ''}
-${hospitalsSection(view.hospitals, { name: view.name, conditions: view.figures.conditionList, fy: view.fy })}
+${view.children ? kidsTable(view.children, { fy: view.fy }) : ''}
+${hospitalsSection(view.hospitals, { name: view.name, conditions: view.figures.conditionList, fy: view.fy, rowsUrl })}
 <p class="page__links"><a href="${PROGRAM_PATH}">${view.back}</a></p>
 </article>`;
   const title = `${view.heading} · ${SITE.name}`;

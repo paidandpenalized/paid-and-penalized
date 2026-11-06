@@ -153,6 +153,10 @@ test('the dictionary lists every column of the area files (states and the places
   assert.match(DICTIONARY.split(/^## /m)[0], /The states file lists the states the same way/);
 });
 
+test('the dictionary names every kind of file the place pages write', () => {
+  for (const kind of ['place-region-<key>-divisions.csv', 'place-division-<key>-states.csv', 'place-state-<key>-metros.csv', 'place-<kind>-<key>-hospitals.csv', 'metro-<code>-hospitals.csv', 'state-<xx>-hospitals.csv']) assert.ok(DICTIONARY.includes(kind), kind);
+});
+
 test('the dictionary and Methods say a condition\'s penalized column is blank when it was not measured (too few cases or no published ratio), and the csv does that', () => {
   assert.match(DICTIONARY, /not measured on the condition: fewer than \{minCases\} cases, or no ratio/);
   assert.match(DICTIONARY, /not measured on the condition: it had fewer than \{minCases\} cases of it, or CMS published no ratio/);
