@@ -11,7 +11,7 @@ import { areaCsvName, inMetro, sizedRows } from './neighbors-data.js';
 // The hospitals table's first page is in the place page; the rest come from one asset the page's script fetches near the table.
 export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'zip', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive', 'bedsSrc']);
 
-// The sorts a hospitals table offers, in the place table's order (the explorer puts name first): the keys of client/place-rows.js
+// The sorts a hospitals table offers, in the order both tables offer them (the first, the largest cut, is the default): the keys of client/place-rows.js
 // sortRows' comparators, and the suffix of each sort's words (hosSortCut, exploreSortCut).
 export const SORT_KEYS = Object.freeze(['cut', 'dollars', 'name', 'beds']);
 

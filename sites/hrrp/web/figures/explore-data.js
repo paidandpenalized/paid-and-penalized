@@ -24,11 +24,11 @@ export function hospitalsAsset(hospitals, places = []) {
 }
 
 // The filter controls' options, from the hospitals: states (codes, in order), peer groups present, the teaching statuses
-// present (in TEACH_LABEL's order) with their labels, the bed bands, the conditions (key and short name), the page size and the sorts (name A to Z first, the rest as the place table has them).
+// present (in TEACH_LABEL's order) with their labels, the bed bands, the conditions (key and short name), the page size and the sorts (as the place table has them: largest cut first, which is the default).
 // conditions: the file's [{ key, short }]; fy: the edition's year (the full hospitals CSV's folder).
 export function exploreControls(hospitals, conditions, fy) {
   const states = [...new Set(hospitals.map((h) => h.st))].sort();
   const peers = [...new Set(hospitals.map((h) => h.peer).filter((p) => p != null))].sort((a, b) => a - b);
   const teach = Object.keys(TEACH_LABEL).filter((k) => hospitals.some((h) => h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
-  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: ['name', ...SORT_KEYS.filter((k) => k !== 'name')], csvHref: csvPath(fy, hospitalsCsvName(fy)) };
+  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: SORT_KEYS, csvHref: csvPath(fy, hospitalsCsvName(fy)) };
 }

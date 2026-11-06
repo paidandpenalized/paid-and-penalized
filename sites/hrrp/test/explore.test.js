@@ -44,7 +44,7 @@ test('the controls\' options come from the hospitals: states, peer groups, teach
   assert.equal(c.conds.length, 6);
   assert.equal(c.conds[0].short, 'Heart attack');
   assert.equal(c.pageSize, 25);
-  assert.deepEqual(c.sorts, ['name', 'cut', 'dollars', 'beds'], 'name A to Z first, the rest high to low');
+  assert.deepEqual(c.sorts, ['cut', 'dollars', 'name', 'beds'], 'largest cut first (the default), as the place table has them');
   assert.deepEqual(Object.keys(SORTS).sort(), [...SORT_KEYS].sort(), 'the browser sorts exactly the keys the pages offer');
   assert.match(c.csvHref, /^\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv$/);
 });
@@ -77,7 +77,8 @@ test('the explorer and a place page\'s hospitals table share one filter row (sam
   assert.deepEqual(ids(section, 'ph').sort(), ids(explorer, 'ex').sort());
   const order = (text) => [...text.matchAll(/<option value="(cut|dollars|name|beds)">/g)].map((m) => m[1]);
   assert.deepEqual(order(section), SORT_KEYS);
-  assert.deepEqual(order(explorer), ['name', 'cut', 'dollars', 'beds']);
+  assert.deepEqual(order(explorer), SORT_KEYS, 'the explorer opens on the largest cut, like a place table');
+  assert.equal(order(explorer)[0], 'cut');
 });
 
 test('the rows asset also feeds the search: the hospital pages\' path, the places, and each hospital\'s ZIP', () => {
