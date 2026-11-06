@@ -14,10 +14,10 @@ import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
 import { waterfallData } from '../worksheet.js';
 
-// The wide drawings' widths, the columns they sit in at 1280: the program page's Step 5 figure column (FIG) and the what-if's result
-// column on a hospital page (PAIR), so their labels keep their size.
+// The wide drawings' widths: the program page's Step 5 figure column at 1280 (FIG), so its labels keep their size; the what-if's
+// result column on a hospital page is drawn narrower than its column (PAIR), so its labels come out a step larger, as the sliders' are.
 export const WF_FIG_WIDE = 620;
-export const WF_PAIR_WIDE = 540;
+export const WF_PAIR_WIDE = 460;
 // The wide label column's room past the longest label.
 const LABEL_PAD = 12;
 // A phone's zoomed axis labels at most this many ticks.

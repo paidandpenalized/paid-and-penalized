@@ -79,7 +79,7 @@ export function neighborsFigure(area, { view, n }) {
 <div>
 ${printout(html`<table class="gb nb__table" data-page-size="${PAGE_SIZE}">
 <caption class="vh">${t('nbCaption')}</caption>
-<thead><tr><th scope="col" class="num">${t('nbColRank')}</th><th scope="col">${t('nbColHospital')}</th><th scope="col" class="num">${t('nbColCut')}</th><th scope="col" class="num">${t('nbColDollars')}</th><th scope="col" class="num">${t('nbColPeer')}</th><th scope="col">${t('nbColConds')}</th></tr></thead>
+<thead><tr><th scope="col" class="num">${t('nbColRank')}</th><th scope="col">${t('nbColHospital')}</th><th scope="col" class="num nb__cuth">${t('nbColCut')}</th><th scope="col" class="num">${t('nbColDollars')}</th><th scope="col" class="num">${t('nbColPeer')}</th><th scope="col">${t('nbColConds')}</th></tr></thead>
 ${bodies}</table>`)}
 ${pager}
 <p class="fig__actions"><a class="fig__btn nb__csv" href="${csvHref}" download>${t('nbCsv')}</a></p>

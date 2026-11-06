@@ -109,7 +109,8 @@ test('Step 4: the medians table is not behind a disclosure, and it fills the col
   assert.ok(!step.includes('<details'), 'no collapsed disclosure around it');
   assert.match(step, /^id="step-4"/);
   assert.match(text, /<section class="hstep" id="step-4"/);
-  assert.match(CSS, /\.meds__table \{ min-width: 0; width: 100%; table-layout: fixed; \}/);
+  assert.match(CSS, /\.meds__table \{ width: 100%; min-width: 34rem; table-layout: fixed; \}/);
+  assert.match(CSS, /@media \(min-width: 980px\) \{ \.meds__table \{ min-width: 0; \} \}/);
   assert.match(rule('.meds__table td.hi'), /background: var\(--pen-tint\)/);
   assert.equal(step.match(/<th scope="col"/g).length, 7, 'the group column and six conditions');
 });

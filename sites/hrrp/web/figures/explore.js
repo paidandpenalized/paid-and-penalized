@@ -50,7 +50,7 @@ ${filterControls({ prefix: 'ex', w: WORDS(), states: controls.states, peers: con
 <p class="small ph__status" id="ex-status" aria-live="polite" data-template="${statusTemplate()}"></p>
 ${printout(html`<table class="gb gb--hospitals explore__table ph__table">
 <caption class="vh">${t('exploreCaption')}</caption>
-<thead><tr><th scope="col">${t('exploreColHospital')}</th><th scope="col" class="num">${t('exploreColCut')}</th><th scope="col" class="num">${t('exploreColDollars')}</th><th scope="col" class="num">${t('exploreColPeer')}</th><th scope="col">${t('exploreColConds')}</th><th scope="col" class="num">${t('exploreColBeds')}</th></tr></thead>
+<thead><tr><th scope="col">${t('exploreColHospital')}</th><th scope="col" class="num nb__cuth">${t('exploreColCut')}</th><th scope="col" class="num">${t('exploreColDollars')}</th><th scope="col" class="num">${t('exploreColPeer')}</th><th scope="col">${t('exploreColConds')}</th><th scope="col" class="num">${t('exploreColBeds')}</th></tr></thead>
 <tbody></tbody>
 </table>`)}
 <p class="ht-empty" id="ex-empty" hidden>${t('exploreEmpty')}</p>

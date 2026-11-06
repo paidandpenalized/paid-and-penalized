@@ -114,7 +114,8 @@ ${rows}
 
 // ---------- the penalty history ----------
 
-const BAR = { top: 26, bottom: 26, left: 40, right: 8, h: 130 };
+// The same plot box as the place panel beside it (web/charts/rankYears.js: top 22, height 150, bottom 26), so the two axes line up.
+const BAR = { top: 22, bottom: 26, left: 40, right: 8, h: 150 };
 
 // This hospital's cut in each year as bars, the average cut of every hospital as a dashed line, the cap's steps as dashed rules and
 // the pandemic years shaded; a year the hospital is not in the file says "n/a", never a zero bar.

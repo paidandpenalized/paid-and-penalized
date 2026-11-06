@@ -71,7 +71,7 @@ ${controls(table, { conditions })}
 <p class="small ph__status" role="status" aria-live="polite" data-template="${statusTemplate()}" hidden></p>
 ${printout(html`<table class="gb ph__table">
 <caption class="vh">${fill('hosCaption', { name })}</caption>
-<thead><tr><th scope="col">${t('hosColHospital')}</th><th scope="col" class="num">${t('hosColCut')}</th><th scope="col" class="num">${t('hosColDollars')}</th><th scope="col" class="num">${t('hosColPeer')}</th><th scope="col">${t('hosColConds')}</th><th scope="col" class="num">${t('hosColBeds')}</th></tr></thead>
+<thead><tr><th scope="col">${t('hosColHospital')}</th><th scope="col" class="num nb__cuth">${t('hosColCut')}</th><th scope="col" class="num">${t('hosColDollars')}</th><th scope="col" class="num">${t('hosColPeer')}</th><th scope="col">${t('hosColConds')}</th><th scope="col" class="num">${t('hosColBeds')}</th></tr></thead>
 <tbody>${first.map((r) => hospitalRow(r, conditions))}</tbody>
 </table>`)}
 ${more ? html`<p class="small ph__more">${fill('hosMore', { shown: fmtInt(first.length), n: fmtInt(table.rows.length) })}</p>` : ''}

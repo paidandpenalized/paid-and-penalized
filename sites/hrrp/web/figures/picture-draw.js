@@ -67,7 +67,7 @@ ${text({ x: width, y: cy + 4, anchor: 'end', cls: 'chart-value chart-label--pen'
 
 // The dot's shade by the size of its cut, the old site's bins (no cut, under 0.25%, under 0.5%, under 1%, under 2%, 2% or more).
 export const stripShade = (red) => (red <= 0 ? 0 : red < 0.25 ? 1 : red < 0.5 ? 2 : red < 1 ? 3 : red < 2 ? 4 : 5);
-const STRIP_DOT = 2.8;
+const STRIP_DOT = 3.6;
 
 // rows: [{ label, sub, reds (cuts in percent of each measured hospital), median (percent or null), shareText, tip }];
 // cap: the axis's top (percent); labels: { median, shade } for the key.
