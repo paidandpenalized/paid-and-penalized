@@ -59,7 +59,6 @@ export const COPY = {
   dollarsNone: { text: '—', claim: null },
 
   // Figure: where the penalty came from [RU-02]. Gaps and dollars are filled from the data.
-  rulersHeading: { text: 'Where the penalty came from', claim: null },
   rulersNone: { text: 'No condition has {minCases} or more cases, so none is counted and none can add to a cut.', claim: null },
   rulersBelowOne: { text: '{short}, the one counted condition, sits at or under its peer median, so it adds nothing to a cut.', claim: null },
   rulersBelowMany: { text: 'All {n} counted conditions sit at or under their peer medians, so none adds to a cut.', claim: null },
@@ -84,7 +83,6 @@ export const COPY = {
   rowOver: { text: '{gap} over', claim: null },
   rowUnder: { text: '{gap} under', claim: null },
   rowAt: { text: 'at the median', claim: null },
-  rowPer: { text: '{money} per {step}', claim: null },
   rowNoWeight: { text: 'payment weight not published', claim: null },
   colCondition: { text: 'Condition', claim: null },
   colCases: { text: 'Cases', claim: null },
@@ -101,20 +99,19 @@ export const COPY = {
   cellNa: { text: 'n/a', claim: null },
 
   // Figure: penalty history.
-  histHospHeading: { text: 'Penalty history', claim: null },
   histHospOne: { text: 'Penalized in the one year with data.', claim: null },
   histHospOneNone: { text: 'Not penalized in the one year with data.', claim: null },
   histHospNever: { text: 'Not penalized in any of the {n} years with data.', claim: null },
   histHospAll: { text: 'Penalized in all {n} years with data.', claim: null },
   histHospSome: { text: 'Penalized in {pen} of the {n} years with data.', claim: null },
   histHospNote: {
-    text: 'Bars: this hospital’s cut. Dashed line: the average across every hospital in each year’s file. “n/a”: the hospital was not in that year’s file. The cap on the cut changed over the years, so a cut in one year is not the same size of penalty in another.',
+    text: 'Bars: this hospital’s cut. Dashed line: the average across every hospital in the {edition} program. “n/a”: the hospital was not in that year’s file. The cap on the cut changed over the years, so a cut in one year is not the same size of penalty in another.',
     claim: null,
   },
   histHospBarsTitle: { text: 'The cut each year', claim: null },
   histHospRankTitle: { text: 'Where the cut fell among hospitals', claim: null },
   histHospRankNote: {
-    text: 'Each dot is where this hospital’s cut fell among every hospital in that year’s file, from the smallest cut at the bottom to the largest at the top; the shaded part is the hospitals that were cut. A place among hospitals compares across years where the cap and the measure changed, which the cut itself does not.',
+    text: 'Each dot is where this hospital’s cut fell, in each year, among today’s hospitals (those in the {edition} program), from the smallest cut at the bottom to the largest at the top; the shaded part is the hospitals that were cut. A place among hospitals compares across years where the cap and the measure changed, which the cut itself does not.',
     claim: null,
   },
   histHospMeasure: { text: 'Measure changed', claim: 'HRRP-14' },
@@ -123,15 +120,15 @@ export const COPY = {
   histHospBottom: { text: 'Least', claim: null },
   histHospBarsAlt: { text: 'Bars of this hospital’s cut in each fiscal year it is in a file, with a dashed line for the average across all hospitals and the pandemic years shaded.', claim: null },
   histHospRankAlt: { text: 'A line through the places this hospital’s cut took among the hospitals of each fiscal year, with the years it was cut as filled dots.', claim: null },
-  histHospTipBar: { text: '{fy}: cut {cut}; average across hospitals {avg}', claim: null },
-  histHospTipNone: { text: '{fy}: no cut; average across hospitals {avg}', claim: null },
+  histHospTipBar: { text: '{fy}: cut {cut}; average across the program’s hospitals {avg}', claim: null },
+  histHospTipNone: { text: '{fy}: no cut; average across the program’s hospitals {avg}', claim: null },
   histHospTipAbsent: { text: '{fy}: not in that year’s file', claim: null },
-  histHospTipRankCut: { text: '{fy}: cut {cut}, larger than {share} of the hospitals in that year’s file', claim: null },
-  histHospTipRankNone: { text: '{fy}: no cut, like {share} of the hospitals in that year’s file', claim: null },
+  histHospTipRankCut: { text: '{fy}: cut {cut}, larger than {share} of today’s hospitals in that year’s file', claim: null },
+  histHospTipRankNone: { text: '{fy}: no cut, like {share} of today’s hospitals in that year’s file', claim: null },
   histHospColFy: { text: 'Fiscal year', claim: null },
   histHospColCut: { text: 'Cut', claim: null },
-  histHospColAvg: { text: 'Average cut, all hospitals', claim: null },
-  histHospColRank: { text: 'Larger cut than', claim: null },
+  histHospColAvg: { text: 'Average cut, all hospitals in the program', claim: null },
+  histHospColRank: { text: 'Larger cut than, of today’s hospitals', claim: null },
   histHospSource: { text: 'CMS Hospital Readmissions Reduction Program supplemental data files, {span}.', claim: null },
 
   // The full worksheet.

@@ -31,6 +31,12 @@ test('ruler: a ▲ at a value (in the penalty ink when marked), a note without o
   assert.equal(d.match(/z/g).length, 3, 'one box per column with a count; an empty column draws nothing');
 });
 
+test('ruler: the "past the axis" mark exists only where a dead zone is drawn', () => {
+  const base = { id: 'r', domain: [0, 2], counts: [1, 3, 0, 2], median: 0.6, labels: { median: 'm', value: 'This', same: 'Same', note: 'n' }, format: String, value: 0.9 };
+  assert.doesNotMatch(String(ruler({ ...base, floor: 0, cap: 2 })), /Same \(/, 'floor and cap at the axis ends: nothing past it, no keyboard stop');
+  assert.match(String(ruler({ ...base, floor: 0, cap: 1.6 })), /<title>Same \(0, 1\.6\)<\/title>/);
+});
+
 test('ruler: end labels along the top only when asked for', () => {
   const base = { id: 'r', domain: [0, 2], counts: [1, 3, 0, 2], floor: 0, cap: 2, median: 0.6, labels: { median: 'median 0.6', value: 'This', same: 'Same', note: 'no value' }, format: String, value: 0.9 };
   assert.doesNotMatch(String(ruler(base)), /chart-end/, 'none by default');

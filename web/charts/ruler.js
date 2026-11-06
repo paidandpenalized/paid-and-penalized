@@ -53,7 +53,7 @@ ${text({ x: xv + (right ? 9 : -9), y: MARK + 10, anchor: right ? 'start' : 'end'
   }
   return frame({
     kind: 'ruler', width, height: HEIGHT, body: html`${hatchDefs(id)}${cols && html`<path class="chart-dist" aria-hidden="true" d="${cols}"/>`}
-${mark({
+${dead.length && mark({
     tip: `${labels.same} (${format(floor)}, ${format(cap)})`, value: [floor, cap], hit: null,
     body: html`${dead.map(([a, b]) => html`<rect class="chart-dead" fill="${hatchFill(id)}" x="${r2(a)}" y="${AXIS - HATCH / 2}" width="${r2(b - a)}" height="${HATCH}"/>`)}${dead.map(([a, b]) => html`<line class="chart-dead__end" x1="${a === PAD ? b : a}" x2="${a === PAD ? b : a}" y1="${AXIS - HATCH / 2}" y2="${AXIS + HATCH / 2}"/>`)}`,
   })}

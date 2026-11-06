@@ -18,12 +18,11 @@ import { PER_STEP } from './hospital-data.js';
 const RULER_WIDE = 480;
 const STEP = ratio(PER_STEP, 2);
 const slug = (cond) => cond.toLowerCase().replace(/_/g, '-');
-const dollarsOf = (v) => roundedDollars(v);
 const cents = (v) => Math.round(v * 100) / 100;
 
 // ---------- where the penalty came from ----------
 
-function takeaway(d, edition) {
+function takeaway(d) {
   if (!d.counted) return fill('rulersNone', { minCases: String(MIN_DISCHARGES) });
   const lead = d.top;
   if (lead) {
@@ -31,8 +30,8 @@ function takeaway(d, edition) {
     const short = lead.short;
     if (!d.priced || lead.per === null || lead.cut === null) return fill('rulersOverNoDollars', { short, gap });
     return d.capped
-      ? fill('rulersOverCapped', { short, gap, cut: dollarsOf(lead.cut) })
-      : fill('rulersOver', { short, gap, cut: dollarsOf(lead.cut), step: STEP, per: dollarsOf(lead.per) });
+      ? fill('rulersOverCapped', { short, gap, cut: roundedDollars(lead.cut) })
+      : fill('rulersOver', { short, gap, cut: roundedDollars(lead.cut), step: STEP, per: roundedDollars(lead.per) });
   }
   if (d.anyOver) return fill('rulersNoParts');
   const counted = d.rows.filter((r) => r.measured);
@@ -53,7 +52,7 @@ function rowWords(row) {
 
 // The text of the "worth per" cell: dollars, "payment weight not published" for a counted condition with none, a dash otherwise.
 function perWords(row) {
-  if (row.per !== null) return dollarsOf(row.per);
+  if (row.per !== null) return roundedDollars(row.per);
   return row.measured && row.weight === null ? t('rowNoWeight') : t('cellNone');
 }
 
@@ -75,7 +74,7 @@ export function rulersFigure(d, { view, n }) {
       ratio(row.med),
       html`<span class="${row.over ? 'rul__gap' : ''}">${gapCell(row)}</span>`,
       perWords(row),
-      row.cut === null ? t('cellNone') : dollarsOf(row.cut),
+      row.cut === null ? t('cellNone') : roundedDollars(row.cut),
     ];
     return html`<li class="${cls}">
 <div class="rul__name"><p class="rul__short">${row.short}</p><p class="rul__sub">${words.cases}</p></div>
@@ -93,7 +92,7 @@ ${rows}
   const num4 = (v) => (v === null ? num(t('cellNone'), null) : num(ratio(v), v));
   return figure({
     n,
-    takeaway: takeaway(d, view.edition) + capNote,
+    takeaway: takeaway(d) + capNote,
     source: fill('rulersSource', { edition: view.edition }),
     claimLevel: 'estimate',
     note: t('rulersNote'),
@@ -106,8 +105,8 @@ ${rows}
       rows: d.rows.map((row) => [
         row.short, num(fmtInt(row.n), row.n), num4(row.err), num4(row.med),
         row.gap === null ? num(t('rowNotCounted'), null) : num(gapText(row.gap), Number(row.gap.toFixed(6))),
-        row.per === null ? num(perWords(row), null) : num(dollarsOf(row.per), cents(row.per)),
-        row.cut === null ? num(t('cellNone'), null) : num(dollarsOf(row.cut), cents(row.cut)),
+        row.per === null ? num(perWords(row), null) : num(roundedDollars(row.per), cents(row.per)),
+        row.cut === null ? num(t('cellNone'), null) : num(roundedDollars(row.cut), cents(row.cut)),
       ]),
     },
   });
@@ -151,7 +150,7 @@ function cutBars({ hd, width }) {
     if (yr.cut === null) {
       return mark({ tip: fill('histHospTipAbsent', { fy: yr.label }), hit, body: html`<text class="chart-cap" transform="translate(${r2(cx(i) + 3)} ${r2(M.top + M.h / 2)}) rotate(-90)" text-anchor="middle">${t('cellNa')}</text>` });
     }
-    const avgText = yr.avg === null ? t('cellNone') : fmtPct(yr.avg);
+    const avgText = yr.avg === null ? t('cellNa') : fmtPct(yr.avg);
     const label = yr.cut > 0 && (!narrow || i === n - 1) ? text({ x: cx(i), y: y(yr.cut) - 4, cls: 'chart-value chart-value--mark', body: decimal(yr.cut, 2) }) : '';
     return mark({
       tip: yr.cut > 0 ? fill('histHospTipBar', { fy: yr.label, cut: fmtPct(yr.cut), avg: avgText }) : fill('histHospTipNone', { fy: yr.label, avg: avgText }), value: yr.cut, hit,
@@ -196,8 +195,8 @@ export function historyFigure(hd, { view, n }) {
       : hd.nCut === hd.nWith ? ['histHospAll', { n: String(hd.nWith) }] : ['histHospSome', { n: String(hd.nWith), pen: String(hd.nCut) }];
   const pair = (draw, alt) => html`${imageOf(draw(WIDTH), alt, 'narrow')}${imageOf(draw(WIDE), alt, 'wide')}`;
   const chart = html`<div class="hosphist">
-<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospBarsTitle')}</h3>${pair((width) => cutBars({ hd, width }), t('histHospBarsAlt'))}<p class="small muted hosphist__note">${t('histHospNote')}${hd.covid.fys.length ? ` ${hd.covid.note}` : ''}</p></div>
-<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospRankTitle')}</h3>${pair((width) => placeDots({ hd, width }), t('histHospRankAlt'))}<p class="small muted hosphist__note">${t('histHospRankNote')}</p></div>
+<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospBarsTitle')}</h3>${pair((width) => cutBars({ hd, width }), t('histHospBarsAlt'))}<p class="small muted hosphist__note">${fill('histHospNote', { edition: view.edition })}${hd.covid.fys.length ? ` ${hd.covid.note}` : ''}</p></div>
+<div class="hosphist__panel"><h3 class="hosphist__title">${t('histHospRankTitle')}</h3>${pair((width) => placeDots({ hd, width }), t('histHospRankAlt'))}<p class="small muted hosphist__note">${fill('histHospRankNote', { edition: view.edition })}</p></div>
 </div>`;
   return figure({
     n,

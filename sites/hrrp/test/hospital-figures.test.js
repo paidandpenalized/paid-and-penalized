@@ -142,8 +142,15 @@ test('history: penalized in X of N years with data, n/a where the hospital is no
   assert.ok(fig.includes('FY2020: not in that year’s file'));
   // The all-hospital average is the dashed line, over the hospitals of each file.
   assert.equal((fig.match(/class="chart-lines__under"/g) ?? []).length, 2);
-  assert.deepEqual(d.years.map((y) => y.avg === null), [false, false, false, false, false, false, false, false]);
-  assert.ok(Math.abs(d.years[0].avg - 0.5 * 0.99 / 1 * 0 - d.years[0].avg) < 1e-9);
+  // Average cut of the hospitals in each year's file (the four fixtures with a history, then FY2027's file of all of them).
+  const cutOf = (paf) => Math.round((1 - paf) * 1e4) / 100;
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const all = [CUT, NONE_MEASURED, NONE_BELOW, NONE_ROUNDED, INACTIVE, ...OTHERS];
+  const pafOf = (h, i) => (i === 7 ? h.paf : HIST.paf[h.id]?.[i]);
+  const expected = d.years.map((_, i) => mean(all.map((h) => pafOf(h, i)).filter((v) => v != null).map(cutOf)));
+  d.years.forEach((y, i) => assert.ok(Math.abs(y.avg - expected[i]) < 1e-9, `FY${y.fy}`));
+  assert.ok(/class="chart-lines__under" d="M[^"]+"/.test(fig), 'the dashed line is drawn from those averages');
+  assert.ok(fig.includes('the average across every hospital in the FY2027 program'), 'the words say what the line averages');
 });
 
 test('history: the place among hospitals ranks within each year\'s file, ties at their middle', () => {
@@ -158,8 +165,10 @@ test('history: the place among hospitals ranks within each year\'s file, ties at
   assert.equal(d.years[0].share, null, 'no place in a year without the hospital');
   assert.ok(d.years.every((y) => y.share === null || (y.share >= 0 && y.share <= 1)));
   const fig = figureOf(pageOf(CUT, hctx), 2);
-  assert.ok(fig.includes('FY2022: cut 1.00%, larger than 66% of the hospitals in that year’s file'));
-  assert.ok(fig.includes('FY2023: no cut, like 50% of the hospitals in that year’s file'));
+  assert.ok(fig.includes('FY2022: cut 1.00%, larger than 66% of today’s hospitals in that year’s file'));
+  assert.ok(fig.includes('FY2023: no cut, like 50% of today’s hospitals in that year’s file'));
+  assert.ok(fig.includes('among today’s hospitals (those in the FY2027 program)'), 'the words name the basis the place is computed on');
+  assert.ok(fig.includes('Larger cut than, of today’s hospitals'));
 });
 
 test('history: the pandemic years are shaded with their note, the cap steps ruled, and FY2027 says the measure changed', () => {
@@ -200,7 +209,7 @@ test('the full worksheet is a disclosure after the figures, without the dollars 
   assert.ok(text.indexOf('id="figure-2"') < text.indexOf('hosp__ws'));
   const sheet = /<details class="hosp__ws">[\s\S]*?<\/details>/.exec(text)[0];
   assert.equal((sheet.match(/<li/g) ?? []).length, 4, 'lines 7 to 9 and the check; no dollars line');
-  assert.ok(sheet.includes('Heart failure') && sheet.includes('0.9900'.replace('0.9900', '1.1000')));
+  assert.ok(sheet.includes('Heart failure') && sheet.includes('1.1000'));
 });
 
 test('the page loads the figure script so the tables sort and download', () => {
