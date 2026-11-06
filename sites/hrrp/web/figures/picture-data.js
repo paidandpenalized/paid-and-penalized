@@ -208,6 +208,12 @@ export function peerFlips(hospitals, meta) {
   return { rows, totals, national, table: rows };
 }
 
+// Whether the program page draws each new figure (and Methods explains it): the same test in both places.
+export const drawsFlips = (f) => f.totals.measured > 0;
+export const drawsWorth = (w) => w.rows.some((r) => r.median !== null);
+export const drawsBands = (b) => b.conditions.some((c) => c.first);
+export const drawsPeers = (p) => p.rows.some((r) => r.nMeasured > 0);
+
 // ---------- what is 0.01 of ratio worth? ----------
 
 // For each condition (rows run from the largest median down; nulls last; ties in CONDS order): measured (hospitals measured on it),

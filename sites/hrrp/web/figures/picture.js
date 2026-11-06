@@ -17,7 +17,7 @@ import { fmtInt, fmtMoney, fmtPct, gapText, ratio } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence, plural } from '../wording.js';
 import { countedNames, glyph } from './glyph.js';
-import { CUT_BIN, MIN_BAND } from './picture-data.js';
+import { CUT_BIN, MIN_BAND, drawsBands, drawsFlips, drawsPeers, drawsWorth } from './picture-data.js';
 import { PER_STEP } from './hospital-data.js';
 import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
 import { BESIDE, FULL, HALF, SIDE, pair, pic } from './layout.js';
@@ -163,7 +163,7 @@ const PEER_LAST = 5;
 
 // wide: the drawing's width, SIDE beside what peer grouping changed, FULL when it stands alone.
 function peerFigure({ p, edition, n, wide = SIDE }) {
-  if (!p.rows.some((r) => r.nMeasured > 0)) return '';
+  if (!drawsPeers(p)) return '';
   const spec = p.rows.map((r) => {
     const share = r.shareCut === null ? t('peerNoShare') : fill('peerShare', { share: pct0(r.shareCut) });
     return {
@@ -213,8 +213,9 @@ export function flipsTakeaway(f) {
   return t('flipsTakeawayEven');
 }
 
-function flipsFigure({ f, edition, n }) {
-  if (!f.totals.measured) return '';
+// wide: the drawing's width, BESIDE the peer-group strips, FULL when it stands alone.
+function flipsFigure({ f, edition, n, wide = BESIDE }) {
+  if (!drawsFlips(f)) return '';
   const spec = f.rows.map((r) => ({
     label: fill('peerLabel', { n: String(r.peer) }), sub: r.lo === null ? '' : fill('peerSub', { from: pct0(r.lo), to: pct0(r.hi) }), added: r.added, removed: r.removed,
     tip: fill('flipsTip', { n: String(r.peer), on: fmtInt(r.added), off: fmtInt(r.removed) }),
@@ -222,7 +223,7 @@ function flipsFigure({ f, edition, n }) {
   const draw = (width) => drawFlips({ rows: spec, width, labels: { off: t('flipsHeadOff'), on: t('flipsHeadOn') } });
   return figure({
     n: n(), takeaway: flipsTakeaway(f), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flags-without-peer-groups',
-    chart: imagePair(drawn(draw, BESIDE), t('flipsAlt')), note: t('flipsNote'),
+    chart: imagePair(drawn(draw, wide), t('flipsAlt')), note: t('flipsNote'),
     table: {
       columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('flipsColMeasured'), numeric: true }, { name: t('flipsColNow'), numeric: true }, { name: t('flipsColAlone'), numeric: true }, { name: t('flipsColOn'), numeric: true }, { name: t('flipsColOff'), numeric: true }],
       rows: f.rows.map((r) => [
@@ -279,17 +280,19 @@ export function worthTakeaway(w, conditions) {
   const name = (r) => inSentence(conditionShort(conditions, r.cond));
   if (!w.takeaway) {
     const only = w.rows.find((r) => r.median !== null);
-    return fill('worthTakeawayOne', { step: STEP_TEXT, hi: name(only), hiDollars: hundreds(only.median) });
+    return only ? fill('worthTakeawayOne', { step: STEP_TEXT, hi: name(only), hiDollars: hundreds(only.median) }) : t('worthTakeawayNone');
   }
   const { hi, lo } = w.takeaway;
+  if (hundreds(hi.median) === hundreds(lo.median)) return fill('worthTakeawayEven', { step: STEP_TEXT, hiDollars: hundreds(hi.median) });
   return fill('worthTakeaway', { step: STEP_TEXT, hi: name(hi), hiDollars: hundreds(hi.median), lo: name(lo), loDollars: hundreds(lo.median) });
 }
 
-// An axis tick in dollars: whole thousands as $5K, a smaller step exactly ($500, $1.5K).
-const axisMoney = (v) => (v === 0 ? '$0' : v < 1000 ? `$${v}` : `$${Number((v / 1000).toFixed(1))}K`);
+// An axis tick in dollars: under $1K in whole dollars ($500), from $1K in thousands to a tenth ($5K, $1.5K; the kit's 1-2-5 steps
+// stay exact).
+const axisMoney = (v) => (v === 0 ? '$0' : v < 1000 ? `$${Math.round(v)}` : `$${Number((v / 1000).toFixed(1))}K`);
 
 function worthFigure({ w, conditions, edition, n }) {
-  if (!w.rows.some((r) => r.median !== null)) return '';
+  if (!drawsWorth(w)) return '';
   const spec = (width) => w.rows.map((r) => ({
     label: conditionShort(conditions, r.cond, { narrow: isNarrow(width) }), median: r.median, p25: r.p25, p75: r.p75,
     valueText: r.median === null ? '—' : hundreds(r.median),
@@ -326,8 +329,8 @@ export function bandsTakeaway(b, conditions) {
 const gap4 = (v) => (v === null ? '—' : gapText(v));
 
 function bandsFigure({ b, conditions, edition, n }) {
-  const withAny = b.conditions.filter((c) => c.bands.some((band) => band.shown));
-  if (!withAny.length) return '';
+  if (!drawsBands(b)) return '';
+  const withAny = b.conditions.filter((c) => c.first);
   const panelsFor = (width) => withAny.map((c) => ({
     name: conditionShort(conditions, c.cond, { narrow: isNarrow(width) }),
     bands: c.bands.map((band) => ({
@@ -338,7 +341,7 @@ function bandsFigure({ b, conditions, edition, n }) {
   const draw = (width) => drawSizeBands({ panels: panelsFor(width), width, labels, format: pct0, signed: (v) => signed(v, 1) });
   return figure({
     n: n(), takeaway: bandsTakeaway(b, conditions), source: fill('swarmSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-flagged-by-cases',
-    chart: imagePair(drawn(draw, FULL), fill('bandsAlt', { count: capitalize(spelled(withAny.length)) })), note: fill('bandsNote', { min: String(MIN_BAND) }),
+    chart: imagePair(drawn(draw, FULL), withAny.length === 1 ? t('bandsAltOne') : fill('bandsAlt', { count: capitalize(spelled(withAny.length)) })), note: fill('bandsNote', { min: String(MIN_BAND) }),
     table: {
       columns: [{ name: t('bandsColCond') }, { name: t('bandsColBand') }, { name: t('bandsColN'), numeric: true }, { name: t('bandsColShare'), numeric: true }, { name: t('bandsColFrom'), numeric: true }, { name: t('bandsColTo'), numeric: true }],
       rows: b.table.filter((r) => r.n > 0).map((r) => [
@@ -398,9 +401,11 @@ export function picturePart(picture, { figure: nextFigure, edition }) {
   const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
   const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
   const worth = pic(worthFigure({ w: picture.worth(), conditions, edition, n: nextFigure }), 'rside');
-  const f = picture.flips();
-  const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure, wide: f.totals.measured ? SIDE : FULL }));
-  const flips = pic(flipsFigure({ f, edition, n: nextFigure }));
+  // The peer-group strips and what peer grouping changed share a 7:5 row; either one alone takes the row at full width.
+  const [p, f] = [picture.peers(), picture.flips()];
+  const both = drawsPeers(p) && drawsFlips(f);
+  const peers = pic(peerFigure({ p, edition, n: nextFigure, wide: both ? SIDE : FULL }));
+  const flips = pic(flipsFigure({ f, edition, n: nextFigure, wide: both ? BESIDE : FULL }));
   const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), 'side');
   const bands = pic(bandsFigure({ b: picture.bands(), conditions, edition, n: nextFigure }));
   return html`<p class="part__intro">${ledeText(picture)}</p>

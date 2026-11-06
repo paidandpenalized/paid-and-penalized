@@ -149,10 +149,13 @@ export const COPY = {
     claim: 'HRRP-05',
   },
   figuresWorth: {
-    text: 'What {step} of ratio is worth: what each {step} over the peer median costs, modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}; a hospital under its median loses nothing from {step} more until it crosses it. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}; a condition with no payment weight in the file, or a hospital with no base payment, is left out{blank}.',
+    text: 'What {step} of ratio is worth: what each {step} over the peer median costs, modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}; a hospital under its median loses nothing from {step} more until it crosses it. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}; a condition with no payment weight in the file, or a hospital with no base payment, is left out ({blank} hospital-conditions in all).',
     claim: 'HRRP-09',
   },
-  figuresWorthBlank: { text: ' ({blank} hospital-conditions in all)', claim: null },
+  figuresWorthAll: {
+    text: 'What {step} of ratio is worth: what each {step} over the peer median costs, modeled, as on each hospital’s page, as the hospital’s base payments × the condition’s payment weight × the neutrality modifier × {step}; a hospital under its median loses nothing from {step} more until it crosses it. A hospital already at the {cap}% cap loses nothing more, so it counts as {zero}.',
+    claim: 'HRRP-09',
+  },
   figuresBands: {
     text: 'Flagged by number of cases: a ratio is CMS’s predicted readmission rate over the rate expected at an average hospital with similar patients, not a raw rate, and the file gives no interval around it. The middle half shown is the spread of the hospitals observed in a band, not an interval; a band of fewer than {min} hospitals is left out.',
     claim: 'HRRP-15',

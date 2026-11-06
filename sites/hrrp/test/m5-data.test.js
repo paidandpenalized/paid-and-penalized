@@ -285,6 +285,8 @@ import { drawWorth } from '../web/figures/picture-draw.js';
 test('#2 takeaway: the dearest and cheapest condition by the typical hospital, to the nearest hundred dollars', () => {
   const w = { takeaway: { hi: { cond: 'CABG', median: 9759.4 }, lo: { cond: 'COPD', median: 2487 } } };
   assert.equal(worthTakeaway(w, CONDITIONS), 'Each 0.01 of ratio over the peer median costs a typical hospital about $9,800 on bypass surgery but $2,500 on COPD.');
+  assert.match(worthTakeaway({ takeaway: null, rows: [{ cond: 'HF', median: null }] }, CONDITIONS), /^No condition/, 'nothing priced: no crash');
+  assert.match(worthTakeaway({ takeaway: { hi: { cond: 'AMI', median: 2540 }, lo: { cond: 'COPD', median: 2460 } } }, CONDITIONS), /about \$2,500 on every condition priced\.$/, 'ends that round alike: no "but"');
   assert.equal(worthTakeaway({ takeaway: null, rows: [{ cond: 'HF', median: 7558 }, { cond: 'AMI', median: null }] }, CONDITIONS), 'Each 0.01 of ratio over the peer median costs a typical hospital about $7,600 on heart failure.', 'one priced condition: that one alone');
 });
 

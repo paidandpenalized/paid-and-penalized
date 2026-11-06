@@ -187,7 +187,7 @@ test('reading the figures: hospitals flagged on a condition whose cut rounds to 
   const lines = methodsView(none).figures;
   assert.ok(!lines.some((l) => /rounds to zero/.test(l)), 'no rounded line with none');
   assert.ok(lines.some((l) => /^What peer grouping changed: .* no dollars are modeled/.test(l)));
-  assert.ok(lines.some((l) => /^What 0\.01 of ratio is worth: .* counts as \$0;/.test(l)));
+  assert.ok(lines.some((l) => /^What 0\.01 of ratio is worth: .* counts as \$0[;.]/.test(l)));
 });
 
 test('reading the figures, real data: the years-cut trap names the two counts, cut in every year in the file above cut in all years', () => {

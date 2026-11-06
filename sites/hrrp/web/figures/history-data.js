@@ -53,8 +53,8 @@ export function smallLines({ history }) {
 export const ROLL = Object.freeze({ cut: 'C', kept: 'N', absent: ' ' });
 
 // One record for each of today's hospitals, one character for each fiscal year (the history's years, then the file's own):
-// 'C' cut, 'N' in the file and not cut, ' ' absent (not in that year's file: never "not cut"). Records are ordered by the
-// first year each was cut (never cut last), then by CCN. counts: n; nYears; neverCut (in the file at least once, never cut);
+// 'C' cut, 'N' in the file and not cut, ' ' absent (not in that year's file: never "not cut"), with present (years in the file)
+// and cut (years cut), which yearsCut reads. Records are ordered by the first year each was cut (never cut last), then by CCN. counts: n; nYears; neverCut (in the file at least once, never cut);
 // everCut; cutEveryYearInFile (cut in every year it is in the file, at least one: includes hospitals in the file one year);
 // cutAllYears (in the file and cut in all nYears); byYear [{ fy, present, cut, share }] (share of those present, 0-1).
 export function rollCall({ hospitals, history, meta }) {
