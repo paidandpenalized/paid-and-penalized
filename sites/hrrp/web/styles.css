@@ -102,8 +102,10 @@
   .hstep { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
   .hstep__text { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
 }
-/* Step 5's worksheet runs the page's width under its words and its waterfall. */
+/* Step 5's worksheet runs the page's width under its words and its waterfall; that step's words don't stick, or they would ride
+   over the worksheet as it scrolls past (a sticky grid item is held inside the whole step, not its own row). */
 .hstep__below { grid-column: 1 / -1; min-width: 0; }
+.hstep:has(> .hstep__below) > .hstep__text { position: static; }
 .hstep__n { color: var(--pen); font: 400 clamp(2.6rem, 4.4vw, 3.4rem)/0.85 var(--font-display); }
 /* The numeral hangs at the left of the heading, as Thirty Day Readmissions sets it; the words run under both. */
 .hstep__text { grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; align-items: end; }
