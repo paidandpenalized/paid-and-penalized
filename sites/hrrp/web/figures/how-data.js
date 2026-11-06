@@ -40,6 +40,8 @@ export function condSets(hospitals) {
 export const BAND = 0.01;
 // The figure table's bins are this wide; a bin holds (lo, hi], so a ratio exactly at its median falls in the bin that ends at 0.
 export const SWARM_BIN = 0.05;
+// The "within 0.001 of the line" count (a tighter band than BAND): items with |d| <= CLOSE, d already rounded to 6 decimals.
+export const CLOSE = 0.001;
 
 
 // The condition switches' order: heart failure first (the one on when the page opens), then the rest as the program lists them.
@@ -78,6 +80,7 @@ export function swarmData(hospitals, meta, cond, exampleId = exampleIdOf(hospita
     items,
     over,
     atOrUnder: items.length - over,
+    close: { half: CLOSE, n: items.filter((i) => Math.abs(i.d) <= CLOSE).length },
     band: { half: BAND, n: near.length, over: near.filter((i) => i.d > 0).length, atOrUnder: near.filter((i) => i.d <= 0).length },
     // The closest ratios to the line on each side (null where a side is empty), the dots over it by less than a sliver, and
     // the example's dot (null where the example is not measured on cond).

@@ -16,7 +16,7 @@ import { childTable, hospitalsTable } from './figures/place-table-data.js';
 import { whatIfData } from './figures/whatif-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
-import { noTotalText, researchData, smallLines, timelineData, windowRows } from './figures/history-data.js';
+import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
 import { pictureData } from './figures/picture-data.js';
@@ -225,7 +225,7 @@ export function programView(ctx) {
     how: howData(ctx),
     picture: pictureData(ctx),
     map: mapData(ctx),
-    history: { lines: ctx.lines, windows: windowRows(ctx), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
+    history: { lines: ctx.lines, windows: windowRows(ctx), escapes: () => yearsCut(rollCall(ctx)), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
     explore: exploreControls(ctx.hospitals, edition.conditions, meta.fy),
     research: researchData(ctx.research),
   };

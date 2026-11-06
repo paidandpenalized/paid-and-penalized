@@ -92,6 +92,30 @@ export function rollCall({ hospitals, history, meta }) {
   return { years, records: sorted.map(({ id, marks }) => ({ id, marks })), counts };
 }
 
+// "Has this hospital ever escaped?" from rollCall()'s result. full: the records in the file in every year (no absent mark);
+// counts: [{ cut, n }] for cut = 0..nYears (every value listed, zeros too), how many full records were cut that many years;
+// partial: the records in the file some years but not all { n, everyYear (cut in every year they were in the file), never (in
+// the file, never cut) }; an absent year is never counted as "not cut". n: all records; full: count of full records.
+// takeaway: { every (full records cut in all nYears), never (full records cut in no year), share (every / full; null when full is 0) }.
+// table: counts.
+export function yearsCut(roll) {
+  const nYears = roll.years.length;
+  const cutIn = (marks) => [...marks].filter((m) => m === ROLL.cut).length;
+  const presentIn = (marks) => [...marks].filter((m) => m !== ROLL.absent).length;
+  const full = roll.records.filter((r) => presentIn(r.marks) === nYears);
+  const part = roll.records.filter((r) => presentIn(r.marks) > 0 && presentIn(r.marks) < nYears);
+  const counts = Array.from({ length: nYears + 1 }, (_, cut) => ({ cut, n: full.filter((r) => cutIn(r.marks) === cut).length }));
+  return {
+    nYears,
+    n: roll.records.length,
+    full: full.length,
+    counts,
+    partial: { n: part.length, everyYear: part.filter((r) => cutIn(r.marks) === presentIn(r.marks)).length, never: part.filter((r) => cutIn(r.marks) === 0).length },
+    takeaway: { every: counts[nYears].n, never: counts[0].n, share: full.length ? counts[nYears].n / full.length : null },
+    table: counts,
+  };
+}
+
 // The roll call's summary sentence, always "of today's hospitals" (the roll call leaves out hospitals that left the program).
 export const rollText = ({ counts }) => fill('rollSummary', { n: String(counts.n), never: String(counts.neverCut), always: String(counts.cutEveryYearInFile), all: String(counts.cutAllYears), years: String(counts.nYears) });
 

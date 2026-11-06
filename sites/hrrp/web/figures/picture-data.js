@@ -4,15 +4,16 @@
 // a name says percent (cuts, avgCut, share and vsNation in typeDots, and cut sizes are in percent); "cut" is a payment
 // reduction above zero; "measured" means measured on at least one condition (only those can be cut). Each function's header
 // names the denominator of every share it returns. Pure.
-import { CAP_PCT, CONDS, PEERS, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
+import { CAP, CAP_PCT, CONDS, PEERS, contrib, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
-import { clamp, median } from '../../../../engine/js/stats.js';
+import { clamp, median, percentileInc } from '../../../../engine/js/stats.js';
 import { r2 } from '../../../../web/charts/svg.js';
 import { GE_CUT_PCT } from '../constants.js';
 import { csvPath } from '../links.js';
+import { perStep } from './hospital-data.js';
 import { statesOf } from './neighbors-data.js';
-import { binIndex, byId, countBy } from '../numbers.js';
+import { binIndex, byId, countBy, roundTo } from '../numbers.js';
 
 // ---------- the lede ----------
 
@@ -162,6 +163,130 @@ export function peerGroups(hospitals, meta) {
   };
 }
 
+// ---------- what did peer grouping change? ----------
+
+// Shared rule for this section: a hospital's condition is "over" a line when err - line > 0 (strictly; a tie is not over), the
+// rule of formula.js conditionContribution. Only measured conditions count (isMeasured); a condition whose peer median is null is
+// skipped.
+// For each peer group (PEERS order): lo, hi (CMS's dual-share cutoffs, null when missing), measured (hospital-conditions measured
+// in the group with a peer median), now (over against the group's peer median: flags as graded), alone (over against the national
+// median of this file's measured errs for that condition, as if there were no peer groups), added (now and not alone: flags peer
+// grouping puts on), removed (alone and not now: flags it takes off) and net (added - removed). national: { [cond]: median } of
+// err over every hospital measured on it; this file's median, not CMS's (CMS's peer medians are not this file's medians), so words
+// say "about". totals: { measured, added, removed, flips: added + removed } over all groups. takeaway: null when flips is 0, else
+// { off (the row with the most negative net), on (the row with the most positive net), flips, measured }; ties go to the earlier group.
+// Counts of hospital-conditions, no dollars. table: the rows' fields.
+export function peerFlips(hospitals, meta) {
+  const national = {};
+  for (const k of CONDS) {
+    const errs = hospitals.filter((h) => isMeasured(h.c[k])).map((h) => h.c[k].err);
+    if (errs.length) national[k] = median(errs);
+  }
+  const rows = PEERS.map((peer, i) => {
+    const cutoff = meta.peerCutoffs?.[i];
+    const row = { peer, lo: cutoff?.[0] ?? null, hi: cutoff?.[1] ?? null, measured: 0, now: 0, alone: 0, added: 0, removed: 0, net: 0 };
+    for (const h of hospitals) {
+      if (h.peer !== peer) continue;
+      for (const k of CONDS) {
+        const c = h.c[k];
+        const med = peerMedian(meta, peer, k);
+        if (!isMeasured(c) || med == null) continue;
+        const now = c.err - med > 0;
+        const alone = c.err - national[k] > 0;
+        row.measured += 1;
+        if (now) row.now += 1;
+        if (alone) row.alone += 1;
+        if (now && !alone) row.added += 1;
+        if (alone && !now) row.removed += 1;
+      }
+    }
+    row.net = row.added - row.removed;
+    return row;
+  });
+  const sum = (key) => rows.reduce((s, r) => s + r[key], 0);
+  const totals = { measured: sum('measured'), added: sum('added'), removed: sum('removed'), flips: sum('added') + sum('removed') };
+  const off = rows.reduce((a, b) => (b.net < a.net ? b : a));
+  const on = rows.reduce((a, b) => (b.net > a.net ? b : a));
+  return {
+    rows, totals, national,
+    takeaway: totals.flips ? { off, on, flips: totals.flips, measured: totals.measured } : null,
+    table: rows.map((r) => ({ peer: r.peer, lo: r.lo, hi: r.hi, measured: r.measured, now: r.now, alone: r.alone, added: r.added, removed: r.removed, net: r.net })),
+  };
+}
+
+// ---------- what is 0.01 of ratio worth? ----------
+
+// For each condition (rows run from the largest median down; nulls last; ties in CONDS order): measured (hospitals measured on it),
+// priced (those with a dollar value per 0.01 of ratio, $0 included: hospital-data.js perStep), blank (measured - priced: weight or
+// base payment missing), capped (priced at $0 because the hospital's cut is at the cap) and p25, median, p75 (of the priced
+// values, PERCENTILE.INC; null with none). Modeled dollars, not CMS's. takeaway: null with fewer than two rows with a median, else
+// { hi (the first row), lo (the last row with a median), times (hi.median / lo.median) }. table: the rows.
+export function dollarsPerStep(hospitals, meta) {
+  const capped = new Map(hospitals.map((h) => [h, contrib(h, meta).sum > CAP]));
+  const rows = CONDS.map((cond) => {
+    const measured = hospitals.filter((h) => isMeasured(h.c[cond]));
+    const vals = measured.map((h) => ({ h, v: perStep(h, cond, meta, capped.get(h)) })).filter((x) => x.v !== null);
+    const sorted = vals.map((x) => x.v).sort((a, b) => a - b);
+    const q = (p) => (sorted.length ? percentileInc(sorted, p) : null);
+    return {
+      cond, measured: measured.length, priced: sorted.length, blank: measured.length - sorted.length,
+      capped: vals.filter((x) => capped.get(x.h)).length, p25: q(0.25), median: q(0.5), p75: q(0.75),
+    };
+  });
+  rows.sort((a, b) => (b.median ?? -Infinity) - (a.median ?? -Infinity) || CONDS.indexOf(a.cond) - CONDS.indexOf(b.cond));
+  const withMedian = rows.filter((r) => r.median !== null);
+  return {
+    rows,
+    takeaway: withMedian.length > 1 ? { hi: rows[0], lo: withMedian[withMedian.length - 1], times: rows[0].median / withMedian[withMedian.length - 1].median } : null,
+    table: rows,
+  };
+}
+
+// ---------- are small hospitals let off? ----------
+
+// Bands of a condition's eligible cases (c.n); a band holds lo..hi inclusive.
+export const SIZE_BANDS = [
+  { lo: 25, hi: 49, label: '25–49' }, { lo: 50, hi: 99, label: '50–99' }, { lo: 100, hi: 199, label: '100–199' },
+  { lo: 200, hi: 399, label: '200–399' }, { lo: 400, hi: 799, label: '400–799' }, { lo: 800, hi: Infinity, label: '800+' },
+];
+// A band with fewer measured hospitals than this is not shown.
+export const MIN_BAND = 20;
+
+// For each condition (CONDS order): bands, one per SIZE_BANDS entry: label, lo, hi, n (hospitals measured on it in the band),
+// over (of those, the count over their peer median: err - median > 0, strictly; a null median is skipped), share (over / n; null
+// when n is 0), p25, median, p75 (of gap = err - peer median, PERCENTILE.INC, null when empty) and shown (n >= MIN_BAND).
+// p25-p75 is the middle half of the hospitals as observed, not a confidence interval. first, last: the first and last shown
+// bands (null if none). takeaway: { lower (conditions whose first shown band has a lower share over than the last), higher
+// (the reverse) } over conditions with two or more shown bands; null when both are empty. table: one row per condition and
+// band, shown or not.
+export function sizeBands(hospitals, meta) {
+  const conditions = CONDS.map((cond) => {
+    const bands = SIZE_BANDS.map((b) => {
+      const gaps = [];
+      for (const h of hospitals) {
+        const c = h.c[cond];
+        const med = peerMedian(meta, h.peer, cond);
+        if (!isMeasured(c) || med == null || c.n < b.lo || c.n > b.hi) continue;
+        gaps.push(roundTo(c.err - med, 6));
+      }
+      gaps.sort((x, y) => x - y);
+      const q = (p) => (gaps.length ? percentileInc(gaps, p) : null);
+      const over = gaps.filter((g) => g > 0).length;
+      return { label: b.label, lo: b.lo, hi: b.hi, n: gaps.length, over, share: gaps.length ? over / gaps.length : null, p25: q(0.25), median: q(0.5), p75: q(0.75), shown: gaps.length >= MIN_BAND };
+    });
+    const shown = bands.filter((b) => b.shown);
+    return { cond, bands, first: shown[0] ?? null, last: shown[shown.length - 1] ?? null };
+  });
+  const multi = conditions.filter((r) => r.first && r.first !== r.last);
+  const lower = multi.filter((r) => r.first.share < r.last.share).map((r) => r.cond);
+  const higher = multi.filter((r) => r.first.share > r.last.share).map((r) => r.cond);
+  return {
+    conditions,
+    takeaway: lower.length || higher.length ? { lower, higher } : null,
+    table: conditions.flatMap((r) => r.bands.map((b) => ({ cond: r.cond, ...b }))),
+  };
+}
+
 // ---------- type dots ----------
 
 const OWNERSHIP = ['Nonprofit', 'For-profit', 'Government'];
@@ -244,5 +369,8 @@ export function pictureData(ctx) {
     bars: () => pairedBars(hospitals, meta),
     peers: () => peerGroups(hospitals, meta),
     types: () => typeSpread(hospitals),
+    flips: () => peerFlips(hospitals, meta),
+    worth: () => dollarsPerStep(hospitals, meta),
+    bands: () => sizeBands(hospitals, meta),
   };
 }

@@ -1,0 +1,212 @@
+// The M5 analyses' data: peer-grouping flips, dollars per 0.01 of ratio, size bands, years cut, the within-0.001 count.
+// Synthetic hospitals (CCNs 9900xx) and invariants of the whole file.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { CAP, CONDS, PEERS, isMeasured, contrib, peerMedian } from '../../../engine/js/hrrp/formula.js';
+import { median } from '../../../engine/js/stats.js';
+import { MIN_BAND, SIZE_BANDS, dollarsPerStep, peerFlips, pictureData, sizeBands } from '../web/figures/picture-data.js';
+import { perStep, rulersData } from '../web/figures/hospital-data.js';
+import { rollCall, yearsCut } from '../web/figures/history-data.js';
+import { CLOSE, swarmData } from '../web/figures/how-data.js';
+import { META, ctxOf, hospital, loadHrrpOnce } from './fixtures.js';
+
+let seq = 0;
+const id = () => String(990100 + seq++);
+// A hospital in peer group `peer` with one HF condition.
+const hf = (err, extra = {}, c = {}) => hospital({ id: id(), peer: 2, c: { HF: { n: 40, err, flag: 0, ratio: 0.1, ...c } }, ...extra });
+const meta = (med, nm = 1) => ({ ...META, nm, peerMedians: Object.fromEntries(PEERS.map((p) => [p, { ...META.peerMedians[p], HF: med }])) });
+// Peer 2's HF median is 1.0 in META; peer 3's is set to 1.2 here so the two lines differ.
+const META2 = { ...META, peerMedians: { ...META.peerMedians, 3: { ...META.peerMedians[3], HF: 1.2 }, 1: { ...META.peerMedians[1], HF: 0.9 } } };
+
+test('peerFlips: over the peer median but under the national median is added; the reverse is removed; a tie is not over', () => {
+  // HF errs: peer 1 (median .9): 1.0 (over now; national median below); peer 3 (median 1.2): 1.1 (under now; over alone).
+  const hs = [hf(1.0, { peer: 1 }), hf(1.1, { peer: 3 }), hf(1.05, { peer: 2 }), hf(1.05, { peer: 2 }), hf(1.15, { peer: 2 })];
+  const f = peerFlips(hs, META2);
+  assert.equal(f.national.HF, 1.05);
+  const row = (p) => f.rows.find((r) => r.peer === p);
+  assert.deepEqual([row(1).now, row(1).alone, row(1).added, row(1).removed, row(1).net], [1, 0, 1, 0, 1]);
+  assert.deepEqual([row(3).now, row(3).alone, row(3).added, row(3).removed, row(3).net], [0, 1, 0, 1, -1]);
+  // peer 2 (median 1.0): 1.05 over now, tie with the national median 1.05 so not over alone: added twice; 1.15 over both.
+  assert.deepEqual([row(2).measured, row(2).now, row(2).alone, row(2).added], [3, 3, 1, 2]);
+  assert.deepEqual(f.totals, { measured: 5, added: 3, removed: 1, flips: 4 });
+  assert.equal(f.takeaway.on.peer, 2);
+  assert.equal(f.takeaway.off.peer, 3);
+  assert.equal(f.takeaway.flips, 4);
+});
+
+test('peerFlips: a tie with the peer median is not over; unmeasured and null-median conditions are skipped; no flips, no takeaway', () => {
+  const tie = hf(1.0); // peer 2 median 1
+  const few = hospital({ id: id(), peer: 2, c: { HF: { n: 24, err: 1.5, flag: 1, ratio: 0.1 } } });
+  const noMed = hospital({ id: id(), peer: 2, c: { HF: { n: 40, err: 1.5, flag: 1, ratio: 0.1 } } });
+  const m = { ...META, peerMedians: { ...META.peerMedians, 2: { ...META.peerMedians[2], HF: null } } };
+  const f = peerFlips([tie, few, noMed], META);
+  assert.equal(f.rows[1].now, 1, 'noMed is over a median of 1; the tie is not; the 24-case one is skipped');
+  assert.equal(f.rows[1].measured, 2);
+  const g = peerFlips([tie, few, noMed], m);
+  assert.equal(g.totals.measured, 0);
+  assert.equal(g.takeaway, null);
+  assert.equal(g.national.HF, 1.25, 'the national median still counts every measured hospital');
+});
+
+test('real data: peerFlips nets and totals add up; national medians are the medians of the measured errs', () => {
+  const { hospitals, meta: m } = loadHrrpOnce();
+  const f = peerFlips(hospitals, m);
+  assert.deepEqual(f.rows.map((r) => r.peer), PEERS);
+  for (const r of f.rows) assert.equal(r.net, r.now - r.alone);
+  for (const r of f.rows) assert.ok(r.added + r.removed <= r.measured);
+  assert.equal(f.totals.flips, f.totals.added + f.totals.removed);
+  assert.equal(f.totals.added - f.totals.removed, f.rows.reduce((s, r) => s + r.net, 0));
+  for (const k of CONDS) assert.equal(f.national[k], median(hospitals.filter((h) => isMeasured(h.c[k])).map((h) => h.c[k].err)));
+  assert.equal(f.table.length, 5);
+  assert.ok(!JSON.stringify(f).includes('dollar'));
+});
+
+test('perStep: null unless measured, weighted and priced; $0 when capped; else base x ratio x NM x 0.01', () => {
+  const h = hf(1.1);
+  assert.equal(perStep(h, 'HF', META, false), 10000000 * 0.1 * 1 * 0.01);
+  assert.equal(perStep(h, 'HF', META, true), 0);
+  assert.equal(perStep(h, 'AMI', META, false), null, 'no AMI cases');
+  assert.equal(perStep(hf(1.1, {}, { n: 24 }), 'HF', META, false), null);
+  assert.equal(perStep(hf(1.1, {}, { ratio: null }), 'HF', META, false), null);
+  assert.equal(perStep(hf(1.1, { base: null }), 'HF', META, false), null);
+});
+
+test('rulersData per equals perStep for every condition', () => {
+  const h = hospital({ id: id() });
+  const ctx = ctxOf([h]);
+  const capped = contrib(h, ctx.meta).sum > CAP;
+  for (const r of rulersData(h, ctx).rows) assert.equal(r.per, perStep(h, r.cond, ctx.meta, capped));
+});
+
+test('dollarsPerStep: $0 at the cap is priced and capped; blanks; under-25 excluded; quartiles', () => {
+  const m = meta(1, 1);
+  // ratio 10 x (err 1.5 - 1) = 5 > CAP: capped.
+  const capHosp = hf(1.5, {}, { ratio: 10 });
+  const hs = [
+    hf(1.0, { base: 1000000 }), hf(1.0, { base: 2000000 }), hf(1.0, { base: 3000000 }), hf(1.0, { base: 4000000 }), // per step 1000..4000
+    capHosp,
+    hf(1.0, { base: null }), hf(1.0, {}, { ratio: null }), hf(1.0, {}, { n: 10 }),
+  ];
+  const rows = dollarsPerStep(hs, m).rows;
+  const r = rows.find((x) => x.cond === 'HF');
+  assert.deepEqual([r.measured, r.priced, r.blank, r.capped], [7, 5, 2, 1]);
+  // priced values 0, 1000, 2000, 3000, 4000
+  assert.deepEqual([r.p25, r.median, r.p75], [1000, 2000, 3000]);
+  assert.equal(rows[0].cond, 'HF');
+  assert.deepEqual(rows.filter((x) => x.cond !== 'HF').map((x) => x.cond), CONDS.filter((k) => k !== 'HF'));
+  assert.equal(rows[1].median, null);
+  assert.equal(dollarsPerStep(hs, m).takeaway, null, 'one row with a median');
+});
+
+test('dollarsPerStep: takeaway names the highest and lowest medians', () => {
+  const m = meta(1);
+  const hs = [hf(1.0, { base: 2000000 }), hospital({ id: id(), c: { AMI: { n: 40, err: 1.0, flag: 0, ratio: 0.1 } }, base: 1000000 })];
+  const t = dollarsPerStep(hs, m).takeaway;
+  assert.equal(t.hi.cond, 'HF');
+  assert.equal(t.lo.cond, 'AMI');
+  assert.equal(t.times, 2);
+});
+
+test('real data: dollarsPerStep priced + blank = measured; capped within priced; rows sorted', () => {
+  const { hospitals, meta: m } = loadHrrpOnce();
+  const d = dollarsPerStep(hospitals, m);
+  assert.equal(d.rows.length, CONDS.length);
+  for (const r of d.rows) {
+    assert.equal(r.priced + r.blank, r.measured);
+    assert.ok(r.capped <= r.priced);
+    if (r.median !== null) assert.ok(r.p25 <= r.median && r.median <= r.p75);
+  }
+  const meds = d.rows.map((r) => r.median).filter((v) => v !== null);
+  assert.deepEqual(meds, [...meds].sort((a, b) => b - a));
+});
+
+test('sizeBands: band edges 49/50 and 799/800; bands under MIN_BAND are not shown', () => {
+  assert.equal(MIN_BAND, 20);
+  assert.equal(SIZE_BANDS.length, 6);
+  const mk = (n, err = 1.1) => hf(err, {}, { n });
+  const hs = [mk(49), mk(50), mk(799), mk(800)];
+  const b = sizeBands(hs, META).conditions.find((r) => r.cond === 'HF').bands;
+  assert.deepEqual(b.map((x) => x.n), [1, 1, 0, 0, 1, 1]);
+  assert.ok(b.every((x) => !x.shown));
+  assert.equal(b[0].label, '25–49');
+  assert.equal(b[5].label, '800+');
+});
+
+test('sizeBands: share, quartiles, first and last, takeaway lower and higher', () => {
+  // 25-49 band: 20 hospitals, 5 over (errs 1.1 -> gap .1) and 15 under (gap -0.1): share .25. 50-99: 20 hospitals, 15 over: share .75.
+  const mk = (n, err) => hf(err, {}, { n });
+  const small = [...Array.from({ length: 5 }, () => mk(30, 1.1)), ...Array.from({ length: 15 }, () => mk(30, 0.9))];
+  const mid = [...Array.from({ length: 15 }, () => mk(60, 1.1)), ...Array.from({ length: 5 }, () => mk(60, 0.9))];
+  const res = sizeBands([...small, ...mid], META);
+  const hfRow = res.conditions.find((r) => r.cond === 'HF');
+  const [a, b] = hfRow.bands;
+  assert.deepEqual([a.n, a.over, a.share, a.shown], [20, 5, 0.25, true]);
+  const close = (xs, ys) => xs.forEach((x, i) => assert.ok(Math.abs(x - ys[i]) < 1e-9, `${x} vs ${ys[i]}`));
+  close([a.p25, a.median, a.p75], [-0.1, -0.1, -0.05]);
+  assert.equal(b.share, 0.75);
+  close([b.p25, b.median, b.p75], [0.05, 0.1, 0.1]);
+  assert.equal(hfRow.first, a);
+  assert.equal(hfRow.last, b);
+  assert.deepEqual(res.takeaway, { lower: ['HF'], higher: [] });
+  const rev = sizeBands([...mid.map((h) => ({ ...h, c: { HF: { ...h.c.HF, n: 30 } } })), ...small.map((h) => ({ ...h, c: { HF: { ...h.c.HF, n: 60 } } }))], META);
+  assert.deepEqual(rev.takeaway, { lower: [], higher: ['HF'] });
+  assert.equal(sizeBands(small, META).takeaway, null, 'one shown band');
+  assert.equal(res.table.length, CONDS.length * SIZE_BANDS.length);
+});
+
+test('sizeBands: no field is named ci or interval', () => {
+  const { hospitals, meta: m } = loadHrrpOnce();
+  const keys = new Set();
+  JSON.stringify(sizeBands(hospitals, m), (k, v) => { keys.add(k); return v; });
+  assert.ok(![...keys].some((k) => /^(ci|interval)$/i.test(k) || /confidence/i.test(k)));
+  const p = pictureData({ hospitals, meta: m, edition: { conditions: [] } });
+  assert.equal(typeof p.flips, 'function');
+  assert.equal(typeof p.worth, 'function');
+  assert.equal(typeof p.bands, 'function');
+});
+
+const HISTORY = { years: [2025, 2026], paf: { 990901: [0.99, 0.98], 990902: [null, 0.99], 990903: [1, 1], 990904: [0.99, 0.99], 990905: [0.99, null], 990906: [1, 0.99] }, national: [] };
+const ROLL_HS = [
+  hospital({ id: '990901', paf: 0.97 }), // C C C
+  hospital({ id: '990902', paf: 0.99 }), // blank C C: partial, cut every year in the file
+  hospital({ id: '990903', paf: 1 }), // N N N
+  hospital({ id: '990904', paf: 1 }), // C C N
+  hospital({ id: '990905', paf: 1 }), // C blank N: partial
+  hospital({ id: '990906', paf: 1 }), // N C N
+];
+
+test('yearsCut: absent years are excluded; partial.everyYear differs from takeaway.every', () => {
+  const y = yearsCut(rollCall({ hospitals: ROLL_HS, history: HISTORY, meta: META }));
+  assert.equal(y.nYears, 3);
+  assert.equal(y.n, 6);
+  assert.equal(y.full, 4);
+  assert.deepEqual(y.counts, [{ cut: 0, n: 1 }, { cut: 1, n: 1 }, { cut: 2, n: 1 }, { cut: 3, n: 1 }]);
+  assert.equal(y.counts.reduce((s, c) => s + c.n, 0), y.full);
+  assert.deepEqual(y.partial, { n: 2, everyYear: 1, never: 0 });
+  assert.deepEqual(y.takeaway, { every: 1, never: 1, share: 0.25 });
+  assert.equal(y.partial.everyYear, 1);
+  assert.equal(y.takeaway.every, 1);
+  assert.deepEqual(y.table, y.counts);
+});
+
+test('yearsCut: every value 0..nYears is listed, zeros too; no full records gives a null share', () => {
+  const y = yearsCut({ years: [1, 2], records: [{ id: 'a', marks: ' C' }, { id: 'b', marks: 'N ' }] });
+  assert.deepEqual(y.counts, [{ cut: 0, n: 0 }, { cut: 1, n: 0 }, { cut: 2, n: 0 }]);
+  assert.equal(y.takeaway.share, null);
+  assert.deepEqual(y.partial, { n: 2, everyYear: 1, never: 1 });
+});
+
+test('real data: yearsCut counts sum to full; full + partial = n', () => {
+  const data = loadHrrpOnce();
+  const y = yearsCut(rollCall(data));
+  assert.equal(y.counts.reduce((s, c) => s + c.n, 0), y.full);
+  assert.equal(y.counts.length, y.nYears + 1);
+  assert.equal(y.full + y.partial.n, y.n);
+});
+
+test('swarmData close: |gap| <= 0.001 counts (exactly 0.001 in, 0.0011 out)', () => {
+  assert.equal(CLOSE, 0.001);
+  const hs = [hf(1.001), hf(1.0011), hf(0.999), hf(1.0), hf(0.9989)];
+  const s = swarmData(hs, META, 'HF', 'none');
+  assert.deepEqual(s.close, { half: 0.001, n: 3 });
+});

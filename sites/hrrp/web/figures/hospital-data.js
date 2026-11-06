@@ -14,6 +14,15 @@ export const RULER_STEP = 0.05;
 // A ratio's change that the "worth per" column prices.
 export const PER_STEP = 0.01;
 
+// Modeled dollars a hospital's penalty moves per PER_STEP of ratio on one condition: null when the condition is not measured, its
+// payment weight is not published or the hospital has no base payment; 0 when capped (the cut is already at the cap, so another
+// step changes nothing; capped = the hospital's contrib sum is strictly above CAP); else base x weight x NM x PER_STEP.
+export function perStep(h, cond, meta, capped) {
+  const c = h.c[cond];
+  if (!isMeasured(c) || !weightPublished(c) || h.base == null) return null;
+  return capped ? 0 : h.base * c.ratio * meta.nm * PER_STEP;
+}
+
 const snapDown = (v) => r2(Math.floor(v / RULER_STEP + 1e-9) * RULER_STEP);
 const snapUp = (v) => r2(Math.ceil(v / RULER_STEP - 1e-9) * RULER_STEP);
 const quantile = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.round(p * (sorted.length - 1))))];
@@ -94,7 +103,7 @@ export function rulersData(h, ctx) {
       part,
       weight: c?.ratio ?? null,
       // $0 once the cut is at the cap: another 0.01 of ratio changes nothing.
-      per: weight && h.base != null ? (capped ? 0 : h.base * c.ratio * meta.nm * PER_STEP) : null,
+      per: perStep(h, cond, meta, capped),
       cut: measured && priced && weight ? (r.sum > 0 ? (h.pen * part) / r.sum : 0) : null,
       ...axis,
     };
