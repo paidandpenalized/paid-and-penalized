@@ -197,6 +197,7 @@
 .wsr-holder { min-width: 0; }
 .omni#ws-pick { max-width: 640px; margin-bottom: 14px; }
 .wsr-pick__status { margin: 6px 0 0; }
+.wsr-pick__status:empty { margin: 0; }
 .wsr__id { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); border-left: 0; max-width: none; }
 .wsr__id > * { max-width: none; }
 @media (min-width: 700px) { .wsr__id { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -430,4 +431,4 @@
 .ph .ht__check label { display: flex; align-items: center; gap: 8px; }
 
 /* A download link on a line of its own meets the 24 px touch target (WCAG 2.5.8). */
-.pen__csv a, .states__csv a { display: inline-block; min-height: 24px; line-height: 24px; }
+.pen__csv a, .states__csv a { display: inline-flex; align-items: center; min-height: 24px; }

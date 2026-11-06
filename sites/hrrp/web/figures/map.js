@@ -106,7 +106,7 @@ function legendOf(measure, states) {
     ...labelsOf('hatched').map((l) => [html`<span class="usmap__chip usmap__chip--hatch" aria-hidden="true"></span>`, l]),
     ...labelsOf('empty').map((l) => [swatch('chart-tile-empty'), l]),
   ];
-  return html`<ul class="usmap__lg" role="list" aria-label="${words.legend}"><li class="usmap__lgt">${words.legend}</li>${steps.map((step, i) => html`<li>${swatch(`chart-tile chart-seq-${step}`)}${range(i)}</li>`)}${others.map(([sw, label]) => html`<li>${sw}${label}</li>`)}</ul>`;
+  return html`<ul class="usmap__lg" role="list" aria-label="${words.legend}"><li class="usmap__lgt" aria-hidden="true">${words.legend}</li>${steps.map((step, i) => html`<li>${swatch(`chart-tile chart-seq-${step}`)}${range(i)}</li>`)}${others.map(([sw, label]) => html`<li>${sw}${label}</li>`)}</ul>`;
 }
 
 // The map figure, or '' when the page has no outlines or no state has a value to shade (and then no figure number is used).

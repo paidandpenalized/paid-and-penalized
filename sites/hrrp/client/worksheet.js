@@ -8,7 +8,7 @@ import { once } from '../../../web/client/once.js';
 import { CCN } from '../../../engine/js/ccn.js';
 import { fill, t } from '../web/program/copy.js';
 import { hospitalOf } from '../web/figures/worksheet-data.js';
-import { estimateTag } from '../web/pages/parts.js';
+import { estimateTag } from '../web/estimate-tag.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
 import { worksheetHtml, worksheetRows } from '../web/worksheet.js';
 import { loadIndex, searchWords } from './search.js';
@@ -41,13 +41,16 @@ export function mountWorksheet() {
   const waterfall = document.querySelector('.wf-holder');
   const status = document.createElement('p');
   status.className = 'wsr-pick__status small muted';
-  status.hidden = true;
-  status.setAttribute('role', 'status');
+  status.setAttribute('role', 'status'); // present (and empty) from the start, so a screen reader hears the words put in it
   form.after(status);
+  let latest = 0;
   const pick = async (href) => {
     const ccn = href.replace(/\/$/, '').split('/').pop();
+    const mine = ++latest;
     try {
-      const next = sheetFor(await loadSheets(holder.dataset.src), ccn, context, Number(waterfall?.dataset.figureN));
+      const data = await loadSheets(holder.dataset.src);
+      if (mine !== latest) return; // a later pick has come in since: its answer is the one that shows
+      const next = sheetFor(data, ccn, context, Number(waterfall?.dataset.figureN));
       if (next) {
         // The scroll boxes about to be replaced stop being watched; the new ones are wired the way the page's were.
         for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(unmountScroll);
@@ -58,15 +61,13 @@ export function mountWorksheet() {
           for (const fig of waterfall.querySelectorAll('figure[data-figure]')) mountFigure(fig);
         }
         for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(mountScroll);
-        status.hidden = true;
+        status.textContent = t('wsPickDone');
       } else {
         // A CCN the asset does not hold: the example stays, and the status says so (a stale failure message is replaced).
         status.textContent = t('wsPickMissing');
-        status.hidden = false;
       }
     } catch {
-      status.textContent = fill('wsPickFailed');
-      status.hidden = false;
+      if (mine === latest) status.textContent = fill('wsPickFailed');
     }
   };
   mountOmnibox(form, { load: () => loadIndex(form.dataset.src), words: searchWords(), open: pick, types: ['hospital'] });

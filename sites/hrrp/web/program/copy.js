@@ -308,6 +308,7 @@ export const COPY = {
   wsPickPlaceholder: { text: 'Try another hospital: name, city, or CCN', claim: null },
   wsPickLabel: { text: 'Worksheet R for another hospital', claim: null },
   swarmLoadFailed: { text: "That condition's chart didn't load. The one shown is still there.", claim: null },
+  wsPickDone: { text: 'The worksheet below now shows that hospital.', claim: null },
   wsPickMissing: { text: "That hospital isn't in the worksheet data. The worksheet below still shows the example.", claim: null },
   wsPickFailed: { text: "The hospital data didn't load. The worksheet below still shows the example.", claim: null },
   wsTitle: { text: 'Worksheet R · Readmissions payment adjustment', claim: null },

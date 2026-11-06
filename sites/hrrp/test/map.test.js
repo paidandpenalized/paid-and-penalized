@@ -252,6 +252,7 @@ test('the legend is HTML under the map: labeled swatches with ranges, the hatche
   assert.ok(words.includes('zero'));
   assert.ok(words.includes('hospitals not in the program'));
   assert.match(avg, /usmap__chip--hatch/);
+  assert.match(avg, /<li class="usmap__lgt" aria-hidden="true">Average cut<\/li>/, 'the list is named once: its title is not read as an item too');
   const dollars = /aria-label="Estimated dollars">(.*?)<\/ul>/s.exec(html)[1];
   assert.match(dollars, /under \$2\.0M/);
   assert.match(dollars, /\$2\.0M to \$4\.9M/);
