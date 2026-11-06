@@ -29,17 +29,17 @@ function figuresOf(view, shared) {
   const n = counter();
   const edition = view.edition;
   const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n) : '';
-  const wide = map ? RAIL : HALF;
+  // The top row's layout, chosen once: the map beside the size and peer figures stacked in the narrow column, or those two as a pair.
+  const top = map ? { cls: 'place__pair', wide: RAIL } : { cls: 'place__pair place__pair--even', wide: HALF };
+  const { wide } = top;
   const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n, wide }));
   const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n, wide }));
   const conditions = f.conditions.measuredAny
     ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n }))
     : html`<section class="place__fig"><h2 class="place__figh">${t('figCondTitle')}</h2><p class="small muted">${t('condNoMeasured')}</p></section>`;
   const trend = titled('trend', t('figTrendTitle'), trendFigure(f.trend, { name: view.name, id: f.id, edition, span: f.span, n }), true);
-  const top = map
-    ? html`<div class="place__pair">${titled('map', t('figMapTitle'), map)}<div class="place__stack">${size}${peers}</div></div>`
-    : html`<div class="place__pair place__pair--even">${size}${peers}</div>`;
-  return html`${top}
+  const row = html`<div class="${top.cls}">${map ? html`${titled('map', t('figMapTitle'), map)}<div class="place__stack">${size}${peers}</div>` : html`${size}${peers}`}</div>`;
+  return html`${row}
 ${conditions}
 ${trend}`;
 }

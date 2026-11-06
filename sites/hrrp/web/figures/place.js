@@ -21,7 +21,6 @@ import { fill as placeFill, t as placeT } from '../place/copy.js';
 import { fyLabel } from '../copy.js';
 import { hospitals as hospitalsText } from '../wording.js';
 import { yearAxis } from './year-axis.js';
-import { RAIL } from './layout.js';
 
 const pct0 = (share) => fmtPct(share * 100, 0);
 
@@ -114,8 +113,8 @@ ${keyOf({ dense: md.dense, around })}`, note, table,
 
 // The figures below take n, the page's counter, and call it only when they draw (as mapFigure does).
 // sd: place-data sizeData(); edition: the edition's label; name: the place's.
-// wide: the wide drawing's width (layout.js: RAIL beside the map, HALF in a pair).
-export function sizeFigure(sd, { name, id, edition, n, wide = RAIL }) {
+// wide: the wide drawing's width, by where the page sets the figure (layout.js: RAIL beside the map, HALF in a pair).
+export function sizeFigure(sd, { name, id, edition, n, wide }) {
   const tip = (i) => {
     const r = sd.rows[i];
     const words = { n: fmtInt(r.n), share: pct0(r.share), nation: pct0(r.nationShare) };
@@ -199,12 +198,12 @@ ${hasDollars ? panel(placeT('condTitleRight'), right, placeT('condAltRight')) : 
 
 // ---------- peer groups ----------
 
-export function peersFigure(pd, { id, edition, total, n, wide = RAIL }) {
+export function peersFigure(pd, { id, edition, total, n, wide }) {
   const draw = (width) => {
     const labels = pd.rows.map((r) => placeFill('peerGroup', { n: String(r.peer) }));
-    const wide = labelWidth([...labels, placeFill('peerSub', { pct: '0.00%' })]);
+    const labelW = labelWidth([...labels, placeFill('peerSub', { pct: '0.00%' })]);
     return barRows({
-      width, max: Math.max(1, ...pd.rows.map((r) => r.n)), labelW: wide,
+      width, max: Math.max(1, ...pd.rows.map((r) => r.n)), labelW,
       rows: pd.rows.map((r, i) => ({
         label: labels[i], sub: r.n ? placeFill('peerSub', { pct: fmtPct(r.avg) }) : placeT('peerNone'), value: r.n, valueText: fmtInt(r.n),
         tip: r.n ? placeFill('peerTip', { peer: String(r.peer), hospitals: hospitalsText(r.n), pct: fmtPct(r.avg) }) : placeFill('peerTipNone', { peer: String(r.peer) }),

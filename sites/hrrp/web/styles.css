@@ -162,7 +162,7 @@
 /* The interval line through the share-cut dots, the strip plot's shaded dots, row bands and median tick (the old
    site's look: the penalty's screens, darker for a bigger cut), and the trait ranges' rules and large spread numbers. */
 .cond-ci { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.strip-dot { stroke-opacity: 0.9; }
+.strip-dot { stroke-opacity: 1; }
 .strip-dot--0 { stroke: var(--ink-3); stroke-opacity: 0.55; }
 .strip-dot--1 { stroke: var(--pen-seq-1); }
 .strip-dot--2 { stroke: var(--pen-seq-2); }
@@ -222,8 +222,10 @@
 }
 .page--place .fig .chart { max-width: none; }
 /* The size of the cuts: the bin of hospitals with no cut a quiet box, so the cuts carry the drawing. */
-.chart--compare .chart-col:not(.chart-col--pen) { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart--compare .chart-col--pen { fill: var(--pen-seq-3); }
+@media not (forced-colors: active) {
+  .chart--compare .chart-col:not(.chart-col--pen) { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+  .chart--compare .chart-col--pen { fill: var(--pen-seq-3); }
+}
 .place__keybox { display: grid; gap: 6px; margin-top: 10px; }
 .place__keytitle { margin: 0; font: 600 var(--fs-sm)/1.2 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 .place__key:not(.place__key--dense) .usmap__sw--ring { box-sizing: border-box; border: 1.5px solid var(--ink); background: var(--paper); opacity: 1; }
@@ -388,7 +390,7 @@
 .hist-line--all { stroke: var(--ink-3); }
 .hist-dot--share, .hist-dot--pen { fill: var(--pen); }
 .hist-bar--cms { fill: var(--pen); }
-.page--prog .fig__swatch--bar-dark { background: var(--pen); }
+@media not (forced-colors: active) { .page--prog .fig__swatch--bar-dark { background: var(--pen); } }
 .hist-bar--kff { fill: var(--pen-seq-1); stroke: var(--pen-seq-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .hist-none { stroke: var(--ink-3); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .hist-name--pen { fill: var(--pen-ink); }
@@ -444,10 +446,8 @@
   .ht select, .ht input[type="search"] { font-size: 1rem; }
 }
 @media (forced-colors: active) {
-  .chart--compare .chart-col:not(.chart-col--pen) { fill: Canvas; stroke: CanvasText; }
-  .chart--compare .chart-col--pen { fill: CanvasText; }
-  .page--hosp .chart-rank__zone { fill: GrayText; }
-  .page--prog .fig__swatch--bar-dark { background: CanvasText; }
+  /* The place's columns gray, so the all-hospitals outline (CanvasText) shows where it crosses them. */
+  .chart--compare .chart-col--pen { fill: GrayText; }
   .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
   .chart-periods__perf { fill: CanvasText; }
   .hist-covid { fill: GrayText; fill-opacity: 0.15; }
@@ -485,16 +485,16 @@
 @media (forced-colors: active) { .rul__row:nth-child(even) { background: transparent; } .rul__gap { color: LinkText; } }
 
 /* The penalty history: the bars and the place among the years' cuts, side by side where there is room (a column's width, not the screen's). */
-.hosphist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 20px 32px; }
-.hosphist__panel { min-width: 0; }
-/* The hospital's history: each panel's title, drawing and note on rows the two panels share, so the drawings and the notes start
-   level; a panel stacked under the other (the figure narrower than two panels) sits apart from it. */
-.page--hosp .hosphist { row-gap: 6px; container-type: inline-size; }
-.page--hosp .hosphist__panel { display: grid; grid-row: span 3; grid-template-rows: subgrid; align-content: start; }
-@container (max-width: 704px) { .page--hosp .hosphist__panel + .hosphist__panel > .hosphist__title { margin-top: 22px; } }
+/* Two panels side by side where there is room, each panel's title, drawing and note (the hospital's history) or title and drawing (a
+   place's conditions) on rows the panels share, so the drawings start level; a panel stacked under the other (the figure narrower
+   than two panels and their gap) sits apart from it. */
+.hosphist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 6px 32px; container-type: inline-size; }
+.hosphist__panel { display: grid; grid-row: span 2; grid-template-rows: subgrid; align-content: start; min-width: 0; }
+.page--hosp .hosphist__panel { grid-row: span 3; }
+@container (width < 44rem) { .hosphist__panel + .hosphist__panel > .hosphist__title { margin-top: 22px; } }
 .page--hosp .hosphist__panel > p { max-width: none; font-size: var(--fs-note); line-height: 1.45; }
 /* The place panel's "cut" years shaded in a neutral, so red stays this hospital's line and dots. */
-.page--hosp .chart-rank__zone { fill: var(--paper-2); }
+@media not (forced-colors: active) { .page--hosp .chart-rank__zone { fill: var(--paper-2); } }
 .hosphist__title { margin: 0 0 6px; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 
 
