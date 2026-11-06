@@ -144,8 +144,8 @@
 .chart-col.dual-odd { fill: var(--ink); }
 .chart-col.dual-even { fill: var(--pen); }
 @media (forced-colors: active) { .chart-col.dual-odd { fill: CanvasText; } .chart-col.dual-even { fill: GrayText; } }
-.page--prog .fig__cap { font-size: var(--fs-base); line-height: 1.4; }
-.page--hosp .fig__cap { font-size: var(--fs-base); line-height: 1.4; }
+.page--prog .fig__cap { font-size: 1rem; line-height: 1.4; }
+.page--hosp .fig__cap { font-size: 1rem; line-height: 1.4; }
 .page--prog .fig .chart { max-width: none; }
 /* Step 2's swarm: the condition switch over the drawing (a script unhides it; the old site's .seg look), the lens's shaded span on the
    main axis, and the notes under the drawing. */
@@ -174,7 +174,7 @@
 .chart-spread { fill: var(--ink); font: 400 20px/1 var(--font-display); }
 /* Step 5: the waterfall beside the step's words; the hospital box and Worksheet R under both. */
 .wf-holder { min-width: 0; }
-.hstep__below .omni#ws-pick { margin-top: 8px; }
+.hstep__text .omni#ws-pick { margin: 6px 0 0; }
 /* Step 4's medians: open under a title and a note; a median above one is shaded, as the old site did. */
 .meds__title { margin: 0; font: 700 var(--fs-md)/1.3 var(--font-body); }
 .meds__note { margin: 2px 0 8px; color: var(--ink-2); }
@@ -192,7 +192,7 @@
 .meds__table tbody th { white-space: nowrap; }
 .meds summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .place__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 8px 0; }
-@media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); align-items: start; } }
+@media (min-width: 960px) { .place__top { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } }
 .place__intro { display: grid; gap: 14px; align-content: start; }
 .place__title { font: 400 clamp(2.4rem, 7vw, 5rem)/0.98 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .place__deck { max-width: 36em; font-size: var(--fs-md); line-height: 1.45; }
@@ -201,10 +201,14 @@
 /* A long metro name wraps in the card's title bar instead of pushing the page sideways. */
 .place__card .prog__summary > .form__title { flex-wrap: wrap; white-space: normal; }
 /* The place's card three fields to a row where it has room, so it ends level with the deck beside it. */
-@container (min-width: 430px) { .place__card .prog__summary > .field { flex-basis: 130px; } }
+@container (min-width: 430px) {
+  .place__card .prog__summary > .field { flex-basis: 130px; }
+  .place__card .field__label { min-height: calc(2 * 1.25em); }
+}
 /* Each figure under a title set as Thirty Day Readmissions sets a figure's (bold, the body's size), the "FIGURE N." label leading
    the takeaway's line. */
 .place__fig { min-width: 0; margin-top: 32px; }
+@media (max-width: 559px) { .place__fig { margin-top: 24px; } }
 .place__figh { margin: 0 0 4px; font: 700 var(--fs-md)/1.25 var(--font-body); }
 .page--place .fig__n { display: inline; margin: 0 6px 0 0; }
 .page--place .fig__cap { font-weight: 400; font-size: 0.9375rem; line-height: 1.45; }
@@ -219,6 +223,7 @@
 .page--place .fig .chart { max-width: none; }
 /* The size of the cuts: the bin of hospitals with no cut a quiet box, so the cuts carry the drawing. */
 .chart--compare .chart-col:not(.chart-col--pen) { fill: var(--paper-2); stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart--compare .chart-col--pen { fill: var(--pen-seq-3); }
 .place__keybox { display: grid; gap: 6px; margin-top: 10px; }
 .place__keytitle { margin: 0; font: 600 var(--fs-sm)/1.2 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 .place__key:not(.place__key--dense) .usmap__sw--ring { box-sizing: border-box; border: 1.5px solid var(--ink); background: var(--paper); opacity: 1; }
@@ -344,7 +349,7 @@
   .usmap[data-dots="on"] .usmap__lg { display: none; }
   .usmap[data-dots="on"] .chart--us-map .chart-tile, .usmap[data-dots="on"] .chart--us-map .chart-tile-na { fill: var(--paper-2); }
 }
-.part__sub { margin-top: 36px; font: 400 clamp(1.4rem, 3vw, 1.9rem)/1.1 var(--font-display); }
+.part__sub { margin-top: 36px; font: 400 var(--fs-lg)/1.15 var(--font-display); }
 /* "Every state" and "Browse by region" side by side, the table the wider (the old site's 3:2), one above the other on a narrow screen. */
 .mapcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 40px; }
 @media (min-width: 900px) { .mapcols { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
@@ -404,12 +409,10 @@
 .tl__src { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.4; }
 @media (max-width: 559px) { .tl__item { grid-template-columns: minmax(0, 1fr); } .tl__item > :not(.tl__date) { grid-column: 1; } .tl__date { grid-row: auto; } }
 /* The research list: a theme, then its findings. */
-/* The research: the questions flow down balanced columns (no empty cell), each study set off by a red rule at its left, the finding
-   at reading size under its citation in small type, as Thirty Day Readmissions sets them. */
-.rsgrid { display: block; margin-top: 24px; columns: 3 18rem; column-gap: 36px; }
-.rs { display: block; min-width: 0; margin-bottom: 28px; padding-top: 10px; border-top: var(--rule) solid var(--ink); }
-.rs .part__sub { margin-bottom: 10px; break-after: avoid; }
-.rs__list > li { break-inside: avoid; }
+/* The research as Thirty Day Readmissions sets it: whole questions down two columns, each study set off by a red rule at its
+   left, the finding at reading size under its citation in small type. */
+.rsgrid { display: block; margin-top: 24px; columns: 2 24rem; column-gap: 48px; }
+.rs { display: grid; gap: 10px; align-content: start; min-width: 0; margin-bottom: 28px; padding-top: 10px; border-top: var(--rule) solid var(--ink); break-inside: avoid; }
 .rs .part__sub { margin-top: 0; font-size: var(--fs-lg); line-height: 1.2; }
 .rs__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 16px; }
 .rs__list > li { max-width: none; padding-left: 12px; border-left: var(--rule) solid var(--pen); }
@@ -422,12 +425,10 @@
 .ht-csv { margin-top: 8px; max-width: 52ch; }
 .ht-retry:empty { display: none; }
 /* The filters on a grid: the name box wider, every select its cell's width, the checkbox and the sort in the next cells. */
-.ht__controls { display: grid; grid-template-columns: minmax(12rem, 16rem) repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px 14px; align-items: end; }
+.ht__controls { display: grid; grid-template-columns: minmax(10rem, 13rem) repeat(auto-fill, minmax(6.75rem, 1fr)); gap: 10px 14px; align-items: end; }
 .ht__controls > * { min-width: 0; }
-@media (min-width: 641px) {
-  .ht__controls > .ht__check { grid-column: 1; grid-row: 2; }
-  .ht__controls > .ht__field:last-child:not(.ht__check) { grid-column: -3 / -1; grid-row: 2; }
-}
+/* The checkbox under the name box; every select, the sort included, on the first row where there is room. */
+@media (min-width: 641px) { .ht__controls > .ht__check { grid-column: 1; grid-row: 2; } }
 .ht select, .ht input[type="search"] { width: 100%; }
 .ht__field { display: grid; gap: 4px; margin: 0; }
 .ht__field label { color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -471,14 +472,13 @@
 .rul__gap { color: var(--pen-ink); font-weight: 700; }
 .rul__k { display: none; }
 @media (max-width: 899px) {
-  .rul__head { display: none; }
-  .rul__row { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px 10px; padding: 10px 8px; }
+  .rul__head { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 6px; padding: 0 6px 4px; font-size: 0.5625rem; letter-spacing: 0.02em; }
+  .rul__head > :nth-child(-n+2) { display: none; }
+  .rul__row { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 6px; padding: 8px 6px; }
   .rul__name, .rul__ruler { grid-column: 1 / -1; }
   .rul__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
-  .rul__num { grid-column: span 2; }
   .rul__num { justify-items: start; text-align: left; align-self: start; }
-  .rul__num:last-of-type { grid-column: span 4; }
-  .rul__k { display: block; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; }
+  .rul__num { font-size: 0.75rem; }
 }
 @media (forced-colors: active) { .rul__row:nth-child(even) { background: transparent; } .rul__gap { color: LinkText; } }
 
@@ -486,6 +486,11 @@
 /* Each panel's title, drawing and note on rows the two panels share, so the drawings and the notes start level. */
 .hosphist { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21rem, 100%), 1fr)); gap: 6px 32px; }
 .hosphist__panel { display: grid; grid-row: span 3; grid-template-rows: subgrid; align-content: start; min-width: 0; }
+.hosphist__panel > p { max-width: none; font-size: 0.8125rem; line-height: 1.45; }
+.wi__help { font-size: 0.8125rem; }
+@media (max-width: 760px) { .hosphist__panel + .hosphist__panel > .hosphist__title { margin-top: 22px; } }
+/* The place panel's "cut" years shaded in a neutral, so red stays this hospital's line and dots. */
+.page--hosp .chart-rank__zone { fill: var(--paper-2); }
 .hosphist__title { margin: 0 0 6px; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 /* The rulers' rows a little tighter than a table's. */
 .rul__row { padding-block: 5px 4px; }
@@ -513,7 +518,7 @@
 .wi__range { width: 100%; min-width: 0; margin: 0; accent-color: var(--pen); }
 .wi__range:disabled { opacity: 0.55; }
 .wi__val { text-align: right; font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
-.wi__escape { grid-column: 1 / -1; margin: 0; color: var(--ink-2); font-size: 0.75rem; line-height: 1.35; }
+.wi__escape { grid-column: 1 / -1; max-width: none; margin: 0; color: var(--ink-2); font-size: 0.75rem; line-height: 1.35; }
 /* The three result fields' values on one line: each label holds three lines' room. */
 @media (min-width: 560px) { .wi__out .field__label { min-height: calc(3 * 1.25em); align-items: flex-start; } }
 .wi__btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; }
@@ -525,10 +530,12 @@
 @media (max-width: 559px) {
   .wi__result { display: contents; }
   .wi__out { position: sticky; bottom: 0; z-index: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--paper); box-shadow: 0 calc(-1 * var(--rule)) 0 var(--pen); }
-  .wi__out .field { padding: 4px 6px 6px; }
-  .wi__out .field__label { font-size: 0.5625rem; letter-spacing: 0.02em; overflow-wrap: anywhere; }
-  .wi__out .field__value { font-size: var(--fs-md); }
-  .wi__out .field__note { font-size: 0.6875rem; }
+  .wi__out .field { padding: 4px 6px 5px; }
+  .wi__out .field__no { display: none; }
+  .wi__out .field__label { font-size: 0.5625rem; letter-spacing: 0; }
+  .wi__out .field__value { font-size: var(--fs-base); }
+  .wi__out .field__note { font-size: 0.625rem; line-height: 1.3; }
+  .wi__out .est-tag { margin-left: 3px; padding: 1px 3px 0; font-size: 0.5rem; }
 }
 .wi__big { font-size: var(--fs-xl, 1.75rem); }
 .wi__title { margin: 0; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
@@ -547,6 +554,7 @@
 .nb > * { min-width: 0; }
 .nb__table { min-width: 38rem; }
 .nb__table .chart--cards { width: 96px; max-width: 96px; }
+@media (min-width: 1100px) { .nb__table tbody th { min-width: 15rem; } }
 /* The number columns' headings wrap, so the hospital's name keeps the room. */
 .nb__table thead th.num { white-space: normal; }
 .nb__rank { color: var(--ink-2); }
@@ -560,12 +568,16 @@
 .gb th.nb__cuth { padding-right: 82px; }
 @media (max-width: 559px) {
   .gb :is(td.nb__cut, th.nb__cuth) { padding-right: 48px; }
-  .nb__bar { left: calc(100% - 42px); width: calc(34px * var(--w, 0) / 100); }
+  .nb__cut .nb__bar { left: calc(100% - 42px); width: calc(34px * var(--w, 0) / 100); }
   :is(.nb__table, .ph__table, .pen__table, .kids__table) tbody th { min-width: 10.5rem; }
 }
 .pen .pen__table thead th { white-space: normal; vertical-align: bottom; }
-/* The number and glyph columns as narrow as their contents (their headings wrap), so the hospital's name keeps the room. */
-.pen__table thead th:not(:first-child) { width: 1%; min-width: 5.5rem; }
+/* Across the page, a line to a hospital: the name with its place after it, the numbers and the glyph in set columns. */
+@media (min-width: 760px) {
+  .pen__table { table-layout: fixed; }
+  .pen__table thead th:first-child { width: 52%; }
+  .pen__table .nb__place { display: inline; margin-left: 10px; }
+}
 .nb__bar { position: absolute; top: 16px; left: calc(100% - 74px); height: 8px; margin-top: -4px; width: calc(64px * var(--w, 0) / 100); background: var(--pen); }
 .nb__cut > span:last-child { position: relative; }
 .nb__ccn { white-space: nowrap; }

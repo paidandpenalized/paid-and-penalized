@@ -156,7 +156,8 @@ export function conditionsFigure(cd, { conditions, id, edition, n }) {
   if (!cd.measuredAny) return '';
   const measured = cd.rows.filter((r) => r.measured > 0);
   // One panel's bars: rows { label, sub, value, valueText, pen, tip, tick? }, the label column as wide as its longest label or sub line.
-  const panelBars = (rows, width) => barRows({ width, max: 100, labelW: labelWidth(rows.flatMap((r) => [r.label, r.sub])), rows });
+  // The values in one column past the tracks' end, as Thirty Day Readmissions sets them, so the all-hospitals tick never runs through one.
+  const panelBars = (rows, width) => barRows({ width, max: 100, labelW: labelWidth(rows.flatMap((r) => [r.label, r.sub])), rows, valuesAtEnd: true });
   const left = (width) => {
     const name = nameAt(conditions, width);
     return panelBars(measured.map((r) => ({

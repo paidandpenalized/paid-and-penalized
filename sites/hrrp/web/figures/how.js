@@ -175,19 +175,19 @@ export const calloutWho = ({ rounded }) => html`<aside class="callout callout--i
 
 // ---------- the Part ----------
 
-// Step 5's two blocks: the waterfall (beside the step's words) and, under both, the hospital box above Worksheet R
-// (client/worksheet.js mounts it) and the sheet it swaps; the box redraws the waterfall too. src: the hospitals asset the box
+// Step 5's blocks: the hospital box (under the step's words; client/worksheet.js mounts it), the waterfall (beside the words)
+// and, under both, Worksheet R, the sheet the box swaps; the box redraws the waterfall too. src: the hospitals asset the box
 // searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src on the holder: fetched when a hospital is
 // picked). null: no box, only the example. figureN: the waterfall's figure number, kept on its holder for the redraw.
 function worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc, figureN }) {
   const sheet = worksheetHtml(how.worksheet, { edition, conditions: how.conditions, dollars: { payShort: how.payShort, tag: estimateTag } });
   const fig = waterfallFigure({ rows: how.worksheet, conditions: how.conditions, n: figureN, edition });
   return {
+    pick: hospitalsUrl && sheetSrc ? searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') }) : '',
     fig: html`<div class="wf-holder" data-figure-n="${String(figureN)}">
 ${fig}
 </div>`,
-    below: html`${hospitalsUrl && sheetSrc && searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') })}
-<div class="wsr-holder" id="worksheet"${sheetSrc ? html` data-src="${sheetSrc}" data-context="${JSON.stringify({ edition, conditions: how.conditions, payShort: how.payShort })}"` : ''}>
+    below: html`<div class="wsr-holder" id="worksheet"${sheetSrc ? html` data-src="${sheetSrc}" data-context="${JSON.stringify({ edition, conditions: how.conditions, payShort: how.payShort })}"` : ''}>
 ${sheet}
 </div>`,
   };
@@ -235,7 +235,8 @@ ${step({
 ${step({
     n: 5, id: 'step-5', heading: t('step5Title'),
     text: html`<p>${fill('step5Text', { cap: String(CAP_PCT) })}</p>
-<p>${t('step5Which')}</p>`,
+<p>${t('step5Which')}</p>
+${sheet.pick}`,
     fig: sheet.fig, below: sheet.below,
   })}`;
 }

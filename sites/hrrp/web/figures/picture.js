@@ -270,7 +270,7 @@ function barsFigure({ b, conditions, edition, n }) {
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
 // numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
 // conditions measured beside the conditions' share of flags and dollars, the cuts by peer group across the page, the traits'
-// ranges (words beside), then the table of the largest cuts (words beside).
+// ranges (words beside), then the table of the largest cuts across the page, a line to a hospital.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
   const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
@@ -283,6 +283,6 @@ ${cuts}
 ${pair(measured, bars)}
 ${peers}
 ${types}
-${largest.length ? html`<div class="pic pic--side pic--table">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
+${largest.length ? html`<div class="pic pic--table">${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}</div>
 <p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}`;
 }
