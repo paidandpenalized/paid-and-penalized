@@ -7,11 +7,9 @@
 // No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
+import { saveCsv } from './download.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-// Some browsers start a download after click() returns; revoking its blob URL at once can cancel it. A minute is
-// ample, and one CSV's blob is small.
-const REVOKE_MS = 60000;
 
 // A cell's raw value (CMS's text, with its hyphen-minus) where the build kept one, else its text.
 const valueOf = (cell) => cell.getAttribute('data-value') ?? cell.textContent.trim();
@@ -118,16 +116,7 @@ function mountTable(fig, live) {
   const download = fig.querySelector('[data-figure-csv]');
   if (!download) return;
   download.hidden = false;
-  download.addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([tableCsv(table)], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = download.dataset.figureCsv;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), REVOKE_MS);
-  });
+  download.addEventListener('click', () => saveCsv(tableCsv(table), download.dataset.figureCsv));
 }
 
 // One chart's tooltip layer; a figure with a narrow and a wide variant gets one per chart (only the shown one meets
