@@ -40,7 +40,6 @@ pure) and `pipeline/py/pp_pipeline/hcris/` (files). Stdlib Python; CSV and JSON 
     over 366 days), adding would overstate the year by up to ~90%. The row keeps the **fullest report** alone
     (`basis: fullest`): real filed numbers for one period, with one status. It applies to 0.5 to 1.6% of a year's rows
     (26 to 75 a year).
-  - `hospital_years(..., long_rule="sum")` still gives the raw sum.
 - **Status.** Every row carries CMS's codes (`status`) and the reader label (`status_label`):
   - "settled": codes 2, 3 and 4 (settled, with or without audit, and settled then reopened);
   - "as filed": codes 1 and 5 (as submitted, and amended by the hospital).
