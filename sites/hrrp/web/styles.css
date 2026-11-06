@@ -171,8 +171,9 @@
 }
 /* The two tables at a place's foot: the places inside it and its hospitals (figures/place-table.js). The hospitals table borrows the
    hospital page's area-table look (.nb__*): a bar behind each cut, the place under the name. */
-.place__tbl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
-.place__tbl > * { min-width: 0; margin-block: 0; }
+.place__tbl, .explore { grid-template-columns: minmax(0, 1fr); }
+.place__tbl { display: grid; gap: 10px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+.place__tbl > *, .explore > * { min-width: 0; margin-block: 0; }
 .kids__table { min-width: 34rem; }
 .ph__table { min-width: 44rem; }
 .ph__tag { display: inline-block; margin-left: 4px; padding: 0 6px; border: 1px solid var(--ink-2); color: var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
@@ -319,8 +320,6 @@
 /* The explorer's shell: the filters wrap on a phone; the whole thing stays hidden until the page's script has the rows. */
 .ht { display: grid; gap: 12px; }
 .ht[hidden], .ht-empty[hidden] { display: none; }
-.explore { grid-template-columns: minmax(0, 1fr); }
-.explore > * { min-width: 0; margin-block: 0; }
 .ht-nojs { margin-top: 12px; max-width: 52ch; color: var(--ink-2); }
 .ht-retry:empty { display: none; }
 .ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }

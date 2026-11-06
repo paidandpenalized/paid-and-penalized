@@ -4,7 +4,6 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { CONDS } from '../../../engine/js/hrrp/formula.js';
 import { applyFilters } from '../../../engine/js/hrrp/filters.js';
-import { count } from '../../../web/client/format.js';
 import { STATE_OF } from '../web/figures/glyph.js';
 import { PLACE_ROW_FIELDS } from '../web/figures/place-table-data.js';
 
@@ -63,11 +62,4 @@ export function csvSubset(text, ids) {
   const [header, ...lines] = records(text);
   const byCcn = new Map(lines.map((line) => [line.slice(0, line.indexOf(',')), line]));
   return [header, ...ids.map((id) => byCcn.get(id)).filter(Boolean)].join('');
-}
-
-// The status line for a page of n rows: the template's {from}, {to} and {n} filled with the page's thousands separators; empty with no row.
-export function statusLine(template, { page, size, n }) {
-  if (!n) return '';
-  const from = (page - 1) * size;
-  return template.replace('{from}', count(from + 1)).replace('{to}', count(Math.min(page * size, n))).replace('{n}', count(n));
 }

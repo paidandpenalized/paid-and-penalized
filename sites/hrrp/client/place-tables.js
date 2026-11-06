@@ -9,8 +9,8 @@
 import { copyOrSelect } from '../../../web/client/clipboard.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
-import { csvSubset, filterRows, placeRows, sortRows, statusLine } from './place-rows.js';
-import { mountPager } from './pager.js';
+import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
+import { mountPager, statusLine } from './pager.js';
 
 // Copies the text copyText() gives (a promise) and says how it went in the box's status line; where the browser refuses, the box's
 // table is selected for the reader to copy by hand.
@@ -118,23 +118,27 @@ export function mountHospitals(box) {
     conditions = asset.conditions;
   });
 
+  // The explorer's box holds no row until the rows load, so it is hidden and its note (with the retry line under it) stands in for it
+  // on the screen: that note is what the reader touches and what comes near. A place table is its own stand-in.
+  const stand = box.hidden ? box.parentElement : null;
+  const nojs = stand?.querySelector('.ht-nojs');
+  const retryNote = stand?.querySelector('.ht-retry');
+  const touch = nojs ?? box;
+
   async function load() {
     try {
       await loadRows();
     } catch {
-      // The first page and the CSV stay. A box with no page of rows (hidden) says so instead and is not touched again.
-      if (box.hidden) {
-        const note = box.parentElement.querySelector('.ht-retry');
-        if (note) note.textContent = note.dataset.text;
-        return;
-      }
-      const retry = () => { for (const type of RETRY) box.removeEventListener(type, retry); load(); };
-      for (const type of RETRY) box.addEventListener(type, retry);
+      // The first page and the CSV stay; the next touch tries again.
+      if (retryNote) retryNote.textContent = retryNote.dataset.text;
+      const retry = () => { for (const type of RETRY) touch.removeEventListener(type, retry); load(); };
+      for (const type of RETRY) touch.addEventListener(type, retry);
       return;
     }
+    if (retryNote) retryNote.textContent = '';
     box.querySelector('.ph__more')?.setAttribute('hidden', '');
     box.hidden = false;
-    box.parentElement.querySelector('.ht-nojs')?.setAttribute('hidden', '');
+    nojs?.setAttribute('hidden', '');
     for (const e of [controls, status, prev, next]) e.hidden = false;
     controls.addEventListener('input', () => { page = 1; render(); });
     prev.addEventListener('click', () => { page -= 1; render(); });
@@ -144,8 +148,7 @@ export function mountHospitals(box) {
 
   if ('IntersectionObserver' in window) {
     const watch = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) { watch.disconnect(); load(); } }, { rootMargin: '600px 0px' });
-    // A box with no rows yet is hidden (it has no place on the screen), so its note stands in for it.
-    watch.observe(box.hidden ? box.parentElement.querySelector('.ht-nojs') ?? box : box);
+    watch.observe(touch);
   } else load();
 }
 
