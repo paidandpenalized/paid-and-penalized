@@ -1,8 +1,8 @@
 // The program page's "The FY2027 picture" Part: its lede (the median cut, how many lose 1% or more, how many are at the cap), the
-// size of the cuts (Step 2's swarm form on the cut), the table of the largest cuts (each row ending in the kit's six-cell glyph,
-// web/charts/miniCards.js, with a CSV of the same hospitals, csv.js, written by the build as largest-penalties.csv), and four more
-// figures: the share cut by number of conditions measured, the cuts by peer group (the old site's strip plot), the traits'
-// ranges, and which conditions cost the most (the kit's paired bars). figures/picture-data.js holds their numbers and
+// size of the cuts (Step 2's swarm form on the cut), the share cut by number of conditions measured beside which conditions cost
+// the most (the kit's paired bars), the cuts by peer group (the old site's strip plot), the traits' ranges, and the table of the
+// largest cuts (each row ending in the kit's six-cell glyph, web/charts/miniCards.js, with a CSV of the same hospitals, csv.js,
+// written by the build as largest-penalties.csv). figures/picture-data.js holds their numbers and
 // figures/picture-draw.js the drawings the kit has no chart for; the words are in program/copy.js.
 import { CAP_PCT, CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
@@ -67,10 +67,15 @@ function penFigure({ rows, conditions, edition, n }) {
 
 // ---------- the size of the cuts ----------
 
-// The wide drawings' width: the figures keep their own size (styles.css .pic) instead of stretching across the page.
-const PIC_WIDE = 720;
-// A figure kept at its drawing's size, or nothing when it has none.
-const pic = (fig) => (fig ? html`<div class="pic">${fig}</div>` : '');
+// The wide drawings' widths, by where a figure sits at 1280 (styles.css .pic): beside its words (SIDE, the chart's 7 of 12
+// columns), half of a pair (HALF) or across the page (FULL). A figure keeps its drawing's size, so its text stays text-sized.
+const SIDE = 640;
+const HALF = 540;
+const FULL = 1120;
+// A figure kept at its drawing's size; side: its words beside the chart where there is room. Nothing when it has none.
+const pic = (fig, side = false) => (fig ? html`<div class="pic${side ? ' pic--side' : ''}">${fig}</div>` : '');
+// Two figures side by side where there is room (one alone takes the row).
+const pair = (a, b) => (a || b ? html`<div class="picpair">${a}${b}</div>` : '');
 const pct0 = (fraction) => pct(fraction, 0);
 const CUT_TICKS = [0, 0.5, 1, 1.5, 2, 2.5, CAP_PCT];
 const cutTicks = (width) => (isNarrow(width) ? [0, 1, 2, CAP_PCT] : CUT_TICKS);
@@ -109,7 +114,7 @@ function cutsFigure({ sw, edition, n }) {
   if (sw.zeroUnmeasured) noteLines.push(fill('cutsUnmeasured', { hospitals: hospitals(sw.zeroUnmeasured), are: sw.zeroUnmeasured === 1 ? 'is' : 'are' }));
   return figure({
     n: n(), takeaway: cutsTakeaway(sw), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-size-of-cuts',
-    chart: imagePair(drawn(draw, PIC_WIDE), fill('cutsAlt', { cap: String(CAP_PCT) })), note: noteLines.join(' '),
+    chart: imagePair(drawn(draw, SIDE), fill('cutsAlt', { cap: String(CAP_PCT) })), note: noteLines.join(' '),
     table: {
       columns: [{ name: t('cutsColCut') }, { name: t('cutsColN'), numeric: true }],
       rows: sw.table.map((b) => [b.hi === 0 ? t(b.measured ? 'cutsRowNone' : 'cutsRowNoneUnmeasured') : range(b), num(count(b.n), b.n)]),
@@ -139,7 +144,7 @@ function measuredFigure({ m, edition, n }) {
   const draw = (width) => drawMeasured({ rows: spec, width, axisFormat: (v) => `${Math.round(v * 100)}%` });
   return figure({
     n: n(), takeaway: measuredTakeaway(m), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-share-cut-by-conditions',
-    chart: imagePair(drawn(draw, PIC_WIDE), fill('measAlt', { ci: CI })), note: fill('measKey', { ci: CI }),
+    chart: imagePair(drawn(draw, HALF), fill('measAlt', { ci: CI })), note: fill('measKey', { ci: CI }),
     table: {
       columns: [{ name: t('measColK'), numeric: true }, { name: t('measColN'), numeric: true }, { name: t('measColCut'), numeric: true }, { name: t('measColShare'), numeric: true }, { name: fill('measColInterval', { ci: CI }) }],
       rows: m.table.map((r) => [num(String(r.k), r.k), num(count(r.n), r.n), num(count(r.nCut), r.nCut), num(pct0(r.share), r.share), fill('measInterval', { from: pct0(r.interval[0]), to: pct0(r.interval[1]) })]),
@@ -177,7 +182,7 @@ function peerFigure({ p, edition, n }) {
   const draw = (width) => drawStrip({ rows: spec, cap: CAP_PCT, width, ticks: cutTicks(width), format: percent, labels: { median: t('peerKeyMedian'), shade: t('peerKeyShade') } });
   return figure({
     n: n(), takeaway: peerTakeaway(p), source: fill('pictSource', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-cuts-by-peer-group',
-    chart: imagePair(drawn(draw, PIC_WIDE), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
+    chart: imagePair(drawn(draw, FULL), fill('peerAlt', { cap: String(CAP_PCT) })), note: t('peerNote'),
     table: {
       columns: [{ name: t('peerColGroup') }, { name: t('peerColDual') }, { name: t('peerColAll'), numeric: true }, { name: t('peerColN'), numeric: true }, { name: t('peerColShare'), numeric: true }, { name: t('peerColMedian'), numeric: true }],
       rows: p.table.map((r) => [
@@ -215,7 +220,7 @@ function typeFigure({ ty, edition, n }) {
   const draw = (width) => drawSpread({ traits, national: nat, width, format: percent, head: t('typeSpreadHead') });
   return figure({
     n: n(), takeaway: typeTakeaway(ty), source: fill('pictSourceTypes', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-share-cut-by-trait',
-    chart: imagePair(drawn(draw, PIC_WIDE), t('typeAlt')), note: t('typeKey'),
+    chart: imagePair(drawn(draw, SIDE), t('typeAlt')), note: t('typeKey'),
     table: {
       columns: [{ name: t('typeColTrait') }, { name: t('typeColGroup') }, { name: t('typeColN'), numeric: true }, { name: t('typeColShare'), numeric: true }],
       rows: ty.table.map((r) => [traitName(r.block), groupName(r.block, r), num(count(r.nMeasured), r.nMeasured), num(fmtPct(r.share, 0), r.share)]),
@@ -254,7 +259,7 @@ function barsFigure({ b, conditions, edition, n }) {
   });
   return figure({
     n: n(), takeaway: barsTakeaway(b, conditions), source: fill('pictSourceDollars', { edition }), claimLevel: 'estimate', csvName: 'hrrp-flags-and-dollars-by-condition',
-    chart: imagePair(drawn(draw, PIC_WIDE), t('barsAlt')), note: t('barsNote'),
+    chart: imagePair(drawn(draw, HALF), t('barsAlt')), note: t('barsNote'),
     table: {
       columns: [{ name: t('barsColCond') }, { name: t('barsColMeasured'), numeric: true }, { name: t('barsColFlags'), numeric: true }, { name: t('barsColFlagShare'), numeric: true }, { name: t('barsColDollars'), numeric: true }, { name: t('barsColDollarShare'), numeric: true }],
       rows: b.table.map((r) => [conditionShort(conditions, r.cond), num(fmtInt(r.measured), r.measured), num(fmtInt(r.flags), r.flags), num(pct0(r.shareOfFlags), r.shareOfFlags), num(fmtMoney(r.dollars), r.dollars), num(pct0(r.shareOfDollars), r.shareOfDollars)]),
@@ -263,16 +268,21 @@ function barsFigure({ b, conditions, edition, n }) {
 }
 
 // picture: view.picture (picture-data.js pictureData); figure: the page's figure counter; edition: the edition's label. The figures are
-// numbered in page order: the size of the cuts, the largest cuts, then the share cut by conditions measured, by peer group, by trait,
-// and the conditions' share of flags and dollars.
+// numbered in page order, which follows Thirty Day Readmissions' Part: the size of the cuts (its words beside it), the share cut by
+// conditions measured beside the conditions' share of flags and dollars, the cuts by peer group across the page, the traits'
+// ranges (words beside), then the table of the largest cuts.
 export function picturePart(picture, { figure: nextFigure, edition }) {
   const { largest, conditions } = picture;
+  const cuts = pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }), true);
+  const measured = pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }));
+  const bars = pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }));
+  const peers = pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }));
+  const types = pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }), true);
   return html`<p class="part__intro">${ledeText(picture)}</p>
-${pic(cutsFigure({ sw: picture.size(), edition, n: nextFigure }))}
+${cuts}
+${pair(measured, bars)}
+${peers}
+${types}
 ${largest.length ? html`${penFigure({ rows: largest, conditions, edition, n: nextFigure() })}
-<p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}
-${pic(measuredFigure({ m: picture.measured(), edition, n: nextFigure }))}
-${pic(peerFigure({ p: picture.peers(), edition, n: nextFigure }))}
-${pic(typeFigure({ ty: picture.types(), edition, n: nextFigure }))}
-${pic(barsFigure({ b: picture.bars(), conditions, edition, n: nextFigure }))}`;
+<p class="small pen__csv"><a href="${picture.csvHref}" download>${t('penDownload')}</a></p>` : ''}`;
 }

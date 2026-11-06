@@ -19,7 +19,11 @@ const range = ([start, end]) => `${isoDate(start)} – ${isoDate(end)}`;
 // The source line of an entry: a link when the address is https, else the label as plain text.
 const sourceOf = ({ label, url }) => (url ? externalLink(url, label) : label);
 
-const pic = (fig) => (fig ? html`<div class="pic">${fig}</div>` : '');
+// A figure kept at its drawing's size; side: its words beside the chart where there is room.
+const pic = (fig, side = false) => (fig ? html`<div class="pic${side ? ' pic--side' : ''}">${fig}</div>` : '');
+// The data windows' wide drawing sits beside its words (7 of 12 columns at 1280); the small multiples run the page's width.
+const WIN_WIDE = 640;
+const HIST_WIDE = 1120;
 
 // entries: history-data.js timelineData().
 export function timeline(entries) {
@@ -46,7 +50,7 @@ export function windowsFigure(rows, { n }) {
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
-    ...drawn(draw, 1040),
+    ...drawn(draw, WIN_WIDE),
     table: {
       columns: [{ name: t('winColFy') }, { name: t('winColPerf') }, { name: t('winColPay') }],
       rows: rows.map((r) => [fyLabel(r.fy), r.perf ? range(r.perf) : t('winNone'), range(r.pay)]),
@@ -56,7 +60,6 @@ export function windowsFigure(rows, { n }) {
 
 // The small multiples' figure [HI-09]. lines: history-data.js smallLines(); n: the figure counter, called only when the figure draws. Its takeaway is the latest year's
 // share of hospitals cut; the pandemic note and the years with no total are said under it; the table has every plotted value.
-const HIST_WIDE = 860;
 export function historyFigure(lines, { n }) {
   const known = lines.share.filter((s) => s.value !== null);
   if (!known.length) return '';
@@ -85,6 +88,6 @@ export function historyFigure(lines, { n }) {
 export function historyPart(history, { figure: nextFigure }) {
   return html`<p class="part__intro">${t('historyIntro')}</p>
 ${pic(historyFigure(history.lines, { n: nextFigure }))}
-${windowsFigure(history.windows, { n: nextFigure })}
+${pic(windowsFigure(history.windows, { n: nextFigure }), true)}
 ${timeline(history.timeline)}`;
 }

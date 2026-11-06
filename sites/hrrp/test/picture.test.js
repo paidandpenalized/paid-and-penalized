@@ -264,10 +264,14 @@ test('the Part: the lede in words and the table with the six-cell glyph, its key
   assert.doesNotMatch(html, /undefined|NaN/);
   const page = programPage({ view, robots: null, assets: ASSETS });
   assert.match(page, /id="picture"/);
-  // the Part holds six figures in page order: the cuts, the largest cuts, then the four more
+  // the Part holds six figures in page order, as Thirty Day Readmissions' Part has them: the cuts (words beside), the share cut by
+  // conditions measured beside the flags and dollars, the peer groups, the traits (words beside), then the largest cuts
   assert.deepEqual([...html.matchAll(/id="figure-(\d+)"/g)].map((x) => Number(x[1])), [5, 6, 7, 8, 9, 10]);
-  assert.match(html, /hrrp-size-of-cuts\.csv/); assert.match(html, /hrrp-flags-and-dollars-by-condition\.csv/);
-  assert.equal([...html.matchAll(/class="pic"/g)].length, 5);
+  const csvOrder = [...html.matchAll(/data-figure-csv="(hrrp-[a-z-]+)\.csv"/g)].map((x) => x[1]);
+  assert.deepEqual(csvOrder, ['hrrp-size-of-cuts', 'hrrp-share-cut-by-conditions', 'hrrp-flags-and-dollars-by-condition', 'hrrp-cuts-by-peer-group', 'hrrp-share-cut-by-trait', 'hrrp-largest-penalties']);
+  assert.equal([...html.matchAll(/class="pic"/g)].length, 3);
+  assert.equal([...html.matchAll(/class="pic pic--side"/g)].length, 2);
+  assert.equal([...html.matchAll(/class="picpair"/g)].length, 1);
   // the cuts' swarm labels its pile with the count of hospitals measured and not cut (one in POOL)
   assert.match(html, />1 not cut</); assert.match(html, />3 cut</);
 });

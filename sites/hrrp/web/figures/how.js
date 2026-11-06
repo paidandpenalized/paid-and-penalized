@@ -1,9 +1,9 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/explainer.js at 33d1959), after HACRP's program page (sites/hacrp/web/program-figures.js).
 // The program page's "How it works" Part: its line, the two callouts, then Steps 1 to 4. Step 1's punch card and Step 3's
 // columns are drawn with the chart kit inside figure(), a phone drawing and a wide one; Step 2's swarm (figures/swarm.js) has the old
-// site's condition switch (client/program.js); Step 4's medians are a table, open, as the old site had it; Step 5 is Worksheet R for the example
-// hospital, drawn on the server, with a box that swaps the hospital in the browser (client/worksheet.js), and the waterfall under it
-// (figures/waterfall.js), which the box redraws with the sheet.
+// site's condition switch (client/program.js); Step 4's medians are a table, open, beside the step's words; Step 5 has the waterfall
+// (figures/waterfall.js) beside its words and, under both, Worksheet R for the example hospital, drawn on the server, with a box
+// that swaps the hospital in the browser (client/worksheet.js) and redraws the waterfall with the sheet.
 import { CAP_PCT, CONDS, MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { columns } from '../../../../web/charts/columns.js';
 import { WIDE, drawn, figure, num } from '../../../../web/charts/figure.js';
@@ -34,7 +34,8 @@ const abbr = (key) => key.replace('_', '/');
 
 // A step of the Part: its number, heading and words beside its figure (stacked on a phone).
 // wide: the figure runs the page's width under the words (a table or a worksheet, too wide for the right column).
-const step = ({ n, id, heading, text, fig = null, wide = false }) => html`<section class="hstep${wide ? ' hstep--wide' : ''}" id="${id}" aria-labelledby="${id}-h">
+// below: a block that runs the page's width under the words and the figure (Step 5's worksheet).
+const step = ({ n, id, heading, text, fig = null, wide = false, below = '' }) => html`<section class="hstep${wide ? ' hstep--wide' : ''}" id="${id}" aria-labelledby="${id}-h">
 <div class="hstep__text">
 <p class="hstep__n" aria-hidden="true">${String(n)}</p>
 <p class="hstep__label vh">${fill('stepLabel', { n: String(n) })}</p>
@@ -43,6 +44,9 @@ ${text}
 </div>
 ${fig && html`<div class="hstep__fig">
 ${fig}
+</div>
+`}${below && html`<div class="hstep__below">
+${below}
 </div>
 `}</section>`;
 
@@ -168,20 +172,22 @@ export const calloutWho = ({ rounded }) => html`<aside class="callout callout--i
 
 // ---------- the Part ----------
 
-// The hospital box above Worksheet R (client/worksheet.js mounts it), the sheet it swaps and the waterfall under the sheet, which it
-// redraws too. src: the hospitals asset the box searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src
-// on the holder: fetched when a hospital is picked). null: no box, only the example. figureN: the waterfall's figure number, kept on
-// its holder for the redraw.
+// Step 5's two blocks: the waterfall (beside the step's words) and, under both, the hospital box above Worksheet R
+// (client/worksheet.js mounts it) and the sheet it swaps; the box redraws the waterfall too. src: the hospitals asset the box
+// searches; sheetSrc: the worksheet asset the swapped sheet is computed from (data-src on the holder: fetched when a hospital is
+// picked). null: no box, only the example. figureN: the waterfall's figure number, kept on its holder for the redraw.
 function worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc, figureN }) {
   const sheet = worksheetHtml(how.worksheet, { edition, conditions: how.conditions, dollars: { payShort: how.payShort, tag: estimateTag } });
   const fig = waterfallFigure({ rows: how.worksheet, conditions: how.conditions, n: figureN, edition });
-  return html`${hospitalsUrl && sheetSrc && searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') })}
+  return {
+    fig: html`<div class="wf-holder" data-figure-n="${String(figureN)}">
+${fig}
+</div>`,
+    below: html`${hospitalsUrl && sheetSrc && searchForm({ id: 'ws-pick', src: hospitalsUrl, label: t('wsPickLabel'), find: t('searchFind'), findRest: t('wsPickLabel'), placeholder: t('wsPickPlaceholder') })}
 <div class="wsr-holder" id="worksheet"${sheetSrc ? html` data-src="${sheetSrc}" data-context="${JSON.stringify({ edition, conditions: how.conditions, payShort: how.payShort })}"` : ''}>
 ${sheet}
-</div>
-<div class="wf-holder" data-figure-n="${String(figureN)}">
-${fig}
-</div>`;
+</div>`,
+  };
 }
 
 // how: view.how (how-data.js howData); figure: the page's figure counter; edition: the edition's label; estimateTag: the
@@ -192,7 +198,7 @@ export function howPart(how, { figure: nextFigure, edition, estimateTag = '', ho
   const punch = punchFigure({ sets: how.sets, conditions, edition, n: nextFigure() });
   const swarm = swarmFigure({ how, edition, n: nextFigure(), restUrl: swarmUrl });
   const dual = dualFigure({ dual: how.dual, edition, n: nextFigure() });
-  const waterfallN = nextFigure();
+  const sheet = worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc: worksheetUrl, figureN: nextFigure() });
   return html`<p class="part__intro">${fill('howIntro', { edition })}</p>
 <div class="hgrid">
 ${calloutNewFor({ items: how.newFor, edition })}
@@ -219,14 +225,14 @@ ${step({
     fig: dual.fig,
   })}
 ${step({
-    n: 4, id: 'step-4', heading: t('step4Title'), wide: true,
+    n: 4, id: 'step-4', heading: t('step4Title'),
     text: html`<p>${t('step4Text')}</p>`,
     fig: mediansTable({ rows: how.medians, conditions, edition }),
   })}
 ${step({
-    n: 5, id: 'step-5', heading: t('step5Title'), wide: true,
+    n: 5, id: 'step-5', heading: t('step5Title'),
     text: html`<p>${fill('step5Text', { cap: String(CAP_PCT) })}</p>
 <p>${t('step5Which')}</p>`,
-    fig: worksheetStep({ how, edition, estimateTag, hospitalsUrl, sheetSrc: worksheetUrl, figureN: waterfallN }),
+    fig: sheet.fig, below: sheet.below,
   })}`;
 }

@@ -87,27 +87,29 @@ test('Step 5: the box above the sheet, the sheet in a holder that names the asse
   assert.ok(!bare.includes('ws-pick') && bare.includes('class="wsr"'), 'no box without the asset; the sheet still reads whole');
 });
 
-test('Worksheet R runs the page width: no cap on its parts, and the step is one column', () => {
-  assert.match(rule('.hstep--wide'), /grid-template-columns: minmax\(0, 1fr\)/);
+test('Worksheet R runs the page width: no cap on its parts, under the step\'s words and its waterfall', () => {
+  assert.match(rule('.hstep__below'), /grid-column: 1 \/ -1/);
   for (const sel of ['.wsr__totals', '.wsr__totals li', '.wsr__id']) assert.match(rule(sel), /max-width: none/, sel);
   assert.match(rule('.wsr'), /min-width: 0/);
   const text = page();
-  assert.match(text, /<section class="hstep hstep--wide" id="step-5"/);
+  assert.match(text, /<section class="hstep" id="step-5"/);
+  const step = text.slice(text.indexOf('id="step-5"'));
+  assert.ok(step.indexOf('class="hstep__below"') < step.indexOf('id="worksheet"'), 'the sheet is in the full-width block');
 });
 
 // ---------- Step 4: the medians table shows ----------
 
 // The bug: the table sat inside a collapsed <details> in the step's right column, so at desktop width the column held one
 // line ("Peer-group medians for ...") and read as blank. It must be in the page's flow, not behind a toggle, and wide enough
-// for six condition columns (a wide step: the table runs the page's width under the words).
-test('Step 4: the medians table is not behind a disclosure, and the step gives it the full width', () => {
+// for six condition columns (from 980px the table fills the step's right column, its condition columns even; narrower it scrolls).
+test('Step 4: the medians table is not behind a disclosure, and it fills the column beside the words', () => {
   const text = page();
   const step = between(text, 'id="step-4"', 'id="step-5"');
   assert.ok(step.includes('<table class="gb meds__table" aria-labelledby="meds-title">'), 'the table is in the step');
   assert.ok(!step.includes('<details'), 'no collapsed disclosure around it');
   assert.match(step, /^id="step-4"/);
-  assert.match(text, /<section class="hstep hstep--wide" id="step-4"/);
-  assert.match(rule('.hstep--wide .hstep__text'), /position: static/);
+  assert.match(text, /<section class="hstep" id="step-4"/);
+  assert.match(CSS, /\.meds__table \{ min-width: 0; width: 100%; table-layout: fixed; \}/);
   assert.match(rule('.meds__table td.hi'), /background: var\(--pen-tint\)/);
   assert.equal(step.match(/<th scope="col"/g).length, 7, 'the group column and six conditions');
 });

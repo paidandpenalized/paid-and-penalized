@@ -265,12 +265,14 @@ test('Step 5: the zoomed scale fits the sum and holds at most seven ticks', () =
   }
 });
 
-test('Step 5: the Part carries both figures in page order, the waterfall under the full-width sheet with its number kept for the redraw', () => {
+test('Step 5: the Part carries both figures in page order, the waterfall beside the step\'s words and the sheet under both, the number kept for the redraw', () => {
   const { how } = data();
   const text = howPart(how, { figure: counter(), edition: 'FY2027', estimateTag: '', hospitalsUrl: '/data/hospitals.json', worksheetUrl: '/data/worksheet.json' }).text;
   assert.deepEqual([...text.matchAll(/id="figure-(\d+)"/g)].map((x) => Number(x[1])), [1, 2, 3, 4]);
   assert.ok(text.indexOf('id="figure-2"') > text.indexOf('id="step-2"') && text.indexOf('id="figure-2"') < text.indexOf('id="step-3"'), 'the swarm is Step 2\'s');
-  assert.ok(text.indexOf('id="worksheet"') < text.indexOf('class="wf-holder"'), 'the waterfall is under the sheet');
+  const step5 = text.slice(text.indexOf('id="step-5"'));
+  assert.ok(step5.indexOf('class="hstep__fig"') < step5.indexOf('class="wf-holder"') && step5.indexOf('class="wf-holder"') < step5.indexOf('class="hstep__below"'), 'the waterfall is the step\'s figure');
+  assert.ok(step5.indexOf('class="hstep__below"') < step5.indexOf('id="worksheet"'), 'the sheet is under the words and the waterfall');
   assert.match(text, /<div class="wf-holder" data-figure-n="4">/);
   assert.ok(CONDS.every((k) => text.includes(`data-cond="${k}"`)));
 });
