@@ -24,12 +24,12 @@ function figuresOf(view, shared) {
   const n = counter();
   const edition = view.edition;
   const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n) : '';
-  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n: n() }));
+  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n }));
   const conditions = f.conditions.measuredAny
-    ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n: n() }))
+    ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n }))
     : html`<section class="place__fig"><h2 class="place__figh">${t('figCondTitle')}</h2><p class="small muted">${t('condNoMeasured')}</p></section>`;
-  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n: n() }));
-  const trend = titled('trend', t('figTrendTitle'), trendFigure(f.trend, { name: view.name, id: f.id, edition, span: f.span, n: n() }));
+  const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n }));
+  const trend = titled('trend', t('figTrendTitle'), trendFigure(f.trend, { name: view.name, id: f.id, edition, span: f.span, n }));
   return html`${map ? html`<div class="place__pair">${titled('map', t('figMapTitle'), map)}${size}</div>` : size}
 ${conditions}
 <div class="place__pair place__pair--rev">${peers}${trend}</div>`;

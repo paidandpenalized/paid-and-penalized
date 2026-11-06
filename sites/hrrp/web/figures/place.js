@@ -111,6 +111,7 @@ ${keyOf({ dense: md.dense, around })}`, note, table,
 
 // ---------- the size of the cuts ----------
 
+// The figures below take n, the page's counter, and call it only when they draw (as mapFigure does).
 // sd: place-data sizeData(); edition: the edition's label; name: the place's.
 export function sizeFigure(sd, { name, id, edition, n }) {
   const tip = (i) => {
@@ -129,7 +130,7 @@ export function sizeFigure(sd, { name, id, edition, n }) {
       : sd.nNone === 0 ? ['sizeTakeawayAll', { hospitals: hospitalsText(sd.n), average: fmtPct(sd.avg) }]
         : ['sizeTakeaway', { hospitals: hospitalsText(sd.n), zero: fmtInt(sd.nNone), average: fmtPct(sd.avg) }];
   return figure({
-    n, takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition }), csvName: `hrrp-${id}-cuts`,
+    n: n(), takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition }), csvName: `hrrp-${id}-cuts`,
     ...drawn(draw, WIDE), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
     table: {
       columns: [{ name: placeT('sizeColFrom'), numeric: true }, { name: placeT('sizeColTo'), numeric: true }, { name: placeT('sizeColN'), numeric: true }, { name: placeT('sizeColShare'), numeric: true }, { name: placeT('sizeColNation'), numeric: true }],
@@ -177,7 +178,7 @@ ${hasDollars ? panel(placeT('condTitleRight'), right, placeT('condAltRight')) : 
   const lead = cd.byDollars[0];
   const takeaway = hasDollars ? placeFill('condTakeaway', { cond: conditionShort(conditions, lead.cond), share: pct0(lead.shareOfDollars) }) : placeT('condTakeawayNoDollars');
   return figure({
-    n, takeaway, source: placeFill('condSource', { edition }), claimLevel: 'estimate', csvName: `hrrp-${id}-conditions`,
+    n: n(), takeaway, source: placeFill('condSource', { edition }), claimLevel: 'estimate', csvName: `hrrp-${id}-conditions`,
     chart, key: [{ swatch: 'median', label: placeT('condKeyAll') }], note: placeT('condNote'),
     table: {
       columns: [{ name: placeT('condColCond') }, { name: placeT('condColMeasured'), numeric: true }, { name: placeT('condColPen'), numeric: true }, { name: placeT('condColShare'), numeric: true },
@@ -213,7 +214,7 @@ export function peersFigure(pd, { id, edition, total, n }) {
     : top.n * 2 > total ? placeFill('peerTakeaway', { hospitals: hospitalsText(total), group })
       : placeFill('peerTakeawayLargest', { group, n: fmtInt(top.n), hospitals: hospitalsText(total) });
   return figure({
-    n, takeaway, source: placeFill('peerSource', { edition }), csvName: `hrrp-${id}-peer-groups`,
+    n: n(), takeaway, source: placeFill('peerSource', { edition }), csvName: `hrrp-${id}-peer-groups`,
     ...drawn(draw, WIDE), alt: placeT('peerAlt'),
     note: placeFill('peerNote', { first: String(pd.rows[0].peer), last: String(pd.rows[pd.rows.length - 1].peer) }),
     table: {
@@ -271,7 +272,7 @@ export function trendFigure(td, { name, id, edition, span, n }) {
   if (last.here === null) return '';
   const cell = (v) => (v === null ? num(placeT('trendNa'), null) : num(fmtPct(v), roundTo(v, 4)));
   return figure({
-    n, takeaway: placeFill('trendTakeaway', { fy: fyLabel(last.fy), name, here: fmtPct(last.here), all: fmtPct(last.all) }),
+    n: n(), takeaway: placeFill('trendTakeaway', { fy: fyLabel(last.fy), name, here: fmtPct(last.here), all: fmtPct(last.all) }),
     source: placeFill('trendSource', { span }), claimLevel: 'recomputed', csvName: `hrrp-${id}-average-cut`,
     ...drawn((width) => trendChart({ td, width }), WIDE), alt: placeT('trendAlt'),
     note: `${placeFill('trendNote', { name, edition })}${td.covid.fys.length ? ` ${td.covid.note}` : ''}`,

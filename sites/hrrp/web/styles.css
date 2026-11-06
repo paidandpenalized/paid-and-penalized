@@ -177,7 +177,6 @@
 .ph__table { min-width: 44rem; }
 .kids__pager, .kids__status { justify-self: start; }
 .kids__pager[hidden], .kids__status[hidden], .ph__status[hidden], .ph__controls[hidden], .place__tbl button[hidden], .ph .printout[hidden] { display: none; }
-.ph__table tr[hidden] { display: none; }
 .ph .ht__check { align-self: end; }
 .place__tbl .fig__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 0; }
 .place__tbl .fig__btn { display: inline-block; text-decoration: none; color: var(--ink); }

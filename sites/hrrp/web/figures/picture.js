@@ -7,7 +7,6 @@
 import { CAP_PCT, CONDS } from '../../../../engine/js/hrrp/formula.js';
 import { drawn, figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { isNarrow, r2 } from '../../../../web/charts/svg.js';
-import { miniCards } from '../../../../web/charts/miniCards.js';
 import { pairBars } from '../../../../web/charts/pairBars.js';
 import { capitalize, count, listText, noun, numberWord, pct, placeText, spelled } from '../../../../web/render/format.js';
 import { printout } from '../../../../web/render/components.js';
