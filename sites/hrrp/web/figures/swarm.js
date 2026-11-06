@@ -15,10 +15,10 @@ import { clamp } from '../../../../engine/js/stats.js';
 import { html } from '../../../../web/render/html.js';
 import { count, listText, signed } from '../../../../web/render/format.js';
 import { conditionShort } from '../derive.js';
-import { gapText, ratio, roundTo } from '../numbers.js';
+import { SLIVER, gapText, ratio, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { hospitals, inSentence } from '../wording.js';
-import { BAND, SLIVER, SWARM_ORDER, swarmDomain } from './how-data.js';
+import { BAND, SWARM_ORDER, swarmDomain } from './how-data.js';
 
 // How many columns each drawing holds at most (the narrowest bin that fits), and the share of dots a phone folds into each end column.
 const MAX_BINS = { wide: 56, narrow: 40 };

@@ -8,7 +8,7 @@ import { figure, num } from '../../../../web/charts/figure.js';
 import { formField } from '../../../../web/render/components.js';
 import { html, jsonScript } from '../../../../web/render/html.js';
 import { fill, t } from '../hospital/copy.js';
-import { estimateTag } from '../pages/parts.js';
+import { estimateTag } from '../estimate-tag.js';
 import { factor4, fmtMoney, fmtPct, ratio } from '../numbers.js';
 import { waterfallPair } from './waterfall.js';
 import { WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';

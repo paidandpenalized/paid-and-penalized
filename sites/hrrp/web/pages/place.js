@@ -11,7 +11,8 @@ import { conditionsFigure, mapFigure, peersFigure, sizeFigure, trendFigure } fro
 import { hospitalsSection, kidsTable } from '../figures/place-table.js';
 import { PROGRAM_PATH } from '../links.js';
 import { t } from '../place/copy.js';
-import { breadcrumb, estimateTag, recordCard, shellOf } from './parts.js';
+import { estimateTag } from '../estimate-tag.js';
+import { breadcrumb, recordCard, shellOf } from './parts.js';
 
 // A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number.
 const titled = (id, title, figureHtml) => (figureHtml ? html`<section class="place__fig" aria-labelledby="pf-${id}"><h2 class="place__figh" id="pf-${id}">${title}</h2>

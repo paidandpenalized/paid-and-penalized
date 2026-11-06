@@ -6,7 +6,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { PAGE_SIZE } from '../web/constants.js';
 import { FIELDS, SORTS, exploreControls, hospitalsAsset } from '../web/figures/explore-data.js';
 import { explorePart } from '../web/figures/explore.js';
 import { generateHrrp } from '../web/generate.js';
@@ -120,7 +119,6 @@ test('sort: name A to Z, the rest high to low, a blank last', async () => {
   const rows = await explorerRows([...HOSPITALS, hospital({ id: '990014', name: 'EXAMPLE BETA HOSPITAL', pen: 5, beds: null })]);
   assert.deepEqual(sortRows(rows, 'name').map((r) => r.h.name), [...rows.map((r) => r.h.name)].sort((a, b) => a.localeCompare(b, 'en')));
   const dollars = sortRows(rows, 'dollars').map((r) => r.h.pen);
-  assert.equal(dollars.at(-1) === null || dollars.every((d) => d !== null), true);
   assert.deepEqual(dollars.filter((d) => d !== null), dollars.filter((d) => d !== null).sort((a, b) => b - a));
   assert.equal(dollars.findIndex((d) => d === null), dollars.length - dollars.filter((d) => d === null).length, 'blanks after every figure');
   const beds = sortRows(rows, 'beds').map((r) => r.h.beds);

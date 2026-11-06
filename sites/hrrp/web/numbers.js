@@ -49,9 +49,12 @@ export const ratio = (x, dp = 4) => (missing(x) ? DASH : decimal(x, dp));
 // A condition's share of the cut, a fraction, in percentage points to dp decimals and without the unit: 0.00342 is "0.342".
 export const points = (x, dp = 3) => (missing(x) ? DASH : decimal(x * 100, dp));
 
+// A gap smaller than this prints "< 0.0001" (the worksheet's rule for line 4).
+export const SLIVER = 0.0001;
+
 // A ratio's gap from its peer median, as the worksheet's line 4 prints it but signed: "+0.0321", "−0.0173", "0.0000" for none, and
 // "< 0.0001" (or "> −0.0001") for a sliver that would print as zero but is not.
-export const gapText = (d, sliver = 0.0001) => {
+export const gapText = (d, sliver = SLIVER) => {
   if (missing(d)) return DASH;
   if (d === 0) return ratio(0);
   if (Math.abs(d) < sliver) return d > 0 ? `< ${ratio(sliver)}` : `> −${ratio(sliver)}`;

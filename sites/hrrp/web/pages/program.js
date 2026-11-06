@@ -17,7 +17,8 @@ import { picturePart } from '../figures/picture.js';
 import { researchPart } from '../figures/research.js';
 import { PROGRAM_PATH } from '../links.js';
 import { fill, t } from '../program/copy.js';
-import { SECTIONS, estimateTag, labelOf, recordCard, shellOf } from './parts.js';
+import { estimateTag } from '../estimate-tag.js';
+import { SECTIONS, labelOf, recordCard, shellOf } from './parts.js';
 
 function top(view, { hospitalsUrl }) {
   const { deck, card } = view;

@@ -2,11 +2,12 @@
 // Methods), and the hospital the header follows.
 import { html } from '../../../../web/render/html.js';
 import { searchForm } from '../../../../web/render/shell.js';
-import { estTag, formField, formTitle, lastCall } from '../../../../web/render/components.js';
+import { formField, formTitle, lastCall } from '../../../../web/render/components.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fill, t } from '../copy.js';
 import { t as searchWord } from '../program/copy.js';
-import { DOLLARS_HREF, METHODS_PATH, PROGRAM_PATH } from '../links.js';
+import { estimateTag } from '../estimate-tag.js';
+import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
 
 // The program page's Parts the section menu links to, by id (the program page gives each Part its id), then Methods.
 export const SECTIONS = Object.freeze(['how', 'picture', 'map', 'history', 'explore', 'research']);
@@ -39,9 +40,6 @@ export const shellOf = ({ edition, current = null, searchUrl = null, hospital = 
 // Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub and HACRP have no page for
 // it, so the tabs and the chip link none.
 export const followed = ({ ccn, name, net, inHub }) => ({ ccn, name, net, inTdr: true, inHub });
-
-// The "estimate" tag after a modeled dollar figure, linked to how the estimate is made.
-export const estimateTag = estTag({ href: DOLLARS_HREF, label: t('estimateLabel'), text: t('estimate') });
 
 // A numbered record card of the program and place pages: the title bar, then each field (an estimated one carries the tag).
 // card: { left, right, fields: [{ label, value, note, estimated }] }.

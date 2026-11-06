@@ -92,6 +92,7 @@ describe('what-if', () => {
   }));
 
   it('a ratio a hair over its median still reaches no cut with "Bring all to median"', () => withPage(tabs, { path: pathOf(CLOSE.h) }, async (page) => {
+    assert.notEqual(await text(page, 'factor'), '1.0000', 'the hospital starts with a factor below 1');
     await page.getByRole('button', { name: 'Bring all to median' }).click();
     await eventually(async () => (await text(page, 'factor')) === '1.0000', 'the factor does not reach 1');
     assert.equal(await text(page, 'cut'), '0.00%');

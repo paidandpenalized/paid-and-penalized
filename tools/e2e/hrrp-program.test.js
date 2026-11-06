@@ -6,7 +6,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
-import { HRRP_PROGRAM_PATH, HOSPITALS, fetchesOf, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
+import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, fetchesOf, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
+import { METHODS_PATH } from '../../sites/hrrp/web/links.js';
 import { STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
 import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, useBrowser, useContext, withPage } from './lib.js';
 
@@ -53,6 +54,25 @@ describe('hero search', () => {
   }));
 });
 
+describe('the top-bar search on the other pages', () => {
+  const tabs = useContext(shared);
+  const pages = [['a hospital page', pathOf(OPEN)], ['a place page', bigState().url], ['Methods', METHODS_PATH]];
+
+  for (const [where, path] of pages) {
+    it(`${where}: the hospitals index waits for the box, then a CCN lists its hospital`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+      const box = page.locator('.topbar').getByRole('search').getByRole('combobox');
+      await box.waitFor({ state: 'visible' });
+      assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 0, 'nothing is fetched before the box is used');
+      await box.fill(OPEN.id);
+      const options = page.locator('.topbar').getByRole('search').getByRole('option');
+      await eventually(async () => (await options.count()) === 1, 'a CCN does not list exactly one option');
+      assert.equal(normalize(await options.first().locator('.omni__t').textContent()), normalize(OPEN.name), 'the option is the hospital');
+      assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 1, 'the index is fetched once');
+      await assertQuiet(seen, 'top-bar search');
+    }));
+  }
+});
+
 describe('Worksheet R hospital swap', () => {
   const tabs = useContext(shared);
   const sheetId = (page) => page.locator('.wsr-holder .wsr__id').innerText();
@@ -88,6 +108,7 @@ describe('Worksheet R hospital swap', () => {
       assert.match(await caption(page), new RegExp(`^\\s*Figure ${before.figure}\\.`), 'the caption keeps its figure number');
       const w = await wired(page);
       assert.ok(w.wired && w.focusable && w.sorts > 0 && w.csv, `the waterfall is wired after the swap: ${JSON.stringify(w)}`);
+      assert.match(await page.locator('.wsr-pick__status[role="status"]').innerText(), /now shows that hospital/, 'the swap is announced');
       last = { id: await sheetId(page), cap: await caption(page) };
     }
     // The swapped-in table sorts, and the CSV button saves the figure's file.
@@ -114,7 +135,7 @@ describe('Worksheet R hospital swap', () => {
     const before = await sheetId(page);
     await input.fill('qqzzxxqq');
     await input.press('Enter');
-    await page.waitForTimeout(300);
+    await page.locator('#ws-pick-list .omni__empty').waitFor({ state: 'visible' }); // the search has answered "no matches"
     assert.equal(await sheetId(page), before, 'the sheet is unchanged');
   }));
 });

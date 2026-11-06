@@ -13,7 +13,8 @@ import { neighborsFigure } from '../figures/neighbors.js';
 import { whatIfFigure, whatIfNone, whatIfScriptData } from '../figures/whatif.js';
 import { t } from '../hospital/copy.js';
 import { hospitalPath } from '../links.js';
-import { breadcrumb, estimateTag, followed, shellOf } from './parts.js';
+import { estimateTag } from '../estimate-tag.js';
+import { breadcrumb, followed, shellOf } from './parts.js';
 
 const starsValue = (stars) => (stars.n === null ? stars.text
   : html`<span class="stars" aria-hidden="true">${stars.filled}<span class="stars__off">${stars.empty}</span></span><span class="vh">${stars.text}</span>`);

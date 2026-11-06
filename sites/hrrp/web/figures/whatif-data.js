@@ -29,11 +29,11 @@ export const liveWords = (state) => {
   return state.dollars === null ? fill('wiLiveNoDollars', words) : fill('wiLive', words);
 };
 
-// The hospital as the what-if holds it: the conditions it can move (measured ones), by key.
 // "Bring all to median" for one slider: where a ratio at its current value goes. Over its peer median (to the median itself, exactly)
 // it comes down to the median; at or under it, or with no median published, null: it stays where the reader put it.
 export const medianTarget = (current, median) => (median !== null && median !== undefined && current > median ? median : null);
 
+// The conditions the what-if can move (the hospital's measured ones), by key.
 export const measuredKeys = (h) => CONDS.filter((k) => isMeasured(h.c[k]));
 
 // The state at these ratios (over: { condition: ratio } for the ones moved; the rest stay at the hospital's own): CMS's factor moved
@@ -59,7 +59,7 @@ export const whatIfWaterfall = (h, meta, conditions, over = {}) => waterfallData
 // Each measured condition: the slider's bounds (widened to hold the ratio), the median, and, for one over its median, its escape
 // value (the ratio that reaches the median) and what reaching it alone would save (percent of base payments, and dollars).
 export function sliderRows(h, meta, conditions) {
-  const dollars = (paf) => (h.base == null ? null : Math.round(h.base * (1 - paf)));
+  const now = whatIfState(h, meta).dollars;
   return measuredKeys(h).map((k) => {
     const c = h.c[k];
     const med = peerMedian(meta, h.peer, k);
@@ -67,9 +67,7 @@ export function sliderRows(h, meta, conditions) {
     const over = c.err > med;
     let escape = null;
     if (over) {
-      const paf = whatIfPaf(h, meta, { [k]: med });
-      const after = dollars(paf);
-      const now = dollars(h.paf);
+      const { paf, dollars: after } = whatIfState(h, meta, { [k]: med });
       escape = {
         ratio: med,
         // CMS counted it, but without a published payment weight its share cannot be recomputed here.

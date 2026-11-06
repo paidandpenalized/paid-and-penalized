@@ -153,7 +153,7 @@ describe('place page hospitals table', () => {
   it('a place that fits one page fetches no rows and has no pager', () => withPage(tabs, { path: SMALL.url, watched: true }, async (page, { seen }) => {
     const t = table(page, '.ph', 'ph');
     await t.box.scrollIntoViewIfNeeded();
-    await page.waitForTimeout(500);
+    await t.box.locator('button[data-copy]').waitFor({ state: 'visible' }); // the script has run: it would have asked for the rows by now
     assert.equal(await fetchesOf(page, 'place-rows'), 0, 'no rows asset');
     assert.equal(await t.rows.count(), SMALL.hospitals.length, 'every hospital is in the page');
     assert.equal(await t.box.locator('[data-next]').isHidden(), true, 'no pager');

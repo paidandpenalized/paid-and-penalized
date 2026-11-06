@@ -6,7 +6,7 @@ import { CAP, CONDS } from '../../../engine/js/hrrp/formula.js';
 import { scoreSwarm } from '../../../web/charts/scoreSwarm.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
 import { withDerived } from '../web/derive.js';
-import { BAND, SWARM_ORDER, howData, swarmData, swarmDomain } from '../web/figures/how-data.js';
+import { BAND, SWARM_ORDER, howData, swarmDomain } from '../web/figures/how-data.js';
 import { howPart } from '../web/figures/how.js';
 import { drawSwarm, swarmFigure, swarmRest, swarmTakeaway } from '../web/figures/swarm.js';
 import { capShare, waterfallFigure, waterfallTakeaway } from '../web/figures/waterfall.js';

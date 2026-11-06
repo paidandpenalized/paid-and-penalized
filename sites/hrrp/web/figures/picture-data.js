@@ -4,7 +4,7 @@
 // a name says percent (cuts, avgCut, share and vsNation in typeDots, and cut sizes are in percent); "cut" is a payment
 // reduction above zero; "measured" means measured on at least one condition (only those can be cut). Each function's header
 // names the denominator of every share it returns. Pure.
-import { CAP_PCT, CONDS, PEERS, condState, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
+import { CAP_PCT, CONDS, PEERS, contrib, isMeasured } from '../../../../engine/js/hrrp/formula.js';
 import { BED_BANDS, TEACH_LABEL, bedBand } from '../../../../engine/js/hrrp/filters.js';
 import { measuredAny, summarize } from '../../../../engine/js/hrrp/summary.js';
 import { clamp, median } from '../../../../engine/js/stats.js';

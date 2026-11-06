@@ -342,6 +342,9 @@ test('the data windows: a row for each fiscal year, newest first, the payment ye
   assert.match(text, /<th scope="row">FY2018<\/th><td>not available<\/td><td>October 1, 2017 – September 30, 2018<\/td>/);
   assert.match(text, /The data behind a year’s cut ends months before the cut begins: for FY2019 the data window ends June 30, 2017 and payments change October 1, 2018\./);
   assert.match(text, /id="figure-4"/);
+  assert.doesNotMatch(text.replace(/<[^>]*>/g, ' '), /\d{4}-\d{2}-\d{2}/, 'no raw ISO date in the windows\' words');
+  const tl = timeline(timelineData(ENTRIES, { edition: EDITION, today: '2026-10-07' })).text;
+  assert.doesNotMatch(tl.replace(/<[^>]*>/g, ' '), /\d{4}-\d{2}-\d{2}/, 'nor in the timeline\'s');
 });
 
 test('the History Part holds the small multiples, the windows figure (both numbered from the counter) and the timeline', () => {

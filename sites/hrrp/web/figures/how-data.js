@@ -4,7 +4,7 @@
 import { CONDS, PEERS, isMeasured, peerMedian } from '../../../../engine/js/hrrp/formula.js';
 import { exampleHospital, withDerived } from '../derive.js';
 import { ROUND_COUNT_TO } from '../constants.js';
-import { binIndex, byId, roundTo } from '../numbers.js';
+import { SLIVER, binIndex, byId, roundTo } from '../numbers.js';
 import { worksheetRows } from '../worksheet.js';
 
 // ---------- Step 1: which conditions each hospital is measured on ----------
@@ -41,8 +41,6 @@ export const BAND = 0.01;
 // The figure table's bins are this wide; a bin holds (lo, hi], so a ratio exactly at its median falls in the bin that ends at 0.
 export const SWARM_BIN = 0.05;
 
-// A gap smaller than this prints "< 0.0001" (the worksheet's rule for line 4).
-export const SLIVER = 0.0001;
 
 // The condition switches' order: heart failure first (the one on when the page opens), then the rest as the program lists them.
 export const SWARM_ORDER = ['HF', ...CONDS.filter((k) => k !== 'HF')];
