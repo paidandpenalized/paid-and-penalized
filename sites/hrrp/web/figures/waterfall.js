@@ -14,8 +14,10 @@ import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
 import { waterfallData } from '../worksheet.js';
 
-// The wide drawing's width: the figure sits under the sheet at about this width, not the page's.
-export const WF_WIDE = 720;
+// The wide drawings' widths, the columns they sit in at 1280: the program page's Step 5 figure column (FIG) and the what-if's result
+// column on a hospital page (PAIR), so their labels keep their size.
+export const WF_FIG_WIDE = 620;
+export const WF_PAIR_WIDE = 540;
 // The wide label column's room past the longest label.
 const LABEL_PAD = 12;
 // A phone's zoomed axis labels at most this many ticks.
@@ -88,7 +90,7 @@ function draw({ wf, width, id }) {
 
 // The waterfall alone as its two drawings (a phone's and a wide one), for a page that frames it itself: the hospital page's what-if,
 // which draws it again as the sliders move. wf: waterfallData(); alt: the drawing's text alternative.
-export const waterfallPair = (wf, alt = t('wfAlt')) => imagePair(drawn((width) => draw({ wf, width, id: width === WF_WIDE ? 'wf-wide' : 'wf' }), WF_WIDE), alt);
+export const waterfallPair = (wf, alt = t('wfAlt')) => imagePair(drawn((width) => draw({ wf, width, id: width === WF_PAIR_WIDE ? 'wf-wide' : 'wf' }), WF_PAIR_WIDE), alt);
 
 // The figure: rows: worksheetRows(); conditions: { key, short }; n: its number; edition: the edition's label.
 export function waterfallFigure({ rows, conditions, n, edition }) {
@@ -104,7 +106,7 @@ export function waterfallFigure({ rows, conditions, n, edition }) {
     n, source: fill('wfSource', { edition, n: '6' }), alt: t('wfAlt'), claimLevel: 'recomputed', csvName: 'hrrp-worksheet-parts',
     takeaway: waterfallTakeaway(wf),
     note: wf.binds ? fill('wfCapNoteOver', { cap: String(CAP_PCT), factor: factor4(wf.factor) }) : fill('wfCapNote', { share: capShare(wf.ofCap), factor: factor4(wf.factor) }),
-    ...drawn((width) => draw({ wf, width, id: width === WF_WIDE ? 'wf-wide' : 'wf' }), WF_WIDE),
+    ...drawn((width) => draw({ wf, width, id: width === WF_FIG_WIDE ? 'wf-wide' : 'wf' }), WF_FIG_WIDE),
     table: { columns: [{ name: t('wfColCond') }, { name: t('wfColPart'), numeric: true }, { name: t('wfColRunning'), numeric: true }, { name: t('wfColWhy') }], rows: tableRows },
   });
 }

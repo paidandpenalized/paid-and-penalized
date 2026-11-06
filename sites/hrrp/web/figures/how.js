@@ -23,8 +23,10 @@ import { waterfallFigure } from './waterfall.js';
 // Punch card: the largest sets each get a column; the rest are pooled.
 const KEEP = 12;
 // The least width, in drawing units, between two labeled cutoffs on the dual-share axis; a closer one goes unlabeled.
-const TICK_GAP = 26;
-const COLUMNS_HEIGHT = 150;
+const TICK_GAP = 24;
+const COLUMNS_HEIGHT = 180;
+// Step 3's wide drawing: the width of the step's figure column at 1280, so its labels keep their size.
+const DUAL_WIDE = 620;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
 export const NOTE_SOURCES = Object.freeze({ 'HRRP-14': 'newForSource', 'HRRP-19': 'newForSourceWindow', 'HRRP-20': 'newForSourceCovid' });
 const BAR_CLASS = 'chart-col';
@@ -104,14 +106,15 @@ function dualFigure({ dual, edition, n }) {
   // Two tones alternate by peer group (odd groups ink, even groups penalty red); the group numbers above the columns name them, so there is no key.
   const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${groupOf(dual.bands, b) % 2 ? 'dual-odd' : 'dual-even'}`, tip: fill('fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
-    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT, stagger: true,
-    bands: dual.bands.map((b) => ({ x0: b.x0, x1: b.x1, label: fill('fig2Band', { n: String(b.peer) }) })),
+    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
+    // One row of group numbers over the bands: the first says "Group" where its band has room (the number alone on a phone), the rest the number.
+    bands: dual.bands.map((b, i) => ({ x0: b.x0, x1: b.x1, label: i ? String(b.peer) : fill('fig2Band', { n: String(b.peer) }), short: String(b.peer) })),
   });
   const sizes = dual.groups.map((g) => g.n);
   const fig = figure({
     n, source: fill('fig2Source', { edition }), alt: t('fig2Alt'), csvName: 'hrrp-dual-share',
     takeaway: fill('fig2Takeaway', { min: fmtInt(Math.min(...sizes)), max: fmtInt(Math.max(...sizes)), n: fmtInt(dual.n) }),
-    ...drawn(draw, WIDE),
+    ...drawn(draw, DUAL_WIDE),
     table: {
       columns: [{ name: t('fig2ColShare') }, { name: t('fig2ColN'), numeric: true }],
       rows: dual.bins.map((b) => [fill('dualRange', { from: `${b.x0}%`, to: `${b.x1}%` }), num(count(b.n), b.n)]),
@@ -128,7 +131,7 @@ function dualFigure({ dual, edition, n }) {
 export function mediansTable({ rows, conditions, edition, collapsed = false }) {
   const table = printout(html`<table class="gb meds__table" aria-labelledby="meds-title">
 <thead><tr><th scope="col">${t('medsGroup')}</th>${CONDS.map((k) => html`<th scope="col" class="num">${conditionShort(conditions, k)}</th>`)}</tr></thead>
-<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRow', { n: String(r.peer), from: pct(r.lo, 0), to: pct(r.hi, 0) })}</th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
+<tbody>${rows.map((r) => html`<tr><th scope="row">${fill('medsRowGroup', { n: String(r.peer) })}<span class="meds__dual"> ${fill('medsRowDual', { from: pct(r.lo, 0), to: pct(r.hi, 0) })}</span></th>${r.cells.map(({ value }) => html`<td class="num${value > 1 ? ' hi' : ''}">${value === null ? t('medsMissing') : ratio(value)}</td>`)}</tr>`)}</tbody>
 </table>`);
   return collapsed
     ? html`<details class="meds">

@@ -137,7 +137,7 @@ test('Fig. 1: the note on the holes is in the step\'s words, not under the chart
 
 // ---------- Fig. 2 ----------
 
-test('Fig. 2: the columns alternate two tones by peer group, with no key, and every label reads Group n at every width', () => {
+test('Fig. 2: the columns alternate two tones by peer group, with no key, and every group is numbered at every width', () => {
   const text = page();
   const step3 = between(text, 'id="step-3"', 'id="step-4"');
   assert.ok(step3.includes('class="chart-col dual-odd"'), 'columns in odd groups');
@@ -149,7 +149,8 @@ test('Fig. 2: the columns alternate two tones by peer group, with no key, and ev
   assert.match(css.match(/\.chart-col\.dual-even \{([^}]*)\}/)?.[1] ?? '', /fill: var\(--pen\)/);
   assert.match(css, /forced-colors: active\) \{ \.chart-col\.dual-odd \{ fill: CanvasText; \} \.chart-col\.dual-even \{ fill: GrayText; \}/);
   for (const svg of step3.match(/<svg [^>]*chart--columns[\s\S]*?<\/svg>/g)) {
-    for (const n of [1, 2, 3, 4, 5]) assert.ok(svg.includes(`>Group ${n}<`), `Group ${n}`);
+    for (const n of [2, 3, 4, 5]) assert.ok(new RegExp(`chart-band__label"[^>]*>${n}<`).test(svg), `group ${n}`);
+    assert.ok(/chart-band__label"[^>]*>(Group 1|1)</.test(svg), 'group 1');
   }
 });
 

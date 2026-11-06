@@ -174,5 +174,5 @@ test('copy and download: the filtered rows, in the current sort, from the hospit
 
 test('the shared row names the place and the CCN: "city, ST · CCN id"', async () => {
   const [r] = await explorerRows([hospital({ id: '990014' })]);
-  assert.match(String(hospitalRow(r, CONDITIONS)), /<span class="nb__place">[^<]+, [A-Z]{2} · CCN 990014<\/span>/);
+  assert.match(String(hospitalRow(r, CONDITIONS)), /<span class="nb__place">[^<]+, [A-Z]{2}<span class="nb__ccn"> · CCN 990014<\/span><\/span>/);
 });

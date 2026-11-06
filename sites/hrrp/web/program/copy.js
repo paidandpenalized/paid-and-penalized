@@ -161,7 +161,8 @@ export const COPY = {
   medsTitle: { text: 'Peer-group medians for {edition}', claim: null },
   medsNote: { text: 'The medians differ slightly by group. Shaded cells are above {one}.', claim: null },
   medsGroup: { text: 'Peer group', claim: null },
-  medsRow: { text: 'Group {n} · {from}–{to} dual', claim: null },
+  medsRowGroup: { text: 'Group {n}', claim: null },
+  medsRowDual: { text: '{from}–{to} dual', claim: null },
   medsMissing: { text: 'none', claim: null },
 
   // Part 2, the picture: the lede, then the table of the largest cuts. The coin-flip's words are in figures/picture-data.js.

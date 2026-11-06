@@ -124,7 +124,8 @@ test('Step 4: the table is open under a title and a note, labeled with the dual 
   assert.equal(text.match(/<tbody>[\s\S]*<\/tbody>/)[0].match(/<tr>/g).length, 5);
   const heads = [...text.matchAll(/<th scope="col"[^>]*>([^<]+)<\/th>/g)].map((x) => x[1]);
   assert.deepEqual(heads, ['Peer group', ...CONDITIONS.map((c) => c.short)]);
-  for (const label of ['Group 1 · 0%–14% dual', 'Group 2 · 14%–18% dual', 'Group 3 · 18%–23% dual', 'Group 4 · 23%–31% dual', 'Group 5 · 31%–100% dual']) assert.ok(text.includes(label), label);
+  const ranges = ['0%–14%', '14%–18%', '18%–23%', '23%–31%', '31%–100%'];
+  ranges.forEach((range, i) => assert.ok(text.includes(`<th scope="row">Group ${i + 1}<span class="meds__dual"> ${range} dual</span></th>`), `Group ${i + 1}`));
   const cells = [...text.matchAll(/<td[^>]*>([^<]+)<\/td>/g)].map((x) => x[1]);
   assert.equal(cells.length, 30);
   assert.ok(cells.every((c) => /^\d\.\d{4}$/.test(c)), cells.join());
@@ -193,7 +194,9 @@ test('the Part on the program page: callouts, steps 1 to 5, the four figures and
   assert.equal(how.match(/<svg [^>]*chart--punch/g).length, 2, 'the punch card, phone and wide');
   assert.equal(how.match(/<svg [^>]*chart--columns/g).length, 2, 'the columns, phone and wide');
   assert.equal(how.match(/class="chart-band( chart-band--tint)?"/g).length, 10, 'five bands in each drawing');
-  for (const n of [1, 2, 3, 4, 5]) assert.equal(how.match(new RegExp(`>Group ${n}<`, 'g')).length, 2, `Group ${n} is named in both drawings (phone and wide)`);
+  // the groups' numbers over the bands, one row: "Group 1" then the numbers in the wide drawing; the numbers alone on a phone
+  assert.ok(how.match(/>Group 1</g).length >= 1, 'the wide drawing names the first group (a phone\'s too where its band has room)');
+  for (const n of [2, 3, 4, 5]) assert.equal(how.match(new RegExp(`chart-band__label"[^>]*>${n}<`, 'g')).length, 2, `group ${n} is numbered in both drawings (phone and wide)`);
   assert.equal(how.match(/<section class="hstep[ "]/g).length, 5, 'steps 1 to 5');
   assert.equal(how.match(/<details class="srcs">/g).length, 1, 'one Sources disclosure for both callouts');
   assert.ok(!how.slice(how.indexOf('class="hgrid"'), how.indexOf('class="srcs"')).includes('is from CMS'), 'no source line inside a callout');

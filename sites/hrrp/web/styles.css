@@ -38,7 +38,7 @@
 .hosp__inactive { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
 .hosp__nums { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .hosp__rank { color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
-.hosp__source { margin-top: 20px; }
+.hosp__source { margin-top: 20px; color: var(--ink-2); font: 400 0.75rem/1.45 var(--font-type); }
 
 /* ---------- the program page's top, the Parts' headings, the place pages and Methods ---------- */
 .prog { gap: 0; }
@@ -69,6 +69,7 @@
   .part { margin-top: 44px; padding-top: 20px; }
   .hstep { margin-top: 28px; padding-top: 18px; }
   .prog__summary > .field { flex-basis: 140px; }
+  .prog__summary > .field:nth-of-type(n+6) { flex-basis: 100%; }
 }
 .part__head { display: grid; gap: 10px; }
 .part__tag { justify-self: start; padding: 2px 8px 1px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.12em; text-transform: uppercase; }
@@ -120,8 +121,9 @@
   :is(.page--prog, .page--hosp, .page--place) .fig > .fig__table:not([open]) { grid-column: 2; align-self: start; }
   :is(.page--prog, .page--hosp, .page--place) .fig > .fig__table[open] > summary { margin-left: auto; }
 }
-:is(.page--prog, .page--hosp, .page--place) :is(.fig__note, .fig__source) { font-size: 0.8125rem; line-height: 1.45; }
-:is(.page--prog, .page--hosp, .page--place) .fig__note { max-width: 80ch; }
+:is(.page--prog, .page--hosp, .page--place) .fig__cap { max-width: 56rem; }
+:is(.page--prog, .page--hosp, .page--place) .fig__note { max-width: 100ch; font-size: 0.8125rem; line-height: 1.45; }
+:is(.page--prog, .page--hosp, .page--place) .fig__source { color: var(--ink-2); font: 400 0.75rem/1.45 var(--font-type); }
 /* A figure with its words beside its chart (.pic--side): the chart in 7 of 12 columns, the takeaway, note, source and the table's
    toggle in the other 5, from 980px; an open table runs under both. Stacked under 980px. */
 @media (min-width: 980px) {
@@ -143,6 +145,8 @@
 /* Step 2's swarm: the condition switch over the drawing (a script unhides it; the old site's .seg look), the lens's shaded span on the
    main axis, and the notes under the drawing. */
 .swarm__controls { margin-bottom: 12px; }
+/* The six conditions fit one row of the step's figure column. */
+.swarm__controls .btn { padding: 6px 5px; font-size: 0.6875rem; letter-spacing: 0.01em; }
 .swarm__controls[hidden], .swarm__m[hidden] { display: none; }
 .swarm__note { margin: 4px 0 0; max-width: 62ch; }
 @media (min-width: 560px) { .swarm__note--phone { display: none; } }
@@ -177,13 +181,16 @@
   .meds .printout { width: 100%; }
   .meds__table { min-width: 0; width: 100%; table-layout: fixed; }
   .meds__table thead th:first-child { width: 28%; }
-  .meds__table thead th { vertical-align: bottom; white-space: normal; }
-  .meds__table :is(thead th, td, tbody th) { padding-inline: 6px; }
-  .meds__table tbody th { white-space: normal; }
+  .meds .meds__table thead th { vertical-align: bottom; white-space: normal; font-size: var(--fs-xs); }
+  .meds .meds__table thead th:first-child { width: 22%; }
+  .meds .meds__table :is(thead th, td, tbody th) { padding-inline: 6px; }
 }
+/* A peer group's row: "Group N" over its dual-share range in small type. */
+.meds__dual { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-type); }
+.meds__table tbody th { white-space: nowrap; }
 .meds summary { width: fit-content; min-height: var(--target-min); padding-block: 2px; font: 600 var(--fs-sm)/1.4 var(--font-body); cursor: pointer; }
 .place__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 48px; padding-block: 8px 20px; }
-@media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
+@media (min-width: 960px) { .place__top { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); align-items: start; } }
 .place__intro { display: grid; gap: 14px; align-content: start; }
 .place__title { font: 400 clamp(2.4rem, 7vw, 5rem)/0.98 var(--font-display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .place__deck { max-width: 36em; font-size: var(--fs-md); line-height: 1.45; }
@@ -196,7 +203,7 @@
 .place__fig { min-width: 0; margin-top: 36px; }
 .place__figh { margin: 0 0 4px; font: 700 var(--fs-md)/1.25 var(--font-body); }
 .page--place .fig__n { display: inline; margin: 0 6px 0 0; }
-.page--place .fig__cap { font-weight: 400; font-size: var(--fs-base); line-height: 1.4; }
+.page--place .fig__cap { font-weight: 400; font-size: 0.9375rem; line-height: 1.45; }
 .place__pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 40px; }
 .place__pair > * { min-width: 0; }
 .place__stack { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; align-content: start; }
@@ -232,9 +239,12 @@
 /* The two tables at a place's foot: the places inside it and its hospitals (figures/place-table.js). The hospitals table borrows the
    hospital page's area-table look (.nb__*): a bar behind each cut, the place under the name. */
 .place__tbl, .explore { grid-template-columns: minmax(0, 1fr); }
-.place__tbl { display: grid; gap: 10px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+.place__tbl { display: grid; gap: 10px; margin-top: 48px; padding-top: 22px; border-top: 5px double var(--ink); }
 .place__tbl > *, .explore > * { min-width: 0; margin-block: 0; }
 .kids__table { min-width: 34rem; }
+.kids__table tbody th { min-width: 11rem; }
+/* A place's map and the area map on a hospital page: a quiet frame, as the page's rules are. */
+:is(.page--place, .page--hosp) .chart--place-map { border-color: var(--line); border-width: 1px; }
 .ph__table { min-width: 44rem; }
 .ph__tag { display: inline-block; margin-left: 4px; padding: 0 6px; border: 1px solid var(--ink-2); color: var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .ph__src { color: var(--ink-2); font-size: var(--fs-xs); white-space: nowrap; }
@@ -254,12 +264,14 @@
 .sources { padding-left: 1.2em; }
 
 /* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
-.wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; border-left: var(--rule) solid var(--pen); }
+/* The whole sheet framed in the form's red rule, closed on every side; the title bar's and fields' own right borders sit on the frame's. */
+.wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; border: var(--rule) solid var(--pen); border-top: 0; }
+.wsr__note { max-width: none; padding-inline: 10px; }
 .wsr-holder { min-width: 0; }
 .omni#ws-pick { max-width: 640px; margin-bottom: 14px; }
 .wsr-pick__status { margin: 6px 0 0; }
 .wsr-pick__status:empty { margin: 0; }
-.wsr__id { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); border-left: 0; max-width: none; }
+.wsr__id { grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); border-left: 0; max-width: none; margin-right: calc(-1 * var(--rule)); }
 .wsr__id > * { max-width: none; }
 @media (min-width: 700px) { .wsr__id { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .wsr__table tr.is-off td { color: var(--ink-3); }
@@ -361,7 +373,8 @@
 .hist-line--share, .hist-line--pen { stroke: var(--pen); }
 .hist-line--all { stroke: var(--ink-3); }
 .hist-dot--share, .hist-dot--pen { fill: var(--pen); }
-.hist-bar--cms { fill: var(--pen-seq-4); }
+.hist-bar--cms { fill: var(--pen); }
+.page--prog .fig__swatch--bar-dark { background: var(--pen); }
 .hist-bar--kff { fill: var(--pen-seq-1); stroke: var(--pen-seq-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .hist-none { stroke: var(--ink-3); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .hist-name--pen { fill: var(--pen-ink); }
@@ -382,26 +395,32 @@
 .tl__src { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.4; }
 @media (max-width: 559px) { .tl__item { grid-template-columns: minmax(0, 1fr); } .tl__item > :not(.tl__date) { grid-column: 1; } .tl__date { grid-row: auto; } }
 /* The research list: a theme, then its findings. */
-.rsgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px 32px; margin-top: 24px; }
-@media (min-width: 700px) { .rsgrid { grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); } }
-.rs { display: grid; gap: 10px; align-content: start; min-width: 0; padding-top: 10px; border-top: var(--rule) solid var(--ink); }
+/* The research: the questions flow down balanced columns (no empty cell), each study set off by a red rule at its left, the finding
+   at reading size under its citation in small type, as Thirty Day Readmissions sets them. */
+.rsgrid { display: block; margin-top: 24px; columns: 3 18rem; column-gap: 36px; }
+.rs { display: grid; gap: 10px; align-content: start; min-width: 0; margin-bottom: 28px; padding-top: 10px; border-top: var(--rule) solid var(--ink); break-inside: avoid; }
 .rs .part__sub { margin-top: 0; font-size: var(--fs-lg); line-height: 1.2; }
-.rs__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
-.rs__cite, .rs__finding { margin: 0; font-size: var(--fs-sm); line-height: 1.45; }
-.rs__finding { color: var(--ink-2); }
+.rs__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 16px; }
+.rs__list > li { max-width: none; padding-left: 12px; border-left: var(--rule) solid var(--pen); }
+.rs__cite { margin: 0 0 4px; font-size: 0.8125rem; line-height: 1.4; }
+.rs__finding { margin: 0; color: var(--ink); font-size: 0.9375rem; line-height: 1.5; }
 /* The explorer's shell: the filters wrap on a phone; the whole thing stays hidden until the page's script has the rows. */
 .ht { display: grid; gap: 12px; }
 .ht[hidden], .ht-empty[hidden] { display: none; }
 .ht-nojs { margin-top: 12px; max-width: 52ch; color: var(--ink-2); }
 .ht-csv { margin-top: 8px; max-width: 52ch; }
 .ht-retry:empty { display: none; }
-.ht__controls { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: end; }
+/* The filters on a grid: the name box wider, every select its cell's width, the checkbox and the sort in the next cells. */
+.ht__controls { display: grid; grid-template-columns: minmax(12rem, 16rem) repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 10px 14px; align-items: end; }
+.ht__controls > * { min-width: 0; }
+.ht select, .ht input[type="search"] { width: 100%; }
 .ht__field { display: grid; gap: 4px; margin: 0; }
 .ht__field label { color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
 .ht select, .ht input[type="search"] { padding: 5px 8px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 400 var(--fs-sm)/1.3 var(--font-body); }
-.ht input[type="search"] { width: 15rem; }
 /* The explorer's and the place tables' buttons on one line where the page is wide enough. */
 :is(.ht, .place__tbl) .fig__actions { max-width: none; }
+:is(.ht, .place__tbl) .fig__actions a.fig__btn { text-decoration: none; }
+@media (max-width: 559px) { :is(.ht, .place__tbl) .fig__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } :is(.ht, .place__tbl) .fig__actions > :is(a, [role="status"]) { grid-column: 1 / -1; } }
 .ht .ht__check label { color: var(--ink); font: 400 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0; text-transform: none; }
 @media (max-width: 640px) {
   .ht__controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
@@ -424,7 +443,7 @@
    ratio, the peer median, the gap, what each step of ratio is worth, its part of the modeled cut). Under 900px a row stacks: the
    name over the ruler over the numbers, each number with its label. */
 .rul { display: grid; }
-.rul__head, .rul__row { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 30rem) repeat(5, minmax(4.4rem, 1fr)); gap: 0 14px; align-items: center; }
+.rul__head, .rul__row { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) repeat(5, 5rem); gap: 0 12px; align-items: center; }
 .rul__head { padding: 0 8px 6px; border-bottom: var(--rule) solid var(--ink); color: var(--ink-2); font: 600 var(--fs-xs)/1.2 var(--font-body); letter-spacing: 0.06em; text-transform: uppercase; }
 .rul__head .num { text-align: right; }
 .rul__rows { margin: 0; padding: 0; list-style: none; }
@@ -442,7 +461,6 @@
   .rul__name, .rul__ruler { grid-column: 1 / -1; }
   .rul__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
   .rul__num { grid-column: span 2; }
-  .rul__num:nth-of-type(n+4) { grid-column: span 3; }
   .rul__num { justify-items: start; text-align: left; }
   .rul__k { display: block; color: var(--ink-2); font: 600 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; }
 }
@@ -478,7 +496,9 @@
 .wi__range { width: 100%; min-width: 0; margin: 0; accent-color: var(--pen); }
 .wi__range:disabled { opacity: 0.55; }
 .wi__val { text-align: right; font: 400 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; }
-.wi__escape { grid-column: 1 / -1; margin: 0; color: var(--ink-2); font-size: 0.8125rem; line-height: 1.35; }
+.wi__escape { grid-column: 1 / -1; min-height: 2lh; margin: 0; color: var(--ink-2); font-size: 0.8125rem; line-height: 1.35; }
+/* The three result fields' values on one line: each label holds three lines' room. */
+@media (min-width: 560px) { .wi__out .field__label { min-height: calc(3 * 1.25em); align-items: flex-start; } }
 .wi__btns { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; }
 .wi__btns[hidden], .wi__help[hidden], .wi__nojs[hidden] { display: none; }
 .wi__help { margin: 0; }
@@ -503,15 +523,17 @@
 .nb__table .chart--cards { width: 96px; max-width: 96px; }
 /* The number columns' headings wrap, so the hospital's name keeps the room. */
 .nb__table thead th.num { white-space: normal; }
-.nb__cut { min-width: 5.5rem; }
 .nb__rank { color: var(--ink-2); }
 .nb__place { display: block; font: 400 var(--fs-xs)/1.3 var(--font-type); color: var(--ink-2); }
 .nb__here { display: inline-block; margin-left: 6px; padding: 0 6px; border: 1.5px solid var(--pen); color: var(--pen-ink); font: 600 var(--fs-xs)/1.5 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .nb__table tr.is-current > * { background: var(--pen-tint); }
 .nb__table tr.is-current { box-shadow: inset 4px 0 0 var(--pen); }
-.nb__cut { position: relative; }
-.nb__bar { position: absolute; top: 25px; height: 4px; left: 10px; width: calc((100% - 20px) * var(--w, 0) / 100); background: var(--pen); }
+/* The cut and its bar on one line, as Thirty Day Readmissions sets them: the number right-aligned, the bar after it, at most
+   64px for the 3% cap. */
+.gb td.nb__cut { position: relative; padding-right: 82px; }
+.nb__bar { position: absolute; top: 16px; left: calc(100% - 74px); height: 8px; margin-top: -4px; width: calc(64px * var(--w, 0) / 100); background: var(--pen); }
 .nb__cut > span:last-child { position: relative; }
+.nb__ccn { white-space: nowrap; }
 .nb__table tbody[hidden], .nb__pager[hidden], .nb__status[hidden] { display: none; }
 .nb__pager { justify-self: start; margin-top: 12px; }
 .nb__status { margin: 8px 0 0; color: var(--ink-2); }
@@ -519,7 +541,7 @@
 .nb__map .chart { max-width: none; }
 .nb__map p { margin-top: 8px; }
 /* The map's dots: small, so a dense metro stays readable (the kit's pins are drawn for a numbered ring of ten). */
-.chart-pin--sm { r: 5px; }
+.chart-pin--sm { r: 6px; }
 @media (forced-colors: active) { .nb__bar { background: Highlight; } .nb__table tr.is-current > * { background: transparent; } .nb__table tr.is-current { box-shadow: inset 4px 0 0 CanvasText; } }
 .ph .ht__check label { display: flex; align-items: center; gap: 8px; }
 

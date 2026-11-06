@@ -238,7 +238,8 @@ test('the dot layer, the quiet state fills and the dot key all sit under the min
 
 test('the sheet pins the map Part\'s grids to the column so the states table cannot widen the page', () => {
   const css = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
-  for (const sel of ['usmap', 'states', 'browse', 'mapcols', 'rsgrid']) assert.match(css, new RegExp(`^\\.${sel} \\{[^}]*grid-template-columns: minmax\\(0, 1fr\\)`, 'm'), `.${sel} has an implicit grid column`);
+  assert.match(css, /^\.rsgrid \{[^}]*display: block;[^}]*columns: /m, 'the research flows down columns, not a grid');
+  for (const sel of ['usmap', 'states', 'browse', 'mapcols']) assert.match(css, new RegExp(`^\\.${sel} \\{[^}]*grid-template-columns: minmax\\(0, 1fr\\)`, 'm'), `.${sel} has an implicit grid column`);
   assert.match(css, /^\.usmap__stage \{[^}]*width: 100%/m, 'the stage fills the column (an auto-margined grid item shrank the map to a third)');
 });
 

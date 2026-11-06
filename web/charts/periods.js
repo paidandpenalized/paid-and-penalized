@@ -3,7 +3,8 @@
 //   rows   [{ label, spans: [{ kind, start, end, tip }] }]: start and end as [year, month (1-12), day]; kind names
 //          the bar's class (chart-periods__<kind>)
 //   kinds  the span kinds in the order their bars stack within a row
-// The axis runs over whole calendar years, each labeled at its middle (every other one on a phone).
+// The axis runs over whole calendar years, each labeled at its middle (every other one on a phone); a year narrower than a
+// four-digit label is labeled by its last two digits.
 import { html } from '../render/html.js';
 import { frame, isNarrow, mark, r2, text } from './svg.js';
 
@@ -16,6 +17,9 @@ const AXIS = 22;
 // Days since 1 January 1970 (UTC), as a number on the axis.
 const day = ([y, m, d]) => Date.UTC(y, m - 1, d) / 86400000;
 
+// The least width of a year, in drawing units, that holds a four-digit label with room either side.
+const SHORT_BELOW = 36;
+
 export function periodsChart({ rows, kinds, width }) {
   if (!rows.length || !kinds.length) throw new RangeError('periodsChart: rows and kinds');
   const all = rows.flatMap((r) => r.spans.flatMap((s) => [day(s.start), day(s.end)]));
@@ -27,9 +31,10 @@ export function periodsChart({ rows, kinds, width }) {
   const height = TOP + rows.length * ROW + AXIS;
   const years = Array.from({ length: y1 - y0 + 1 }, (_, i) => y0 + i);
   const every = isNarrow(width) ? 2 : 1;
+  const short = isNarrow(width) || x(day([y0 + 1, 1, 1])) - x(lo) < SHORT_BELOW;
   const grid = years.map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(TOP + rows.length * ROW)}"/>`);
   const tickLabels = years.slice(0, -1).filter((_, i) => i % every === 0)
-    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: TOP + rows.length * ROW + 15, cls: 'chart-tick', body: String(yr).slice(isNarrow(width) ? 2 : 0) }));
+    .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: TOP + rows.length * ROW + 15, cls: 'chart-tick', body: String(yr).slice(short ? 2 : 0) }));
   const body = rows.map((r, i) => {
     const mid = TOP + i * ROW + ROW / 2;
     const bars = r.spans.map((s) => {

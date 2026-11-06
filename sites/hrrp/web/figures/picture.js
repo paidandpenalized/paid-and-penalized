@@ -31,14 +31,14 @@ export function ledeText({ lede }) {
   ].join(' ');
 }
 
-// The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page, then its cut, its
-// modeled dollars and the glyph (with the conditions in words for a screen reader).
+// The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page with its place under
+// it (as the explorer's rows have it), then its cut, its modeled dollars and the glyph (with the conditions in words for a screen reader).
 function penTable(rows, conditions) {
   return html`<div class="pen">${printout(html`<table class="gb pen__table">
-<thead><tr><th scope="col">${t('penColHospital')}</th><th scope="col">${t('penColPlace')}</th><th scope="col" class="num">${t('penColCut')}</th><th scope="col" class="num">${t('penColDollars')}</th><th scope="col">${t('penColConds')}</th></tr></thead>
+<thead><tr><th scope="col">${t('penColHospital')}</th><th scope="col" class="num">${t('penColCut')}</th><th scope="col" class="num">${t('penColDollars')}</th><th scope="col">${t('penColConds')}</th></tr></thead>
 <tbody>${rows.map((r, i) => {
     const names = countedNames(r, conditions);
-    return html`<tr><th scope="row"><a href="${hospitalPath(r.h.id)}">${r.h.name}</a></th><td>${placeText({ city: r.h.city, state: r.h.st })}</td><td class="num">${fmtPct(r.h.red)}</td><td class="num">${fmtMoney(r.h.pen)}</td><td><span class="pen__glyph">${glyph(r, i + 1, conditions)}</span><span class="vh">${names.length ? fill('penCondsSpoken', { list: listText(names) }) : t('penCondsNone')}</span></td></tr>`;
+    return html`<tr><th scope="row"><a href="${hospitalPath(r.h.id)}">${r.h.name}</a><span class="nb__place">${placeText({ city: r.h.city, state: r.h.st })}</span></th><td class="num">${fmtPct(r.h.red)}</td><td class="num">${fmtMoney(r.h.pen)}</td><td><span class="pen__glyph">${glyph(r, i + 1, conditions)}</span><span class="vh">${names.length ? fill('penCondsSpoken', { list: listText(names) }) : t('penCondsNone')}</span></td></tr>`;
   })}</tbody>
 </table>`)}</div>`;
 }

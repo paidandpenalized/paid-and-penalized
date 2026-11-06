@@ -2,8 +2,8 @@
 // record card, the stamp, the verdict beside it). The top of a hospital's page: the breadcrumb, the record card
 // (name, place, metro area, type, peer group, stars) beside the verdict (the stamps, the summary, the inactive note,
 // the factor and the estimated dollars, the rank, the report link). Then the figures, each across the page: where the penalty
-// came from, the what-if (its result beside the sliders), the penalty history, the full worksheet and the other hospitals in the
-// area (their table and the nearby map).
+// came from, the what-if (its result beside the sliders), the full worksheet under it, the penalty history and the other hospitals
+// in the area (their table and the nearby map).
 import { formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
@@ -75,9 +75,9 @@ ${verdict(view, path)}
 </div>
 ${rulersFigure(rulers, { view, n: n() })}
 ${interactive ? whatIfFigure(whatIf, { view, n: n() }) : whatIfNone()}
+${worksheetDisclosure(sheet, view.edition)}
 ${historyFigure(history, { view, n: n() })}
 ${interactive ? whatIfScriptData(whatIf) : ''}
-${worksheetDisclosure(sheet, view.edition)}
 ${area && neighborsFigure(area, { view, n: n() })}
 <p class="small muted hosp__source">${view.source}</p>
 </article>`;
