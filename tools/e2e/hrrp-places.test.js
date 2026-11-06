@@ -3,13 +3,14 @@
 // the filters, sort and pager act on them; "Copy as CSV" copies the filtered rows in the table's order; and at 360 px, no
 // sideways scroll and no console error. Expected rows are worked out here from the build's data (the engine's applyFilters),
 // and places are picked by property (hrrp-pick.js), never named. Runs against dist/ or any URL; see site.js.
+import { readFile } from 'node:fs/promises';
 import { before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
 import { applyFilters } from '../../engine/js/hrrp/filters.js';
 import { PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
-import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, fetchesOf, intOf, multiStateMetro, smallMetro, stubClipboard } from './hrrp-pick.js';
-import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, useBrowser, useContext, withPage } from './lib.js';
+import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, intOf, multiStateMetro, smallMetro, stubClipboard } from './hrrp-pick.js';
+import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, fetchesOf, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 const BIG = bigState();
@@ -38,6 +39,9 @@ function table(page, root, prefix) {
   return t;
 }
 
+// A city that some, not all, of the hospitals are in.
+const partialCity = (scope) => scope.find((h) => scope.some((o) => o.city !== h.city)).city;
+
 // The checks a full table (rows asset loaded) has to pass, for the hospitals in scope (the build's records). Leaves it unfiltered.
 async function exerciseTable(page, t, scope, { state }) {
   const n = scope.length;
@@ -58,8 +62,8 @@ async function exerciseTable(page, t, scope, { state }) {
   assert.equal(await t.rows.count(), n - (pages - 1) * PAGE_SIZE, 'the last page holds the rest');
   await t.control('sort').selectOption('cut');
 
-  // Text filter: a city that some, not all, of the hospitals are in.
-  const city = scope.find((h) => scope.some((o) => o.city !== h.city)).city;
+  // Text filter.
+  const city = partialCity(scope);
   const inCity = applyFilters(scope, { text: city });
   await t.control('text').fill(city);
   await eventually(async () => (await t.total()) === inCity.length, 'the text filter does not leave the hospitals in that city');
@@ -102,7 +106,7 @@ async function exerciseTable(page, t, scope, { state }) {
 
 // Copy as CSV: the filtered rows, in the table's sort order, the header first.
 async function copyFiltered(page, t, scope) {
-  const city = scope.find((h) => scope.some((o) => o.city !== h.city)).city;
+  const city = partialCity(scope);
   const want = applyFilters(scope, { text: city });
   await t.control('text').fill(city);
   await t.control('sort').selectOption('name');
@@ -176,22 +180,18 @@ describe('the Every hospital explorer', () => {
     assert.equal(await page.locator('.ht-nojs').isHidden(), true, 'the CSV line goes');
     await exerciseTable(page, t, HOSPITALS, { state: BIG.hospitals[0].st });
     // Teaching, beds and location together.
-    const tbl = { teach: 'major', beds: '500+', urban: true };
-    await t.control('teach').selectOption('major');
-    await t.control('beds').selectOption('500+');
-    await t.control('loc').selectOption('urban');
-    const want = applyFilters(HOSPITALS, tbl);
+    const picks = { teach: 'major', beds: '500+', loc: 'urban' };
+    for (const [id, v] of Object.entries(picks)) await t.control(id).selectOption(v);
+    const want = applyFilters(HOSPITALS, { teach: picks.teach, beds: picks.beds, urban: picks.loc === 'urban' });
     await eventually(async () => (await t.total()) === want.length, 'teaching, beds and location together');
-    await t.control('teach').selectOption('');
-    await t.control('beds').selectOption('');
-    await t.control('loc').selectOption('');
+    for (const id of Object.keys(picks)) await t.control(id).selectOption('');
     await eventually(async () => (await t.total()) === HOSPITALS.length, 'the filters clear');
     await copyFiltered(page, t, HOSPITALS);
     // The download is the copy, saved as a file named for the filtered rows.
     const copied = await page.evaluate(() => window.__clip);
     const [download] = await Promise.all([page.waitForEvent('download'), t.box.locator('button[data-download]').click()]);
     assert.ok(download.suggestedFilename().endsWith('-hospitals-filtered.csv'), 'the file is named as filtered');
-    assert.equal(await (await import('node:fs/promises')).readFile(await download.path(), 'utf8'), copied, 'the file holds the copied rows');
+    assert.equal(await readFile(await download.path(), 'utf8'), copied, 'the file holds the copied rows');
     assert.equal(await fetchesOf(page, 'place-rows'), 1, 'still one fetch');
     await assertQuiet(seen, 'explorer');
   }));

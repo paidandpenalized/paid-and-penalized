@@ -18,7 +18,7 @@ import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, ENGINE, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, ENGINE, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, fetchesOf, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -50,7 +50,7 @@ const hubRows = (page) => page.evaluate(async () => {
 // The tab links, as the page holds them.
 const hrefsOf = (page) => page.evaluate(() => [...document.querySelectorAll('.tabs__scroll a')].map((a) => a.getAttribute('href')));
 // How many times the page has fetched the hub's asset.
-const assetFetches = (page) => page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length);
+const assetFetches = (page) => fetchesOf(page, 'hub-hospitals');
 
 // What the header shows: its height, the bar's, whether the find button shows, whether the bar holds a search form, the
 // tab row's fade and scroll, and the current tab's place against the row's.

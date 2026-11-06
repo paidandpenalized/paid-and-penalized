@@ -66,10 +66,6 @@ export const statesCount = () => PLACES.filter((p) => p.kind === 'state').length
 // The page's what-if data, as the page embeds it for its script (whatif-data.js WHATIF_DATA_ID).
 export const embeddedWhatIf = (page) => page.evaluate(() => JSON.parse(document.getElementById('hrrp-hospital').textContent));
 
-// How many times the page fetched a file whose address has this word (the page's own requests, read from its resource timings, so
-// those made before a test attached a listener count).
-export const fetchesOf = (page, word) => page.evaluate((w) => performance.getEntriesByType('resource').filter((e) => e.name.includes(w)).length, word);
-
 // Makes navigator.clipboard.writeText keep what it is given in window.__clip, in any engine (no permission to grant or read back).
 export const stubClipboard = (context) => context.addInitScript(() => {
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { window.__clip = text; } } });

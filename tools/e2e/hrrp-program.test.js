@@ -6,20 +6,27 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
-import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, fetchesOf, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
+import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
 import { METHODS_PATH } from '../../sites/hrrp/web/links.js';
 import { STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
-import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, fetchesOf, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 const PATH = HRRP_PROGRAM_PATH;
 const OPEN = HOSPITALS.find((h) => h.paf < 1 && h.pen != null);
 
-// The text of the first match in the box for a query typed whole, then Enter.
-async function typeAndEnter(page, input, list, query) {
+// A query typed whole into the box, then Enter once the search lists something.
+async function typeAndEnter(input, list, query) {
   await input.fill(query);
   await eventually(async () => (await list.count()) > 0 && (await input.getAttribute('aria-expanded')) === 'true', 'the search lists nothing for the query');
   await input.press('Enter');
+}
+
+// The hospital's CCN typed into the box lists exactly that hospital (its option's title is the hospital's name).
+async function listsHospital(input, options, h) {
+  await input.fill(h.id);
+  await eventually(async () => (await options.count()) === 1, 'a CCN does not list exactly one option');
+  assert.equal(normalize(await options.first().locator('.omni__t').textContent()), normalize(h.name), 'the option is the hospital');
 }
 
 describe('hero search', () => {
@@ -29,20 +36,17 @@ describe('hero search', () => {
     const form = page.locator('#hero');
     await form.waitFor({ state: 'visible' });
     const input = page.locator('#hero-q');
-    await input.fill(OPEN.id);
-    const options = form.getByRole('option');
-    await eventually(async () => (await options.count()) === 1, 'a CCN does not list exactly one option');
-    assert.equal(normalize(await options.first().locator('.omni__t').textContent()), normalize(OPEN.name), 'the option is the hospital');
+    await listsHospital(input, form.getByRole('option'), OPEN);
     await input.press('Enter');
-    assert.ok(await page.waitForURL((url) => url.pathname === pathOf(OPEN), { timeout: 10000 }).then(() => true, () => false), 'Enter opens the hospital\'s page');
+    await page.waitForURL((url) => url.pathname === pathOf(OPEN), { timeout: 10000 });
     await assertQuiet(seen, 'hero search');
   }));
 
   it('a state name lists a place, and Enter opens its page', () => withPage(tabs, { path: PATH }, async (page) => {
     const input = page.locator('#hero-q');
     await input.waitFor({ state: 'visible' });
-    await typeAndEnter(page, input, page.locator('#hero-list').getByRole('option'), OPEN.st);
-    assert.ok(await page.waitForURL((url) => url.pathname.startsWith(PATH) && url.pathname !== PATH, { timeout: 10000 }).then(() => true, () => false), 'Enter on a code opens a page');
+    await typeAndEnter(input, page.locator('#hero-list').getByRole('option'), OPEN.st);
+    await page.waitForURL((url) => url.pathname.startsWith(PATH) && url.pathname !== PATH, { timeout: 10000 });
   }));
 
   it('a query nothing matches lists no option', () => withPage(tabs, { path: PATH }, async (page) => {
@@ -60,13 +64,10 @@ describe('the top-bar search on the other pages', () => {
 
   for (const [where, path] of pages) {
     it(`${where}: the hospitals index waits for the box, then a CCN lists its hospital`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
-      const box = page.locator('.topbar').getByRole('search').getByRole('combobox');
+      const { box, list } = searchIn(page, '.topbar');
       await box.waitFor({ state: 'visible' });
       assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 0, 'nothing is fetched before the box is used');
-      await box.fill(OPEN.id);
-      const options = page.locator('.topbar').getByRole('search').getByRole('option');
-      await eventually(async () => (await options.count()) === 1, 'a CCN does not list exactly one option');
-      assert.equal(normalize(await options.first().locator('.omni__t').textContent()), normalize(OPEN.name), 'the option is the hospital');
+      await listsHospital(box, list, OPEN);
       assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 1, 'the index is fetched once');
       await assertQuiet(seen, 'top-bar search');
     }));
@@ -97,9 +98,7 @@ describe('Worksheet R hospital swap', () => {
     const exampleId = (await page.locator('.wsr-holder .wsr__id a').getAttribute('href')).split('/').filter(Boolean).pop();
     let last = before;
     for (const h of swapSamples(exampleId)) {
-      await input.fill(h.id);
-      const options = page.locator('#ws-pick-list').getByRole('option');
-      await eventually(async () => (await options.count()) === 1, 'the worksheet search does not list the hospital by its CCN');
+      await listsHospital(input, page.locator('#ws-pick-list').getByRole('option'), h);
       await input.press('Enter');
       await eventually(async () => (await page.locator('.wsr-holder .wsr__id a').getAttribute('href')) === pathOf(h), 'the sheet did not change to the picked hospital');
       assert.ok((await sheetId(page)) !== last.id, 'the sheet\'s identity block changed');

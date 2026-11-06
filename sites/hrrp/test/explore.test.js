@@ -8,6 +8,11 @@ import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
 import { FIELDS, SORTS, exploreControls, hospitalsAsset } from '../web/figures/explore-data.js';
 import { explorePart } from '../web/figures/explore.js';
+import { hospitalRow } from '../web/figures/place-row.js';
+import { placeRowsAsset } from '../web/figures/place-table-data.js';
+import { csvSubset, filterRows, placeRows, sortRows } from '../client/place-rows.js';
+import { statusLine } from '../client/pager.js';
+import { hospitalCsv } from '../web/csv.js';
 import { generateHrrp } from '../web/generate.js';
 import { HOSPITALS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { programPage } from '../web/pages/program.js';
@@ -86,8 +91,6 @@ test('the build writes the search asset and the rows asset; the program page\'s 
 // ---------- the browser's rules, on the rows asset ----------
 
 const explorerRows = async (hospitals) => {
-  const { placeRowsAsset } = await import('../web/figures/place-table-data.js');
-  const { placeRows } = await import('../client/place-rows.js');
   const asset = JSON.parse(JSON.stringify(placeRowsAsset(hospitals, META, CONDITIONS)));
   return placeRows(asset, { all: true });
 };
@@ -97,7 +100,6 @@ test('the explorer keeps every hospital, with the inactive flag and the beds sou
   assert.equal(rows.length, 4);
   assert.equal(rows.find((r) => r.h.id === '990013').h.inactive, 1);
   assert.equal(rows.find((r) => r.h.id === '990014').h.bedsSrc, 'cr');
-  const { hospitalRow } = await import('../web/figures/place-row.js');
   const quiet = String(hospitalRow(rows.find((r) => r.h.id === '990013'), CONDITIONS, { prefix: 'ex' }));
   assert.match(quiet, /<span class="ph__tag"[^>]*>inactive<\/span>/);
   assert.match(String(hospitalRow(rows.find((r) => r.h.id === '990014'), CONDITIONS, { prefix: 'ex' })), /cost rpt/);
@@ -105,7 +107,6 @@ test('the explorer keeps every hospital, with the inactive flag and the beds sou
 });
 
 test('filters: text finds a former name, penalized only means a factor below 1, the condition follows the counted conditions', async () => {
-  const { filterRows } = await import('../client/place-rows.js');
   const rows = await explorerRows(HOSPITALS);
   assert.deepEqual(filterRows(rows, { text: 'former' }).map((r) => r.h.id), ['990011']);
   assert.ok(filterRows(rows, { pen: true }).every((r) => r.h.paf < 1));
@@ -115,7 +116,6 @@ test('filters: text finds a former name, penalized only means a factor below 1, 
 });
 
 test('sort: name A to Z, the rest high to low, a blank last', async () => {
-  const { sortRows } = await import('../client/place-rows.js');
   const rows = await explorerRows([...HOSPITALS, hospital({ id: '990014', name: 'EXAMPLE BETA HOSPITAL', pen: 5, beds: null })]);
   assert.deepEqual(sortRows(rows, 'name').map((r) => r.h.name), [...rows.map((r) => r.h.name)].sort((a, b) => a.localeCompare(b, 'en')));
   const dollars = sortRows(rows, 'dollars').map((r) => r.h.pen);
@@ -127,7 +127,6 @@ test('sort: name A to Z, the rest high to low, a blank last', async () => {
 });
 
 test('the status line: 1 to 25 of N with thousands separators; none with no rows', async () => {
-  const { statusLine } = await import('../client/place-rows.js');
   const tpl = '{from}–{to} of {n}';
   assert.equal(statusLine(tpl, { page: 1, size: 25, n: 3123 }), '1–25 of 3,123');
   assert.equal(statusLine(tpl, { page: 125, size: 25, n: 3123 }), '3,101–3,123 of 3,123');
@@ -135,8 +134,6 @@ test('the status line: 1 to 25 of N with thousands separators; none with no rows
 });
 
 test('copy and download: the filtered rows, in the current sort, from the hospitals CSV', async () => {
-  const { csvSubset, filterRows, sortRows } = await import('../client/place-rows.js');
-  const { hospitalCsv } = await import('../web/csv.js');
   const list = [...HOSPITALS, hospital({ id: '990014', name: 'EXAMPLE BETA HOSPITAL', st: 'ZY' })];
   const shown = sortRows(filterRows(await explorerRows(list), { st: 'ZY' }), 'name');
   const csv = csvSubset(hospitalCsv(list), shown.map((r) => r.h.id));
@@ -146,7 +143,6 @@ test('copy and download: the filtered rows, in the current sort, from the hospit
 });
 
 test('the shared row names the place and the CCN: "city, ST · CCN id"', async () => {
-  const { hospitalRow } = await import('../web/figures/place-row.js');
   const [r] = await explorerRows([hospital({ id: '990014' })]);
   assert.match(String(hospitalRow(r, CONDITIONS)), /<span class="nb__place">[^<]+, [A-Z]{2} · CCN 990014<\/span>/);
 });
