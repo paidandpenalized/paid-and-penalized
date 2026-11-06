@@ -173,11 +173,12 @@ describe('the Every hospital explorer', () => {
     const t = table(page, '#explore-table', 'ex');
     assert.equal(await fetchesOf(page, 'place-rows'), 0, 'no rows asset at the top');
     assert.equal(await t.box.isHidden(), true, 'the table waits');
-    assert.equal(await page.locator('.ht-nojs').isVisible(), true, 'the CSV line stands in meanwhile');
+    assert.equal(await page.locator('.ht-nojs').isHidden(), true, 'the needs-JavaScript sentence goes as soon as the script runs');
+    assert.match(await page.locator('#ex-note').innerText(), /Loading/, 'a loading line stands in meanwhile');
     await page.locator('#explore').scrollIntoViewIfNeeded();
     await t.box.waitFor({ state: 'visible' });
     await eventually(async () => (await fetchesOf(page, 'place-rows')) === 1, 'the rows asset is not fetched once near the explorer');
-    assert.equal(await page.locator('.ht-nojs').isHidden(), true, 'the CSV line goes');
+    assert.equal(await page.locator('#ex-note').innerText(), '', 'the loading line goes');
     await exerciseTable(page, t, HOSPITALS, { state: BIG.hospitals[0].st });
     // Teaching, beds and location together.
     const picks = { teach: 'major', beds: '500+', loc: 'urban' };
@@ -194,6 +195,39 @@ describe('the Every hospital explorer', () => {
     assert.equal(await readFile(await download.path(), 'utf8'), copied, 'the file holds the copied rows');
     assert.equal(await fetchesOf(page, 'place-rows'), 1, 'still one fetch');
     await assertQuiet(seen, 'explorer');
+  }));
+});
+
+describe('the explorer when the rows do not come', () => {
+  const tabs = useContext(shared);
+  const ROWS = /\/assets\/hrrp-place-rows\.[^/]+\.json$/;
+  const CSV = /\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv$/;
+
+  it('says it did not load, tries again on a touch of that line, and then loads', () => withPage(tabs, { path: HRRP_PROGRAM_PATH }, async (page) => {
+    let fail = true;
+    await page.route(ROWS, (route) => (fail ? route.fulfill({ status: 503, body: '' }) : route.continue()));
+    const note = page.locator('#ex-note');
+    await page.locator('#explore').scrollIntoViewIfNeeded();
+    await eventually(async () => /try again/.test(await note.innerText()), 'the failure is said');
+    assert.doesNotMatch(await note.innerText(), /reload/i, 'the words match the behavior: a touch, not a reload');
+    assert.equal(await page.locator('#explore-table').isHidden(), true, 'the table stays hidden');
+    assert.equal(await page.locator('.ht-nojs').isHidden(), true, 'the needs-JavaScript sentence is not shown to a reader with the script');
+    fail = false;
+    await note.click();
+    await page.locator('#explore-table').waitFor({ state: 'visible' });
+    assert.equal(await note.innerText(), '', 'the line clears once the rows are in');
+  }));
+
+  it('a failed filtered download says so, and the whole list stays a visible link', () => withPage(tabs, { path: HRRP_PROGRAM_PATH }, async (page) => {
+    const t = table(page, '#explore-table', 'ex');
+    await page.locator('#explore').scrollIntoViewIfNeeded();
+    await t.box.waitFor({ state: 'visible' });
+    await page.route(CSV, (route) => route.fulfill({ status: 503, body: '' }));
+    const whole = t.box.locator('a.fig__btn[download]');
+    assert.equal(await whole.isVisible(), true, 'the whole list is a visible link beside the download button');
+    await t.box.locator('button[data-download]').click();
+    await eventually(async () => /could not be downloaded/.test(await t.box.locator('[data-copy-status]').innerText()), 'the failure is said');
+    assert.equal(await whole.isVisible(), true, 'the link is still there');
   }));
 });
 

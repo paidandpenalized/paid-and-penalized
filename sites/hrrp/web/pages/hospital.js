@@ -14,7 +14,7 @@ import { whatIfFigure, whatIfNone, whatIfScriptData } from '../figures/whatif.js
 import { t } from '../hospital/copy.js';
 import { hospitalPath } from '../links.js';
 import { estimateTag } from '../estimate-tag.js';
-import { barSearchScripts, breadcrumb, followed, shellOf } from './parts.js';
+import { breadcrumb, followed, shellOf } from './parts.js';
 
 const starsValue = (stars) => (stars.n === null ? stars.text
   : html`<span class="stars" aria-hidden="true">${stars.filled}<span class="stars__off">${stars.empty}</span></span><span class="vh">${stars.text}</span>`);
@@ -89,7 +89,7 @@ ${area && neighborsFigure(area, { view, n: n() })}
     path,
     robots,
     body,
-    scripts: [assets.js.figure, ...barSearchScripts(assets, hospitalsUrl), ...(interactive || area ? [assets.js['hrrp-hospital']] : [])],
+    scripts: [assets.js.figure, ...(hospitalsUrl || interactive || area ? [assets.js['hrrp-hospital']] : [])],  // its script mounts the bar's search too
     assets,
     ...shellOf({ edition: view.edition, current: 'explore', searchUrl: hospitalsUrl, hospital: followed(view) }),
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebPage', name: title, url: SITE.origin + path },

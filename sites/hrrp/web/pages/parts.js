@@ -33,7 +33,7 @@ const shellParts = lastCall(({ edition, current, searchUrl }) => [edition, curre
   current,
   search: searchUrl ? searchBox(searchUrl) : '',
 }));
-// The script that wires the bar's search (client/search.js), on a page whose bar has the box (searchUrl is set).
+// The script that wires the bar's search (client/search.js), on a page with no script of its own (Methods, the dictionary) whose bar has the box (searchUrl is set).
 export const barSearchScripts = (assets, searchUrl) => (searchUrl ? [assets.js['hrrp-search']] : []);
 
 export const shellOf = ({ edition, current = null, searchUrl = null, hospital = null }) => ({ ...shellParts({ edition, current, searchUrl }), hospital });

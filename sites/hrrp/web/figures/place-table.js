@@ -12,8 +12,9 @@ import { conditionShort } from '../derive.js';
 import { csvPath } from '../links.js';
 import { fmtInt, fmtMoney, fmtPct } from '../numbers.js';
 import { fill, t } from '../place/copy.js';
-import { field, option, select } from './explore.js';
+import { filterControls } from './explore.js';
 import { pagerNav, statusTemplate } from './pager.js';
+import { SORT_KEYS } from './place-table-data.js';
 import { hospitalRow } from './place-row.js';
 
 const COL_KEY = { Division: 'kidsColDivision', State: 'kidsColState', 'Metro area': 'kidsColMetro' };
@@ -39,21 +40,19 @@ ${kids.pages.length > 1 ? pagerNav({ cls: 'kids', label: t('kidsPager'), pages: 
 
 // ---------- the area's hospitals ----------
 
+const sortWord = (key) => t(`hosSort${key[0].toUpperCase()}${key.slice(1)}`);
+const WORDS = () => ({
+  filters: t('hosFilters'), any: t('hosAny'), text: t('hosText'), state: t('hosState'), peer: t('hosPeer'), group: (n) => fill('peerGroup', { n: String(n) }),
+  cond: t('hosCond'), teach: t('hosTeach'), beds: t('hosBeds'), location: t('hosLocation'), urban: t('hosUrban'), rural: t('hosRural'),
+  penalized: t('hosPenalized'), sort: t('hosSort'), sortBy: sortWord,
+});
+
 function controls(table, { conditions }) {
-  const any = t('hosAny');
   const peers = [...new Set(table.rows.map((r) => r.h.peer).filter((p) => p != null))].sort((a, b) => a - b);
-  const teach = Object.keys(TEACH_LABEL).filter((k) => table.rows.some((r) => r.h.teach === k));
-  return html`<div class="ht__controls ph__controls" role="group" aria-label="${t('hosFilters')}" hidden>
-${field('ph-text', t('hosText'), html`<input id="ph-text" type="search" autocomplete="off">`)}
-${table.states.length > 1 ? field('ph-state', t('hosState'), select('ph-state', any, table.states.map((s) => option(s, s)))) : ''}
-${field('ph-peer', t('hosPeer'), select('ph-peer', any, peers.map((p) => option(p, fill('peerGroup', { n: String(p) })))))}
-${field('ph-cond', t('hosCond'), select('ph-cond', any, CONDS.map((k, i) => option(String(i), conditionShort(conditions, k)))))}
-${field('ph-teach', t('hosTeach'), select('ph-teach', any, teach.map((k) => option(k, TEACH_LABEL[k]))))}
-${field('ph-beds', t('hosBeds'), select('ph-beds', any, BED_BANDS.map((b) => option(b, b))))}
-${field('ph-loc', t('hosLocation'), select('ph-loc', any, [option('urban', t('hosUrban')), option('rural', t('hosRural'))]))}
-<p class="ht__field ht__check"><label><input id="ph-pen" type="checkbox"> ${t('hosPenalized')}</label></p>
-${field('ph-sort', t('hosSort'), html`<select id="ph-sort">${option('cut', t('hosSortCut'))}${option('dollars', t('hosSortDollars'))}${option('name', t('hosSortName'))}${option('beds', t('hosSortBeds'))}</select>`)}
-</div>`;
+  const teach = Object.keys(TEACH_LABEL).filter((k) => table.rows.some((r) => r.h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
+  return filterControls({
+    prefix: 'ph', w: WORDS(), states: table.states, peers, conds: CONDS.map((k) => ({ short: conditionShort(conditions, k) })), teach, beds: BED_BANDS, sorts: SORT_KEYS, hidden: true,
+  });
 }
 
 // table: view.hospitals (place-table-data hospitalsTable); name: the place; conditions: the edition's; fy: the edition's year; rowsUrl: the

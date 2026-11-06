@@ -41,17 +41,19 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const places = buildPlaces(hospitals, meta);
   const area = areaContext({ ...data, places, side: shared.side, lines: shared.lines });  // data.shapes: the state outlines the map draws
   const program = programView(area);
-  // The explorer's rows are a content-hashed asset the page reads, not part of the page.
+  // The search asset (one short row for each hospital and the site's places) is what the pages that only search read: a hospital page,
+  // Methods and the dictionary.
   const placeRows = places.list.map((p) => [p.kind, p.key, p.name, p.path, p.hospitals.length]);
   const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, placeRows)));
   // Worksheet R's hospital box reads every hospital's worksheet inputs, loaded when a hospital is picked.
   const worksheetUrl = ctx.asset('hrrp-worksheet', 'json', JSON.stringify(worksheetAsset(hospitals, meta)));
   // Step 2's swarms past heart failure's: drawn here, fetched by the page when a condition is first picked.
   const swarmUrl = ctx.asset('hrrp-swarm', 'json', JSON.stringify(swarmRest({ how: program.how })));
-  // The place pages' hospitals tables carry their first page; the rest are read from this asset near the table. The program page's
-  // explorer reads the same asset (every hospital, filtered in the browser), so its rows are never in the page.
-  const placeRowsUrl = ctx.asset('hrrp-place-rows', 'json', JSON.stringify(placeRowsAsset(hospitals, meta, area.edition.conditions)));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl, worksheetUrl, swarmUrl, rowsUrl: placeRowsUrl }) });
+  // The rows asset (every hospital, plus what the search needs) is the one file the program page and the place pages read: the search
+  // box, Worksheet R's box, the explorer (filtered in the browser, so its rows are never in the page) and the place pages' hospitals
+  // tables, which carry their first page and read the rest from it near the table. It is fetched once on a page.
+  const placeRowsUrl = ctx.asset('hrrp-place-rows', 'json', JSON.stringify(placeRowsAsset(hospitals, meta, area.edition.conditions, placeRows)));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl: placeRowsUrl, worksheetUrl, swarmUrl, rowsUrl: placeRowsUrl }) });
   ctx.emit({ path: program.picture.csvHref, noindex: robots !== null, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, noindex: robots !== null, text: placeCsv(statesCsvRows(program.map.pages)) });
   // The full hospitals file and its dictionary: files, then the dictionary as a page.
@@ -70,7 +72,7 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   }
   for (const place of places.list) {
     const view = placeView(place, area);
-    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl, hospitalsUrl }) });
+    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area, rowsUrl: placeRowsUrl, hospitalsUrl: placeRowsUrl }) });
     // The files its two tables link: the places inside it, and its hospitals (a metro area's are the area file written above).
     if (view.children) ctx.emit({ path: csvPath(fy, view.children.csvName), noindex: robots !== null, text: placeCsv(view.children.csvRows, view.children.column) });
     if (view.hospitals.csvOwn) ctx.emit({ path: csvPath(fy, view.hospitals.csvName), noindex: robots !== null, text: hospitalCsv(view.hospitals.rows.map((r) => r.h)) });

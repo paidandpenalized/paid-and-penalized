@@ -1,15 +1,18 @@
 // The two tables at the foot of a place page (figures/place-table.js), and, with the same code, the program page's "Every hospital"
 // table (figures/explore.js: its box says data-all, a data-prefix for its control ids and a download button that writes the filtered
-// rows as a file; it holds no row until the rows load, so it stays hidden until then). The child table gets the shared pager (pager.js). The
+// rows as a file; it holds no row until the rows load, so it stays hidden until then, and data-nojs and data-note name the no-script
+// sentence that goes and the line that says the list is loading, or did not and a touch tries again). The child table gets the shared pager (pager.js). The
 // hospitals table carries its first page of rows in the page; here, when it comes near the screen, the script reads the rest from the
 // rows asset, keeps this place's hospitals and draws a page at a time with the page's own row markup (figures/place-row.js), with the
 // filters, a sort and Previous/Next. Both tables get a "Copy as CSV" button: the child table's file, and the hospitals table's file cut
 // to the rows that pass the filters, in the current sort. Everything is hidden in the page until here, and without this script a reader
 // has the first page and the CSV.
 import { copyOrSelect } from '../../../web/client/clipboard.js';
+import { saveCsv } from '../../../web/client/download.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
+import { loadAsset } from './hospitals.js';
 import { mountPager, statusLine } from './pager.js';
 
 // Copies the text copyText() gives (a promise) and says how it went in the box's status line; where the browser refuses, the box's
@@ -52,16 +55,6 @@ function mountKids(box) {
   mountCopy(box, csvOf(box));
 }
 
-// Saves text as a CSV file the reader downloads (a link made for the click, then dropped).
-function saveCsv(text, name) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
-  const a = Object.assign(document.createElement('a'), { href: url, download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 export function mountHospitals(box) {
   const body = box.querySelector('table.ph__table')?.tBodies[0];
   const controls = box.querySelector('.ph__controls');
@@ -82,7 +75,9 @@ export function mountHospitals(box) {
       try {
         saveCsv(await subset(), box.dataset.csv.split('/').pop().replace(/\.csv$/, '-filtered.csv'));
       } catch {
-        // The full file stays a link in the page's note.
+        // Said where the copy buttons say how they went (cleared first, so a repeat is announced again); the whole list stays a link beside the button.
+        const note = box.querySelector('[data-download-failed]');
+        if (note) { note.textContent = ''; note.textContent = note.dataset.downloadFailed; }
       }
     });
   }
@@ -113,32 +108,40 @@ export function mountHospitals(box) {
 
   // The rows asset, fetched once; a failure is tried again on the reader's next touch of the table.
   const loadRows = once(async () => {
-    const asset = JSON.parse(await fetchText(box.dataset.src, '/assets/'));
+    const asset = await loadAsset(box.dataset.src);
     all = placeRows(asset, scope);
     conditions = asset.conditions;
   });
 
-  // The explorer's box holds no row until the rows load, so it is hidden and its note (with the retry line under it) stands in for it
-  // on the screen: that note is what the reader touches and what comes near. A place table is its own stand-in.
-  const stand = box.hidden ? box.parentElement : null;
-  const nojs = stand?.querySelector('.ht-nojs');
-  const retryNote = stand?.querySelector('.ht-retry');
-  const touch = nojs ?? box;
+  // The explorer's box holds no row until the rows load, so it is hidden and a line (data-note) stands in for it on the screen: it says
+  // the list is loading, is what comes near the screen, and is what the reader touches to try again after a failure. A place table is
+  // its own stand-in. The no-script sentence (data-nojs) goes as soon as the script has what it needs.
+  const note = box.dataset.note ? document.getElementById(box.dataset.note) : null;
+  const nojs = box.dataset.nojs ? document.getElementById(box.dataset.nojs) : null;
+  const touch = note ?? box;
+  if (nojs) nojs.hidden = true;
+  if (note) note.textContent = note.dataset.loading;
 
   async function load() {
     try {
       await loadRows();
     } catch {
-      // The first page and the CSV stay; the next touch tries again.
-      if (retryNote) retryNote.textContent = retryNote.dataset.text;
-      const retry = () => { for (const type of RETRY) touch.removeEventListener(type, retry); load(); };
+      // The first page and the CSV stay; the next touch of the line (or a focus on it) tries again.
+      if (note) {
+        note.textContent = note.dataset.text;
+        note.tabIndex = 0;
+      }
+      const retry = () => {
+        for (const type of RETRY) touch.removeEventListener(type, retry);
+        if (note) { note.removeAttribute('tabindex'); note.textContent = note.dataset.loading; }
+        load();
+      };
       for (const type of RETRY) touch.addEventListener(type, retry);
       return;
     }
-    if (retryNote) retryNote.textContent = '';
+    if (note) note.textContent = '';
     box.querySelector('.ph__more')?.setAttribute('hidden', '');
     box.hidden = false;
-    nojs?.setAttribute('hidden', '');
     for (const e of [controls, status, prev, next]) e.hidden = false;
     controls.addEventListener('input', () => { page = 1; render(); });
     prev.addEventListener('click', () => { page -= 1; render(); });

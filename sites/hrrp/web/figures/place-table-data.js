@@ -4,11 +4,16 @@
 // linked rather than written a second time; every other place gets a file of its own. Pure.
 import { PAGE_SIZE } from '../constants.js';
 import { pagesOf } from '../numbers.js';
+import { HOSPITALS_PATH } from '../links.js';
 import { STATE_LETTER } from './glyph.js';
 import { areaCsvName, inMetro, sizedRows } from './neighbors-data.js';
 
 // The hospitals table's first page is in the place page; the rest come from one asset the page's script fetches near the table.
-export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive', 'bedsSrc']);
+export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'zip', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive', 'bedsSrc']);
+
+// The sorts a hospitals table offers, in the place table's order (the explorer puts name first): the keys of client/place-rows.js
+// sortRows' comparators, and the suffix of each sort's words (hosSortCut, exploreSortCut).
+export const SORT_KEYS = Object.freeze(['cut', 'dollars', 'name', 'beds']);
 
 // The first column of a child table's CSV, by the kind of place the table is on.
 export const KIDS_COLUMN = Object.freeze({ region: 'Division', division: 'State', state: 'Metro area' });
@@ -44,14 +49,18 @@ export function hospitalsTable(place, meta) {
   };
 }
 
-// The asset the hospitals tables read (the place pages' and the program page's explorer): every hospital in the program as one row (PLACE_ROW_FIELDS), largest cut first, with the
-// conditions' short names for the six-condition glyph's words. hospitals: the file's rows; conditions: the edition's [{ key, short }].
-export function placeRowsAsset(hospitals, meta, conditions) {
+// The asset the hospitals tables read (the place pages' and the program page's explorer) and the search boxes on those pages: every
+// hospital in the program as one row (PLACE_ROW_FIELDS), largest cut first, with the conditions' short names for the six-condition
+// glyph's words, and what the search needs besides (where a hospital's page is, and the site's places as [kind, key, name, path,
+// hospitals], so one fetch feeds the table and the search). hospitals: the file's rows; conditions: the edition's [{ key, short }].
+export function placeRowsAsset(hospitals, meta, conditions, places = []) {
   return {
+    hospitalPath: HOSPITALS_PATH,
+    places,
     fields: PLACE_ROW_FIELDS,
     conditions: conditions.map(({ key, short }) => ({ key, short })),
     rows: sizedRows(hospitals, meta).map(({ h, states }) => [
-      h.id, h.name, h.alias ?? null, h.city, h.st, inMetro(h) ? h.cbsa : null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
+      h.id, h.name, h.alias ?? null, h.city, h.st, h.zip ?? null, inMetro(h) ? h.cbsa : null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
       states.map((x) => STATE_LETTER[x]).join(''), h.inactive ? 1 : 0, h.bedsSrc ?? null,
     ]),
   };

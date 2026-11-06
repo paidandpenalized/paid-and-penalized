@@ -8,6 +8,7 @@ import { conditionShort } from '../derive.js';
 import { HOSPITALS_PATH, csvPath } from '../links.js';
 import { hospitalsCsvName } from '../csv.js';
 import { byId } from '../numbers.js';
+import { SORT_KEYS } from './place-table-data.js';
 
 // The search asset's row fields, in order (the search box and Worksheet R's box read them). name: the hospital as CMS lists it.
 // The explorer's table rows are the place pages' rows asset (place-table-data.js placeRowsAsset), one asset for both.
@@ -22,20 +23,12 @@ export function hospitalsAsset(hospitals, places = []) {
   return { hospitalPath: HOSPITALS_PATH, fields: FIELDS, rows, places };
 }
 
-// The sorts the explorer offers (name A to Z first, the rest high to low, blanks last): the key is one of client/place-rows.js sortRows'.
-export const SORTS = Object.freeze([
-  { key: 'name', copy: 'exploreSortName' },
-  { key: 'cut', copy: 'exploreSortCut' },
-  { key: 'dollars', copy: 'exploreSortDollars' },
-  { key: 'beds', copy: 'exploreSortBeds' },
-]);
-
 // The filter controls' options, from the hospitals: states (codes, in order), peer groups present, the teaching statuses
-// present (in TEACH_LABEL's order) with their labels, the bed bands, the conditions (key and short name) and the page size.
+// present (in TEACH_LABEL's order) with their labels, the bed bands, the conditions (key and short name), the page size and the sorts (name A to Z first, the rest as the place table has them).
 // conditions: the file's [{ key, short }]; fy: the edition's year (the full hospitals CSV's folder).
 export function exploreControls(hospitals, conditions, fy) {
   const states = [...new Set(hospitals.map((h) => h.st))].sort();
   const peers = [...new Set(hospitals.map((h) => h.peer).filter((p) => p != null))].sort((a, b) => a - b);
   const teach = Object.keys(TEACH_LABEL).filter((k) => hospitals.some((h) => h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
-  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: SORTS, csvHref: csvPath(fy, hospitalsCsvName(fy)) };
+  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: ['name', ...SORT_KEYS.filter((k) => k !== 'name')], csvHref: csvPath(fy, hospitalsCsvName(fy)) };
 }

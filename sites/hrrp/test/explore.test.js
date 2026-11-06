@@ -6,11 +6,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createContext } from '../../../pipeline/site/context.js';
 import { withTemp } from '../../../pipeline/test/helpers.js';
-import { FIELDS, SORTS, exploreControls, hospitalsAsset } from '../web/figures/explore-data.js';
+import { FIELDS, exploreControls, hospitalsAsset } from '../web/figures/explore-data.js';
 import { explorePart } from '../web/figures/explore.js';
 import { hospitalRow } from '../web/figures/place-row.js';
-import { placeRowsAsset } from '../web/figures/place-table-data.js';
-import { csvSubset, filterRows, placeRows, sortRows } from '../client/place-rows.js';
+import { hospitalsSection } from '../web/figures/place-table.js';
+import { PLACE_ROW_FIELDS, SORT_KEYS, hospitalsTable, placeRowsAsset } from '../web/figures/place-table-data.js';
+import { SORTS, csvSubset, filterRows, placeRows, sortRows } from '../client/place-rows.js';
 import { statusLine } from '../client/pager.js';
 import { hospitalCsv } from '../web/csv.js';
 import { generateHrrp } from '../web/generate.js';
@@ -43,13 +44,14 @@ test('the controls\' options come from the hospitals: states, peer groups, teach
   assert.equal(c.conds.length, 6);
   assert.equal(c.conds[0].short, 'Heart attack');
   assert.equal(c.pageSize, 25);
-  assert.deepEqual(SORTS.map((s) => s.key), ['name', 'cut', 'dollars', 'beds'], 'name A to Z first, the rest high to low');
+  assert.deepEqual(c.sorts, ['name', 'cut', 'dollars', 'beds'], 'name A to Z first, the rest high to low');
+  assert.deepEqual(Object.keys(SORTS).sort(), [...SORT_KEYS].sort(), 'the browser sorts exactly the keys the pages offer');
   assert.match(c.csvHref, /^\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv$/);
 });
 
 test('the shell: every filter control, an empty table body, the asset address, hidden until a script has the rows', () => {
   const text = explorePart(exploreControls(HOSPITALS, CONDITIONS, META.fy), { url: '/assets/hrrp-hospitals.abc.json' }).text;
-  assert.match(text, /<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-csv="[^"]+\.csv" data-src="\/assets\/hrrp-hospitals\.abc\.json" data-page-size="25" hidden>/);
+  assert.match(text, /<div class="ht explore ph" id="explore-table" data-ph data-all data-prefix="ex" data-nojs="ex-nojs" data-note="ex-note" data-csv="[^"]+\.csv" data-src="\/assets\/hrrp-hospitals\.abc\.json" data-page-size="25" hidden>/);
   for (const id of ['ex-text', 'ex-state', 'ex-peer', 'ex-cond', 'ex-teach', 'ex-beds', 'ex-loc', 'ex-pen', 'ex-sort']) assert.ok(text.includes(`id="${id}"`), id);
   assert.match(text, /<tbody><\/tbody>/);
   assert.ok(!text.includes('<tr><th scope="row"'), 'no data row in the page');
@@ -59,8 +61,32 @@ test('the shell: every filter control, an empty table body, the asset address, h
   assert.match(text, /<option value="cut">Cut, highest first<\/option>/);
   assert.match(text, /id="ex-empty" hidden>No hospital matches these filters\./);
   assert.match(text, /data-template="\{from\}–\{to\} of \{n\}"/);
-  assert.match(text, /class="ht-nojs">The searchable table needs JavaScript\.[^<]*<a href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>/);
+  assert.match(text, /class="ht-nojs" id="ex-nojs">The searchable table needs JavaScript\.[^<]*<a href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>/);
+  assert.match(text, /<th scope="col" class="num">Peer group<\/th>/, 'the peer column is a number column, as in the place table');
+  assert.match(text, /id="ex-note" role="status" data-loading="Loading[^"]*" data-text="[^"]*try again[^"]*"/, 'the loading line is the retry line');
+  assert.match(text, /<a class="fig__btn" href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>[^<]+<\/a>/, 'the whole list stays a visible link beside the download button');
+  assert.match(text, /data-download-failed="[^"]+"/);
   assert.ok(!explorePart(exploreControls(HOSPITALS, CONDITIONS, META.fy)).text.includes('data-src'), 'no source: no data-src');
+});
+
+test('the explorer and a place page\'s hospitals table share one filter row (same controls, same ids under their own prefix)', () => {
+  const ids = (text, prefix) => [...text.matchAll(new RegExp(`id="${prefix}-(\\w+)"`, 'g'))].map((m) => m[1]).filter((x) => ['text', 'state', 'peer', 'cond', 'teach', 'beds', 'loc', 'pen', 'sort'].includes(x));
+  const explorer = explorePart(exploreControls(HOSPITALS, CONDITIONS, META.fy)).text;
+  const place = buildPlaces(HOSPITALS, META).list[0];
+  const section = hospitalsSection({ ...hospitalsTable(place, META), states: ['ZY', 'ZZ'] }, { name: 'X', conditions: CONDITIONS, fy: META.fy }).text;
+  assert.deepEqual(ids(section, 'ph').sort(), ids(explorer, 'ex').sort());
+  const order = (text) => [...text.matchAll(/<option value="(cut|dollars|name|beds)">/g)].map((m) => m[1]);
+  assert.deepEqual(order(section), SORT_KEYS);
+  assert.deepEqual(order(explorer), ['name', 'cut', 'dollars', 'beds']);
+});
+
+test('the rows asset also feeds the search: the hospital pages\' path, the places, and each hospital\'s ZIP', () => {
+  const places = [['state', 'zy', 'Zy', `${PROGRAM_PATH}state/zy/`, 2]];
+  const a = placeRowsAsset(HOSPITALS, META, CONDITIONS, places);
+  assert.equal(a.hospitalPath, HOSPITALS_PATH);
+  assert.deepEqual(a.places, places);
+  for (const k of FIELDS) assert.ok(a.fields.includes(k), `the search reads ${k}`);
+  assert.ok(a.rows.every((r) => r.length === PLACE_ROW_FIELDS.length));
 });
 
 test('the program page carries the explorer, and none of the hospital rows', () => {
@@ -86,6 +112,9 @@ test('the build writes the search asset and the rows asset; the program page\'s 
     const program = readFileSync(join(dir, PROGRAM_PATH, 'index.html'), 'utf8');
     assert.ok(program.includes(` data-src="/assets/${rows[0]}"`));
     assert.ok(!/<div class="ht explore[^>]*data-src="\/assets\/hrrp-hospitals\./.test(program), 'the explorer does not read the search asset');
+    assert.ok(!program.includes(`/assets/${search[0]}`), 'the program page reads the rows asset only: one file for the search, the worksheet box and the explorer');
+    const hospitalPage = readFileSync(join(dir, HOSPITALS_PATH, `${data.hospitals[0].id.toLowerCase()}/index.html`), 'utf8');
+    assert.ok(hospitalPage.includes(`/assets/${search[0]}`), 'a hospital page searches the small asset');
   }));
 
 // ---------- the browser's rules, on the rows asset ----------

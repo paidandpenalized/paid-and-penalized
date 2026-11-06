@@ -35,7 +35,7 @@ export function filterRows(rows, want) {
 }
 
 // Highest first, a blank last, ties in the table's own order (rank: cut, then dollars, then CCN).
-const SORTS = {
+export const SORTS = {
   cut: (a, b) => a.rank - b.rank,
   dollars: (a, b) => (b.h.pen ?? -1) - (a.h.pen ?? -1) || a.rank - b.rank,
   name: (a, b) => a.h.name.localeCompare(b.h.name, 'en') || a.rank - b.rank,

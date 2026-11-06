@@ -42,6 +42,19 @@ describe('hero search', () => {
     await assertQuiet(seen, 'hero search');
   }));
 
+  it('the hero, the top bar, Worksheet R\'s box and the explorer read one file, fetched once', () => withPage(tabs, { path: PATH }, async (page) => {
+    await page.locator('#hero-q').waitFor({ state: 'visible' });
+    await listsHospital(page.locator('#hero-q'), page.locator('#hero-list').getByRole('option'), OPEN);
+    await listsHospital(searchIn(page, '.topbar').box, searchIn(page, '.topbar').list, OPEN);
+    await page.locator('#explore').scrollIntoViewIfNeeded();
+    await page.locator('#explore-table').waitFor({ state: 'visible' });
+    const ws = page.locator('#ws-pick-q');
+    await ws.scrollIntoViewIfNeeded();
+    await listsHospital(ws, page.locator('#ws-pick-list').getByRole('option'), OPEN);
+    assert.equal(await fetchesOf(page, 'hrrp-place-rows'), 1, 'one fetch of the rows asset for all four');
+    assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 0, 'the small search asset is never fetched on this page');
+  }));
+
   it('a state name lists a place, and Enter opens its page', () => withPage(tabs, { path: PATH }, async (page) => {
     const input = page.locator('#hero-q');
     await input.waitFor({ state: 'visible' });
@@ -60,15 +73,16 @@ describe('hero search', () => {
 
 describe('the top-bar search on the other pages', () => {
   const tabs = useContext(shared);
-  const pages = [['a hospital page', pathOf(OPEN)], ['a place page', bigState().url], ['Methods', METHODS_PATH]];
+  // The file each page's search reads: the small search asset, or on a place page the rows asset its table reads too.
+  const pages = [['a hospital page', pathOf(OPEN), 'hrrp-hospitals'], ['a place page', bigState().url, 'hrrp-place-rows'], ['Methods', METHODS_PATH, 'hrrp-hospitals']];
 
-  for (const [where, path] of pages) {
+  for (const [where, path, asset] of pages) {
     it(`${where}: the hospitals index waits for the box, then a CCN lists its hospital`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
       const { box, list } = searchIn(page, '.topbar');
       await box.waitFor({ state: 'visible' });
-      assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 0, 'nothing is fetched before the box is used');
+      assert.equal(await fetchesOf(page, asset), 0, 'nothing is fetched before the box is used');
       await listsHospital(box, list, OPEN);
-      assert.equal(await fetchesOf(page, 'hrrp-hospitals'), 1, 'the index is fetched once');
+      assert.equal(await fetchesOf(page, asset), 1, 'the index is fetched once');
       await assertQuiet(seen, 'top-bar search');
     }));
   }
@@ -126,6 +140,26 @@ describe('Worksheet R hospital swap', () => {
     const [download] = await Promise.all([page.waitForEvent('download'), fig.locator('[data-figure-csv]').click()]);
     assert.equal(download.suggestedFilename(), await fig.locator('[data-figure-csv]').getAttribute('data-figure-csv'), 'the CSV is named as the button says');
     await assertQuiet(seen, 'worksheet swap');
+  }));
+
+  it('picking the same hospital again announces again (the status is cleared before it is set)', () => withPage(tabs, { path: PATH }, async (page) => {
+    const input = page.locator('#ws-pick-q');
+    await input.scrollIntoViewIfNeeded();
+    const h = swapSamples((await page.locator('.wsr-holder .wsr__id a').getAttribute('href')).split('/').filter(Boolean).pop())[0];
+    await listsHospital(input, page.locator('#ws-pick-list').getByRole('option'), h);
+    await input.press('Enter');
+    const status = page.locator('.wsr-pick__status[role="status"]');
+    await eventually(async () => /now shows that hospital/.test(await status.innerText()), 'the first pick is announced');
+    await page.evaluate(() => {
+      const el = document.querySelector('.wsr-pick__status');
+      window.__records = [];
+      new MutationObserver((rs) => window.__records.push(...rs.map((r) => [r.removedNodes.length, r.addedNodes.length]))).observe(el, { childList: true });
+    });
+    await listsHospital(input, page.locator('#ws-pick-list').getByRole('option'), h);
+    await input.press('Enter');
+    await eventually(async () => (await page.evaluate(() => window.__records)).some(([, added]) => added > 0), 'the repeat is announced');
+    const records = await page.evaluate(() => window.__records);
+    assert.ok(records.some(([removed, added]) => removed > 0 && added === 0), `the old words are cleared on their own first: ${JSON.stringify(records)}`);
   }));
 
   it('a CCN the asset does not hold leaves the example in place', () => withPage(tabs, { path: PATH }, async (page) => {
