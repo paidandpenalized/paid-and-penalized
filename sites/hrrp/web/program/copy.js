@@ -497,6 +497,9 @@ export const COPY = {
   // Part 5, every hospital: the explorer's shell (figures/explore.js); the rows come from the hospitals asset.
   exploreIntro: { text: 'Search every hospital in the program and filter by place, peer group, size and the conditions it was cut for.', claim: null },
   exploreNoScript: { text: 'The searchable table needs JavaScript. Without it, every hospital is listed on its state’s page: use the state map and the list of states above.', claim: null },
+  exploreNoScriptCsv: { text: 'Or download the full list as a CSV file.', claim: null },
+  exploreCopied: { text: 'Copied.', claim: null },
+  exploreCopyFailed: { text: 'The rows could not be copied. Use the download instead.', claim: null },
   exploreRetry: { text: 'The hospital list did not load. Reload the page to try again.', claim: null },
   exploreFilters: { text: 'Filters', claim: null },
   exploreText: { text: 'Name, city or CCN', claim: null },

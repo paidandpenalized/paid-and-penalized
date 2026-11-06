@@ -43,14 +43,15 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const program = programView(area);
   // The explorer's rows are a content-hashed asset the page reads, not part of the page.
   const placeRows = places.list.map((p) => [p.kind, p.key, p.name, p.path, p.hospitals.length]);
-  const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, meta, placeRows)));
+  const hospitalsUrl = ctx.asset('hrrp-hospitals', 'json', JSON.stringify(hospitalsAsset(hospitals, placeRows)));
   // Worksheet R's hospital box reads every hospital's worksheet inputs, loaded when a hospital is picked.
   const worksheetUrl = ctx.asset('hrrp-worksheet', 'json', JSON.stringify(worksheetAsset(hospitals, meta)));
   // Step 2's swarms past heart failure's: drawn here, fetched by the page when a condition is first picked.
   const swarmUrl = ctx.asset('hrrp-swarm', 'json', JSON.stringify(swarmRest({ how: program.how })));
-  // The place pages' hospitals tables carry their first page; the rest are read from this asset near the table.
+  // The place pages' hospitals tables carry their first page; the rest are read from this asset near the table. The program page's
+  // explorer reads the same asset (every hospital, filtered in the browser), so its rows are never in the page.
   const placeRowsUrl = ctx.asset('hrrp-place-rows', 'json', JSON.stringify(placeRowsAsset(hospitals, meta, area.edition.conditions)));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl, worksheetUrl, swarmUrl }) });
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ view: program, robots, assets, hospitalsUrl, worksheetUrl, swarmUrl, rowsUrl: placeRowsUrl }) });
   ctx.emit({ path: program.picture.csvHref, noindex: robots !== null, text: hospitalCsv(program.picture.largest.map((r) => r.h)) });
   ctx.emit({ path: program.map.csvHref, noindex: robots !== null, text: placeCsv(statesCsvRows(program.map.pages)) });
   // The full hospitals file and its dictionary: files, then the dictionary as a page.

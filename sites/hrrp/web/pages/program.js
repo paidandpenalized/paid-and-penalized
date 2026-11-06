@@ -55,16 +55,16 @@ ${body}
 </section>`;
 
 // view: programView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths;
-// hospitalsUrl: the hospitals asset's path the search and the explorer read (null: the shell has no source); worksheetUrl:
+// hospitalsUrl: the hospitals asset's path the search reads (null: the shell has no source); rowsUrl: the rows asset the explorer reads (null: no explorer source); worksheetUrl:
 // the worksheet asset Worksheet R's hospital box reads (null: no box); swarmUrl: the asset holding Step 2's other five swarms (null: in the page).
-export function programPage({ view, robots, assets, hospitalsUrl = null, worksheetUrl = null, swarmUrl = null }) {
+export function programPage({ view, robots, assets, hospitalsUrl = null, worksheetUrl = null, swarmUrl = null, rowsUrl = null }) {
   const figure = counter();
   const bodies = {
     how: howPart(view.how, { figure, edition: view.edition, estimateTag, hospitalsUrl, worksheetUrl, swarmUrl }),
     picture: picturePart(view.picture, { figure, edition: view.edition }),
     map: mapPart(view.map, { figure, edition: view.edition }),
     history: historyPart(view.history, { figure }),
-    explore: explorePart(view.explore, { url: hospitalsUrl }),
+    explore: explorePart(view.explore, { url: rowsUrl }),
     research: researchPart(view.research),
   };
   const body = html`<article class="wrap page page--prog prog">

@@ -175,10 +175,12 @@
 .place__tbl > * { min-width: 0; margin-block: 0; }
 .kids__table { min-width: 34rem; }
 .ph__table { min-width: 44rem; }
+.ph__tag { display: inline-block; margin-left: 4px; padding: 0 6px; border: 1px solid var(--ink-2); color: var(--ink-2); font: 600 var(--fs-xs)/1.5 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.ph__src { color: var(--ink-2); font-size: var(--fs-xs); white-space: nowrap; }
 .kids__pager, .kids__status { justify-self: start; }
-.kids__pager[hidden], .kids__status[hidden], .ph__status[hidden], .ph__controls[hidden], .place__tbl button[hidden], .ph .printout[hidden] { display: none; }
+.kids__pager[hidden], .kids__status[hidden], .ph__status[hidden], .ph__controls[hidden], .place__tbl button[hidden], .explore button[hidden], .ph .printout[hidden] { display: none; }
 .ph .ht__check { align-self: end; }
-.place__tbl .fig__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 0; }
+.place__tbl .fig__actions, .explore .fig__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 0; }
 .place__tbl .fig__btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .meth__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px 56px; }
 @media (min-width: 960px) { .meth__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; } }
@@ -316,6 +318,8 @@
 /* The explorer's shell: the filters wrap on a phone; the whole thing stays hidden until the page's script has the rows. */
 .ht { display: grid; gap: 12px; }
 .ht[hidden], .ht-empty[hidden] { display: none; }
+.explore { grid-template-columns: minmax(0, 1fr); }
+.explore > * { min-width: 0; margin-block: 0; }
 .ht-nojs { margin-top: 12px; max-width: 52ch; color: var(--ink-2); }
 .ht-retry:empty { display: none; }
 .ht__controls { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: end; }

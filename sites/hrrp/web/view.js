@@ -226,7 +226,7 @@ export function programView(ctx) {
     picture: pictureData(ctx),
     map: mapData(ctx),
     history: { lines: ctx.lines, windows: windowRows(ctx), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
-    explore: exploreControls(ctx.hospitals, edition.conditions),
+    explore: exploreControls(ctx.hospitals, edition.conditions, meta.fy),
     research: researchData(ctx.research),
   };
 }

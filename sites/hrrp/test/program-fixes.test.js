@@ -56,10 +56,10 @@ test('the hospitals asset carries the places the search finds, and the worksheet
   const data = loadHrrpOnce();
   const places = buildPlaces(data.hospitals, data.meta);
   const rows = places.list.map((p) => [p.kind, p.key, p.name, p.path, p.hospitals.length]);
-  const asset = hospitalsAsset(data.hospitals, data.meta, rows);
+  const asset = hospitalsAsset(data.hospitals, rows);
   assert.equal(asset.places.length, places.list.length);
   assert.ok(asset.places.every(([kind, , , path, n]) => ['region', 'division', 'state', 'metro'].includes(kind) && path.startsWith('/hrrp/') && n > 0));
-  assert.deepEqual(hospitalsAsset(data.hospitals, data.meta).places, [], 'none without the argument');
+  assert.deepEqual(hospitalsAsset(data.hospitals).places, [], 'none without the argument');
   const sheets = worksheetAsset(data.hospitals, data.meta);
   assert.equal(sheets.rows.length, data.hospitals.length);
   assert.deepEqual(sheets.meta, { nm: data.meta.nm, peerMedians: data.meta.peerMedians });

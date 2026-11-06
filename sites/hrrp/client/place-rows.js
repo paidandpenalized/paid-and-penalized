@@ -4,17 +4,18 @@
 import { CCN } from '../../../engine/js/ccn.js';
 import { CONDS } from '../../../engine/js/hrrp/formula.js';
 import { applyFilters } from '../../../engine/js/hrrp/filters.js';
+import { count } from '../../../web/client/format.js';
 import { STATE_OF } from '../web/figures/glyph.js';
 import { PLACE_ROW_FIELDS } from '../web/figures/place-table-data.js';
 
-// asset: the parsed JSON; scope: { cbsa } or { states: [codes] } (the page's data attributes). Returns [{ h, states, rank, text }] in the
-// asset's order (largest cut first), ranked from 1 within the place. A row with a bad CCN or condition string is dropped; an asset
+// asset: the parsed JSON; scope: { cbsa }, { states: [codes] } (a place page's data attributes) or { all: true } (the program page's explorer). Returns [{ h, states, rank, text }] in the
+// asset's order (largest cut first), ranked from 1 within the scope. A row with a bad CCN or condition string is dropped; an asset
 // without the fields it should have throws.
 export function placeRows(asset, scope) {
   const at = Object.fromEntries(PLACE_ROW_FIELDS.map((k) => [k, asset.fields.indexOf(k)]));
   if (Object.values(at).includes(-1) || !Array.isArray(asset.rows) || !Array.isArray(asset.conditions)) throw new Error('place rows: the asset is missing fields');
   const states = new Set(scope.states ?? []);
-  const kept = asset.rows.filter((r) => CCN.test(r[at.id]) && /^[cbfn]{6}$/.test(r[at.conds]) && (scope.cbsa ? r[at.cbsa] === scope.cbsa : states.has(r[at.st])));
+  const kept = asset.rows.filter((r) => CCN.test(r[at.id]) && /^[cbfn]{6}$/.test(r[at.conds]) && (scope.all || (scope.cbsa ? r[at.cbsa] === scope.cbsa : states.has(r[at.st]))));
   return kept.map((r, i) => {
     const h = Object.fromEntries(PLACE_ROW_FIELDS.filter((k) => k !== 'conds').map((k) => [k, r[at[k]]]));
     const states = [...r[at.conds]].map((c) => STATE_OF[c]);
@@ -62,4 +63,11 @@ export function csvSubset(text, ids) {
   const [header, ...lines] = records(text);
   const byCcn = new Map(lines.map((line) => [line.slice(0, line.indexOf(',')), line]));
   return [header, ...ids.map((id) => byCcn.get(id)).filter(Boolean)].join('');
+}
+
+// The status line for a page of n rows: the template's {from}, {to} and {n} filled with the page's thousands separators; empty with no row.
+export function statusLine(template, { page, size, n }) {
+  if (!n) return '';
+  const from = (page - 1) * size;
+  return template.replace('{from}', count(from + 1)).replace('{to}', count(Math.min(page * size, n))).replace('{n}', count(n));
 }

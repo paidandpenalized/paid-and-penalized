@@ -8,7 +8,7 @@ import { STATE_LETTER } from './glyph.js';
 import { areaCsvName, inMetro, sizedRows } from './neighbors-data.js';
 
 // The hospitals table's first page is in the place page; the rest come from one asset the page's script fetches near the table.
-export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds']);
+export const PLACE_ROW_FIELDS = Object.freeze(['id', 'name', 'alias', 'city', 'st', 'cbsa', 'red', 'pen', 'peer', 'beds', 'teach', 'urban', 'paf', 'conds', 'inactive', 'bedsSrc']);
 
 // The first column of a child table's CSV, by the kind of place the table is on.
 export const KIDS_COLUMN = Object.freeze({ region: 'Division', division: 'State', state: 'Metro area' });
@@ -44,7 +44,7 @@ export function hospitalsTable(place, meta) {
   };
 }
 
-// The asset the hospitals tables read: every hospital in the program as one row (PLACE_ROW_FIELDS), largest cut first, with the
+// The asset the hospitals tables read (the place pages' and the program page's explorer): every hospital in the program as one row (PLACE_ROW_FIELDS), largest cut first, with the
 // conditions' short names for the six-condition glyph's words. hospitals: the file's rows; conditions: the edition's [{ key, short }].
 export function placeRowsAsset(hospitals, meta, conditions) {
   return {
@@ -52,7 +52,7 @@ export function placeRowsAsset(hospitals, meta, conditions) {
     conditions: conditions.map(({ key, short }) => ({ key, short })),
     rows: sizedRows(hospitals, meta).map(({ h, states }) => [
       h.id, h.name, h.alias ?? null, h.city, h.st, inMetro(h) ? h.cbsa : null, h.red, h.pen ?? null, h.peer, h.beds ?? null, h.teach ?? null, h.urban ?? null, h.paf,
-      states.map((x) => STATE_LETTER[x]).join(''),
+      states.map((x) => STATE_LETTER[x]).join(''), h.inactive ? 1 : 0, h.bedsSrc ?? null,
     ]),
   };
 }
