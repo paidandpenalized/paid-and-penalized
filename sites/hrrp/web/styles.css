@@ -194,7 +194,7 @@
 .sources { padding-left: 1.2em; }
 
 /* Worksheet R (Part 1, Step 5): the form's title bar and three fields, the green-bar table of lines 1 to 6, then lines 7 to 9. */
-.wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; }
+.wsr { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; min-width: 0; border-left: var(--rule) solid var(--pen); }
 .wsr-holder { min-width: 0; }
 .omni#ws-pick { max-width: 640px; margin-bottom: 14px; }
 .wsr-pick__status { margin: 6px 0 0; }
