@@ -502,7 +502,7 @@ export const COPY = {
   exploreCopyFailed: { text: 'The rows could not be copied. Use the download instead.', claim: null },
   exploreRetry: { text: 'The hospital list did not load. Reload the page to try again.', claim: null },
   exploreFilters: { text: 'Filters', claim: null },
-  exploreText: { text: 'Name, city or CCN', claim: null },
+  exploreText: { text: 'Name, former name, city or CCN', claim: null },
   exploreState: { text: 'State', claim: null },
   explorePeer: { text: 'Peer group', claim: null },
   exploreGroup: { text: 'Group {n}', claim: null },

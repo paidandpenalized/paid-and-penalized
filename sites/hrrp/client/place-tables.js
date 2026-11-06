@@ -80,7 +80,7 @@ export function mountHospitals(box) {
     download.hidden = false;
     download.addEventListener('click', async () => {
       try {
-        saveCsv(await subset(), box.dataset.csv.split('/').pop());
+        saveCsv(await subset(), box.dataset.csv.split('/').pop().replace(/\.csv$/, '-filtered.csv'));
       } catch {
         // The full file stays a link in the page's note.
       }

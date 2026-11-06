@@ -54,7 +54,7 @@ test('the shell: every filter control, an empty table body, the asset address, h
   assert.match(text, /<option value="3">Group 3<\/option>/);
   assert.match(text, /<option value="cut">Cut, highest first<\/option>/);
   assert.match(text, /id="ex-empty" hidden>No hospital matches these filters\./);
-  assert.match(text, /data-template="Showing \{from\} to \{to\} of \{n\}"/);
+  assert.match(text, /data-template="\{from\}–\{to\} of \{n\}"/);
   assert.match(text, /class="ht-nojs">The searchable table needs JavaScript\.[^<]*<a href="\/data\/hrrp\/fy\d+\/hrrp-fy\d+-hospitals\.csv" download>/);
   assert.ok(!explorePart(exploreControls(HOSPITALS, CONDITIONS, META.fy)).text.includes('data-src'), 'no source: no data-src');
 });
@@ -130,9 +130,9 @@ test('sort: name A to Z, the rest high to low, a blank last', async () => {
 
 test('the status line: 1 to 25 of N with thousands separators; none with no rows', async () => {
   const { statusLine } = await import('../client/place-rows.js');
-  const tpl = 'Showing {from} to {to} of {n}';
-  assert.equal(statusLine(tpl, { page: 1, size: 25, n: 3123 }), 'Showing 1 to 25 of 3,123');
-  assert.equal(statusLine(tpl, { page: 125, size: 25, n: 3123 }), 'Showing 3,101 to 3,123 of 3,123');
+  const tpl = '{from}–{to} of {n}';
+  assert.equal(statusLine(tpl, { page: 1, size: 25, n: 3123 }), '1–25 of 3,123');
+  assert.equal(statusLine(tpl, { page: 125, size: 25, n: 3123 }), '3,101–3,123 of 3,123');
   assert.equal(statusLine(tpl, { page: 1, size: 25, n: 0 }), '');
 });
 
@@ -145,4 +145,10 @@ test('copy and download: the filtered rows, in the current sort, from the hospit
   const cells = csv.trimEnd().split('\n').slice(1).map((l) => l.slice(0, l.indexOf(',')));
   assert.deepEqual(cells, shown.map((r) => r.h.id));
   assert.deepEqual(cells, ['990014', '990011']);
+});
+
+test('the shared row names the place and the CCN: "city, ST · CCN id"', async () => {
+  const { hospitalRow } = await import('../web/figures/place-row.js');
+  const [r] = await explorerRows([hospital({ id: '990014' })]);
+  assert.match(String(hospitalRow(r, CONDITIONS)), /<span class="nb__place">[^<]+, [A-Z]{2} · CCN 990014<\/span>/);
 });

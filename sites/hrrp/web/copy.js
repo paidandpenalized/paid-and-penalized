@@ -70,7 +70,7 @@ export const COPY = {
 
   // A paged table's pager and status line (figures/pager.js); the table's own words say what the pages hold.
   pagerPage: { text: 'Page {n}', claim: null },
-  pagerStatus: { text: 'Showing {from} to {to} of {n}', claim: null },
+  pagerStatus: { text: '{from}–{to} of {n}', claim: null },
 
   // The section menu (pages/parts.js): the six Parts of the program page, then Methods (web/copy.js).
   navHow: { text: 'How it works', claim: null },
