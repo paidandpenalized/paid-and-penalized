@@ -99,4 +99,6 @@ export const PLACE_ZERO_WIDTH = 0.3;
 export const PLACE_SHADES = Object.freeze([0.25, 0.5, 1, 2]);
 export const PLACE_SIZES = 4;
 export const PLACE_DENSE = 160;
+// A place page's child table (divisions, states or metro areas) shows this many rows to a page; its hospitals table shows EXPLORE_PAGE_SIZE.
+export const PLACE_KIDS_PAGE_SIZE = 25;
 export const PLACE_MAP_WIDE = 560;

@@ -64,7 +64,13 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   for (const hospital of hospitals) {
     ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, shared }) });
   }
-  for (const place of places.list) ctx.emit({ path: place.path, robots, text: placePage({ view: placeView(place, area), robots, assets, shared: area }) });
+  for (const place of places.list) {
+    const view = placeView(place, area);
+    ctx.emit({ path: place.path, robots, text: placePage({ view, robots, assets, shared: area }) });
+    // The files its two tables link: the places inside it, and its hospitals (a metro area's are the area file written above).
+    if (view.children) ctx.emit({ path: csvPath(fy, view.children.csvName), noindex: robots !== null, text: placeCsv(view.children.csvRows, view.children.column) });
+    if (view.hospitals.csvOwn) ctx.emit({ path: csvPath(fy, view.hospitals.csvName), noindex: robots !== null, text: hospitalCsv(view.hospitals.rows.map((r) => r.h)) });
+  }
   // Methods last, with the count of the pages under the program.
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ view: methodsView(area), robots, assets }) });
   log(`HRRP: ${1 + hospitals.length + places.list.length + 2} pages under ${PROGRAM_PATH}`);

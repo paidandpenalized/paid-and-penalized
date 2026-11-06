@@ -1,6 +1,6 @@
 # Data dictionary: Readmissions files
 
-These files hold what the Readmissions pages show for the {edition} edition of the Hospital Readmissions Reduction Program (HRRP). `{file}` has one row for each hospital in the program's file: its place, its payment adjustment factor and cut, this site's estimate of the dollars, and, for each of the six conditions, the hospital's cases, its excess readmission ratio and whether it was penalized on the condition. The states file lists the states the same way. They are files from Paid & Penalized (paidandpenalized.org). They hold no patient information.
+These files hold what the Readmissions pages show for the {edition} edition of the Hospital Readmissions Reduction Program (HRRP). `{file}` has one row for each hospital in the program's file: its place, its payment adjustment factor and cut, this site's estimate of the dollars, and, for each of the six conditions, the hospital's cases, its excess readmission ratio and whether it was penalized on the condition. The states file lists the states the same way, and each state, division, region and metro area page has files for the places inside it and for its hospitals. They are files from Paid & Penalized (paidandpenalized.org). They hold no patient information.
 
 schema_version: 1
 
@@ -20,7 +20,7 @@ schema_version: 1
 
 ## Hospital files
 
-`{file}`, the largest-penalties file on the program page and the area files on the hospital pages share these 31 columns, in this order. An area file (`hrrp-fy…-metro-<code>-hospitals.csv` for a metro area, `hrrp-fy…-state-<xx>-hospitals.csv` for the hospitals of a state outside any metro area) lists the hospitals the "other hospitals" table shows on the pages of that area, largest cut first.
+`{file}`, the largest-penalties file on the program page and the area files on the hospital pages share these 31 columns, in this order. An area file (`hrrp-fy…-metro-<code>-hospitals.csv` for a metro area, `hrrp-fy…-state-<xx>-hospitals.csv` for the hospitals of a state outside any metro area) lists the hospitals the "other hospitals" table shows on the pages of that area, largest cut first. A place page's hospitals table has the same 31 columns in its own file, largest cut first: `hrrp-fy…-place-<kind>-<key>-hospitals.csv`, where `<kind>` is `region`, `division`, `state` or `metro` and `<key>` is the place's address (a state by its code, a metro area by its code). A metro area with more than one hospital uses the metro area file above instead, since it holds the same hospitals.
 
 | Column | Type | Meaning | Notes |
 |---|---|---|---|
@@ -58,11 +58,11 @@ schema_version: 1
 
 ## Area files
 
-The "Every state" file on the program page has these 8 columns, in this order. Every share is over the hospitals measured on at least one condition.
+The "Every state" file on the program page has these 8 columns, in this order. The files for the places inside a place have the same 8 columns, and differ only in the first column's name: `Division` (`hrrp-fy…-place-region-<key>-divisions.csv`, the divisions of a region), `State` (`hrrp-fy…-place-division-<key>-states.csv`, the states of a division) or `Metro area` (`hrrp-fy…-place-state-<key>-metros.csv`, the metro areas of a state, with a row for the hospitals outside them). A metro area across a state line counts the hospitals in that state only. Every share is over the hospitals measured on at least one condition.
 
 | Column | Type | Meaning | Notes |
 |---|---|---|---|
-| `State` | text | The state's name. | Which hospitals are in a state is as the state's page lists them. |
+| `State` | text | The state's name (the first column's name is `Division` or `Metro area` in the files for those places). | Which hospitals are in a state is as the state's page lists them. |
 | `Hospitals` | number | The hospitals in the area. |  |
 | `Hospitals measured` | number | Those measured on at least one condition (with {minCases} or more cases of it and a published ratio). | A hospital measured on nothing cannot take a cut, so every share below is over this count. |
 | `Hospitals penalized` | number | Those with a cut. |  |

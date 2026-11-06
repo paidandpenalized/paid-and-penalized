@@ -52,8 +52,9 @@ const keyOf = ({ dense, around }) => html`<div class="place__keybox"><p class="p
 // The map's dots, by draw order: the others (faint) first, then no cut, then the cuts from the smallest to the largest, big dots under small.
 const drawOrder = (a, b) => a.shade - b.shade || b.size - a.size;
 
-// place: buildPlaces() entry; md: place-data mapData(); ctx: the area context (shapes, counties, edition); n: the figure's number.
-export function mapFigure(place, md, ctx, n) {
+// place: buildPlaces() entry; md: place-data mapData(); ctx: the area context (shapes, counties, edition); nextFigure: the page's
+// counter, called only when the figure draws (a place with nothing to draw takes no number).
+export function mapFigure(place, md, ctx, nextFigure) {
   const { shapes } = ctx;
   if (!shapes || !md.own.length) return '';
   const metro = place.kind === 'metro';
@@ -105,7 +106,7 @@ export function mapFigure(place, md, ctx, n) {
     ]),
   };
   return figure({
-    n, takeaway, source: placeFill('mapSource', { edition: ctx.edition.label }), csvName: `hrrp-${place.kind}-${place.key}-map`,
+    n: nextFigure(), takeaway, source: placeFill('mapSource', { edition: ctx.edition.label }), csvName: `hrrp-${place.kind}-${place.key}-map`,
     chart: html`${narrow}
 ${wide}
 ${keyOf({ dense: md.dense, around })}`, note, table,

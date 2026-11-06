@@ -70,7 +70,9 @@ test('while unreleased, a production build sends X-Robots-Tag: noindex for the d
     const held = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     generateHrrp(held, { data, released: false, ...quiet });
     const files = held.noindexFiles;
-    assert.equal(files.length, 4 + areaGroups(data.hospitals, data.meta).size, 'largest-penalties, states, hospitals CSVs, the dictionary Markdown and one CSV for each area a hospital page tables');
+    const placeFiles = files.filter((p) => p.includes('-place-'));
+    assert.ok(placeFiles.length > 0, 'the place pages write files of their own');
+    assert.equal(files.length, 4 + areaGroups(data.hospitals, data.meta).size + placeFiles.length, 'largest-penalties, states, hospitals CSVs, the dictionary Markdown, one CSV for each area a hospital page tables and the place pages\' own');
     assert.ok(files.every((p) => p.startsWith('/data/hrrp/')), files.join());
     assert.ok(files.some((p) => p.endsWith('.csv')) && files.some((p) => p.endsWith('.md')));
     const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: files }));

@@ -17,6 +17,15 @@ export const areaCsvName = (fy, key) => `hrrp-fy${fy}-${key}-hospitals`;
 
 const bySize = (a, b) => b.h.red - a.h.red || (b.h.pen ?? -1) - (a.h.pen ?? -1) || byId(a.h.id, b.h.id);
 
+// A list of hospitals as table rows, largest cut first (then modeled dollars, then CCN): { h, states (condState for each
+// condition, in CONDS order), rank (1-based) }. A hospital page's area table and a place page's hospitals table share it.
+export function sizedRows(list, meta) {
+  return list.map((h) => {
+    const { byCond } = contrib(h, meta);
+    return { h, states: CONDS.map((k) => condState(h, k, meta, byCond)) };
+  }).sort(bySize).map((r, i) => ({ ...r, rank: i + 1 }));
+}
+
 // hospitals: the file's rows; meta: its meta. Returns a Map of area key -> { key, metro, name, state, rows, pages, nCut, csvName }
 // for each area with more than one hospital. rows: [{ h, states (condState for each condition, in CONDS order), rank (1-based) }];
 // pages: rows in chunks of NEIGHBORS_PAGE_SIZE.
@@ -31,10 +40,7 @@ export function areaGroups(hospitals, meta) {
   for (const [key, list] of groups) {
     if (list.length < 2) continue;
     const metro = key.startsWith('metro-');
-    const rows = list.map((h) => {
-      const { byCond } = contrib(h, meta);
-      return { h, states: CONDS.map((k) => condState(h, k, meta, byCond)) };
-    }).sort(bySize).map((r, i) => ({ ...r, rank: i + 1 }));
+    const rows = sizedRows(list, meta);
     const pages = [];
     for (let i = 0; i < rows.length; i += NEIGHBORS_PAGE_SIZE) pages.push(rows.slice(i, i + NEIGHBORS_PAGE_SIZE));
     out.set(key, {

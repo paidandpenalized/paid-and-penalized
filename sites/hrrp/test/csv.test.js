@@ -145,13 +145,12 @@ test('the dictionary lists every hospital column in file order, and nothing else
   assert.deepEqual(documented('Hospital files'), HOSPITAL_COLUMNS.map((c) => c.name));
 });
 
-test('the dictionary lists every column of the one area file the build writes (states), and names no other area file', () => {
+test('the dictionary lists every column of the area files (states and the places inside a place), and names the three first columns', () => {
   const area = documented('Area files');
   assert.deepEqual(area, placeColumns('State').map((c) => c.name));
-  const intro = DICTIONARY.split(/^## /m)[0];
-  assert.match(intro, /The states file lists the states/);
-  assert.doesNotMatch(intro, /metro areas, divisions|regions the same way/);
-  assert.ok(!/Metro area|Division|Region/.test(DICTIONARY.split(/^## /m).find((x) => x.startsWith('Area files'))), 'no word for an area file the build does not write');
+  const section = DICTIONARY.split(/^## /m).find((x) => x.startsWith('Area files'));
+  for (const label of ['Division', 'State', 'Metro area']) assert.ok(section.includes(`\`${label}\``), `the first column ${label}`);
+  assert.match(DICTIONARY.split(/^## /m)[0], /The states file lists the states the same way/);
 });
 
 test('the dictionary and Methods say a condition\'s penalized column is blank when it was not measured (too few cases or no published ratio), and the csv does that', () => {

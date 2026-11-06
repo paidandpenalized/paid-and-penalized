@@ -169,9 +169,18 @@
   .chart-dots--cut-1, .chart-dots--cut-2, .chart-dots--cut-3, .chart-dots--cut-4, .chart-dots--cut-5 { stroke: CanvasText; }
   .place__key:not(.place__key--dense) .usmap__sw--ring { background: Canvas; border-color: CanvasText; }
 }
-.place__kids { margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
-.kids { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 6px 24px; margin: 12px 0 0; padding: 0; list-style: none; }
-.kids a { display: inline-block; padding-block: 4px; }
+/* The two tables at a place's foot: the places inside it and its hospitals (figures/place-table.js). The hospitals table borrows the
+   hospital page's area-table look (.nb__*): a bar behind each cut, the place under the name. */
+.place__tbl { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 44px; padding-top: 24px; border-top: 1px solid var(--line); }
+.place__tbl > * { min-width: 0; margin-block: 0; }
+.kids__table { min-width: 34rem; }
+.ph__table { min-width: 44rem; }
+.kids__pager, .kids__status { justify-self: start; }
+.kids__pager[hidden], .kids__status[hidden], .ph__status[hidden], .ph__controls[hidden], .place__tbl button[hidden], .ph .printout[hidden] { display: none; }
+.ph__table tr[hidden] { display: none; }
+.ph .ht__check { align-self: end; }
+.place__tbl .fig__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 4px 0 0; }
+.place__tbl .fig__btn { display: inline-block; text-decoration: none; color: var(--ink); }
 .meth__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px 56px; }
 @media (min-width: 960px) { .meth__grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); align-items: start; } }
 .meth__sec { margin-top: 32px; }
@@ -415,3 +424,4 @@
 /* The map's dots: small, so a dense metro stays readable (the kit's pins are drawn for a numbered ring of ten). */
 .chart-pin--sm { r: 5px; }
 @media (forced-colors: active) { .nb__bar { background: Highlight; } .nb__table tr.is-current > * { background: transparent; } .nb__table tr.is-current { box-shadow: inset 4px 0 0 CanvasText; } }
+.ph .ht__check label { display: flex; align-items: center; gap: 8px; }

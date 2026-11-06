@@ -12,6 +12,7 @@ import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, N
 import { edition as editionOf, meanCutByYear, pafByYear } from './derive.js';
 import { historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
+import { childTable, hospitalsTable } from './figures/place-table-data.js';
 import { whatIfData } from './figures/whatif-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
@@ -247,19 +248,19 @@ const stateRank = (place, S, ctx) => {
   return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0) };
 };
 
-// The places inside this one, with their hospital counts: a state lists its metro areas (a metro across a state line
-// shows this state's hospitals only, as the source did) and the hospitals outside them.
+// The places inside this one, each with its summary (summarize's result over the hospitals of it that are in this place: a metro
+// across a state line shows this state's hospitals only, as the source did) for the child table, and for a state the hospitals
+// outside its metro areas (a row with no link). Largest first.
 function childRows(place) {
   const st = place.key.toUpperCase();
-  const row = (p) => {
-    const n = place.kind === 'state' ? p.hospitals.reduce((c, h) => c + (h.st === st ? 1 : 0), 0) : p.hospitals.length;
-    const label = place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st }) : p.name;
-    return { label, href: p.path, n, count: hospitals(n) };
-  };
-  const rows = place.children.map(row);
+  const make = (label, href, list) => ({ label, href, n: list.length, count: hospitals(list.length), s: summarize(list), nEstimated: list.filter((h) => h.pen != null).length });
+  const rows = place.children.map((p) => {
+    const list = place.kind === 'state' ? p.hospitals.filter((h) => h.st === st) : p.hospitals;
+    return make(place.kind === 'state' && p.states.length > 1 ? placeFill('childPart', { name: p.name, st }) : p.name, p.path, list);
+  });
   if (place.kind === 'state') {
     const outside = place.hospitals.filter((h) => !inMetro(h));
-    if (outside.length) rows.push({ label: placeT('childOutside'), href: null, n: outside.length, count: hospitals(outside.length) });
+    if (outside.length) rows.push(make(placeT('childOutside'), null, outside));
   }
   return rows.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 }
@@ -282,10 +283,11 @@ export function placeView(place, ctx) {
   const lead = deckLead(S, edition.label);
   const kind = placeT(KIND_KEY[place.kind]);
   const spans = place.kind === 'metro' && place.states.length > 1;
-  const children = CHILDREN_KEY[place.kind] ? { title: placeT(CHILDREN_KEY[place.kind]), rows: childRows(place) } : null;
+  const children = CHILDREN_KEY[place.kind] ? childTable(place, childRows(place), placeT(CHILDREN_KEY[place.kind]), ctx.meta) : null;
   return {
     name: place.name,
     path: place.path,
+    fy: ctx.meta.fy,
     edition: edition.label,
     heading: placeFill('pageTitle', { name: place.name, edition: edition.label }),
     description: placeFill('pageDescription', { name: place.name, lead }),
@@ -316,6 +318,7 @@ export function placeView(place, ctx) {
       peers: peersData(place.hospitals),
       trend: trendData(place.hospitals, ctx),
     },
+    hospitals: hospitalsTable(place, ctx.meta),
     back: placeT('back'),
   };
 }

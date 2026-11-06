@@ -2,22 +2,16 @@
 // a state or a metro area) so far: the breadcrumb, the kind, the name, the deck (the count of cuts, the average cut, a
 // state's rank, the estimated total) beside the six-field card compared with the nation, and the places inside it.
 // Then its figures (the map, the size of the cuts, which conditions drive the penalties, the peer groups, the average cut over time).
-// The child table and its hospitals' table come in the next batch.
+// Then the places inside it as a table and the area's hospitals as a table, each with its CSV.
 import { counter } from '../../../../web/charts/figure.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { conditionsFigure, mapFigure, peersFigure, sizeFigure, trendFigure } from '../figures/place.js';
+import { hospitalsSection, kidsTable } from '../figures/place-table.js';
 import { PROGRAM_PATH } from '../links.js';
 import { t } from '../place/copy.js';
 import { breadcrumb, estimateTag, recordCard, shellOf } from './parts.js';
-
-const children = (kids) => html`<section class="place__kids" aria-labelledby="kids-h">
-<h2 id="kids-h">${kids.title}</h2>
-<ul class="kids" role="list">
-${kids.rows.map((r) => html`<li>${r.href ? html`<a href="${r.href}">${r.label}</a>` : r.label} <span class="muted">${r.count}</span></li>
-`)}</ul>
-</section>`;
 
 // A figure under its title; a figure the place cannot draw (it is '') leaves no title and takes no number.
 const titled = (id, title, figureHtml) => (figureHtml ? html`<section class="place__fig" aria-labelledby="pf-${id}"><h2 class="place__figh" id="pf-${id}">${title}</h2>
@@ -29,7 +23,7 @@ function figuresOf(view, shared) {
   const f = view.figures;
   const n = counter();
   const edition = view.edition;
-  const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n()) : '';
+  const map = shared?.shapes ? mapFigure(f.place, f.map, shared, n) : '';
   const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n: n() }));
   const conditions = f.conditions.measuredAny
     ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n: n() }))
@@ -58,7 +52,8 @@ ${recordCard(view.card)}
 </div>
 </header>
 ${figuresOf(view, shared)}
-${view.children && view.children.rows.length ? children(view.children) : ''}
+${view.children ? kidsTable(view.children, { fy: view.fy, crossState: view.children.rows.some((r) => r.label.endsWith(' part)')) }) : ''}
+${hospitalsSection(view.hospitals, { name: view.name, conditions: view.figures.conditionList, fy: view.fy })}
 <p class="page__links"><a href="${PROGRAM_PATH}">${view.back}</a></p>
 </article>`;
   const title = `${view.heading} · ${SITE.name}`;

@@ -23,10 +23,12 @@ const NEAR_DEGREES = 1;
 // and the base payment its dots are sized against.
 export function nationalSide({ hospitals, meta, history }) {
   const rows = pairedBars(hospitals, meta).rows;
+  const pafs = pafByYear({ history, meta });
   return {
+    pafs,
     cuts: cutCounts(hospitals.map((h) => h.red)),
     conditionShares: new Map(rows.map((r) => [r.cond, r.shareFlagged])),
-    avgCut: meanCutByYear(hospitals, [...history.years, meta.fy], pafByYear({ history, meta })),
+    avgCut: meanCutByYear(hospitals, [...history.years, meta.fy], pafs),
     volumeTop: volumeTop(hospitals),
   };
 }
@@ -102,7 +104,7 @@ export function peersData(list) {
 export function trendData(list, ctx) {
   const { history, meta } = ctx;
   const fys = [...history.years, meta.fy];
-  const here = meanCutByYear(list, fys, pafByYear({ history, meta }));
+  const here = meanCutByYear(list, fys, ctx.side.pafs);
   return {
     years: fys.map((fy, i) => ({ fy, here: here[i], all: ctx.side.avgCut[i] })),
     caps: ctx.lines.caps.slice(1),
@@ -129,7 +131,8 @@ export function mapData(place, ctx) {
   // it would only add markup.
   const lons = own.map((p) => p.h.lon);
   const lats = own.map((p) => p.h.lat);
-  const near = (h) => h.lon >= Math.min(...lons) - NEAR_DEGREES && h.lon <= Math.max(...lons) + NEAR_DEGREES && h.lat >= Math.min(...lats) - NEAR_DEGREES && h.lat <= Math.max(...lats) + NEAR_DEGREES;
+  const [west, east, south, north] = [Math.min(...lons) - NEAR_DEGREES, Math.max(...lons) + NEAR_DEGREES, Math.min(...lats) - NEAR_DEGREES, Math.max(...lats) + NEAR_DEGREES];
+  const near = (h) => h.lon >= west && h.lon <= east && h.lat >= south && h.lat <= north;
   const around = place.kind === 'metro' && own.length
     ? placed(place.states.flatMap((code) => ctx.places.byKey.get(`state:${code.toLowerCase()}`)?.hospitals ?? [])).filter((h) => !ids.has(h.id) && near(h)).map((h) => ({ h, shade: -1, size: sizeOf(h, top) }))
     : [];
