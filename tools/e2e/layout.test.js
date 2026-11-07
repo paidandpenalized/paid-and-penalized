@@ -1,6 +1,6 @@
 // Layout facts a reader sees at a glance, in a real browser (light): the HACRP hospital page's record card at 1280, 390
 // and 320 px (as tall as the verdict beside it, the whole state's outline behind its fields, the dot well clear of every
-// line of their words and of every rule); at 1280 px, the end of the placeholder pages (no
+// line of their words and of every rule); at 1280 px, the end of the placeholder pages, a hub hospital page and the Readmissions program and hospital pages (no
 // wide empty band before the footer); and with scripts off, a hospital
 // page that offers no what-if it cannot run and an HACRP record card that shows the state without its dot. Pages are
 // picked by type (site.js) or by state, never named. Runs against dist/ (make build) or any URL; see site.js.
@@ -102,13 +102,12 @@ describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
     const last = Math.max(...leaves.map((el) => el.getBoundingClientRect().bottom));
     return Math.round(document.querySelector('.foot > .wrap').getBoundingClientRect().top - last);
   });
-  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['a hospital page', ofType('hub-hospital-cut').path]]) {
+  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['a hospital page', ofType('hub-hospital-cut').path], ['a Readmissions hospital page', ofType('hrrp-hospital-cut').path], ['the Readmissions program page', ofType('hrrp-program').path]]) {
     it(`${what} ends without a wide empty band before the footer`, () => withPage(tabs, { path }, async (page) => {
       const band = await endBand(page);
       assert.ok(band <= FOOT_ROOM + SLACK, `${band} px between its last words and the footer's rule`);
     }));
   }
-
 });
 
 describe('a hospital page with scripts off', () => {
