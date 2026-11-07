@@ -487,8 +487,73 @@ reader in `engine/js/hrrp/` (or an emitted field with its methods-log heading). 
 
 ---
 
+## Milestone 6: the hub's switch (added 2026-11-06)
+
+### Task 39: The hub reads the emitted file (Sonnet, own worktree; reviewed)
+
+- [ ] `hub/data.js` reads `data/emitted/hrrp/fy<newest>/hrrp.json` (through the same loader rule as the site: emitted,
+      else the pin) instead of the pinned Thirty Day Readmissions file; the year check names the Readmissions file.
+- [ ] Readmissions' `stage` is `live`; the `interim` stage and its words go from `web/site.js`, the tests and comments.
+- [ ] Whether a hospital has a Readmissions page, and the hospital page's newer-factor note, come from the emitted
+      file; the dead `SITE.tdr` link builder and the hub's unused `conditions`/`peerMedians` go.
+- [ ] Hub links to a hospital's Readmissions page are `/hrrp/hospital/<ccn>/` (tests say "its Readmissions page",
+      not "interim").
+- [ ] Restore the two browser checks dropped with the slim page (the end band before the footer; the pill beside
+      the figure) on the filled pages.
+- [ ] `make test`, `make build`; HACRP and hub HTML compared before and after: only what the switch needs changes
+      (asset and bundle names count as unchanged), each changed page listed with why. Commit.
+
+### Checkpoint M6 (main thread)
+
+- [ ] `/simplify` → `make test` → `/code-review`; fix and repeat until clean.
+
+## Milestone 7: page fixes after the design pass (added 2026-11-06)
+
+### Task 40: Copy from the year files (main thread)
+
+- [ ] History's basis line and Methods' scope line say what the year files bear out: which years list Maryland and
+      Puerto Rico hospitals, and which list hospitals with no data for any condition (counted from the pinned history
+      file at build time, through `fill()`).
+- [ ] The Picture Part's lede states a fact its first figure doesn't; the first figure keeps its three numbers.
+
+### Task 41: Figure fixes (main thread draws; design-compare before/after at 1280 and 360; up to three screenshot-critic rounds)
+
+- [ ] Data windows (History): every year has a window, or its row says the file lists none; the Jan–Jun 2020 set-aside
+      drawn in the years it applies; the windows lighter than the payment years; fewer gridlines; the phone axis reaches
+      the last year; the source line says the site recomputes.
+- [ ] Traits (Picture): labels clear of the national line.
+- [ ] Largest cuts table on a phone: the dollars and glyph in view, or a visible scroll cue.
+- [ ] Small multiples (History): the source key with the totals panel; years with no total drawn as no bar, not as $0;
+      the note at two lines.
+- [ ] Flags vs dollars: the key in place of a legend.
+
+### Checkpoint M7 (main thread)
+
+- [ ] `/simplify` → `make test` (re-measure after) → `/code-review`; fix and repeat until clean.
+
+## Milestone 8: the ~40-page comparison and the deferred minors (added 2026-11-06)
+
+### Task 42: The ~40-page comparison (Sonnet harness; main thread reads every mismatch)
+
+- [ ] Pick about 40 pages by property: cut, no cut, rounded to zero, inactive, MDH, no estimate, each peer group,
+      under 25 cases, a state, a metro, a division, a region, the nation.
+- [ ] For each, every number printed on the Thirty Day Readmissions built page (served locally) against the new page,
+      after normalizing the true minus sign and typeset apostrophes. Result: a report listing each mismatch with its
+      reason, or "match".
+
+### Task 43: Deferred minors (Sonnet, from a list; reviewed)
+
+- [ ] Every deferred minor finding in the ledger: fixed, or declined with its reason. HACRP pages unchanged.
+
+### Final gate (main thread)
+
+- [ ] On the branch diff from `main`: `/simplify` → `make test` (re-measure) → `/code-review` + `/security-review` +
+      a drive of the pages end to end; fix until clean. `npm run e2e` clean (no build while it runs); every page in
+      budget; link check clean.
+
+---
+
 ## After this plan
 
-The browser scripts (explorer, search, what-if, worksheet picker, map switches, the Step 2 condition switch), the
-hub's switch to the new pages and the emitted file, the program's `stage`, the browser checks for these rows, the
-40-page comparison and the old address's "moved" page.
+The swap: merge to `main` (the hub and `/hrrp/` go live together), the live checks, and the old address's "moved"
+page.
