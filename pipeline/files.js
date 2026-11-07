@@ -30,6 +30,7 @@ export function writeFileMkdir(path, text) {
 
 // The newest fy<YYYY> folder under a repo directory (e.g. data/emitted/hacrp), as a number.
 export function newestYear(dir) {
+  if (!existsSync(REPO_ROOT + dir)) throw new RangeError(`no folder ${dir}`);
   const years = readdirSync(REPO_ROOT + dir).map((f) => /^fy(\d{4})$/.exec(f)?.[1]).filter(Boolean).map(Number);
   if (!years.length) throw new RangeError(`no fy<YYYY> folder under ${dir}`);
   return Math.max(...years);

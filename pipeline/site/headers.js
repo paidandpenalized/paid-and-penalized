@@ -3,6 +3,7 @@
 // the parser and matcher that read the file back the way Cloudflare does, for the local server (serve.js) and for
 // checking the live site's headers against the file. They read the part of Cloudflare's grammar this file uses.
 import { isProduction } from './context.js';
+import { fileFor } from './address.js';
 
 const DAY = 24 * 60 * 60;
 const IMMUTABLE = `public, max-age=${365 * DAY}, immutable`;
@@ -57,10 +58,17 @@ export const cspFor = (env) => [
 // dist/ itself, so a file written outside emit counts too); without it, each file by name.
 export function noindexPaths(noindexFiles, emitted = null) {
   const folderOf = (path) => path.slice(0, path.lastIndexOf('/') + 1);
-  const shut = new Set(noindexFiles);
-  // A splat matches slashes too, so a folder is open when any file it holds, in it or in a folder under it, may be indexed.
-  const others = (emitted ?? []).filter((path) => !shut.has(path));
-  const isShut = (folder) => !others.some((path) => path.startsWith(folder));
+  // Compared as files: a folder path an emit names ("/x/") is its index.html in dist/.
+  const asFile = (path) => `/${fileFor(path)}`;
+  const shut = new Set(noindexFiles.map(asFile));
+  // A splat matches slashes too, so a folder is open when any file it holds, in it or in a folder under it, may be indexed:
+  // every folder above each such file, once.
+  const open = new Set();
+  for (const path of emitted ?? []) {
+    if (shut.has(path)) continue;
+    for (let i = path.indexOf('/'); i >= 0; i = path.indexOf('/', i + 1)) open.add(path.slice(0, i + 1));
+  }
+  const isShut = (folder) => !open.has(folder);
   const out = new Set();
   for (const path of noindexFiles) {
     const folder = folderOf(path);

@@ -291,6 +291,9 @@ test('real data: every state in the file names its page on every measure, on the
   }
   assert.ok(data.notInProgram && !inFile.has(data.notInProgram), 'the state outside the program is not in the file');
   const svg = String(usMap({ id: 'm', shapes: loadHrrpOnce().shapes, states: entriesOf(MEASURES[0], data), ramp: [...MEASURES[0].ramp], width: 600, bare: true }));
-  assert.match(svg, new RegExp(`data-state="${[...inFile][0]}" data-href="${placePath('state', [...inFile][0]).replace(/\//g, '\\/')}"`));
-  assert.doesNotMatch(svg, new RegExp(`data-state="${data.notInProgram}" data-href`));
+  const first = [...inFile][0];
+  assert.ok(svg.includes(`data-state="${first}" data-href="${placePath('state', first)}"`));
+  assert.ok(!svg.includes(`data-state="${data.notInProgram}" data-href`));
+  const pages = new Set(buildPlaces(hospitals, meta).list.filter((p) => p.kind === 'state').map((p) => p.key.toUpperCase()));
+  for (const code of inFile) assert.ok(pages.has(code), `${code}: a state the map links has a page`);
 });
