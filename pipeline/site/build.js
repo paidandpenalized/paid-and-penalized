@@ -3,9 +3,9 @@
 // order, then writes Cloudflare's _headers (headers.js).
 // A production build (PP_ENV=production, or Workers Builds' build of main: buildEnv in context.js) is the only one that
 // may be indexed (robotsFor in context.js holds the rule for pages).
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { shellFacts } from '../../hub/model.js';
@@ -91,8 +91,11 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
     const result = await site.generate(ctx, { updated });
     if (Object.hasOwn(SITE.sites, site.id)) updated.set(site.id, siteDates(site.id, result));
   }
-  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
-  writeFileMkdir(join(dir, '_headers'), headersFile({ env, noindexFiles: ctx.noindexFiles, emitted: ctx.emitted }));
+  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it. Every file in dist/ is
+  // listed for it (emitted or copied), so no noindex splat covers a file that may be indexed.
+  const written = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile())
+    .map((e) => '/' + relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));
+  writeFileMkdir(join(dir, '_headers'), headersFile({ env, noindexFiles: ctx.noindexFiles, emitted: written }));
   return { pages: ctx.pages, env };
 }
 

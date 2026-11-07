@@ -17,6 +17,7 @@ import { fmtInt, fmtMoney, fmtPct, roundTo } from '../numbers.js';
 import { fill, t } from '../program/copy.js';
 import { DOT_TIERS, MILLION } from './map-data.js';
 import { pagerNav } from './pager.js';
+import { placePath } from '../links.js';
 
 // The wide drawing's width: about the page's content on a wide screen. The dots are drawn on it only; a phone shows the shading.
 export const MAP_WIDE = 1180;
@@ -48,17 +49,18 @@ const WORDS = {
 };
 
 // The states entries usMap takes for a measure: a state in the file is shaded (or, with nothing to measure, left plain with
-// its reason); the state the program leaves out is hatched; any other state without a hospital is plain, "no hospitals in
-// the program". Every code the map draws is given.
-function entriesOf(measure, { rows, notInProgram }) {
+// its reason) and names its page (href), on every measure; the state the program leaves out is hatched; any other state
+// without a hospital is plain, "no hospitals in the program". Neither of those has a page. Every code the map draws is given.
+export function entriesOf(measure, { rows, notInProgram }) {
   const byCode = new Map(rows.map((r) => [r.code, r]));
   const words = WORDS[measure.key];
   return Object.fromEntries(US_MAP_CODES.map((code) => {
     const row = byCode.get(code);
     if (!row) return [code, code === notInProgram ? { hatched: true, label: t('mapNotInProgram') } : { empty: true, label: t('mapNoHospitals') }];
     const cell = row.m[measure.key];
+    const href = placePath('state', code);
     // A shown zero that takes a bin (dollars) is passed as the smallest positive number, so usMap shades it, not plain.
-    return [code, cell ? { value: cell.value === 0 && cell.bin > 0 ? Number.EPSILON : cell.value, label: words.tip(row, cell) } : { empty: true, label: words.noValue }];
+    return [code, cell ? { value: cell.value === 0 && cell.bin > 0 ? Number.EPSILON : cell.value, label: words.tip(row, cell), href } : { empty: true, label: words.noValue, href }];
   }));
 }
 

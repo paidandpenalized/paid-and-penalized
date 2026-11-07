@@ -82,8 +82,8 @@ export function mountHospitals(box) {
     });
   }
   // A table that fits on one page has every row and names no asset.
+  // (Only a site asset is fetched: fetch-asset.js refuses anything else, and the load then fails as any failed load does.)
   if (!box.dataset.src) return;
-  if (!box.dataset.src.startsWith('/assets/')) return;
   const prefix = box.dataset.prefix ?? 'ph';
   const el = (id) => box.querySelector(`#${prefix}-${id}`);
   const f = { text: el('text'), st: el('state'), peer: el('peer'), cond: el('cond'), teach: el('teach'), beds: el('beds'), loc: el('loc'), pen: el('pen'), sort: el('sort') };

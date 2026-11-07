@@ -53,19 +53,20 @@ export const cspFor = (env) => [
 
 // The noindex data files as rules' paths: a folder's files as one splat ("/data/hrrp/fy2027/*") when every file the build
 // wrote in that folder is noindex, else each file by name, so a site's hundreds of CSVs stay inside Cloudflare's 100 rules
-// without a splat ever covering a file that may be indexed. emitted: every path the build wrote (ctx.emitted); without it,
-// each file by name.
+// without a splat ever covering a file that may be indexed. emitted: every file the build wrote, by its path (build.js lists
+// dist/ itself, so a file written outside emit counts too); without it, each file by name.
 export function noindexPaths(noindexFiles, emitted = null) {
   const folderOf = (path) => path.slice(0, path.lastIndexOf('/') + 1);
   const shut = new Set(noindexFiles);
-  const open = new Set((emitted ?? []).filter((path) => !shut.has(path)).map(folderOf));
-  const out = [];
+  // A splat matches slashes too, so a folder is open when any file it holds, in it or in a folder under it, may be indexed.
+  const others = (emitted ?? []).filter((path) => !shut.has(path));
+  const isShut = (folder) => !others.some((path) => path.startsWith(folder));
+  const out = new Set();
   for (const path of noindexFiles) {
     const folder = folderOf(path);
-    const rule = emitted && !open.has(folder) ? `${folder}*` : path;
-    if (!out.includes(rule)) out.push(rule);
+    out.add(emitted && isShut(folder) ? `${folder}*` : path);
   }
-  return out;
+  return [...out];
 }
 
 // The rules in file order, each [pattern, [[name, value]]]. A request gets every matching rule's headers.
@@ -95,7 +96,7 @@ const rulesFor = (env, noindexFiles = [], emitted = null) => [
 ];
 
 // The _headers text for a build. env: the build's PP_ENV. noindexFiles: paths the build emitted with noindex (ctx.noindexFiles);
-// emitted: every path it emitted (ctx.emitted), which lets a folder of noindex files take one rule (noindexPaths).
+// emitted: every file it wrote, by path (build.js lists dist/), which lets a folder of noindex files take one rule (noindexPaths).
 export function headersFile({ env, noindexFiles = [], emitted = null } = {}) {
   const blocks = rulesFor(env, noindexFiles, emitted).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
   return `# Written by pipeline/site/headers.js. Cloudflare reads this file and does not serve it.\n${blocks.join('\n\n')}\n`;

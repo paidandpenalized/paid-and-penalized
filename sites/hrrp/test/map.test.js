@@ -8,7 +8,8 @@ import { US_MAP_CODES, usMap } from '../../../web/charts/geo.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { placeColumns, placeCsv } from '../web/csv.js';
 import { DOT_TIERS, MEASURES, binOf, dotPoints, mapData, shownValue, statesCsvRows } from '../web/figures/map-data.js';
-import { mapPart } from '../web/figures/map.js';
+import { entriesOf, mapPart } from '../web/figures/map.js';
+import { placePath } from '../web/links.js';
 import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
 import { areaContext, programView } from '../web/view.js';
@@ -275,4 +276,21 @@ test('the usMap kit draws no legend when bare, and the frame is the map\'s heigh
   assert.doesNotMatch(bare, /chart-legend/);
   assert.match(full, /chart-legend/);
   assert.ok(Number(/viewBox="0 0 300 (\d+)/.exec(bare)[1]) < Number(/viewBox="0 0 300 (\d+)/.exec(full)[1]));
+});
+
+test('real data: every state in the file names its page on every measure, on the map\'s marks too; the state outside the program and a state with no hospital name none', () => {
+  const { hospitals, meta } = loadHrrpOnce();
+  const data = programView(areaContext({ ...loadHrrpOnce(), places: buildPlaces(hospitals, meta) })).map;
+  const inFile = new Set(data.rows.map((r) => r.code));
+  for (const measure of MEASURES) {
+    const states = entriesOf(measure, data);
+    for (const code of US_MAP_CODES) {
+      if (inFile.has(code)) assert.equal(states[code].href, placePath('state', code), `${measure.key} ${code}`);
+      else assert.equal(states[code].href, undefined, `${measure.key} ${code}: no page`);
+    }
+  }
+  assert.ok(data.notInProgram && !inFile.has(data.notInProgram), 'the state outside the program is not in the file');
+  const svg = String(usMap({ id: 'm', shapes: loadHrrpOnce().shapes, states: entriesOf(MEASURES[0], data), ramp: [...MEASURES[0].ramp], width: 600, bare: true }));
+  assert.match(svg, new RegExp(`data-state="${[...inFile][0]}" data-href="${placePath('state', [...inFile][0]).replace(/\//g, '\\/')}"`));
+  assert.doesNotMatch(svg, new RegExp(`data-state="${data.notInProgram}" data-href`));
 });

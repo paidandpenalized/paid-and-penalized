@@ -238,8 +238,8 @@ describe('map', () => {
     await eventually(async () => {
       if (opened && new URL(page.url()).pathname === opened) return true;
       await svg.focus().catch(() => {});
-      // A state with no value (outside the program) has no page: move on past it.
-      if ((await mark.count()) !== 1 || (await mark.getAttribute('data-value')) === null) { await svg.press('ArrowRight').catch(() => {}); return false; }
+      // A state with no page (outside the program) names none: move on past it.
+      if ((await mark.count()) !== 1 || (await mark.getAttribute('data-href')) === null) { await svg.press('ArrowRight').catch(() => {}); return false; }
       opened = placePath('state', await mark.getAttribute('data-state'));
       await svg.press('Enter').catch(() => {});
       await page.waitForTimeout(100);
@@ -247,10 +247,13 @@ describe('map', () => {
     }, 'Enter on a state does not open its page');
   }));
 
-  it('a state drawn with no value (outside the program) opens nothing when clicked', () => withPage(tabs, { path: PATH }, async (page) => {
+  it('every state with a page names it on the map, and the state outside the program, which has none, opens nothing', () => withPage(tabs, { path: PATH }, async (page) => {
     const svg = page.locator('.usmap__m:not([hidden]) svg.chart--us-map:visible').first();
-    const none = svg.locator('.chart-mark[data-state]:not([data-value])').first();
-    if (!(await none.count())) return;
+    const named = await svg.locator('.chart-mark[data-href]').evaluateAll((els) => els.map((e) => [e.dataset.state, e.dataset.href]));
+    assert.ok(named.length > 0, 'states name their pages');
+    for (const [state, href] of named) assert.equal(href, placePath('state', state), state);
+    const none = svg.locator('.chart-mark[data-state]:not([data-href])').filter({ has: page.locator('.chart-tile-na') }).first();
+    assert.equal(await none.count(), 1, 'the state outside the program is drawn hatched, with no page');
     const before = page.url();
     await none.locator('path, rect').first().click({ force: true });
     await page.waitForTimeout(300);

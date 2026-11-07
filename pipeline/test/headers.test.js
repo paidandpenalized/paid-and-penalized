@@ -70,6 +70,8 @@ test('noindex data files: a folder whose every file is noindex takes one splat; 
   const emitted = [...shut, ...mixed, '/data/yy/open.csv', '/data/zz/', '/zz/'];
   assert.deepEqual(noindexPaths([...shut, ...mixed], emitted), ['/data/zz/fy2099/*', '/data/yy/a.csv', '/data/yy/b.csv']);
   assert.deepEqual(noindexPaths(mixed), mixed, 'without the emitted list, each by name');
+  // A splat matches slashes: a folder whose subfolder holds an indexable file keeps each name.
+  assert.deepEqual(noindexPaths(['/data/xx/a.csv'], ['/data/xx/a.csv', '/data/xx/sub/public.csv']), ['/data/xx/a.csv']);
   const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: [...shut, ...mixed], emitted }));
   assert.equal(headersFor(rules, '/data/zz/fy2099/file-7.csv')['x-robots-tag'], 'noindex');
   assert.equal(headersFor(rules, '/data/yy/b.csv')['x-robots-tag'], 'noindex');

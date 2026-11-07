@@ -202,7 +202,8 @@ function checkUsStates(states) {
 // states entries, ramp, format and legend, and the same stepped legend under the map), each state a mark with its
 // tooltip and data-state, so web/client/figure.js steps through them by keyboard and a page script can act on one.
 // A value of zero takes the neutral mark; hatched is not in the program; empty is nothing to show; few gets a dashed
-// outline over the state. Every code in US_MAP_CODES must be given, and only those codes.
+// outline over the state. Every code in US_MAP_CODES must be given, and only those codes. An entry's href (optional) is the
+// state's page, carried on its mark as data-href for a page script to follow.
 // bare: draw no legend (the page prints its own under the map); the frame is then the map's height alone.
 export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WIDTH, format = plain, overlay = '', bare = false }) {
   checkId(id, 'usMap');
@@ -219,7 +220,7 @@ export function usMap({ id, shapes, states, ramp, legend: words = {}, width = WI
     const shape = s.hatched ? html`<path class="chart-tile-na chart-geo-state" fill="${hatchFill(id)}" d="${d}"/>`
       : s.empty ? html`<path class="chart-tile-empty chart-geo-state" d="${d}"/>`
         : html`<path class="chart-tile chart-geo-state ${zero ? 'chart-tile-zero' : `chart-seq-${step}`}" d="${d}"/>${s.few ? html`<path class="chart-tile-few chart-geo-few${step >= DARK_FROM ? ' chart-tile-few--on' : ''}" d="${d}"/>` : ''}`;
-    return html`${mark({ tip: `${STATE_NAMES[code]}: ${s.label}`, value: none ? null : s.value, data: { state: code }, hit: null, body: shape })}
+    return html`${mark({ tip: `${STATE_NAMES[code]}: ${s.label}`, value: none ? null : s.value, data: s.href ? { state: code, href: s.href } : { state: code }, hit: null, body: shape })}
 `;
   });
   const legend = bare ? { body: '', height } : stepLegend({ id, top: height, ramp, format, words, states });

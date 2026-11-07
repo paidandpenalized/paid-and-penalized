@@ -17,10 +17,14 @@ function mountSwitches(box) {
   }
 }
 
-// A state's click (or Enter on the state the keyboard is on: web/client/figure.js marks it is-active) opens its page. Only a
-// state with a value has one: a state outside the program (Maryland, hatched) is drawn with no value and has no page.
+// A state's click (or Enter on the state the keyboard is on: web/client/figure.js marks it is-active) opens its page, which the
+// build names on the state's mark (data-href; figures/map.js entriesOf): a state outside the program, or with no hospital in it,
+// has none. Only the state's own address is followed.
 function mountStateLinks(box) {
-  const open = (mark) => { if (mark?.dataset.state && mark.dataset.value !== undefined) window.location.assign(placePath('state', mark.dataset.state)); };
+  const open = (mark) => {
+    const href = mark?.dataset.href;
+    if (href && href === placePath('state', mark.dataset.state)) window.location.assign(href);
+  };
   for (const svg of box.querySelectorAll('svg.chart--us-map')) {
     svg.addEventListener('click', (e) => open(e.target.closest?.('[data-state]')));
     svg.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(svg.querySelector('.chart-mark.is-active[data-state]')); });

@@ -31,6 +31,7 @@ export function decidedCcns(hacrp, fy) {
 // The newest emitted Readmissions file's path; a missing folder, year or file stops the build with one message.
 function newestHrrpFile() {
   const stop = (what) => new RangeError(`hub: ${what}: emit the Readmissions site's year first (make emit)`);
+  if (!existsSync(REPO_ROOT + 'data/emitted/hrrp')) throw stop('there is no data/emitted/hrrp');
   let fy;
   try {
     fy = newestYear('data/emitted/hrrp');
