@@ -208,6 +208,14 @@ test('no raw ISO date reaches the History figure\'s words, tips or table; a year
   assert.ok(!/among all hospitals<\/title>/.test(svg.replace(/FY\d{4}: average cut [\d.]+% among penalized hospitals, [\d.]+% among all hospitals/g, '')));
 });
 
+test('the Part\'s lede: at least the lowest share cut since the first year at the highest cap, rounded down', () => {
+  const national = [{ fy: 2013, cap: 1, pctPen: 60 }, { fy: 2014, cap: 3, pctPen: 79.9 }, { fy: 2015, cap: 3, pctPen: 74.67 }, { fy: 2016, cap: 3, pctPen: null }];
+  assert.deepEqual(smallLines({ history: { national } }).steady, { fy: 2014, cap: 3, share: 74 });
+  assert.equal(smallLines({ history: { national: [{ fy: 2013, pctPen: 60 }] } }).steady, null, 'no cap: no lede');
+  const part = historyPart({ lines: smallLines({ history: loadHrrpOnce().history }), windows: [], timeline: [] }, { figure: () => 1 }).text;
+  assert.match(part, /<p class="part__intro">At least 74% of hospitals have been cut every year since the cap reached 3% in FY2015\. The program’s record/);
+});
+
 // ---------- the roll call ----------
 
 const ROLL_HISTORY = { years: [2025, 2026], paf: { 990001: [0.99, 0.98], 990002: [null, 0.99], 990003: [1, 1], 990004: [1, 1], 990005: [0.99, null], 990006: [1, 0.99] }, national: [] };
@@ -341,10 +349,10 @@ test('a window across the discharges the files leave out is two pieces; one that
   const first = text.slice(text.indexOf('<svg'), text.indexOf('</svg>'));
   assert.equal((first.match(/class="chart-periods__perf"/g) ?? []).length, 2, 'two bars');
   assert.match(text, /<td>July 1, 2018 – December 1, 2019; July 1, 2020 – June 30, 2021<\/td>/);
-  assert.match(text, /broken between December 1, 2019 and July 1, 2020, the discharges the files leave out/);
+  assert.match(text, /the break is those the files leave out, December 2, 2019 to June 30, 2020\./);
 });
 
-test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its rule; gridlines every five years; a phone axis ends on the last year', () => {
+test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its rule; no gridlines; labels every other year in the small multiples\' style, ending on the last', () => {
   const rows = windowRows(loadHrrpOnce());
   const by = Object.fromEntries(rows.map((r) => [r.fy, r]));
   assert.equal(by[2023].pieces.length, 2);
@@ -354,9 +362,10 @@ test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its r
   assert.ok(rows.every((r) => r.pieces.length), 'every year has a window');
   const fig = windowsFigure(rows, { n: () => 1 });
   const grid = (svg) => (svg.match(/class="chart-grid"/g) ?? []).length;
-  assert.equal(grid(fig.text.slice(fig.text.indexOf('<svg'), fig.text.indexOf('</svg>'))), 4, '2010, 2015, 2020, 2025');
+  assert.equal(grid(fig.text), 0, 'no gridlines: the bars carry the ink');
+  assert.match(fig.text.slice(fig.text.indexOf('<svg'), fig.text.indexOf('</svg>')), />’27<\/text><\/svg>|>’27<\/text>/, 'the wide axis ends on the last year too');
   const phone = fig.text.slice(fig.text.lastIndexOf('<svg'));
-  assert.match(phone, />27<\/text>/, 'the phone axis labels the last year');
+  assert.match(phone, />’27<\/text>/, 'the phone axis labels the last year');
 });
 
 test('who the history counts: the years whose file lists each group it leaves out', () => {
@@ -380,7 +389,7 @@ test('the data windows: a row for each fiscal year, newest first, the payment ye
   assert.match(text, /chart-periods__perf/);
   assert.match(text, /chart-periods__pay/);
   assert.match(text, /<th scope="row">FY2018<\/th><td>July 1, 2013 – June 30, 2016 \(FY2018 IPPS final rule, 82 FR 38224\)<\/td>/);
-  assert.match(text, /the window for FY2018, which its file doesn’t state, from the FY2018 IPPS final rule, 82 FR 38224\./);
+  assert.match(text, /for FY2018, whose file doesn’t state it, the FY2018 IPPS final rule, 82 FR 38224\./);
   assert.match(text, /<th scope="row">FY2017<\/th><td>not available<\/td><td>October 1, 2016 – September 30, 2017<\/td>/);
   assert.match(text, /The data behind a year’s cut ends months before the cut begins: for FY2019 the data window ends June 30, 2017 and payments change October 1, 2018\./);
   assert.match(text, /id="figure-4"/);

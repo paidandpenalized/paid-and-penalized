@@ -22,7 +22,7 @@ const totalOf = (r) => (r.totalEst == null ? null : { value: r.totalEst, kind: r
 // The fiscal years with no total, in words ("FY2024 and FY2026"), or null when every year has one.
 export const noTotalText = (fys) => (fys.length ? fill('histNoTotal', { years: listText(fys.map(fyLabel)) }) : null);
 
-// history: loadHrrp().history. Returns { years, share, avgPen, avgAll, totals, noTotal, noTotalText, caps, marks, covid, table }:
+// history: loadHrrp().history. Returns { years, share, avgPen, avgAll, totals, noTotal, noTotalText, caps, marks, covid, table, steady }:
 // share, avgPen and avgAll are [{ fy, value }] (percent; value null when the year has none); totals [{ fy, value, kind, label, url
 // }] for the years with one; noTotal the years without; caps the cap steps read from the data [{ fy, label, short }]; marks the
 // rule marks [{ fy, key, label }] (the copy entry carries the claim) (FY2019, FY2023, FY2027); covid { first, last, label, note, fys }; table one row for each
@@ -46,7 +46,19 @@ export function smallLines({ history }) {
     marks: HISTORY_MARKS.filter((m) => years.includes(m.fy)).map(({ fy, key }) => ({ fy, key, label: t(key) })),
     covid: { first, last, fys: years.filter((fy) => fy >= first && fy <= last), label: t('histCovid'), note: fill('histCovidNote', { from: isoDate(COVID_EXCLUDED[0]), to: isoDate(COVID_EXCLUDED[1]) }) },
     table: national.map((r) => ({ fy: r.fy, n: r.n, share: r.pctPen ?? null, avgAll: r.meanRed ?? null, avgPen: r.meanRedPen ?? null, total: totalOf(r) })),
+    steady: steadyShare(national),
   };
+}
+
+// The Part's lede: since the first year at the highest cap, the lowest share cut in any year, rounded down to a whole percent (so
+// "at least" holds): { fy, cap, share }, or null without a year at a cap or a share.
+function steadyShare(national) {
+  const caps = national.map((r) => r.cap).filter(Number.isFinite);
+  if (!caps.length) return null;
+  const cap = Math.max(...caps);
+  const since = national.filter((r) => r.cap === cap);
+  const shares = national.filter((r) => r.fy >= since[0].fy && Number.isFinite(r.pctPen)).map((r) => r.pctPen);
+  return shares.length ? { fy: since[0].fy, cap, share: Math.floor(Math.min(...shares)) } : null;
 }
 
 // ---------- the roll call ----------
@@ -141,8 +153,8 @@ export function timelineData(content, { edition, today }) {
 // A window as the pieces the files state: [[start, end]], or two pieces when it runs across the discharges they leave out
 // (WINDOW_GAP). ISO dates, so they compare as strings.
 const DAY = 86400000;
-const dayBefore = (iso) => new Date(Date.parse(iso) - DAY).toISOString().slice(0, 10);
-const dayAfter = (iso) => new Date(Date.parse(iso) + DAY).toISOString().slice(0, 10);
+export const dayBefore = (iso) => new Date(Date.parse(iso) - DAY).toISOString().slice(0, 10);
+export const dayAfter = (iso) => new Date(Date.parse(iso) + DAY).toISOString().slice(0, 10);
 export function windowPieces([start, end], [gapStart, gapEnd] = WINDOW_GAP) {
   return start < gapStart && end > gapEnd ? [[start, dayBefore(gapStart)], [dayAfter(gapEnd), end]] : [[start, end]];
 }

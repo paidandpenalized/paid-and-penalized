@@ -11,6 +11,8 @@ import { fill, t } from '../program/copy.js';
 import { fmtInt, fmtPct } from '../numbers.js';
 import { hospitals } from '../wording.js';
 import { drawHistory, drawYearsCut, usdM } from './history-draw.js';
+import { dayAfter, dayBefore } from './history-data.js';
+import { yy } from './year-axis.js';
 import { FULL, HALF, pair, pic } from './layout.js';
 
 const ymd = (iso) => iso.split('-').map(Number);
@@ -37,12 +39,12 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 
 // rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws. A window the files
 // state in two pieces is two bars; a window from the year's final rule (row.src) is drawn and its table cell and the source line
-// say where it is from. Gridlines every GRID_YEARS years, so the bars carry the ink; a phone's axis ends on the last year.
-const GRID_YEARS = 5;
+// say where it is from. No gridlines, so the bars carry the ink; every other year labeled as the small multiples label theirs ('13),
+// counted back from the last so the axis ends on it.
 export function windowsFigure(rows, { n }) {
   if (!rows.length) return '';
   const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...r.pieces.map((p) => span('perf', r.fy, p)), span('pay', r.fy, r.pay)] }));
-  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width, grid: (yr) => yr % GRID_YEARS === 0, labelEnd: true });
+  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width, grid: () => false, every: 2, labelEnd: true, format: yy });
   const newest = rows[0];
   const ruled = rows.filter((r) => r.src);
   const split = rows.filter((r) => r.pieces.length > 1);
@@ -51,7 +53,7 @@ export function windowsFigure(rows, { n }) {
   return figure({
     n: n(), csvName: 'hrrp-data-windows', alt: t('winAlt'),
     source: ruled.length ? fill('winSourceRule', { fys: ruled.map((r) => fyLabel(r.fy)).join(', '), rule: ruled.map((r) => r.src.label).join('; ') }) : t('winSource'),
-    note: gap ? fill('winKeyGap', { after: isoDate(gap[0]), before: isoDate(gap[1]) }) : t('winKey'),
+    note: gap ? fill('winKeyGap', { from: isoDate(dayAfter(gap[0])), to: isoDate(dayBefore(gap[1])) }) : t('winKey'),
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
@@ -121,7 +123,9 @@ export function historyPart(history, { figure: nextFigure }) {
   // The years cut stand on the data windows' plot base beside them, their charts starting level (shared rows), so the two axes'
   // labels share a line.
   const winBase = history.windows.length ? periodsPlotBase(history.windows.length) : null;
-  return html`<p class="part__intro">${t('historyIntro')}</p>
+  const steady = history.lines.steady;
+  const lede = steady ? `${fill('historyLede', { share: fmtPct(steady.share, 0), cap: String(steady.cap), fy: fyLabel(steady.fy) })} ` : '';
+  return html`<p class="part__intro">${lede}${t('historyIntro')}</p>
 ${pic(historyFigure(history.lines, { n: nextFigure }))}
 ${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, base: winBase })), pic(windowsFigure(history.windows, { n: nextFigure })), { rows: true })}
 ${timeline(history.timeline)}`;

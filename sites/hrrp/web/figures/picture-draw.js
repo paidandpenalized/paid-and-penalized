@@ -305,8 +305,9 @@ export function drawSpread({ traits, national, width, format, head }) {
       const w = textWidth(g.label, NOTE_PX) + 16;
       // The label's span where it is drawn (kept inside the drawing), so a label pushed in from an edge is checked where it sits.
       const center = clamp(x(g.share), w / 2, width - w / 2);
-      // Off the line: shift the label to the dot's side of the line when it would cross it and still covers its dot.
-      const off = nx > center - w / 2 + 2 && nx < center + w / 2 - 2 ? (x(g.share) < nx ? nx - 3 - w / 2 : nx + 3 + w / 2) : center;
+      // Off the line (wide drawing): shift the label to its dot's side of the line when it would cross it and still covers its dot.
+      // A phone's dots sit too close for that (a shifted label lands over a neighbor), so its labels stay on their dots, over the line.
+      const off = !narrow && nx > center - w / 2 + 2 && nx < center + w / 2 - 2 ? (x(g.share) < nx ? nx - 3 - w / 2 : nx + 3 + w / 2) : center;
       const at = Math.abs(off - x(g.share)) < w / 2 - 4 ? clamp(off, w / 2, width - w / 2) : center;
       const [a0, a1] = [at - w / 2, at + w / 2];
       const free = (spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1);

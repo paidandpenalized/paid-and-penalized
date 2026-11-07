@@ -38,8 +38,9 @@ function lineAt(pts, px) {
 // Each item is words at a point, set above or below it (a short leader joining them when the item asks), at the first position that stays
 // inside the plot, clear of every line and of the words already set; if none is clear, at the one that breaks the fewest rules.
 //   items  [{ at: [{ px, py }] (the points it may sit at, best first), lines: [{ text, cls, mono }], sides, anchors, gap, leader, cls (a hook for tests, no style), data }]
-//   box    { x0, x1, top, bottom }: the plot's limits; polys: the lines to keep clear of, [[{ px, py }]]
-function place(items, { box, polys }) {
+//   box    { x0, x1, top, bottom }: the plot's limits; polys: the lines to keep clear of, [[{ px, py }]]; rects: marks to keep clear
+//   of, [{ x0, x1, y0, y1 }] (a bar), each costing as words do
+function place(items, { box, polys, rects = [] }) {
   const placed = [];
   // An item with no point to sit at draws nothing.
   return items.filter((it) => it.at.length).map((it) => {
@@ -56,6 +57,7 @@ function place(items, { box, polys }) {
         if (polys.some((p) => { const y = lineAt(p, px); return y !== null && y >= by0 - 3 && y <= by1 + 3; })) { bad += CROSSES_LINE; break; }
       }
       if (placed.some((q) => bx0 < q.bx1 + 3 && bx1 > q.bx0 - 3 && by0 < q.by1 + 2 && by1 > q.by0 - 2)) bad += OVERLAPS_WORDS;
+      if (rects.some((q) => bx0 < q.x1 + 2 && bx1 > q.x0 - 2 && by0 < q.y1 && by1 > q.y0 - 2)) bad += OVERLAPS_WORDS;
       return { bad, pt, side, anchor, bx0, bx1, by0, by1 };
     };
     const options = it.at.flatMap((pt) => it.sides.flatMap((side) => it.anchors.map((anchor) => ({ pt, side, anchor }))));
@@ -132,14 +134,16 @@ function sharePanel(lines, p, narrow) {
     return { at: [q], lines: [...words(label), { text: fmtPct(q.value, 1), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above', 'below'], anchors: ['middle', 'start', 'end'], gap: 12, leader: true, cls: 'hist-ann', data };
   };
   const notes = [
-    ...lines.caps.filter((c) => at(c.fy)?.value != null).map((c) => item(c.fy, narrow ? c.short : c.label, { fy: c.fy, key: 'cap' })),
+    ...lines.caps.filter((c) => at(c.fy)?.value != null).map((c) => item(c.fy, c.label, { fy: c.fy, key: 'cap' })),
     ...lines.marks.filter((m) => at(m.fy)?.value != null).map((m) => item(m.fy, m.label, { fy: m.fy, key: m.key })),
   ];
   const dots = pts.filter((q) => q.value !== null).map((q) => mark({
     tip: fill('histTipShare', { fy: fyLabel(q.fy), share: fmtPct(q.value, 1) }), value: q.value, data: { fy: q.fy }, hit: null,
     body: html`<circle class="hist-dot--share" cx="${r2(q.px)}" cy="${r2(q.py)}" r="${narrow ? 2.5 : 3}"/>`,
   }));
-  const ann = place(notes, { box: f.box, polys: [pts] });
+  // On a phone the gridlines are kept clear of too, so a value never reads as the tick beside it.
+  const grid = narrow ? ticks.filter((v) => v > start).map((v) => [{ px: f.box.x0, py: f.y(v) }, { px: f.box.x1, py: f.y(v) }]) : [];
+  const ann = place(notes, { box: f.box, polys: [pts, ...grid] });
   return html`<g class="hist-panel hist-panel--share">${f.markup}<path class="hist-line hist-line--share" d="${lineOf(pts)}"/>${dots}${ann}</g>`;
 }
 
@@ -212,7 +216,8 @@ function totalPanel(lines, p, narrow) {
   const picks = [...new Map([firstR, peak, lastR].map((r) => [r.fy, r])).values()];
   const anchors = (r) => (r === firstR ? ['start', 'middle'] : r === lastR ? ['end', 'middle'] : ['middle', 'start', 'end']);
   const labeled = picks.map((r) => ({ at: [{ px: f.x(r.fy), py: f.y(r.value) }], lines: [{ text: usdM(r.value), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above'], anchors: anchors(r), gap: 4, leader: false }));
-  return html`<g class="hist-panel hist-panel--total">${f.markup}${bars}${place(labeled, { box: { ...f.box, top: f.box.top - 14 }, polys: [] })}</g>`;
+  const rects = lines.totals.map((r) => ({ x0: f.x(r.fy) - bw / 2, x1: f.x(r.fy) + bw / 2, y0: f.y(r.value), y1: f.base }));
+  return html`<g class="hist-panel hist-panel--total">${f.markup}${bars}${place(labeled, { box: { ...f.box, top: f.box.top - 14 }, polys: [], rects })}</g>`;
 }
 
 // ---------- the drawing ----------

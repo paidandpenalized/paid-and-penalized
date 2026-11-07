@@ -345,6 +345,10 @@
 /* The conditions glyph at its drawing's size in every table. */
 .pen__glyph { display: block; }
 :is(.pen__glyph, .nb__table) .chart--cards { width: 96px; max-width: 96px; }
+/* In dark mode the glyph's empty boxes take the faint text gray, one step lighter than the rule gray, so their dotted outline
+   still reads on the dark paper (light mode keeps the kit's). */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chart-card__none { stroke: var(--ink-3); } }
+:root[data-theme="dark"] .chart-card__none { stroke: var(--ink-3); }
 
 /* Part 3, the map (figures/map.js), in the old site's look: the measure buttons and the hospitals checkbox above a full-width
    map, labeled swatches under it. Without a script the first measure shows and the dots and switches stay hidden; a script

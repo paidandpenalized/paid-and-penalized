@@ -3,8 +3,8 @@
 // share of the money". Each bar is a mark with its tooltip and value; each row's two numbers print at the bar ends.
 //   sections [{ heading, rows: [{ label, a, b, aText, bText, tipA, tipB }] }]: a and b are fractions (0 to 1)
 //   labels   { a, b }: what the two bars are (the key over the chart)
-//   direct   { a, b } or null: short words that name the bars in place instead of the key: set after the two numbers of the
-//            first row where both fit inside the drawing (no key then); the key stays when no row has the room
+//   direct   { a, b } or null: short words that name the bars in place instead of the key, set after the first row's two numbers;
+//            the value column widens to hold them (no key then)
 import { html } from '../render/html.js';
 import { LABEL_PX, frame, isNarrow, mark, r2, text } from './svg.js';
 import { textWidth } from './text.js';
@@ -21,15 +21,14 @@ export function pairBars({ sections, labels, width, direct = null }) {
   // The name column: its usual width, or wider where a name needs it, so none runs off the drawing's left edge.
   const widest = Math.max(...sections.flatMap((s) => s.rows.map((r) => textWidth(r.label, LABEL_PX))));
   const nameW = Math.max(narrow ? 92 : 170, Math.ceil(widest) + LABEL_GAP);
-  const valueW = 44;
+  // The row that names its bars in place (direct): the first; its numbers and words set the value column's width.
+  const named = direct ? sections[0]?.rows[0] ?? null : null;
+  const VALUE_PX = 11;
+  const valueW = named ? Math.max(44, ...[[named.aText, direct.a], [named.bText, direct.b]].map(([v, w]) => Math.ceil(textWidth(`${v} ${w}`, VALUE_PX, { mono: true })) + 6)) : 44;
   const x0 = nameW;
   const x1 = width - valueW;
   const max = Math.max(...sections.flatMap((s) => s.rows.flatMap((r) => [r.a, r.b])), 0.01);
   const x = (v) => x0 + (v / max) * (x1 - x0);
-  // The row that names its bars in place (direct), or null: the first whose numbers and words both fit.
-  const VALUE_PX = 11;
-  const fits = (v, words) => x(v) + 4 + textWidth(words, VALUE_PX, { mono: true }) <= width;
-  const named = direct ? sections.flatMap((s) => s.rows).find((r) => fits(r.a, `${r.aText} ${direct.a}`) && fits(r.b, `${r.bText} ${direct.b}`)) ?? null : null;
   const suffix = (r, side) => (r === named ? html` <tspan class="chart-note">${direct[side]}</tspan>` : '');
   // On a phone the key's two entries take a row each; a chart that names its bars in place has no key.
   let y = named ? 0 : narrow ? KEY + 18 : KEY;
