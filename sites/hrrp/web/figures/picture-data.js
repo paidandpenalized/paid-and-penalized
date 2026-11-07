@@ -110,8 +110,9 @@ export function moreConditions(hospitals) {
 
 // For each condition: measured (hospitals measured on it), flags (CMS flagged it), shareFlagged (flags / measured on that
 // condition), shareOfFlags (its share of all flags; adds to one), dollars (the modeled penalty dollars it adds: each cut
-// hospital's dollars split by its conditions' parts of the cut; hospitals without a dollar estimate leave out), shareOfDollars (over those dollars; adds to one) and dollarsPerFlag (null without a flag). Rows
-// run from the largest share of dollars down (ties: program order).
+// hospital's dollars split by its conditions' parts of the cut; hospitals without a dollar estimate leave out),
+// shareOfDollars (over those dollars; adds to one) and dollarsPerFlag (null without a flag). Rows run from the largest
+// share of dollars down (ties: program order).
 export function pairedBars(hospitals, meta) {
   const dollars = Object.fromEntries(CONDS.map((k) => [k, 0]));
   for (const h of hospitals) {
