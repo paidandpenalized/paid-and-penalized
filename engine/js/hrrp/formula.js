@@ -7,7 +7,7 @@ export const MIN_DISCHARGES = 25;
 export const CAP = 0.03;
 export const CAP_PCT = CAP * 100;
 
-const round4 = (v) => Math.round(v * 1e4) / 1e4;
+export const round4 = (v) => Math.round(v * 1e4) / 1e4;
 // Payment reduction in percent (2 dp) from a payment adjustment factor.
 export const cutPct = (paf) => Math.round((1 - paf) * 1e4) / 100;
 // A condition counts only with at least 25 eligible cases and a published ratio.

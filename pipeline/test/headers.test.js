@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chmodSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ANALYTICS_ORIGIN, cspFor, isAnalyticsBeacon, headersFile, headersFor, parseHeaders } from '../site/headers.js';
+import { ANALYTICS_ORIGIN, cspFor, isAnalyticsBeacon, headersFile, headersFor, parseHeaders, noindexPaths } from '../site/headers.js';
 import { createSiteServer } from '../site/serve.js';
 import { get, withServer, withTemp, writeTree } from './helpers.js';
 
@@ -64,9 +64,29 @@ test('isAnalyticsBeacon: the beacon script and its versioned copies on the analy
   }
 });
 
-test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters', () => {
-  for (const env of [undefined, 'production']) {
-    const text = headersFile({ env });
+test('noindex data files: a folder whose every file is noindex takes one splat; a folder that also holds an indexable file keeps each name', () => {
+  const shut = Array.from({ length: 600 }, (_, i) => `/data/zz/fy2099/file-${i}.csv`);
+  const mixed = ['/data/yy/a.csv', '/data/yy/b.csv'];
+  const emitted = [...shut, ...mixed, '/data/yy/open.csv', '/data/zz/index.html', '/zz/index.html'];
+  assert.deepEqual(noindexPaths([...shut, ...mixed], emitted), ['/data/zz/fy2099/*', '/data/yy/a.csv', '/data/yy/b.csv']);
+  assert.deepEqual(noindexPaths(mixed), mixed, 'without the emitted list, each by name');
+  // A splat matches slashes: a folder whose subfolder holds an indexable file keeps each name.
+  assert.deepEqual(noindexPaths(['/data/xx/a.csv'], ['/data/xx/a.csv', '/data/xx/sub/public.csv']), ['/data/xx/a.csv']);
+  // A page emitted at a folder address is its index.html among the files.
+  assert.deepEqual(noindexPaths(['/data/ww/'], ['/data/ww/index.html']), ['/data/ww/*']);
+  assert.deepEqual(noindexPaths(['/data/ww/'], ['/data/ww/']), ['/data/ww/*'], 'either form in either list');
+  const folderRules = parseHeaders(headersFile({ env: 'production', noindexFiles: ['/data/ww/'], emitted: ['/data/ww/index.html'] }));
+  assert.equal(headersFor(folderRules, '/data/ww/')['x-robots-tag'], 'noindex', 'the splat covers the folder address itself');
+  const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: [...shut, ...mixed], emitted }));
+  assert.equal(headersFor(rules, '/data/zz/fy2099/file-7.csv')['x-robots-tag'], 'noindex');
+  assert.equal(headersFor(rules, '/data/yy/b.csv')['x-robots-tag'], 'noindex');
+  assert.equal(headersFor(rules, '/data/yy/open.csv')['x-robots-tag'], undefined, 'the indexable file is left alone');
+});
+
+test('headersFile stays inside Cloudflare\'s limits: at most 100 rules, every line under 2,000 characters, with an unreleased site\'s hundreds of data files', () => {
+  const noindexFiles = Array.from({ length: 600 }, (_, i) => `/data/zz/fy2099/file-${i}.csv`);
+  for (const [env, extra] of [[undefined, {}], ['production', {}], ['production', { noindexFiles, emitted: noindexFiles }]]) {
+    const text = headersFile({ env, ...extra });
     assert.ok(parseHeaders(text).length <= 100, env);
     for (const line of text.split('\n')) assert.ok(line.length < 2000, line.slice(0, 60));
   }

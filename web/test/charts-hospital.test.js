@@ -31,6 +31,21 @@ test('ruler: a ▲ at a value (in the penalty ink when marked), a note without o
   assert.equal(d.match(/z/g).length, 3, 'one box per column with a count; an empty column draws nothing');
 });
 
+test('ruler: the "past the axis" mark exists only where a dead zone is drawn', () => {
+  const base = { id: 'r', domain: [0, 2], counts: [1, 3, 0, 2], median: 0.6, labels: { median: 'm', value: 'This', same: 'Same', note: 'n' }, format: String, value: 0.9 };
+  assert.doesNotMatch(String(ruler({ ...base, floor: 0, cap: 2 })), /Same \(/, 'floor and cap at the axis ends: nothing past it, no keyboard stop');
+  assert.doesNotMatch(String(ruler({ ...base, floor: 0, cap: 2 })), />\s*0\s*</, 'and no stray 0 text node where the mark was');
+  assert.match(String(ruler({ ...base, floor: 0, cap: 1.6 })), /<title>Same \(0, 1\.6\)<\/title>/);
+});
+
+test('ruler: end labels along the top only when asked for', () => {
+  const base = { id: 'r', domain: [0, 2], counts: [1, 3, 0, 2], floor: 0, cap: 2, median: 0.6, labels: { median: 'median 0.6', value: 'This', same: 'Same', note: 'no value' }, format: String, value: 0.9 };
+  assert.doesNotMatch(String(ruler(base)), /chart-end/, 'none by default');
+  const s = String(ruler({ ...base, ends: ['0.00', '2.00'] }));
+  assert.match(s, /<text class="chart-end" x="6" y="12" text-anchor="start">0\.00<\/text>/);
+  assert.match(s, /<text class="chart-end" x="294" y="12" text-anchor="end">2\.00<\/text>/);
+});
+
 test('waterfall: each part starts where the last ended, the sum bar starts at zero, and the line is a mark', () => {
   const svg = String(waterfall({
     id: 'w', band: [0.29, 0.3], labels: { line: 'Line', lineTip: 'Line', zone: 'cut' },
@@ -40,6 +55,17 @@ test('waterfall: each part starts where the last ended, the sum bar starts at ze
   assert.ok(svg.includes('data-value="0.4"') && svg.includes('data-value="-0.1"') && svg.includes('data-value="0.3"') && svg.includes('data-value="0.29 0.3"'));
   assert.match(svg, /chart-step chart-step--down/);
   assert.equal((svg.match(/class="chart-connector"/g) ?? []).length, 2);
+});
+
+test('waterfall: on a phone the cap\'s label starts at its line when the line is left of the edge (a sum past the cap), so it never crosses the strip\'s title', () => {
+  const draw = (max) => String(waterfall({
+    id: 'w', width: 300, stacked: true, domain: [0, 0.06], ticks: [0, 0.03, 0.06], format: String,
+    rows: [{ label: 'A', value: 0.05, valueText: '5', tip: 'A', pen: true }],
+    total: { label: 'Sum', value: 0.05, valueText: '5', tip: 'Sum', pen: true },
+    cap: { value: 0.03, max, title: 'Against the cap, to scale', label: '3% CAP', share: '169%', tip: 'cap', ticks: [0, 0.03], format: String },
+  }));
+  assert.match(draw(0.05), /text-anchor="start">3% CAP<\/text>/, 'line at 60% of the strip: the label runs right of it');
+  assert.match(draw(0.03), /text-anchor="end">3% CAP<\/text>/, 'line at the right edge: the label ends at it');
 });
 
 test('ridges: a row per group with its share, the words beside the plot when wide and over it when narrow', () => {

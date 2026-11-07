@@ -3,12 +3,15 @@
 // a mark.
 //   edges: the bins' edges (the line one of them); place, nation: counts per bin; line: the score; labels
 //   { place, nation, line }; tip(i) -> a column's tooltip
+//   optional: labels.line left out prints no words at the line; avg { at, label }: a dashed line at a value, named at
+//   its top (the words sit left of it in the chart's right half); first: words under the first bin (a pile that is
+//   not a range of the scale)
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
 import { columnPath, frame, mark, r2, text } from './svg.js';
 
-export function compareHist({ edges, place, nation, line, labels, tip, width, format }) {
+export function compareHist({ edges, place, nation, line, labels, tip, width, format, avg = null, first = null }) {
   const left = 34;
   const right = width - 8;
   const top = 26;
@@ -33,7 +36,14 @@ export function compareHist({ edges, place, nation, line, labels, tip, width, fo
 ${cols}
 <path class="chart-outline" d="${outline}"/>
 <line class="chart-boundary" x1="${lx}" x2="${lx}" y1="${top - 14}" y2="${r2(base)}"/>
-${text({ x: lx + 4, y: top - 4, anchor: 'start', cls: 'chart-cap', body: labels.line })}
-<g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: width < 400 ? 4 : 8, format })}</g>`,
+${labels.line ? text({ x: lx + 4, y: top - 4, anchor: 'start', cls: 'chart-cap', body: labels.line }) : ''}
+<g transform="translate(0 ${r2(base)})">${axis({ scale: x, orient: 'bottom', ticks: width < 400 ? 4 : 8, format })}</g>${avg ? averageLine(avg, x, top, base) : ''}${first ? text({ x: (x(edges[0]) + x(edges[1])) / 2, y: base + 14, cls: 'chart-tick', body: first }) : ''}`,
   });
+}
+
+// A dashed line at a value with its words at the top, set right of the line in the chart's left half and left of it in the right.
+function averageLine({ at, label }, x, top, base) {
+  const ax = r2(x(at));
+  const right = x(at) < (x.range()[0] + x.range()[1]) / 2;
+  return html`<line class="chart-ref" x1="${ax}" x2="${ax}" y1="${top - 14}" y2="${r2(base)}"/>${text({ x: right ? x(at) + 4 : x(at) - 4, y: top - 16, anchor: right ? 'start' : 'end', cls: 'chart-value chart-value--mark', body: label })}`;
 }

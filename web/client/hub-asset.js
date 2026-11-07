@@ -7,7 +7,7 @@ import { once } from './once.js';
 // The columns of a row, in the order the build writes them. The decoder reads by name through the asset's own `cols`, so
 // it needs only that every one of these is there.
 export const HUB_COLS = Object.freeze(['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total',
-  'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr', 'decided']);
+  'hrrp', 'hvbp', 'hac', 'net', 'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'inHrrp', 'decided']);
 
 // The one-letter code the asset holds for each status, and the words it decodes to. The build's encoder (hub/asset.js)
 // reads the same map; a test holds its keys to the statuses the pages have words for.
@@ -44,7 +44,7 @@ function bedsOf(ccn, value) {
 }
 
 // The asset as `{ fy, mapW, mapH, hospitals, byCcn }`: hospitals in the asset's order, each `{ ccn, name, city, state,
-// status, beds, teach, x, y, inTdr, cut, decided, est }` (status in words; cut CMS's HAC decision; decided whether CMS
+// status, beds, teach, x, y, inHrrp, cut, decided, est }` (status in words; cut CMS's HAC decision; decided whether CMS
 // scored it and decided Yes or No, the HACRP pages' population; beds the bed count, whose size band engine/js/peers.js
 // bedBand works out, or null; x and y a place on the map at mapW wide, or null; est null unless the status is
 // 'estimated'), and byCcn a Map. Throws on an asset it cannot read rather than guess.
@@ -61,7 +61,7 @@ export function decodeRows(asset) {
     const beds = bedsOf(v('ccn'), v('beds'));
     return {
       ccn: v('ccn'), name: v('name'), city: v('city'), state: v('state'), status, beds, teach: v('teach'),
-      x: v('x'), y: v('y'), inTdr: flag(v('ccn'), 'tdr', v('tdr')), cut: flag(v('ccn'), 'cut', v('cut')), decided: flag(v('ccn'), 'decided', v('decided')),
+      x: v('x'), y: v('y'), inHrrp: flag(v('ccn'), 'inHrrp', v('inHrrp')), cut: flag(v('ccn'), 'cut', v('cut')), decided: flag(v('ccn'), 'decided', v('decided')),
       est: status === 'estimated' ? decodeEstimate(v('ccn'), v) : null,
     };
   });

@@ -1,9 +1,9 @@
 {
   "fy": 2027,
+  "skipped": ["Coming in FY2030:"],
   "items": [
-    {"title": "Medicare Advantage patients now count.", "body": "The ratios include patients in private Medicare Advantage plans for the first time. The cut still applies only to traditional Medicare payments."},
-    {"title": "Two years of data instead of three.", "body": "Discharges from July 1, 2023 through June 30, 2025."},
-    {"title": "COVID-19 patients are back in.", "body": "The pandemic-era exclusion ended."},
-    {"title": "Coming in FY2030:", "body": "readmissions after sepsis become a seventh measure."}
+    {"title": "Medicare Advantage patients now count.", "claim": "HRRP-14", "body": "The ratios include patients in private Medicare Advantage plans for the first time. The cut still applies only to traditional Medicare payments."},
+    {"title": "Two years of data instead of three.", "claim": "HRRP-19", "body": "Discharges from July 1, 2023 through June 30, 2025."},
+    {"title": "COVID-19 patients to be counted again.", "claim": "HRRP-20", "pin": "COVID-19 patients are back in.", "body": "CMS said it would stop excluding them from the readmission measures starting with this year."}
   ]
 }

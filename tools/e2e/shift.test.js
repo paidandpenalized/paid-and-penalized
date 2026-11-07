@@ -27,7 +27,7 @@ const PAGES = [
   ['the front page', '/'],
   ['a hospital page across the programs', hospitalPathOf('hub', EXAMPLE_CCN)],
   ['a placeholder page', programById('hvbp').path],
-  ['the interim Readmissions page', programById('hrrp').path],
+  ['the Readmissions program page', programById('hrrp').path],
   ['HACRP\'s program page', PROGRAM_PATH],
   ['a HACRP hospital page', hospitalSample('hospital-cut').path],
 ];

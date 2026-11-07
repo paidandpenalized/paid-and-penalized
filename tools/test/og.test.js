@@ -1,12 +1,13 @@
 // The share cards (web/share-card.js, tools/og/): each committed card is the one its HTML draws today, 1200 by 630, small
-// enough to fetch, and the HTML holds no numbers in its words.
+// enough to fetch, and the HTML holds no numbers in its words (the Readmissions card's three figures aside).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { CARD_SIZE, CARD_STAMP, SHARE_CARDS, cardFile } from '../../web/share-card.js';
 import { sha256 } from '../../pipeline/site/assets.js';
-import { RENDER, cardDots, cardHtml, cardInputs } from '../og/card.js';
+import { fmtInt, fmtPct } from '../../sites/hrrp/web/numbers.js';
+import { CARDS, RENDER, cardDots, cardHtml, cardInputs } from '../og/card.js';
 
 const INPUTS = cardInputs();
 const STAMP = readJson(REPO_ROOT + CARD_STAMP);
@@ -40,7 +41,9 @@ for (const id of Object.keys(SHARE_CARDS)) {
   test(`the ${id} card's words hold no digit and no byline; it draws a dot for every hospital on the map`, () => {
     const page = cardHtml(id, INPUTS);
     const body = page.slice(page.indexOf('<body>'));
-    const words = body.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
+    // Only a card with fields draws figures (their numbers come from the data, not the words).
+    const figures = CARDS[id].fields ? body.replace(/<span class="(num|lab)"[^>]*>[^<]*<\/span>/g, '') : body;
+    const words = figures.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, ' ');
     assert.doesNotMatch(words, /\d/);
     assert.doesNotMatch(words, /built by/i);
     assert.equal(circles(page).length, placedRows().length);
@@ -62,6 +65,25 @@ test('the HACRP card is red for every hospital CMS cut (payment reduction "Yes" 
   // CMS's flag, not the dollar estimates: a cut hospital the hub has no estimate for is red too.
   const placed = new Set(placedRows().map((r) => r[col('ccn')]));
   for (const ccn of INPUTS.cut) assert.ok(placed.has(ccn), `a cut hospital (${ccn}) has no place on the map`);
+});
+
+test('the Readmissions card is red for every hospital whose factor is below 1 that has a place on the map, and shows the program page\'s three figures', () => {
+  const page = cardHtml('hrrp', INPUTS);
+  const tones = circles(page);
+  const placed = new Set(placedRows().map((r) => r[col('ccn')]));
+  assert.ok(INPUTS.hrrpCut.size > 0);
+  assert.equal(count(tones, 'pen'), [...INPUTS.hrrpCut].filter((c) => placed.has(c)).length);
+  assert.equal(count(tones, 'pen') + count(tones, 'none'), tones.length);
+  const nums = [...page.matchAll(/<span class="num">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.equal(nums.length, 3);
+  assert.equal(nums[0], fmtInt(INPUTS.hrrp.nPen));
+  assert.equal(nums[1], fmtPct(INPUTS.hrrp.meanRedPen));
+  assert.equal(nums[2], fmtInt(INPUTS.hrrp.nMax));
+  assert.ok(page.includes(`${fmtPct(INPUTS.hrrp.pctPen, 0)} of ${fmtInt(INPUTS.hrrp.nMeasured)} measured`));
+});
+
+test('cardDots: the Readmissions card colors a hospital in the penalized set red, the rest gray', () => {
+  assert.deepEqual(cardDots('hrrp', { hub: HUB, cut: new Set(), hrrpCut: new Set(['A2', 'A5']) }), [[1, 1, null], [3, 3, null], [4, 4, null], [5, 5, null], [2, 2, 'pen']]);
 });
 
 test('the family card is red for a net cut, green for a net bonus and gray for no net change or no estimate', () => {

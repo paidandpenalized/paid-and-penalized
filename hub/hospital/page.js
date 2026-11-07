@@ -31,8 +31,8 @@ const FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-ple
 
 // The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
 // hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
-// Thirty Day Readmissions has (inTdr) has an interim Readmissions page (hub/hrrp/page.js).
-const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inTdr: h.inTdr });
+// the Readmissions file lists (inHrrp) has a Readmissions page (sites/hrrp/).
+const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inHrrp: h.inHrrp });
 
 // A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
@@ -73,9 +73,8 @@ function typeText(h, master) {
 }
 
 // The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,
-// beds } (the hub hospital, or the same fields from the master); master: its master record, or null. The interim
-// Readmissions pages (hub/hrrp/page.js) add their own fields after these.
-export function recordSpecs(h, master) {
+// beds } (the hub hospital, or the same fields from the master); master: its master record, or null.
+function recordSpecs(h, master) {
   const type = typeText(h, master);
   return [
     { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },
@@ -192,11 +191,11 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 
 // ---------- the what-if section ----------
 // The Readmissions row's second line, for a hospital with a Readmissions page here: that page shows CMS's newer file's
-// factor (tdr: loadHub().tdr), so the row says which and why this page's differs; '' otherwise.
-function hrrpYearLine(h, { fy, tdr }) {
-  const record = h.inTdr ? tdr?.hospitals.get(h.ccn) : null;
-  if (!record || !Number.isFinite(record.paf) || String(tdr.fy) === fy) return '';
-  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(tdr.fy), factor: factor(record.paf), fy })}</p>`;
+// factor (hrrp: loadHub().hrrp), so the row says which and why this page's differs; '' otherwise.
+function hrrpYearLine(h, { fy, hrrp }) {
+  const record = h.inHrrp ? hrrp?.hospitals.get(h.ccn) : null;
+  if (!record || !Number.isFinite(record.paf) || String(hrrp.fy) === fy) return '';
+  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(hrrp.fy), factor: factor(record.paf), fy })}</p>`;
 }
 
 function programRow(h, id, figures, ctx) {
@@ -217,8 +216,8 @@ ${id === 'hrrp' ? hrrpYearLine(h, ctx) : ''}${deepLink(h, id)}
 </div>`;
 }
 
-function whatifSection(h, { peers, figures, group }, { fy, tdr }) {
-  const ctx = { fy, group, tdr };
+function whatifSection(h, { peers, figures, group }, { fy, hrrp }) {
+  const ctx = { fy, group, hrrp };
   const n = peers.length;
   const result = comparison(fill, 'result', { share: h.est.share, median: figures.net.median, n, group });
   return html`<section class="hh__progs" id="whatif" aria-labelledby="whatif-h">
@@ -253,7 +252,7 @@ const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
 <p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
 ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
-function estimatedBody(h, master, group, { fy, all, sets, tdr }) {
+function estimatedBody(h, master, group, { fy, all, sets, hrrp }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
 ${peerRow(h, group)}
@@ -264,7 +263,7 @@ ${netBlock(h, group.figures, fy, sets)}
 </div>
 ${figure(h, group, { fy, all })}
 </div>
-${whatifSection(h, group, { fy, tdr })}
+${whatifSection(h, group, { fy, hrrp })}
 <div class="wrap"><div class="hh__tbl">
 <details class="hh__det" data-peer-table><summary>${fill('tableSummary')} <span>${fill('tableCount', { n: count(peers.length), group: group.group })}</span></summary></details>
 </div></div>
@@ -298,8 +297,8 @@ ${notes(fy, false)}
 // The page at hospitalPathOf('hub', h.ccn). h: the hospital (hub/model.js hubHospitals); hospitals: every one of them (its
 // peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital master
 // record (the Type field's ownership and urban or rural); assets: the build's (the fiscal year is the shell's); robots:
-// the page's robots value; tdr: loadHub().tdr, for the Readmissions row's note on its page's newer factor (none: no note).
-export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, tdr = null }) {
+// the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note).
+export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null }) {
   const fy = String(assets.shell.fy);
   const place = { name: h.name, city: h.city ?? '', state: h.state ?? '' };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
@@ -315,10 +314,10 @@ export function hospitalPage({ h, hospitals, facts, assets, robots, master = nul
     description,
     path: hospitalPathOf('hub', h.ccn),
     robots,
-    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, tdr }) : variantBody(h, master, fy),
+    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp }) : variantBody(h, master, fy),
     assets,
     scripts: h.est ? [assets.js['hub-hospital']] : [],
     preloadFonts: FONTS,
-    hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inTdr: h.inTdr },
+    hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp },
   });
 }

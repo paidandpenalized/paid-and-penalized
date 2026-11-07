@@ -7,11 +7,9 @@
 // No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
+import { saveCsv } from './download.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-// Some browsers start a download after click() returns; revoking its blob URL at once can cancel it. A minute is
-// ample, and one CSV's blob is small.
-const REVOKE_MS = 60000;
 
 // A cell's raw value (CMS's text, with its hyphen-minus) where the build kept one, else its text.
 const valueOf = (cell) => cell.getAttribute('data-value') ?? cell.textContent.trim();
@@ -42,11 +40,13 @@ export function scrollState(scroll) {
 }
 
 // Each mounted box, { scroll, frame, label, region }, by its scroll box and by its table: what the observer reports.
-const BOXES = new Map();
+const BOXES = new WeakMap();
 let sizes = null;
 
 // Every box's state is read before any box is written, so the page is laid out once, not once per box.
 function edges(boxes) {
+  // A box whose markup a script replaced is no longer watched.
+  boxes = boxes.filter((box) => box && (box.scroll.isConnected || (unmountScroll(box.scroll), false)));
   const states = boxes.map((box) => scrollState(box.scroll));
   boxes.forEach((box, i) => {
     const { region, more } = states[i];
@@ -63,9 +63,20 @@ function edges(boxes) {
   });
 }
 
+// Stops watching a scroll box and its table; a script that replaces markup calls this on each box it is about to drop
+// (a box found disconnected at the next report is let go the same way).
+export function unmountScroll(scroll) {
+  const table = scroll.querySelector('table');
+  sizes?.unobserve(scroll);
+  if (table) sizes?.unobserve(table);
+  BOXES.delete(scroll);
+  if (table) BOXES.delete(table);
+}
+
 export function mountScroll(scroll) {
   const table = scroll.querySelector('table');
-  if (!table) return;
+  if (!table || scroll.hasAttribute('data-wired')) return;
+  scroll.setAttribute('data-wired', '');
   const label = table.getAttribute('aria-labelledby') ?? table.caption?.id;
   if (!label || !('ResizeObserver' in window)) return;
   const box = { scroll, frame: scroll.parentElement, label, region: false };
@@ -105,16 +116,7 @@ function mountTable(fig, live) {
   const download = fig.querySelector('[data-figure-csv]');
   if (!download) return;
   download.hidden = false;
-  download.addEventListener('click', () => {
-    const url = URL.createObjectURL(new Blob([tableCsv(table)], { type: 'text/csv;charset=utf-8' }));
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = download.dataset.figureCsv;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), REVOKE_MS);
-  });
+  download.addEventListener('click', () => saveCsv(tableCsv(table), download.dataset.figureCsv));
 }
 
 // One chart's tooltip layer; a figure with a narrow and a wide variant gets one per chart (only the shown one meets
@@ -181,9 +183,12 @@ function mountMarks(fig, svg, live) {
   // touch keeps the tooltip; a tap outside the chart, Escape or a scroll hides it.
   svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide(); });
   svg.addEventListener('blur', hide);
-  document.addEventListener('pointerdown', (e) => { if (current >= 0 && !svg.contains(e.target)) hide(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && current >= 0) hide(); });
-  window.addEventListener('scroll', () => { if (current >= 0) hide(); }, { passive: true });
+  // The page-wide listeners go when a script redraws the figure and this drawing leaves the page (the first event after, by any of them).
+  const gone = new AbortController();
+  const onPage = (fn) => (e) => { if (!svg.isConnected) gone.abort(); else fn(e); };
+  document.addEventListener('pointerdown', onPage((e) => { if (current >= 0 && !svg.contains(e.target)) hide(); }), { signal: gone.signal });
+  document.addEventListener('keydown', onPage((e) => { if (e.key === 'Escape' && current >= 0) hide(); }), { signal: gone.signal });
+  window.addEventListener('scroll', onPage(() => { if (current >= 0) hide(); }), { passive: true, signal: gone.signal });
   svg.addEventListener('keydown', (e) => {
     const step = STEPS[e.key];
     let i;
@@ -196,13 +201,24 @@ function mountMarks(fig, svg, live) {
   });
 }
 
-function mountFigure(fig) {
+// Idempotent (a page script that redraws a figure calls it on the new one; a second copy of this module in another bundle
+// finds the mark and leaves the figure alone).
+export function mountFigure(fig) {
+  if (fig.hasAttribute('data-wired')) return;
+  fig.setAttribute('data-wired', '');
   const live = document.createElement('p');
   live.className = 'vh';
   live.setAttribute('aria-live', 'polite');
   fig.append(live);
   mountTable(fig, live);
   for (const svg of fig.querySelectorAll('svg.chart')) mountMarks(fig, svg, live);
+}
+
+// Wires the charts of markup a script added to a figure already wired (tooltips and keys, as mountFigure did for the first).
+export function mountCharts(fig, root) {
+  const live = fig.querySelector(':scope > .vh[aria-live]');
+  if (!live) return;
+  for (const svg of root.querySelectorAll('svg.chart')) mountMarks(fig, svg, live);
 }
 
 if (typeof document !== 'undefined') {

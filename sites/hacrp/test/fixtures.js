@@ -162,17 +162,18 @@ export function slicedHub(data) {
   return { ...HUB, generate: (ctx, options) => generateHub(ctx, { ...options, hospitals, master: hub.master }) };
 }
 
-// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub (slicedHub), in production: for the
+// A getter for the build of `data` (a slice of loadHacrp()'s) released, with the hub (slicedHub) and any `more` sites built between them (a test that follows the hub's links
+// to another program's pages passes that site), in production: for the
 // tests that read a whole build. The build is made on the first call and shared by the rest, and its folder is removed after the
 // file's tests, so call this once, at the top of the test file. The getter resolves to the output folder.
-export function sliceBuild(data) {
+export function sliceBuild(data, more = []) {
   let built = null;
   after(() => built && rmSync(built.dir, { recursive: true, force: true }));
   return () => {
     if (!built) {
       const dir = mkdtempSync(join(tmpdir(), 'pp-slice-'));
       built = { dir, out: join(dir, 'dist') };
-      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), slicedHub(data)] });
+      built.ready = build({ outDir: built.out, env: 'production', sites: [slicedSite(data, { released: true }), ...more, slicedHub(data)] });
     }
     return built.ready.then(() => built.out);
   };

@@ -9,7 +9,7 @@
 //        of a last option that hands every match on, or null; onMore(query) acts on it)
 import { LIMIT, search } from './search.js';
 
-export function mountOmnibox(form, { load, words, open = (href) => window.location.assign(href), onMore = null }) {
+export function mountOmnibox(form, { load, words, open = (href) => window.location.assign(href), onMore = null, types }) {
   const input = form.querySelector('[role="combobox"]');
   const list = form.querySelector('[role="listbox"]');
   const status = form.querySelector('[role="status"]');
@@ -94,7 +94,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
       pending = true;
       return;
     }
-    ({ results, total } = search(query, index, { limit: LIMIT }));
+    ({ results, total } = search(query, index, { limit: LIMIT, types }));
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);
     paint();

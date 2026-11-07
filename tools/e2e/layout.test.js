@@ -1,7 +1,7 @@
 // Layout facts a reader sees at a glance, in a real browser (light): the HACRP hospital page's record card at 1280, 390
 // and 320 px (as tall as the verdict beside it, the whole state's outline behind its fields, the dot well clear of every
-// line of their words and of every rule); at 1280 px, the end of the placeholder and interim Readmissions pages (no
-// wide empty band before the footer) and the interim page's pill beside its figure; and with scripts off, a hospital
+// line of their words and of every rule); at 1280 px, the end of the placeholder pages, a hub hospital page and the Readmissions program and hospital pages (no
+// wide empty band before the footer); and with scripts off, a hospital
 // page that offers no what-if it cannot run and an HACRP record card that shows the state without its dot. Pages are
 // picked by type (site.js) or by state, never named. Runs against dist/ (make build) or any URL; see site.js.
 import { describe, it } from 'node:test';
@@ -102,21 +102,12 @@ describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
     const last = Math.max(...leaves.map((el) => el.getBoundingClientRect().bottom));
     return Math.round(document.querySelector('.foot > .wrap').getBoundingClientRect().top - last);
   });
-  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['an interim Readmissions page', ofType('hrrp-hospital-cut').path], ['a hospital page', ofType('hub-hospital-cut').path]]) {
+  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['a hospital page', ofType('hub-hospital-cut').path], ['a Readmissions hospital page', ofType('hrrp-hospital-cut').path], ['the Readmissions program page', ofType('hrrp-program').path]]) {
     it(`${what} ends without a wide empty band before the footer`, () => withPage(tabs, { path }, async (page) => {
       const band = await endBand(page);
       assert.ok(band <= FOOT_ROOM + SLACK, `${band} px between its last words and the footer's rule`);
     }));
   }
-
-  it('the interim Readmissions page\'s pill sits beside its figure', () => withPage(tabs, { path: ofType('hrrp-hospital-cut').path }, async (page) => {
-    const gap = await page.evaluate(() => {
-      const big = document.querySelector('.hh__netline .hh__big').getBoundingClientRect();
-      const pill = document.querySelector('.hh__netline .pill').getBoundingClientRect();
-      return Math.round(pill.left - big.right);
-    });
-    assert.ok(gap >= 0 && gap <= 24, `the pill ${gap} px from the figure`);
-  }));
 });
 
 describe('a hospital page with scripts off', () => {

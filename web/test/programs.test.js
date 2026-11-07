@@ -10,7 +10,7 @@ const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', '
 test('the registry lists the nine programs in order, each with its names (CMS\'s, exactly, in `long`), folder, stage, group and whether the hub has its data', () => {
   const row = (p) => [p.id, p.name, p.ab, p.long, p.path, p.stage, p.group, p.inData];
   assert.deepEqual(SITE.programs.map(row), [
-    ['hrrp', 'Readmissions', 'HRRP', 'Hospital Readmissions Reduction Program', '/hrrp/', 'interim', 'quality', true],
+    ['hrrp', 'Readmissions', 'HRRP', 'Hospital Readmissions Reduction Program', '/hrrp/', 'live', 'quality', true],
     ['hacrp', 'Hospital-acquired conditions', 'HACRP', 'Hospital-Acquired Condition Reduction Program', '/hacrp/', 'live', 'quality', true],
     ['hvbp', 'Value-based purchasing', 'HVBP', 'Hospital Value-Based Purchasing Program', '/hvbp/', 'soon', 'quality', true],
     ['wage-index', 'Local wages', 'Wage index', 'Hospital Wage Index', '/wage-index/', 'soon', 'price', false],
@@ -31,27 +31,29 @@ test('the registry\'s groups: listed (full tabs and the footer\'s figures), unli
   const ids = (list) => list.map((p) => p.id);
   assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp']);
   assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
-  // Readmissions' folder holds the hub's interim pages (hub/hrrp/page.js), so only the programs still to come have a placeholder.
+  // Readmissions' folder holds its own site, so only the programs still to come have a placeholder.
   assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
-  assert.deepEqual(ids(SITE.programs.filter((p) => p.stage === 'interim')), ['hrrp']);
+  assert.deepEqual([...new Set(SITE.programs.map((p) => p.stage))].sort(), ['live', 'soon'], 'every program is live or still to come');
   for (const list of [LISTED_PROGRAMS, UNLISTED_PROGRAMS, PLACEHOLDER_PROGRAMS]) assert.ok(Object.isFrozen(list));
 });
 
-test('the registry and SITE.sites agree on HACRP\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
-  assert.deepEqual(Object.keys(SITE.sites), ['hacrp']);
+test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
+  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp']);
+  assert.equal(SITE.sites.hrrp.path, programById('hrrp').path);
   assert.equal(SITE.sites.hacrp.path, programById('hacrp').path);
   assert.equal(siteOf('/hacrp/hospital/990001/'), SITE.sites.hacrp);
-  assert.equal(siteOf('/hrrp/'), null);
+  assert.equal(siteOf('/hrrp/'), SITE.sites.hrrp);
+  assert.equal(siteOf('/hrrp/hospital/990001/'), SITE.sites.hrrp);
 });
 
-test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no program that is not live (interim or soon) has one; every site is a live program', () => {
+test('the registry\'s stage and SITE.sites agree: every live program has a site here at its folder, and no program still to come has one; every site is a live program', () => {
   for (const p of SITE.programs) {
     const site = Object.hasOwn(SITE.sites, p.id) ? SITE.sites[p.id] : null;
-    if (p.stage === 'live') assert.equal(site?.path, p.path, `${p.id}: a live program has a site at its folder`);
-    else assert.equal(site, null, `${p.id}: a ${p.stage} program has no entry in SITE.sites`);
+    if (p.stage === 'soon') assert.equal(site, null, `${p.id}: a program still to come has no entry in SITE.sites`);
+    else assert.equal(site?.path, p.path, `${p.id}: a ${p.stage} program has a site at its folder`);
   }
   for (const p of PLACEHOLDER_PROGRAMS) assert.ok(!Object.hasOwn(SITE.sites, p.id), p.id);
-  for (const id of Object.keys(SITE.sites)) assert.equal(programById(id)?.stage, 'live', `SITE.sites.${id} is a live program`);
+  for (const id of Object.keys(SITE.sites)) assert.notEqual(programById(id)?.stage, 'soon', `SITE.sites.${id} is a live program`);
 });
 
 test('programOf names the program whose folder holds the path, or null for the family\'s own pages', () => {
@@ -67,32 +69,26 @@ test('programById: each program by its id, the registry\'s own entry; null for a
   for (const id of ['hub', 'HRRP', 'toString', '__proto__', '', undefined]) assert.equal(programById(id), null, String(id));
 });
 
-test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital Thirty Day Readmissions has, no other program', () => {
+test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital the Readmissions site lists, no other program', () => {
   assert.equal(hospitalPathOf('hub', '990001'), '/hospital/990001/');
   assert.equal(hospitalPathOf('hacrp', '990001'), '/hacrp/hospital/990001/');
-  assert.equal(hospitalPathOf('hrrp', '990001', { inTdr: true }), '/hrrp/hospital/990001/');
-  assert.equal(hospitalPathOf('hrrp', '990001', { inTdr: false }), null);
-  assert.equal(hospitalPathOf('hrrp', '990001'), null, 'no flag is not in Thirty Day Readmissions');
+  assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: true }), '/hrrp/hospital/990001/');
+  assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: false }), null);
+  assert.equal(hospitalPathOf('hrrp', '990001'), null, 'no flag is not in the Readmissions file');
   for (const id of ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team', 'nope']) {
-    assert.equal(hospitalPathOf(id, '990001', { inTdr: true }), null, id);
+    assert.equal(hospitalPathOf(id, '990001', { inHrrp: true }), null, id);
   }
-  // A hospital the dollar file lacks has no hub or HACRP page; its Readmissions page goes by inTdr alone.
+  // A hospital the dollar file lacks has no hub or HACRP page; its Readmissions page goes by inHrrp alone.
   assert.equal(hospitalPathOf('hub', '990001', { inHub: false }), null);
   assert.equal(hospitalPathOf('hacrp', '990001', { inHub: false }), null);
-  assert.equal(hospitalPathOf('hrrp', '990001', { inTdr: true, inHub: false }), '/hrrp/hospital/990001/');
+  assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: true, inHub: false }), '/hrrp/hospital/990001/');
   // A CCN with a letter is lowercased, since a folder is.
   assert.equal(hospitalPathOf('hub', '99A001'), '/hospital/99a001/');
   assert.equal(hospitalPathOf('hacrp', '99A001'), '/hacrp/hospital/99a001/');
   // Each page sits in its program's hospital folder; a program with none has no folder.
   assert.deepEqual(['hub', 'hacrp', 'hrrp'].map(hospitalFolderOf), ['/hospital/', '/hacrp/hospital/', '/hrrp/hospital/']);
-  for (const id of ['hub', 'hacrp', 'hrrp']) assert.ok(hospitalPathOf(id, '990001', { inTdr: true }).startsWith(hospitalFolderOf(id)), id);
+  for (const id of ['hub', 'hacrp', 'hrrp']) assert.ok(hospitalPathOf(id, '990001', { inHrrp: true }).startsWith(hospitalFolderOf(id)), id);
   for (const id of ['hvbp', 'team', 'nope']) assert.equal(hospitalFolderOf(id), null, id);
-});
-
-test('Thirty Day Readmissions: its name, its address, and the link to one of its hospitals', () => {
-  assert.equal(SITE.tdr.name, 'Thirty Day Readmissions');
-  assert.equal(SITE.tdr.url, 'https://thirty-day-readmissions.vercel.app/');
-  assert.equal(SITE.tdr.hospital('990001'), 'https://thirty-day-readmissions.vercel.app/#hospital-990001');
 });
 
 test('the method constants are the programs\' own rules: the 3% Readmissions cap, the 1% hospital-acquired conditions cut, the 2% withheld', () => {

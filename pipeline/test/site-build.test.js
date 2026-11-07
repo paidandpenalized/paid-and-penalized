@@ -6,6 +6,12 @@ import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
 import { buildAssets, hash8, stylesheet } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
+import { loadHub } from '../../hub/data.js';
+import { EXAMPLE_CCN } from '../../hub/model.js';
+import { HRRP, generateHrrp } from '../../sites/hrrp/web/generate.js';
+import { loadHrrp } from '../../sites/hrrp/web/data.js';
+import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
@@ -13,8 +19,8 @@ import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.j
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf } from '../site/address.js';
 import { htmlPages, tags } from '../site/html.js';
-import { pageType } from '../../tools/ci/page-types.js';
-import { cardFile } from '../../web/share-card.js';
+import { pageProgram, pageType } from '../../tools/ci/page-types.js';
+import { SHARE_CARDS, cardFile, shareCardOf } from '../../web/share-card.js';
 import { SITE } from '../../web/site.js';
 import { get, testAssets, withServer, withTemp as inTemp, writeTree } from './helpers.js';
 
@@ -291,7 +297,29 @@ const newestBuilt = ({ builtFiles }) => builtFiles.filter(([, file]) => file)
 // HACRP released on its first four hospitals (every page type, in well under a second) with the hub: built once, in
 // production, for the tests that read a whole build.
 const DATA = loadHacrp();
-const builtSlice = sliceBuild({ ...DATA, hospitals: DATA.hospitals.slice(0, 4) });
+// The hub's example hospital too: the home page's example card links to its page.
+const SLICE = { ...DATA, hospitals: [...DATA.hospitals.slice(0, 4), DATA.hospitals.find((h) => h.ccn === EXAMPLE_CCN)] };
+// Readmissions' pages link the hub's and HACRP's page for their hospital, which the slice builds for its own hospitals only,
+// so its Readmissions pages are the slice's too.
+const SLICE_CCNS = new Set(SLICE.hospitals.map((h) => h.ccn));
+const HRRP_DATA = loadHrrp();
+const HRRP_SLICE = { ...HRRP, generate: (ctx) => generateHrrp(ctx, { data: { ...HRRP_DATA, hospitals: HRRP_DATA.hospitals.filter((h) => SLICE_CCNS.has(h.id)) }, log: () => {} }) };
+const builtSlice = sliceBuild(SLICE, [HRRP_SLICE]);
+
+// CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
+// site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's
+// hospitals are the only HACRP ones built, and "#state=" names their states.
+test('every internal link on the built pages lands on a file, and every fragment on an id or a state the page reads', async () => {
+  const { pages, found } = checkLinks(await builtSlice(), SLICE.hospitals.map((h) => h.state));
+  assert.deepEqual(found, []);
+  assert.ok(pages > SLICE.hospitals.length, `${pages} pages checked`);
+});
+
+test('the Readmissions site has a page for every hospital the hub marks for Readmissions, so the hub\'s links never 404', () => {
+  const have = new Set(HRRP_DATA.hospitals.map((h) => hrrpHospitalPath(h.id)));
+  const missing = [...loadHub().hrrp.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
+  assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
+});
 
 test('HACRP gives the build its two dates, which /corrections/ shows', async () => {
   const out = await builtSlice();
@@ -301,8 +329,8 @@ test('HACRP gives the build its two dates, which /corrections/ shows', async () 
   assert.ok(text.includes(`<time datetime="${newestBuilt(DATA)}">`));
 });
 
-// A rule for a hub page's own parts: the hospital page's (.hh), the home page's story (.story) or the interim Readmissions
-// pages' (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
+// A rule for a hub page's own parts: the hospital page's (.hh), the home page's story (.story) or the placeholder pages'
+// masthead (.rd), as a selector names it (minified: followed by a combinator, another selector or the block).
 const HUB_RULE = /\.(hh|story|rd)(__[\w-]+|--[\w-]+)?(?=[\s,{.:>+~[)])/;
 
 test('each page links the shared stylesheet and then its own site\'s alone: a HACRP page HACRP\'s, a hub page the hub\'s; the shared one holds neither\'s rules', async () => {
@@ -312,30 +340,32 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
   const seen = new Set();
   const shared = new Set();
-  const own = { hacrp: new Set(), hub: new Set() };
+  const siteIds = [...Object.keys(SITE.sites), 'hub'];
+  const own = Object.fromEntries(siteIds.map((id) => [id, new Set()]));
   for (const file of htmlPages(out)) {
     const type = pageType(addressOf(file));
     const links = sheetsOf(file);
     seen.add(type);
     assert.equal(links.length, 2, file);
     shared.add(links[0]);
-    own[PROGRAM_TYPES.includes(type) ? 'hacrp' : 'hub'].add(links[1]);
+    own[pageProgram(addressOf(file)) ?? 'hub'].add(links[1]);
   }
   for (const type of [...PROGRAM_TYPES, 'hub', 'policy', 'coming', 'hubHospital', 'notFound']) assert.ok(seen.has(type), `the slice built a ${type} page`);
   assert.equal(shared.size, 1, 'one shared stylesheet');
-  assert.deepEqual([own.hacrp.size, own.hub.size], [1, 1], 'one stylesheet for each site');
+  assert.deepEqual(siteIds.map((id) => own[id].size), siteIds.map(() => 1), 'one stylesheet for each site');
   const [site] = shared;
-  const [[hacrp], [hub]] = [[...own.hacrp], [...own.hub]];
+  const sheetOf = Object.fromEntries(siteIds.map((id) => [id, [...own[id]][0]]));
+  const { hacrp, hrrp, hub } = sheetOf;
   assert.match(site, /^\/assets\/site\.[0-9a-f]{8}\.css$/);
-  assert.match(hacrp, /^\/assets\/hacrp\.[0-9a-f]{8}\.css$/);
-  assert.match(hub, /^\/assets\/hub\.[0-9a-f]{8}\.css$/);
+  for (const id of siteIds) assert.match(sheetOf[id], new RegExp(`^/assets/${id}\\.[0-9a-f]{8}\\.css$`), id);
   // (Each check is a yes or no: a failing match would print the whole stylesheet.)
   const css = (href) => readFileSync(join(out, href), 'utf8');
   assert.equal(HUB_RULE.exec(css(site))?.[0] ?? null, null, 'the shared stylesheet holds no hub page\'s rule');
   assert.equal(HUB_RULE.exec(css(hacrp))?.[0] ?? null, null, 'HACRP\'s stylesheet holds no hub page\'s rule');
+  assert.equal(HUB_RULE.exec(css(hrrp))?.[0] ?? null, null, 'Readmissions\' stylesheet holds no hub page\'s rule');
   for (const root of ['.prog__lede', '.step__n']) {
     assert.ok(css(hacrp).includes(root), `HACRP's stylesheet holds ${root}`);
-    assert.ok(!css(site).includes(root) && !css(hub).includes(root), `only HACRP's stylesheet holds ${root}`);
+    assert.ok(!css(site).includes(root) && !css(hub).includes(root) && !css(hrrp).includes(root), `only HACRP's stylesheet holds ${root}`);
   }
   for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
   // The chart and what-if kit (KIT_STYLES) rides in HACRP's sheet alone; the hub's keeps the scale bar's two dot rules.
@@ -356,9 +386,9 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   assert.doesNotMatch('.hhx{margin:0}.history{margin:0}.rdx{margin:0}', HUB_RULE);
 });
 
-test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, every other page the family\'s, each a copy of its committed PNG', async () => {
+test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s card, Readmissions\' its own, every other page the family\'s, each a copy of its committed PNG', async () => {
   const out = await builtSlice();
-  const shown = { hacrp: new Set(), family: new Set() };
+  const shown = Object.fromEntries(Object.keys(SHARE_CARDS).map((id) => [id, new Set()]));
   for (const file of htmlPages(out)) {
     const metas = [...tags(readFileSync(join(out, file), 'utf8'), { names: ['meta'] })].map(({ attrs }) => attrs);
     const content = (key) => metas.filter((a) => (a.property ?? a.name) === key).map((a) => a.content);
@@ -368,7 +398,7 @@ test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s car
     assert.ok(image.startsWith(`${SITE.origin}/assets/`), file);
     const path = image.slice(SITE.origin.length);
     assert.ok(existsSync(join(out, path)), `${file}: ${path} is not in dist/`);
-    const id = addressOf(file).startsWith(SITE.sites.hacrp.path) ? 'hacrp' : 'family';
+    const id = shareCardOf(addressOf(file));
     assert.match(path, new RegExp(`^/assets/og-${id}\\.[0-9a-f]{8}\\.png$`), file);
     shown[id].add(path);
   }

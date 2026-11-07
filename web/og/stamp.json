@@ -1,10 +1,14 @@
 {
   "family": {
-    "html": "f4f961aedd4d47ce9569f2cddfe8f91721b8dd36f046d22080f5ac8cb1c9f387",
+    "html": "8f500467c0a3403ecff32af50604fd2bb4812600a17a60dfaa75a37c2f0967ec",
     "png": "41e48c10d9fa45ae492b4ab44fe3d4be23040e98c6b99ae47aa40106f8a6bb8d"
   },
   "hacrp": {
-    "html": "241fc9fc19b50710bc34fb154b2fc0d783ab0f1c7c127679aeb868c777ec0656",
+    "html": "3ec941f1a37d231bae0511a498bea5a1eb14fb6c8c1c1a67de9bd9be80e88b20",
     "png": "bc9415b070d282e344bf83cdcb0ea3c8a0fec1dd2188d7661fbbcdc87a4f90bc"
+  },
+  "hrrp": {
+    "html": "51723f6ed2f9782f99e8eb60e4efca0d2f5fd58922bb10e724b78daf38234d27",
+    "png": "54a3cfaba70eb6721a8180e149f4b11e476032e9684e41a885e785507aa830a1"
   }
 }

@@ -9,7 +9,7 @@ import { barRows } from '../charts/barRows.js';
 import { dotsD } from '../charts/dots.js';
 import { absoluteD } from '../charts/pathd.js';
 import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../charts/geo.js';
-import { periodsChart } from '../charts/periods.js';
+import { periodsChart, periodsPlotBase } from '../charts/periods.js';
 import { proofBins, proofStrips } from '../charts/proofStrips.js';
 import { rankYears } from '../charts/rankYears.js';
 import { everBrackets, rollCall, rollParts } from '../charts/rollCall.js';
@@ -222,6 +222,17 @@ const PERIODS = (over = {}) => ({
     { label: 'FY2024', spans: [SPAN('hai', [2022, 1, 1], [2023, 12, 31]), SPAN('pay', [2023, 10, 1], [2024, 9, 30])] },
   ],
   kinds: ['psi', 'hai', 'pay'], width: 640, ...over,
+});
+
+test('periodsChart grid and labelEnd: gridlines only at the years asked for; a phone\'s every-other labels end on the last year', () => {
+  const rows = [{ label: 'FY2027', spans: [SPAN('pay', [2008, 7, 1], [2027, 6, 30])] }];
+  const all = String(periodsChart({ rows, kinds: ['pay'], width: 640 }));
+  const fives = String(periodsChart({ rows, kinds: ['pay'], width: 640, grid: (yr) => yr % 5 === 0 }));
+  assert.equal((all.match(/class="chart-grid"/g) ?? []).length, 21, 'every year by default');
+  assert.equal((fives.match(/class="chart-grid"/g) ?? []).length, 4, '2010, 2015, 2020, 2025');
+  const labels = (svg) => [...svg.matchAll(/class="chart-tick"[^>]*>(\d+)</g)].map((m) => m[1]);
+  assert.equal(labels(String(periodsChart({ rows, kinds: ['pay'], width: 330 }))).at(-1), '26', 'from the first year: the last is skipped');
+  assert.equal(labels(String(periodsChart({ rows, kinds: ['pay'], width: 330, labelEnd: true }))).at(-1), '27', 'from the last year');
 });
 
 test('periodsChart refuses no rows and no kinds', () => {
@@ -447,6 +458,13 @@ test('rankYears: each year with a cut line is shaded from the line up; a year wi
   assert.ok(s.includes('>No scores</text>'));
   assert.doesNotMatch(String(rankYears({ years, labels: { ...RANK_LABELS, none: '' }, width: 300 })), /rotate\(-90\)/, 'no word, no label');
   assert.ok(Number(/r="(\d+)"/.exec(tags(s, 'chart-rank__dot')[0])[1]) === 4, 'smaller dots on a phone');
+});
+
+test('rankYears: a break marked left runs its label left of the rule even with no break after it', () => {
+  const years = Array.from({ length: 10 }, (_, i) => rankYear(String(15 + i), (i % 5) / 4));
+  const caps = (left) => textTags(String(rankYears({ years, breaks: [{ at: 9, label: 'changed', left }], labels: RANK_LABELS, width: 300 })), 'chart-cap').map((c) => c.anchor);
+  assert.deepEqual(caps(undefined), ['start']);
+  assert.deepEqual(caps(true), ['end']);
 });
 
 test('rankYears: rule changes are dashed lines with their labels; a phone with many years labels every other one', () => {
@@ -866,4 +884,12 @@ test('usYearMap: the land as a faint path for each state and DC, then one path o
   assert.equal(attr(tags(s, 'chart-years__dots')[0], 'data-size'), '4.2');
   assert.equal(String(usYearMap({ shapes, groups, size: 4.2, width: 960 })), s, 'the same call gives the same markup');
   assert.equal(count(String(usYearMap({ shapes, groups: [], size: 4.2, width: 960 })), /chart-dots /g), 0);
+});
+
+test('periodsPlotBase: the line where a periods chart of n rows ends its rows, its gridlines stop and its year labels hang', () => {
+  const chart = String(periodsChart(PERIODS()));
+  const n = PERIODS().rows.length;
+  const y2 = Number(chart.match(/class="chart-grid"[^>]*y2="([\d.]+)"/)[1]);
+  assert.equal(periodsPlotBase(n), y2);
+  assert.ok(periodsPlotBase(n + 1) > periodsPlotBase(n));
 });

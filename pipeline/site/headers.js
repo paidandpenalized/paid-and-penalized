@@ -3,6 +3,7 @@
 // the parser and matcher that read the file back the way Cloudflare does, for the local server (serve.js) and for
 // checking the live site's headers against the file. They read the part of Cloudflare's grammar this file uses.
 import { isProduction } from './context.js';
+import { fileFor } from './address.js';
 
 const DAY = 24 * 60 * 60;
 const IMMUTABLE = `public, max-age=${365 * DAY}, immutable`;
@@ -51,8 +52,33 @@ export const cspFor = (env) => [
   "frame-ancestors 'none'",
 ].join('; ');
 
+// The noindex data files as rules' paths: a folder's files as one splat ("/data/hrrp/fy2027/*") when every file the build
+// wrote in that folder is noindex, else each file by name, so a site's hundreds of CSVs stay inside Cloudflare's 100 rules
+// without a splat ever covering a file that may be indexed. emitted: every file the build wrote, by its path (build.js lists
+// dist/ itself, so a file written outside emit counts too); without it, each file by name.
+export function noindexPaths(noindexFiles, emitted = null) {
+  const folderOf = (path) => path.slice(0, path.lastIndexOf('/') + 1);
+  // Compared as files: a folder path an emit names ("/x/") is its index.html in dist/.
+  const asFile = (path) => `/${fileFor(path)}`;
+  const shut = new Set(noindexFiles.map(asFile));
+  // A splat matches slashes too, so a folder is open when any file it holds, in it or in a folder under it, may be indexed:
+  // every folder above each such file, once.
+  const open = new Set();
+  for (const path of (emitted ?? []).map(asFile)) {
+    if (shut.has(path)) continue;
+    for (let i = path.indexOf('/'); i >= 0; i = path.indexOf('/', i + 1)) open.add(path.slice(0, i + 1));
+  }
+  const isShut = (folder) => !open.has(folder);
+  const out = new Set();
+  for (const path of noindexFiles) {
+    const folder = folderOf(asFile(path));
+    out.add(emitted && isShut(folder) ? `${folder}*` : path);
+  }
+  return [...out];
+}
+
 // The rules in file order, each [pattern, [[name, value]]]. A request gets every matching rule's headers.
-const rulesFor = (env) => [
+const rulesFor = (env, noindexFiles = [], emitted = null) => [
   ['/*', [
     ['Content-Security-Policy', cspFor(env)],
     ['X-Content-Type-Options', 'nosniff'],
@@ -68,15 +94,19 @@ const rulesFor = (env) => [
   // The share cards (.png) too: a link preview's cache fetches a changed card by its new name. A splat matches slashes
   // too, so these would also take a .js, .css, .json or .png file under /assets/fonts/; that folder holds only fonts
   // and their licenses, and a test checks every built file against the rule.
+  // Data files of a site not yet released (no meta robots on a CSV): a production build keeps them out of search results
+  // by path; every other build already says noindex on every path.
+  ...(isProduction(env) ? noindexPaths(noindexFiles, emitted).map((path) => [path, [['X-Robots-Tag', 'noindex']]]) : []),
   ...['js', 'css', 'json', 'png'].map((ext) => [`/assets/*.${ext}`, [['Cache-Control', IMMUTABLE]]]),
   // Fixed names whose content can change in place: kept a week, then checked again.
   ['/assets/fonts/*', [['Cache-Control', WEEK]]],
   ['/favicon.svg', [['Cache-Control', WEEK]]],
 ];
 
-// The _headers text for a build. env: the build's PP_ENV.
-export function headersFile({ env } = {}) {
-  const blocks = rulesFor(env).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
+// The _headers text for a build. env: the build's PP_ENV. noindexFiles: paths the build emitted with noindex (ctx.noindexFiles);
+// emitted: every file it wrote, by path (build.js lists dist/), which lets a folder of noindex files take one rule (noindexPaths).
+export function headersFile({ env, noindexFiles = [], emitted = null } = {}) {
+  const blocks = rulesFor(env, noindexFiles, emitted).map(([path, set]) => [path, ...set.map(([name, value]) => `  ${name}: ${value}`)].join('\n'));
   return `# Written by pipeline/site/headers.js. Cloudflare reads this file and does not serve it.\n${blocks.join('\n\n')}\n`;
 }
 

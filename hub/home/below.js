@@ -189,8 +189,8 @@ const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title
 
 // The directory. programs: the registry (SITE.programs); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year.
 // A card per program the dollar estimates hold (one of them with no page here, stage soon, is under construction: its
-// card's link says so), then the rest by group. The heading counts the programs with pages here (live, or interim until
-// Thirty Day Readmissions folds in), those under construction, and those under consideration.
+// card's link says so), then the rest by group. The heading counts the programs with pages here (live), those under
+// construction, and those under consideration.
 export function directory({ programs, facts, hospitals, fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);

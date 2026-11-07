@@ -3,14 +3,15 @@
 // order, then writes Cloudflare's _headers (headers.js).
 // A production build (PP_ENV=production, or Workers Builds' build of main: buildEnv in context.js) is the only one that
 // may be indexed (robotsFor in context.js holds the rule for pages).
-import { mkdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { isAbsolute, join, relative, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { shellFacts } from '../../hub/model.js';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
+import { HRRP } from '../../sites/hrrp/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
 import { SITE } from '../../web/site.js';
 import { buildAssets, writeHashed } from './assets.js';
@@ -24,7 +25,7 @@ import { headersFile } from './headers.js';
 // SITE.sites) returns its two dates for the corrections page, { updated: { cmsReleased, changed } }; updated is the
 // dates of the program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml,
 // listing every page an earlier site emitted as indexable.
-export const SITES = [HACRP, HUB];
+export const SITES = [HACRP, HRRP, HUB];
 // Shared by every site: the head's theme script (the reader's light/dark choice for the visit, put back before the
 // page paints), then the shell's script (the theme buttons, the followed hospital, the phone's search button, the
 // tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads on every
@@ -90,8 +91,11 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
     const result = await site.generate(ctx, { updated });
     if (Object.hasOwn(SITE.sites, site.id)) updated.set(site.id, siteDates(site.id, result));
   }
-  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it.
-  writeFileMkdir(join(dir, '_headers'), headersFile({ env }));
+  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it. Every file in dist/ is
+  // listed for it (emitted or copied), so no noindex splat covers a file that may be indexed.
+  const written = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile())
+    .map((e) => '/' + relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));
+  writeFileMkdir(join(dir, '_headers'), headersFile({ env, noindexFiles: ctx.noindexFiles, emitted: written }));
   return { pages: ctx.pages, env };
 }
 

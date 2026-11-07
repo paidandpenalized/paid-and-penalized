@@ -92,6 +92,11 @@ export const CLAIMS = {
   PARHM_THROUGH_YEAR: 'HACRP-93',
 };
 
+// What the copy gate (pipeline/test/copy-gate.test.js) reads: the prefix of this site's claim ids, and the method constants
+// it checks (name and type): each carries a claim id above. Not listed on purpose: a constant that is presentation, not a claim.
+export const CLAIM_PREFIX = 'HACRP';
+export const METHOD_CONSTANTS = Object.freeze({ REDUCTION_PCT: 'number', CUTOFF_PERCENTILE: 'number', WINSOR_LOW: 'number', WINSOR_HIGH: 'number' });
+
 // CMS's short names for the measures, read from its column names ("PSI 90 W Z Score" -> "PSI 90"). PSI 90 has a
 // digit, so these can't live in copy.js.
 export const SHORT_NAMES = Object.freeze(Object.fromEntries(MEASURES.map((m) => [m.id, m.z.replace(/ W Z Score$/, '')])));

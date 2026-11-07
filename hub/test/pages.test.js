@@ -28,11 +28,11 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx, { released: true });
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
-    // still to come, a page per hospital in the dollar file, and the interim Readmissions pages (/hrrp/ and one per hospital
-    // in the pinned file). The hub released: its home page, Methods, policy pages and hospital pages with an estimate
-    // (one without has no figures) are indexable; the 404 page, the placeholders and the interim pages never are.
+    // still to come, and a page per hospital in the dollar file (the
+    // Readmissions site writes /hrrp/ and its pages). The hub released: its home page, Methods, policy pages and hospital
+    // pages with an estimate (one without has no figures) are indexable; the 404 page and the placeholders never are.
     const hub = loadHub();
-    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + 1 + hub.tdr.hospitals.size);
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length);
     // The program site's pages first (the sitemap's order), then the hub's.
     assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
     const hubIndexable = ctx.indexable.slice(2);
@@ -73,6 +73,7 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
+    assert.ok(notFound.includes(fillCopy(SHARED, 'notInHrrp')), 'the line on who is not in the Readmissions program');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));

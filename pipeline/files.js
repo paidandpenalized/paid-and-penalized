@@ -30,6 +30,7 @@ export function writeFileMkdir(path, text) {
 
 // The newest fy<YYYY> folder under a repo directory (e.g. data/emitted/hacrp), as a number.
 export function newestYear(dir) {
+  if (!existsSync(REPO_ROOT + dir)) throw new RangeError(`no folder ${dir}`);
   const years = readdirSync(REPO_ROOT + dir).map((f) => /^fy(\d{4})$/.exec(f)?.[1]).filter(Boolean).map(Number);
   if (!years.length) throw new RangeError(`no fy<YYYY> folder under ${dir}`);
   return Math.max(...years);
@@ -39,6 +40,8 @@ export function newestYear(dir) {
 export const masterPath = (fy) => `data/emitted/hospital/fy${fy}/hospital_master.json`;
 // The HACRP site's emitted file for a fiscal year, repo-relative (written by `make emit`; see sites/hacrp/pipeline/emit.js).
 export const hacrpPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;
+// The Readmissions site's emitted file for a fiscal year, repo-relative (written by `make emit`).
+export const hrrpPath = (fy) => `data/emitted/hrrp/fy${fy}/hrrp.json`;
 // The dollar estimates for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/dollars.py).
 export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
 

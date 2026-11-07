@@ -18,7 +18,7 @@ import { money } from '../../web/client/format.js';
 import { tabHref, withFollow } from '../../web/client/follow.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { PROGRAM_PATH } from '../ci/page-types.js';
-import { CONCURRENCY, ENGINE, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, ENGINE, TAB_KEYS, assertAnswered, assertNoSideways, assertQuiet, fetchesOf, newPage, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { hospitalSample, hubHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -39,18 +39,18 @@ const PLACEHOLDER = programById('hvbp').path;
 const PATHS = [['hub page', '/'], ['hub page', SITE.pages.about], ['placeholder', PLACEHOLDER], ['program page', PROGRAM_PATH], ['hospital page', HOSPITAL]];
 
 // The hub's asset as the page's header names it, fetched in the page: its fiscal year and its rows as { ccn, name, net,
-// tdr, status }, so the test needs no hospital of its own (and prints none). Call it after any check that the asset was
+// inHrrp, status }, so the test needs no hospital of its own (and prints none). Call it after any check that the asset was
 // not fetched.
 const hubRows = (page) => page.evaluate(async () => {
   const asset = await (await fetch(document.querySelector('.topbar').dataset.hubSrc)).json();
   const at = (c) => asset.cols.indexOf(c);
-  return { fy: asset.fy, rows: asset.rows.map((r) => ({ ccn: r[at('ccn')], name: r[at('name')], net: r[at('net')], tdr: r[at('tdr')], status: r[at('status')] })) };
+  return { fy: asset.fy, rows: asset.rows.map((r) => ({ ccn: r[at('ccn')], name: r[at('name')], net: r[at('net')], inHrrp: r[at('inHrrp')], status: r[at('status')] })) };
 });
 
 // The tab links, as the page holds them.
 const hrefsOf = (page) => page.evaluate(() => [...document.querySelectorAll('.tabs__scroll a')].map((a) => a.getAttribute('href')));
 // How many times the page has fetched the hub's asset.
-const assetFetches = (page) => page.evaluate(() => performance.getEntriesByType('resource').filter((e) => e.name.includes('hub-hospitals')).length);
+const assetFetches = (page) => fetchesOf(page, 'hub-hospitals');
 
 // What the header shows: its height, the bar's, whether the find button shows, whether the bar holds a search form, the
 // tab row's fade and scroll, and the current tab's place against the row's.
@@ -222,10 +222,10 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, PHONE);
 
   it('a ?h= naming a hospital fills the chip, points the tabs and the wordmark at it, and the × stops following', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
-    // Two estimated hospitals, one Thirty Day Readmissions has and one it does not.
+    // Two estimated hospitals, one with a Readmissions page and one without.
     const { rows } = await hubRows(page);
-    const pick = (tdr) => rows.find((r) => r.status === STATUS_CODES.estimated && r.tdr === tdr);
-    for (const [row, inTdr] of [[pick(1), true], [pick(0), false]]) {
+    const pick = (flag) => rows.find((r) => r.status === STATUS_CODES.estimated && r.inHrrp === flag);
+    for (const [row, inHrrp] of [[pick(1), true], [pick(0), false]]) {
       // Lowercase on purpose: a CCN is accepted in either case.
       await visit(page, tabs.base, `${PROGRAM_PATH}?x=1&h=${row.ccn.toLowerCase()}`);
       const chip = page.locator('[data-chip]');
@@ -233,7 +233,7 @@ describe('the followed hospital', { concurrency: CONCURRENCY }, () => {
       assert.equal(await chip.locator('.chip__t').textContent(), row.name, 'the chip names the hospital');
       assert.match(await chip.locator('.chip__v').textContent(), /^Estimated FY\d{4} net:\s*[+−]?\$[\d.,]+[KMB]?$/);
       assert.equal(await chip.locator('.chip__n').getAttribute('href'), tabHref(null, row.ccn));
-      assert.deepEqual(await hrefsOf(page), [tabHref(null, row.ccn), ...LISTED_PROGRAMS.map((p) => tabHref(p.id, row.ccn, { inTdr }))]);
+      assert.deepEqual(await hrefsOf(page), [tabHref(null, row.ccn), ...LISTED_PROGRAMS.map((p) => tabHref(p.id, row.ccn, { inHrrp }))]);
       assert.equal(await page.locator('a.wordmark').getAttribute('href'), `/?h=${row.ccn}`);
       assert.ok((await headerFacts(page)).header <= MAX_STICKY, 'the header stays modest with the chip');
       await assertNoSideways(page, 'the page with the chip');
@@ -284,13 +284,13 @@ describe('a hospital\'s own page', { concurrency: CONCURRENCY }, () => {
     assert.equal(await chip.isVisible(), true, 'the chip shows without waiting for a script');
     assert.equal(await assetFetches(page), 0, 'no hub asset fetched');
     // The tabs and the wordmark carry the hospital to every program's folder and the front page; its HACRP tab is this
-    // page, All programs its page across the programs and Readmissions its interim page when Thirty Day Readmissions has the
+    // page, All programs its page across the programs and Readmissions its page when the Readmissions site has the
     // hospital (the hub's asset says). Compared as one answer, so a failure prints no CCN.
     const { fy, rows } = await hubRows(page);
     const row = rows.find((r) => r.ccn === ccn);
     assert.ok(row, 'the hospital is in the hub\'s asset');
     const own = hospitalPathOf('hub', ccn);
-    const tabFor = (p) => (p.id === 'hacrp' ? HOSPITAL : p.id === 'hrrp' && row.tdr === 1 ? hospitalPathOf('hrrp', ccn, { inTdr: true }) : withFollow(p.path, ccn));
+    const tabFor = (p) => (p.id === 'hacrp' ? HOSPITAL : p.id === 'hrrp' && row.inHrrp === 1 ? hospitalPathOf('hrrp', ccn, { inHrrp: true }) : withFollow(p.path, ccn));
     const want = [own, ...LISTED_PROGRAMS.map(tabFor)];
     assert.ok(JSON.stringify(await hrefsOf(page)) === JSON.stringify(want), 'the tabs follow the hospital');
     assert.ok(await page.locator('a.wordmark').getAttribute('href') === withFollow('/', ccn), 'the wordmark follows the hospital');

@@ -23,18 +23,18 @@ export const SITE = {
   hub: { released: true },
   sites: {
     hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
+    hrrp: { path: '/hrrp/', released: true, title: 'Readmissions', subtitle: 'HRRP' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
   //   name, ab, long   the tab's name, its short form, and CMS's name for the program
   //   path             the program's folder (a program not built here holds a placeholder page there)
-  //   stage            live (a site here), interim (a slim page here until Thirty Day Readmissions folds in), soon
-  //                    (no page here: not built; the id is internal)
+  //   stage            live (a site here), soon (no page here: not built; the id is internal)
   //   group            what the program does to payment: quality (a cut or bonus for scores), price (an adjustment to
   //                    the rate), reporting (a cut for not reporting), episode (a spending target)
   //   inData           whether the dollar estimates (hub/) include the program
   programs: [
-    { id: 'hrrp', name: 'Readmissions', ab: 'HRRP', long: 'Hospital Readmissions Reduction Program', path: '/hrrp/', stage: 'interim', group: 'quality', inData: true },
+    { id: 'hrrp', name: 'Readmissions', ab: 'HRRP', long: 'Hospital Readmissions Reduction Program', path: '/hrrp/', stage: 'live', group: 'quality', inData: true },
     { id: 'hacrp', name: 'Hospital-acquired conditions', ab: 'HACRP', long: 'Hospital-Acquired Condition Reduction Program', path: '/hacrp/', stage: 'live', group: 'quality', inData: true },
     { id: 'hvbp', name: 'Value-based purchasing', ab: 'HVBP', long: 'Hospital Value-Based Purchasing Program', path: '/hvbp/', stage: 'soon', group: 'quality', inData: true },
     { id: 'wage-index', name: 'Local wages', ab: 'Wage index', long: 'Hospital Wage Index', path: '/wage-index/', stage: 'soon', group: 'price', inData: false },
@@ -44,13 +44,6 @@ export const SITE = {
     { id: 'pi', name: 'Electronic health records', ab: 'PI', long: 'Medicare Promoting Interoperability Program', path: '/pi/', stage: 'soon', group: 'reporting', inData: false },
     { id: 'team', name: 'Surgical episodes', ab: 'TEAM', long: 'Transforming Episode Accountability Model', path: '/team/', stage: 'soon', group: 'episode', inData: false },
   ],
-  // Thirty Day Readmissions, the sister site Readmissions lives on until it folds in; hospital(ccn) is the link to one
-  // of its hospitals.
-  tdr: {
-    name: 'Thirty Day Readmissions',
-    url: 'https://thirty-day-readmissions.vercel.app/',
-    hospital: (ccn) => `${SITE.tdr.url}#hospital-${ccn}`,
-  },
 };
 
 // The site a page belongs to, by its path: the entry in SITE.sites whose path starts the page's, or null for the
@@ -64,11 +57,10 @@ export const programById = (id) => SITE.programs.find((p) => p.id === id) ?? nul
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
 
 // The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live and
-// interim programs and the not-built ones the dollar estimates already include, the shell's tabs and the footer's
+// programs and the not-built ones the dollar estimates already include, the shell's tabs and the footer's
 // figures; unlisted: the rest, under consideration, the footer's "Under consideration:" line and the front page's
 // slips (no tab). Placeholder: every program with no page here (stage soon), whose folder holds the hub's placeholder
-// page (hub/coming.js). A live program's folder holds its site and an interim one's the hub's own Readmissions pages
-// (hub/hrrp/page.js).
+// page (hub/coming.js). A live program's folder holds its site.
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));
 export const UNLISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => !LISTED_PROGRAMS.includes(p)));
 export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage === 'soon'));
@@ -76,9 +68,8 @@ export const PLACEHOLDER_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.
 // front page's directory and a hospital page's link say so).
 export const underConstruction = (p) => p.stage === 'soon' && p.inData;
 
-// The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' (that site's
-// hospital pages) or 'hrrp' (the slim Readmissions pages), each under its program's folder; null for any other program,
-// which has none yet.
+// The folder that holds hospitals' pages: 'hub' (the hospital page across the programs, /hospital/), 'hacrp' or 'hrrp'
+// (that site's hospital pages, under its program's folder); null for any other program, which has none yet.
 export function hospitalFolderOf(programId) {
   if (programId === 'hub') return '/hospital/';
   return programId === 'hacrp' || programId === 'hrrp' ? `${programById(programId).path}hospital/` : null;
@@ -86,8 +77,9 @@ export function hospitalFolderOf(programId) {
 
 // The address of a hospital's page in a program (hospitalFolderOf), or null when the program has none for it: a hospital
 // in the dollar file (inHub, as every hospital the hub's pages and data hold is) has a hub page and a HACRP page, and one
-// Thirty Day Readmissions has (inTdr) a Readmissions page. Folders are lowercase, so the CCN is too.
-export function hospitalPathOf(programId, ccn, { inTdr = false, inHub = true } = {}) {
+// the Readmissions site lists (inHrrp, which the hub marks from that site's emitted file) a Readmissions page: the
+// Readmissions site writes a page for every hospital in its data file. Folders are lowercase, so the CCN is too.
+export function hospitalPathOf(programId, ccn, { inHrrp = false, inHub = true } = {}) {
   const folder = hospitalFolderOf(programId);
-  return folder && (programId === 'hrrp' ? inTdr : inHub) ? `${folder}${ccn.toLowerCase()}/` : null;
+  return folder && (programId === 'hrrp' ? inHrrp : inHub) ? `${folder}${ccn.toLowerCase()}/` : null;
 }

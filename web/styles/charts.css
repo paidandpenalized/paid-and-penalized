@@ -20,6 +20,10 @@
 .fig__swatch--median::after { top: 0; bottom: 0; left: 6px; width: 2px; background: var(--ink); }
 /* Scores the same: the hatch, with the hairline where it starts. */
 .fig__swatch--same { width: 20px; height: 8px; border-left: 1px solid var(--ink-2); background: var(--hatch-fill); }
+/* The pen ramp's dark step and its light, outlined one (two kinds of bar). */
+.fig__swatch--bar-dark, .fig__swatch--bar-light { width: 12px; height: 12px; }
+.fig__swatch--bar-dark { background: var(--pen-seq-4); }
+.fig__swatch--bar-light { background: var(--pen-seq-1); border: 1px solid var(--pen-seq-3); }
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
 /* The claim level leads the source line as words, not a badge. */
 .fig__claim { color: var(--ink); font-weight: 600; }
@@ -83,6 +87,10 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 /* Marks: neutral gray unless the mark is a cut (--pen); no data is the hatch, never a color. */
 .chart-bar, .chart-col { fill: var(--ink-3); }
 .chart-col--pen { fill: var(--pen); }
+/* The bands behind a columns chart (columns.js bands): every other one tinted, each labeled across the top. */
+.chart-band { fill: transparent; }
+.chart-band--tint { fill: var(--paper-2); }
+.chart-band__label { fill: var(--ink-2); font: 600 10px var(--font-type); }
 .chart-bar-na, .chart-tile-na { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* Nothing to show (no hospital in the file): an empty tile, dashed, so it never reads as the hatch's "not in the program". */
 /* A share of exactly zero: the neutral mark, a solid outline (the dashed one means nothing to show). */
@@ -181,12 +189,16 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
    mark class is covered here or in whatif.css, components.css and the site styles. */
 @media (forced-colors: active) {
   .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { forced-color-adjust: none; background: CanvasText; }
+  .fig__swatch--bar-dark { forced-color-adjust: none; background: CanvasText; }
+  .fig__swatch--bar-light { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .chart-hatch { color: CanvasText; }
   .chart-bar-na, .chart-tile-na, .chart-tile-empty, .chart-tile-zero, .chart-tile-few, .chart-dead__end { stroke: CanvasText; }
   .chart-tile-zero { fill: Canvas; }
   .chart-tile, .chart-tile__code, .chart-tile__value, .chart-tile-few--on { forced-color-adjust: none; }
   .chart-bar, .chart-col--pen, .chart-this { fill: CanvasText; }
   .chart-col { fill: GrayText; }
+  /* A plain .chart-band stays transparent here (no rule needed); only the tint swaps its paper fill for Canvas and gains an edge. */
+  .chart-band--tint { fill: Canvas; stroke: GrayText; stroke-width: 1px; vector-effect: non-scaling-stroke; }
   .chart-hyp { fill: Canvas; stroke: CanvasText; }
   .chart-median, .chart-boundary, .chart-axis__line, .chart-axis__tick, .chart-zero { stroke: CanvasText; }
   .chart-line { stroke: Highlight; }
@@ -279,6 +291,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-place__dot--faint { fill: var(--ink-3); stroke: var(--paper); opacity: 0.6; }
 .chart--place-map .chart-mark[data-href] { cursor: pointer; }
 .chart--place-map .chart-mark.is-active .chart-place__dot { stroke-width: 3px; }
+.chart-bartick { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .chart-outline { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 
 /* Forced colors for those marks: the cut in CanvasText, everything else in GrayText, frames and rules in CanvasText,
@@ -290,7 +303,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
   .chart-punch__card, .chart-slide__stock, .chart-slide__glass, .chart-loupe__glass, .chart-scatter__bg, .chart-agree__cell, .chart-card, .chart-card--pen, .chart-card__none, .chart-share__dot, .chart-place__dot--ring, .chart-geo-near, .chart-geo-mine { fill: Canvas; stroke: CanvasText; }
   .chart-card__a { stroke: CanvasText; }
-  .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
+  .chart-bartick, .chart-slide__tick, .chart-slide__mid, .chart-slide__mean, .chart-rule__line, .chart-rule__avg, .chart-rule__cursor, .chart-outline, .chart-swarm__ring { stroke: CanvasText; }
   .chart-agree__cell.is-picked { stroke: Highlight; }
 }
 

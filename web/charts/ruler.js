@@ -11,6 +11,8 @@
 //   labels                 { median, value, same, note }: the median's label (with its number), the ▲'s tooltip
 //                          name, the hatch's tooltip name, the text in the ▲'s place when value is null
 //   format                 value -> text
+//   ends                   optional [low, high] texts: the axis's end values, small, along the top (a page whose rulers
+//                          each have their own axis); none by default
 import { html } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, mark, r2, text, triangle } from './svg.js';
 
@@ -21,7 +23,7 @@ const HATCH = 6;
 const MARK = AXIS + 3;
 const HEIGHT = AXIS + 18;
 
-export function ruler({ id, domain: [lo, hi], counts, floor, cap, median, value, labels, format, width = 300, pen = false, ghost = false }) {
+export function ruler({ id, domain: [lo, hi], counts, floor, cap, median, value, labels, format, width = 300, pen = false, ghost = false, ends = null }) {
   checkId(id, 'ruler');
   const x = (v) => r2(PAD + ((Math.min(Math.max(v, lo), hi) - lo) / (hi - lo)) * (width - 2 * PAD));
   const step = (width - 2 * PAD) / counts.length;
@@ -51,16 +53,17 @@ ${text({ x: xv + (right ? 9 : -9), y: MARK + 10, anchor: right ? 'start' : 'end'
   }
   return frame({
     kind: 'ruler', width, height: HEIGHT, body: html`${hatchDefs(id)}${cols && html`<path class="chart-dist" aria-hidden="true" d="${cols}"/>`}
-${mark({
+${dead.length ? mark({
     tip: `${labels.same} (${format(floor)}, ${format(cap)})`, value: [floor, cap], hit: null,
     body: html`${dead.map(([a, b]) => html`<rect class="chart-dead" fill="${hatchFill(id)}" x="${r2(a)}" y="${AXIS - HATCH / 2}" width="${r2(b - a)}" height="${HATCH}"/>`)}${dead.map(([a, b]) => html`<line class="chart-dead__end" x1="${a === PAD ? b : a}" x2="${a === PAD ? b : a}" y1="${AXIS - HATCH / 2}" y2="${AXIS + HATCH / 2}"/>`)}`,
-  })}
+  }) : ''}
 <line class="chart-axis__line" x1="${PAD}" x2="${width - PAD}" y1="${AXIS}" y2="${AXIS}"/>
 ${mark({
     tip: labels.median, value: median, hit: { x: xm - 6, y: COL_TOP - 4, width: 12, height: AXIS - COL_TOP + 10 },
     body: html`<line class="chart-median" x1="${xm}" x2="${xm}" y1="${COL_TOP - 3}" y2="${AXIS + 5}"/>`,
   })}
 ${text({ x: xm + (nearRight ? -4 : 4), y: COL_TOP - 4, anchor: nearRight ? 'end' : 'start', cls: 'chart-note chart-label--halo', body: labels.median })}
-${hospital}`,
+${hospital}${ends && html`
+${text({ x: PAD, y: COL_TOP - 4, anchor: 'start', cls: 'chart-end', body: ends[0] })}${text({ x: width - PAD, y: COL_TOP - 4, anchor: 'end', cls: 'chart-end', body: ends[1] })}`}`,
   });
 }

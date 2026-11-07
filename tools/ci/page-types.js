@@ -7,7 +7,8 @@ import { hospitalHref } from '../../sites/hacrp/web/hospital-table.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/web/links.js';
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
 import { HOSPITALS_PATH } from '../../sites/hacrp/web/view.js';
-import { PLACEHOLDER_PROGRAMS, SITE, hospitalFolderOf, hospitalPathOf, programById } from '../../web/site.js';
+import * as hrrp from '../../sites/hrrp/web/links.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalFolderOf, hospitalPathOf } from '../../web/site.js';
 
 export { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, placePath };
 // A hospital's page, by its CCN (any case): '/hacrp/hospital/<ccn, lowercase>/'.
@@ -22,35 +23,47 @@ const folderUnder = (path, prefix) => {
   return name && !name.includes('/') ? name : null;
 };
 // A path is a hospital's or a place's page when the helper that writes it writes it from the name in it. A hospital's page
-// in a program's hospital folder (web/site.js hospitalFolderOf: HACRP's, the hub's own, Readmissions' interim one), by
-// hospitalPathOf, which a test holds equal to HACRP's own writer (hospitalPath).
-const hospitalPageIn = (programId) => {
-  const folder = hospitalFolderOf(programId);
-  return (path) => {
-    const ccn = folderUnder(path, folder)?.toUpperCase();
-    return ccn !== undefined && CCN.test(ccn) && hospitalPathOf(programId, ccn, { inTdr: true }) === path;
-  };
+// is in a hospital folder and is the path pathOf writes for the CCN in it (a CCN in any case).
+const hospitalPageBy = (folder, pathOf) => (path) => {
+  const ccn = folderUnder(path, folder)?.toUpperCase();
+  return ccn !== undefined && CCN.test(ccn) && pathOf(ccn) === path;
 };
+// HACRP's and the hub's own hospital pages, by web/site.js hospitalPathOf (which a test holds equal to HACRP's own writer,
+// hospitalPath).
+const hospitalPageIn = (programId) => hospitalPageBy(hospitalFolderOf(programId), (ccn) => hospitalPathOf(programId, ccn));
 const isHospital = hospitalPageIn('hacrp');
 const isHubHospital = hospitalPageIn('hub');
-const isHrrpHospital = hospitalPageIn('hrrp');
-// The interim Readmissions page (hub/hrrp/page.js): the program's folder.
-const HRRP_PATH = programById('hrrp').path;
-// The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
-export const placeKind = (path) => KINDS.find((kind) => {
-  const key = folderUnder(path, `${PROGRAM_PATH}${kind}/`);
-  return key !== null && placePath(kind, key) === path;
+// A place's page by the helper that writes it (placePath), under the program's folder.
+const placeKindIn = (programPath, kinds, pathOf) => (path) => kinds.find((kind) => {
+  const key = folderUnder(path, `${programPath}${kind}/`);
+  return key !== null && pathOf(kind, key) === path;
 }) ?? null;
+// The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
+export const placeKind = placeKindIn(PROGRAM_PATH, KINDS, placePath);
+
+// A program site's five page predicates, from its links module: PROGRAM_PATH, METHODS_PATH, DICTIONARY_PAGE,
+// HOSPITALS_PATH, hospitalPath, KINDS and placePath.
+const programPages = (links) => {
+  const kindOf = placeKindIn(links.PROGRAM_PATH, links.KINDS, links.placePath);
+  return {
+    program: (path) => path === links.PROGRAM_PATH,
+    methods: (path) => path === links.METHODS_PATH,
+    dictionary: (path) => path === links.DICTIONARY_PAGE,
+    hospital: hospitalPageBy(links.HOSPITALS_PATH, links.hospitalPath),
+    place: (path) => kindOf(path) !== null,
+  };
+};
 
 // The program sites with pages of their own (program, hospital, place, Methods and data dictionary), each with the
 // predicates that sort a path into those types. A program site joins by adding its entry when its pages exist; its
 // budgets join in size-budget.js (PROGRAM_BUDGETS). A test checks that every id here has budgets; a program's budgets
-// may exist before its pages do, as Readmissions' do.
+// may exist before its pages do.
 export const PROGRAM_SITES = [
   {
     id: 'hacrp',
     pages: { program: (path) => path === PROGRAM_PATH, methods: (path) => path === METHODS_PATH, dictionary: (path) => path === DICTIONARY_PAGE, hospital: isHospital, place: (path) => placeKind(path) !== null },
   },
+  { id: 'hrrp', pages: programPages(hrrp) },
 ];
 // The program-keyed types: those of a program's own pages, budgeted per program.
 export const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
@@ -62,19 +75,17 @@ const programPage = (path) => {
 };
 
 // The type of the page at a site path: 'hub', 'policy', 'coming', 'program', 'methods', 'dictionary', 'hospital',
-// 'place', 'hubHospital', 'hrrp', 'hrrpHospital' or 'notFound'; null for a path that is none of them.
+// 'place', 'hubHospital' or 'notFound'; null for a path that is none of them.
 export function pageType(path) {
   if (path === '/') return 'hub';
   if (path === NOT_FOUND_ADDRESS) return 'notFound';
   if (POLICY.has(path)) return 'policy';
   if (PLACEHOLDERS.has(path)) return 'coming';
-  if (path === HRRP_PATH) return 'hrrp';
   const own = programPage(path);
   if (own) return own.type;
   if (isHubHospital(path)) return 'hubHospital';
-  if (isHrrpHospital(path)) return 'hrrpHospital';
   return null;
 }
-// The id of the program whose page is at a site path ('hacrp'), for the program-keyed types ('program', 'hospital',
+// The id of the program whose page is at a site path ('hacrp', 'hrrp'), for the program-keyed types ('program', 'hospital',
 // 'place', 'methods', 'dictionary'); null for any other page.
 export const pageProgram = (path) => programPage(path)?.program ?? null;

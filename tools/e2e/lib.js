@@ -304,6 +304,10 @@ export function searchIn(page, container) {
   return { box: search.getByRole('combobox'), list: search.getByRole('option') };
 }
 
+// How many times the page fetched a file whose address has this word (the page's own requests, read from its resource timings, so
+// those made before a test attached a listener count).
+export const fetchesOf = (page, word) => page.evaluate((w) => performance.getEntriesByType('resource').filter((e) => e.name.includes(w)).length, word);
+
 // The keys that move focus forward and back in ENGINE. Safari's, on macOS, tabs only through form controls unless
 // Option is held (its "Press Tab to highlight each item" setting is off), so a walk there holds it.
 export const TAB_KEYS = ENGINE === 'webkit' && process.platform === 'darwin'

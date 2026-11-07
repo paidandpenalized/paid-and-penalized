@@ -8,13 +8,21 @@
 // on its mapW by mapH projection). The family's card: the wordmark, the tagline and the address; its dots red for a
 // net cut, green for a net bonus, gray for no net change or no estimate. HACRP's card: the family and the program as a
 // kicker, the program's title, its address; its dots red where CMS's HACRP file says it cut the hospital (payment
-// reduction "Yes", the newest emitted year), gray otherwise. No numbers and no byline on any card.
+// reduction "Yes", the newest emitted year), gray otherwise. The Readmissions (HRRP) card is HACRP's with three of the program
+// page's At-a-glance numbers under the title (penalized with its share of those measured, the average cut among the
+// penalized, the count at the maximum), its dots red where the hospital's payment adjustment factor is below 1. No
+// other card holds a number, and none a byline.
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { REPO_ROOT, readJson } from '../../pipeline/files.js';
 import { LIGHT_BLOCK, declarations } from '../../pipeline/site/assets.js';
 import { emittedPath } from '../../sites/hacrp/pipeline/build.js';
+import { summarize } from '../../engine/js/hrrp/summary.js';
+import { CAP_PCT } from '../../engine/js/hrrp/formula.js';
+import { loadHrrp } from '../../sites/hrrp/web/data.js';
+import { fmtInt, fmtPct } from '../../sites/hrrp/web/numbers.js';
+import { fill as programFill } from '../../sites/hrrp/web/program/copy.js';
 import { COPY } from '../../web/copy.js';
 import { html, raw } from '../../web/render/html.js';
 import { CARD_SIZE, SHARE_CARDS } from '../../web/share-card.js';
@@ -48,7 +56,7 @@ const titleLines = (title) => title.split(' ').flatMap((word) => word.split(/(?<
 // Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red; size its font
 // size and top the words' top edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
 // the hospital's net dollars in the hub asset or its CCN among HACRP's cut hospitals (cut, a Set).
-const CARDS = {
+export const CARDS = {
   family: {
     kicker: null,
     lines: [COPY.wordmarkLead, COPY.wordmarkPen],
@@ -68,20 +76,36 @@ const CARDS = {
     // CMS's own flag, not the dollar estimates: a hospital CMS cut but the hub has no estimate for is still red.
     tone: ({ ccn }, { cut }) => (cut.has(ccn) ? 'pen' : null),
   },
+  hrrp: {
+    kicker: `${SITE.name} · ${SITE.sites.hrrp.subtitle}`,
+    lines: titleLines(SITE.sites.hrrp.title),
+    size: 72,
+    top: 92,
+    tagline: null,
+    address: host + SITE.sites.hrrp.path.replace(/\/$/, ''),
+    // The program's own result: a payment adjustment factor below 1 is a cut, whether or not the hub has an estimate.
+    tone: ({ ccn }, { hrrpCut }) => (hrrpCut.has(ccn) ? 'pen' : null),
+    // The three At-a-glance fields, [value, label], from the same summary the program page's card reads.
+    fields: ({ hrrp: S }) => [
+      [fmtInt(S.nPen), programFill('cardPenalized', { pct: fmtPct(S.pctPen, 0), nMeasured: fmtInt(S.nMeasured) })],
+      [fmtPct(S.meanRedPen), programFill('cardMeanPen')],
+      [fmtInt(S.nMax), programFill('cardMax', { cap: String(CAP_PCT) })],
+    ],
+  },
 };
 for (const id of Object.keys(SHARE_CARDS)) if (!Object.hasOwn(CARDS, id)) throw new Error(`tools/og/card.js: no card design for "${id}"`);
 
 // A card's dots from the hub asset (hub: { mapW, mapH, cols, rows }) and HACRP's cut hospitals (cut: a Set of CCNs):
 // [x, y, tone] on the map, the gray ones first so the colored ones sit on top; a hospital with no place on the map is
 // left out.
-export function cardDots(id, { hub: { cols, rows }, cut }) {
+export function cardDots(id, { hub: { cols, rows }, cut, hrrpCut }) {
   const at = (name) => {
     const i = cols.indexOf(name);
     if (i < 0) throw new RangeError(`share card: the hub asset has no "${name}" column`);
     return i;
   };
   const [ccn, x, y, net] = [at('ccn'), at('x'), at('y'), at('net')];
-  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut })]);
+  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut, hrrpCut })]);
   return [...dots.filter((d) => d[2] === null), ...dots.filter((d) => d[2] !== null)];
 }
 
@@ -115,7 +139,7 @@ function mapSvg(dots, { mapW, mapH }) {
 // those it reads, so an edit to another token leaves it current; fonts: each CARD_FONTS file as base64; hub: the hub's
 // data asset (hub/asset.js hubAsset); cut: HACRP's cut hospitals (a Set of CCNs). Everything is inline, so the HTML
 // alone decides the picture, with RENDER in a comment.
-export function cardHtml(id, { tokens, fonts, hub, cut }) {
+export function cardHtml(id, { tokens, fonts, hub, cut, hrrpCut, hrrp }) {
   if (!Object.hasOwn(CARDS, id)) throw new RangeError(`share card: no card "${id}"`);
   const card = CARDS[id];
   const faces = Object.entries(CARD_FONTS).map(([file, [family, weight]]) => {
@@ -138,6 +162,10 @@ body { position: relative; background: var(--grain) repeat, var(--paper); color:
 .words > .kick { margin-bottom: 18px; }
 .rule { border-top: 1.5px solid var(--ink); margin-top: 30px; padding-top: 16px; }
 .addr { width: fit-content; font: 400 26px var(--font-type); white-space: nowrap; }
+.stats { margin-top: 26px; }
+.stat { display: flex; align-items: baseline; gap: 16px; margin-top: 10px; white-space: nowrap; }
+.stat .num { flex: none; width: 150px; font: 400 40px/1 var(--font-display); }
+.stat .lab { font: 700 21px var(--font-body); }
 .kick + .addr { margin-top: 14px; }
 .mapbox { position: absolute; right: 70px; top: 96px; width: ${MAP_BOX.width}px; height: ${MAP_BOX.height}px; }
 .map circle { fill-opacity: .85; }
@@ -157,9 +185,10 @@ ${raw(css)}
 <div class="words">
 ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 ` : ''}<div class="big">${card.lines.map((line, i) => html`<span${i === last ? raw(' class="pen"') : ''} data-fit>${line}</span>`)}</div>
-<div class="rule">${card.tagline ? html`<div class="kick" data-fit>${card.tagline}</div>` : ''}<div class="addr" data-fit>${card.address}</div></div>
+${card.fields ? html`<div class="stats">${card.fields({ hrrp }).map(([value, label]) => html`<div class="stat"><span class="num">${value}</span><span class="lab" data-fit>${label}</span></div>`)}</div>
+` : ''}<div class="rule">${card.tagline ? html`<div class="kick" data-fit>${card.tagline}</div>` : ''}<div class="addr" data-fit>${card.address}</div></div>
 </div>
-<div class="mapbox">${mapSvg(cardDots(id, { hub, cut }), hub)}</div>
+<div class="mapbox">${mapSvg(cardDots(id, { hub, cut, hrrpCut }), hub)}</div>
 <div class="dbl dbl--bottom"></div>
 </body></html>
 `.toString();
@@ -174,5 +203,8 @@ export function cardInputs() {
   const { hub, hospitals } = hubModel();
   const hacrp = readJson(REPO_ROOT + emittedPath(hub.fy));
   const cut = new Set(hacrp.hospitals.filter((h) => h.paymentReduction === 'Yes').map((h) => h.ccn));
-  return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut };
+  // Readmissions: the newest year's penalized hospitals (factor below 1) and the summary the program page's card shows.
+  const rows = loadHrrp().hospitals;
+  const hrrpCut = new Set(rows.filter((h) => h.paf < 1).map((h) => h.id));
+  return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut, hrrpCut, hrrp: summarize(rows) };
 }

@@ -66,8 +66,8 @@ export const COPY = typesetCopy({
   claimEstimate: 'Estimate',
   claimHypothetical: 'Hypothetical',
   // Each program's one-sentence dek (web/programs.js fills the placeholders from the programs' rules, in digits or in
-  // words): on the placeholder pages of the programs without a page of their own (hub/coming.js), the interim
-  // Readmissions page and the home page's directory. dekHrrp says "in the {days} days after leaving" where CMS says
+  // words): on the placeholder pages of the programs without a page of their own (hub/coming.js), the
+  // Readmissions program page and the home page's directory. dekHrrp says "in the {days} days after leaving" where CMS says
   // "within", since the house-words test reads "within" as a promised time.
   dekHrrp: 'Cuts pay by up to {cap} when more patients than expected return to the hospital in the {days} days after leaving.',
   dekHacrp: 'Cuts pay by a flat {cut} for {top} of hospitals with the highest infection and patient-safety scores.',
@@ -77,5 +77,10 @@ export const COPY = typesetCopy({
   dekIme: 'Adds payments for hospitals that train medical residents.',
   dekIqr: "Hospitals that don't report required quality data lose {share} of their yearly payment increase.",
   dekPi: 'Hospitals that miss electronic health record requirements lose {share} of their yearly increase.',
+  // Who is not in the Readmissions program: its Methods page and the hub's not-found page both say it (claim HRRP-11).
+  notInHrrp: {
+    text: "The Readmissions program covers the hospitals Medicare pays under its inpatient payment system, so critical access hospitals and the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) are not in it and have no page here.",
+    claim: ['HRRP-11', 'HRRP-12', 'HRRP-13'],
+  },
   dekTeam: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.',
 });

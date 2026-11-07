@@ -99,7 +99,7 @@ export const COPY = typesetCopy({
   whatifLede: "This hospital's estimated FY{fy} dollars in each program, beside the same {n} {group}.",
   rowValue: 'Estimated FY{fy}:',
   whyFactor: 'FY{fy} payment factor {factor}.',
-  // A hospital with a Readmissions page here (hub/hrrp/page.js), which shows CMS's newer file: why the factor there differs.
+  // A hospital with a Readmissions page here (sites/hrrp/), which shows CMS's newer file: why the factor there differs.
   whyHrrpYear: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.",
   // The same for a hospital FY{fy}'s file did not list.
   whyHrrpYearOut: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}, the latest year all three programs share, whose file did not list it.",

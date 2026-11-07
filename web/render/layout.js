@@ -62,7 +62,7 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 // page links after the shared one, in order (a hub page's: ['hub']); render-blocking, as the shared one is, so the page
 // never paints without them.
 // The shell's parts (render/shell.js familyHeader): program, the current program's id (null on the family's own pages);
-// hospital, the followed hospital ({ ccn, name, net, inTdr }) on a hospital's page, else null; sections, a program's
+// hospital, the followed hospital ({ ccn, name, net, inHrrp }) on a hospital's page, else null; sections, a program's
 // section menu ([{ id, label, href }], or null for none) and current, the section to mark (an id, or null); search, the
 // bar's search box (searchForm markup, or '' for none). The page's site, from its path (siteOf), names the site in the
 // footer's feedback link (feedbackFor).

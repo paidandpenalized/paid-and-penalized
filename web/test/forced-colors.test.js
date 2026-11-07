@@ -5,15 +5,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'hub/styles.css'];
+const FILES = ['web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'sites/hrrp/web/styles.css', 'hub/styles.css'];
 const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
   '.chart-boundary', '.chart-zone', '.chart-hatch', '.chart-dead__end', '.chart-tile', '.chart-tile-na', '.chart-tile-empty',
   '.chart-tile-zero', '.chart-tile-few', '.chart-geo-state', '.chart-geo-few', '.chart-geo-dot', '.chart-geo-halo', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
+  '.fig__swatch--bar-dark', '.fig__swatch--bar-light',
   // the money's charts (treemap, acrossLine, pairBars, geo usBubbles, columns)
   '.chart-tree__group', '.chart-tree__tile', '.chart-across__dot', '.chart-across__dot--over', '.chart-across__dot--faint', '.chart-pair__a',
-  '.chart-pair__b', '.chart-land', '.chart-bubble', '.chart-col--rew',
+  '.chart-pair__b', '.chart-land', '.chart-bubble', '.chart-col--rew', '.chart-band--tint',
   // the cliff (web/charts/cliff.js; its strip of every score is two paths in .chart-dist and .chart-col--pen)
   '.chart-cliff__ledge', '.chart-cliff__drop', '.chart-cliff__floor', '.chart-cliff__dot', '.chart-cliff__dot--over', '.chart-cliff__ring',
   '.chart-dist',
@@ -35,12 +36,28 @@ const MARKS = [
   '.chart-punch__bar', '.chart-punch__yes', '.chart-ref', '.chart-same', '.chart-sil', '.chart-pull__line', '.chart-slide__stock', '.chart-slide__hair',
   '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
   '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
-  '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring',
+  '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring', '.chart-bartick',
   // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',
+  // the Readmissions hospital page's area table (sites/hrrp/web/styles.css): the bar under a cut
+  '.nb__bar',
+  // the Readmissions map's dot key (sites/hrrp/web/styles.css)
+  '.usmap__sw--pen', '.usmap__sw--ring', '.usmap__sw--faint', '.usmap__chip--hatch',
+  // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
+  '.chart-periods__perf',
+  // the History figure's small multiples (sites/hrrp/web/styles.css)
+  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff',
+  // Step 2's lens zone on the swarm's main axis (sites/hrrp/web/styles.css)
+  '.chart-lens-zone',
+  // the Readmissions medians' shaded cells (sites/hrrp/web/styles.css)
+  '.meds__table td.hi',
+  // the picture's figures: the interval line, the strip plot's dots, bands and median tick, the trait ranges' rule (sites/hrrp/web/styles.css)
+  '.cond-ci', '.strip-dot--0', '.strip-dot--1', '.strip-dot--2', '.strip-dot--3', '.strip-dot--4', '.strip-dot--5', '.strip__band', '.strip__median', '.spread__rule',
+  // a place page's dots shaded by cut and their key (sites/hrrp/web/styles.css)
+  '.chart-place__dot--cut-1', '.chart-place__dot--cut-5', '.chart-dots--cut-1', '.chart-dots--cut-5', '.place__sw--cut-1', '.place__sw--cut-5',
 ];
 
 // The text of every @media (forced-colors: active) block, braces balanced.

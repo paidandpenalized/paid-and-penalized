@@ -10,7 +10,7 @@
 //                of the two), so its text keeps its size instead of growing with the chart
 //   chart        in place of svg: a chart that is not a kit SVG (Safe HTML, e.g. the what-if's live bars, which
 //                name their own parts); alt is then not used, and its marks carry no data-value to check
-//   note         optional: a short line under the chart (text), e.g. what the chart leaves out that the table holds
+//   note         optional: a short line under the chart (text or Safe), e.g. what the chart leaves out that the table holds
 //   key          optional: [{ swatch, label }], a one-line key above the chart naming marks it doesn't label itself;
 //                swatch is one of KEY_SWATCHES (drawn in CSS like the chart's own mark), label the caller's words
 //   claimLevel   'official' (CMS's values; nothing is said), 'recomputed', 'estimate' or 'hypothetical'
@@ -29,7 +29,8 @@ import { WIDTH } from './svg.js';
 
 const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COPY.claimEstimate, hypothetical: COPY.claimHypothetical };
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
-export const KEY_SWATCHES = ['this', 'median', 'same'];
+// 'bar-dark' and 'bar-light': the pen ramp's dark step, and its light one outlined.
+export const KEY_SWATCHES = ['this', 'median', 'same', 'bar-dark', 'bar-light'];
 
 function cellOf(cell, numeric) {
   if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value), data: cell.data ?? {} };
@@ -49,7 +50,7 @@ function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table
   if (chart === null && !isChart(svg)) throw new TypeError(`figure ${n}: svg must be a chart from web/charts`);
   if (svgWide !== null && !isChart(svgWide)) throw new TypeError(`figure ${n}: svgWide must be a chart from web/charts`);
   if (!has(CLAIMS, claimLevel)) throw new RangeError(`figure ${n}: unknown claimLevel "${claimLevel}"`);
-  if (note !== null && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
+  if (note !== null && !(note instanceof Safe) && (typeof note !== 'string' || !note)) throw new TypeError(`figure ${n}: a note must be text`);
   if (key !== null && !(Array.isArray(key) && key.length && key.every((k) => KEY_SWATCHES.includes(k?.swatch) && typeof k.label === 'string' && k.label))) {
     throw new TypeError(`figure ${n}: a key is a list of { swatch, label } with swatch one of ${KEY_SWATCHES.join(', ')}`);
   }

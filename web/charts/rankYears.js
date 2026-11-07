@@ -4,7 +4,7 @@
 // the rule changed carry a dashed rule and its label.
 //   years    [{ label, share, cut, line, tip }]: share in [0, 1] or null (no score that year), the number the table
 //            holds; cut: CMS cut it; line: the share at CMS's line that year (null: no cut that year)
-//   breaks   [{ at, label }]: a rule change before years[at]
+//   breaks   [{ at, label, left }]: a rule change before years[at]; left: its label runs left of the rule (a break near the right end)
 import { html } from '../render/html.js';
 import { capsWidth, frame, isNarrow, lineD, mark, r2, text } from './svg.js';
 
@@ -31,7 +31,7 @@ export function rankYears({ years, breaks = [], labels, width }) {
   const rules = breaks.map((b, i) => {
     const x = M.left + b.at * colW;
     const next = breaks[i + 1];
-    const crowded = next && M.left + next.at * colW - x < capsWidth(b.label) + 10;
+    const crowded = b.left || (next && M.left + next.at * colW - x < capsWidth(b.label) + 10);
     return html`<line class="chart-rank__break" x1="${r2(x)}" x2="${r2(x)}" y1="${M.top - 14}" y2="${r2(M.top + H)}"/>${text({ x: crowded ? x - 3 : x + 3, y: M.top - 6, anchor: crowded ? 'end' : 'start', cls: 'chart-cap', body: b.label })}`;
   });
   const height = M.top + H + M.bottom;
