@@ -1,7 +1,7 @@
 // The Map Part's browser behavior (figures/map.js): the measure buttons show one drawing at a time, the "hospital dots"
 // checkbox turns the dot layer on, a state picked on the map opens its page, and the "Every state" pager (pager.js) shows one page of
 // the table at a time. Without this script the average cut shows, the dots are off and the whole table reads.
-import { PROGRAM_PATH } from '../web/links.js';
+import { placePath } from '../web/links.js';
 import { mountPager } from './pager.js';
 import { mountSwitch } from './switch.js';
 
@@ -19,12 +19,14 @@ function mountSwitches(box) {
 
 // A state's click (or Enter on the state the keyboard is on: web/client/figure.js marks it is-active) opens its page, which the
 // build names on the state's mark (data-href; figures/map.js entriesOf): a state outside the program, or with no hospital in it,
-// has none. Only an address in the state pages' folder is followed.
-const STATES_PATH = `${PROGRAM_PATH}state/`;
+// has none. Only the clicked state's own page is followed.
 function mountStateLinks(box) {
   const open = (mark) => {
     const href = mark?.dataset.href;
-    if (href?.startsWith(STATES_PATH)) window.location.assign(href);
+    if (!href) return;
+    // Resolved, then held to the clicked state's own page: the build names it with the same placePath.
+    const url = new URL(href, location.origin);
+    if (url.origin === location.origin && url.pathname === placePath('state', mark.dataset.state)) window.location.assign(url.pathname);
   };
   for (const svg of box.querySelectorAll('svg.chart--us-map')) {
     svg.addEventListener('click', (e) => open(e.target.closest?.('[data-state]')));

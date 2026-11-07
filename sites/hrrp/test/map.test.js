@@ -280,7 +280,8 @@ test('the usMap kit draws no legend when bare, and the frame is the map\'s heigh
 
 test('real data: every state in the file names its page on every measure, on the map\'s marks too; the state outside the program and a state with no hospital name none', () => {
   const { hospitals, meta } = loadHrrpOnce();
-  const data = programView(areaContext({ ...loadHrrpOnce(), places: buildPlaces(hospitals, meta) })).map;
+  const places = buildPlaces(hospitals, meta);
+  const data = programView(areaContext({ ...loadHrrpOnce(), places })).map;
   const inFile = new Set(data.rows.map((r) => r.code));
   for (const measure of MEASURES) {
     const states = entriesOf(measure, data);
@@ -294,6 +295,6 @@ test('real data: every state in the file names its page on every measure, on the
   const first = [...inFile][0];
   assert.ok(svg.includes(`data-state="${first}" data-href="${placePath('state', first)}"`));
   assert.ok(!svg.includes(`data-state="${data.notInProgram}" data-href`));
-  const pages = new Set(buildPlaces(hospitals, meta).list.filter((p) => p.kind === 'state').map((p) => p.key.toUpperCase()));
+  const pages = new Set(places.list.filter((p) => p.kind === 'state').map((p) => p.key.toUpperCase()));
   for (const code of inFile) assert.ok(pages.has(code), `${code}: a state the map links has a page`);
 });

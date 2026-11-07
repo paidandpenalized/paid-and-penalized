@@ -71,7 +71,7 @@ export function noindexPaths(noindexFiles, emitted = null) {
   const isShut = (folder) => !open.has(folder);
   const out = new Set();
   for (const path of noindexFiles) {
-    const folder = folderOf(path);
+    const folder = folderOf(asFile(path));
     out.add(emitted && isShut(folder) ? `${folder}*` : path);
   }
   return [...out];

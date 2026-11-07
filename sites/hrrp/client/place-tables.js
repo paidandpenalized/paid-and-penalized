@@ -12,7 +12,6 @@ import { saveCsv } from '../../../web/client/download.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
-import { isSiteAsset } from './fetch-asset.js';
 import { loadAsset } from './hospitals.js';
 import { mountPager, statusLine } from './pager.js';
 
@@ -83,8 +82,8 @@ export function mountHospitals(box) {
     });
   }
   // A table that fits on one page has every row and names no asset.
-  // A source that is not one of the site's assets leaves the table as the server drew it (fetch-asset.js holds the rule).
-  if (!box.dataset.src || !isSiteAsset(box.dataset.src)) return;
+  // A source that is not one of the site's assets fails to load as any failed load does, in words (fetch-asset.js holds the rule).
+  if (!box.dataset.src) return;
   const prefix = box.dataset.prefix ?? 'ph';
   const el = (id) => box.querySelector(`#${prefix}-${id}`);
   const f = { text: el('text'), st: el('state'), peer: el('peer'), cond: el('cond'), teach: el('teach'), beds: el('beds'), loc: el('loc'), pen: el('pen'), sort: el('sort') };

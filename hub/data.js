@@ -35,7 +35,7 @@ function newestHrrpFile() {
   try {
     fy = newestYear('data/emitted/hrrp');
   } catch (e) {
-    if (e instanceof RangeError) throw stop('there is no emitted Readmissions year');
+    if (e instanceof RangeError) throw stop(e.message);
     throw e;
   }
   const file = hrrpPath(fy);

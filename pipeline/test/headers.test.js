@@ -67,11 +67,13 @@ test('isAnalyticsBeacon: the beacon script and its versioned copies on the analy
 test('noindex data files: a folder whose every file is noindex takes one splat; a folder that also holds an indexable file keeps each name', () => {
   const shut = Array.from({ length: 600 }, (_, i) => `/data/zz/fy2099/file-${i}.csv`);
   const mixed = ['/data/yy/a.csv', '/data/yy/b.csv'];
-  const emitted = [...shut, ...mixed, '/data/yy/open.csv', '/data/zz/', '/zz/'];
+  const emitted = [...shut, ...mixed, '/data/yy/open.csv', '/data/zz/index.html', '/zz/index.html'];
   assert.deepEqual(noindexPaths([...shut, ...mixed], emitted), ['/data/zz/fy2099/*', '/data/yy/a.csv', '/data/yy/b.csv']);
   assert.deepEqual(noindexPaths(mixed), mixed, 'without the emitted list, each by name');
   // A splat matches slashes: a folder whose subfolder holds an indexable file keeps each name.
   assert.deepEqual(noindexPaths(['/data/xx/a.csv'], ['/data/xx/a.csv', '/data/xx/sub/public.csv']), ['/data/xx/a.csv']);
+  // A page emitted at a folder address is its index.html among the files.
+  assert.deepEqual(noindexPaths(['/data/ww/'], ['/data/ww/index.html']), ['/data/ww/*']);
   const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: [...shut, ...mixed], emitted }));
   assert.equal(headersFor(rules, '/data/zz/fy2099/file-7.csv')['x-robots-tag'], 'noindex');
   assert.equal(headersFor(rules, '/data/yy/b.csv')['x-robots-tag'], 'noindex');
