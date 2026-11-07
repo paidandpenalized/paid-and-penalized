@@ -29,8 +29,8 @@ import { WIDTH } from './svg.js';
 
 const CLAIMS = { official: null, recomputed: COPY.claimRecomputed, estimate: COPY.claimEstimate, hypothetical: COPY.claimHypothetical };
 const NAME = /^[a-z0-9][a-z0-9-]*$/;
-// 'cat-N': the categorical tone chart-cat-N; 'bar-dark' and 'bar-light': the pen ramp's dark step, and its light one outlined.
-export const KEY_SWATCHES = ['this', 'median', 'same', 'cat-1', 'cat-2', 'cat-3', 'cat-4', 'cat-5', 'bar-dark', 'bar-light'];
+// 'bar-dark' and 'bar-light': the pen ramp's dark step, and its light one outlined.
+export const KEY_SWATCHES = ['this', 'median', 'same', 'bar-dark', 'bar-light'];
 
 function cellOf(cell, numeric) {
   if (cell !== null && typeof cell === 'object') return { text: String(cell.text), value: cell.value == null ? null : String(cell.value), data: cell.data ?? {} };

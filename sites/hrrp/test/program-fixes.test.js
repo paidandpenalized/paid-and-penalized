@@ -143,7 +143,7 @@ test('Fig. 2: the columns alternate two tones by peer group, with no key, and ev
   const step3 = between(text, 'id="step-3"', 'id="step-4"');
   assert.ok(step3.includes('class="chart-col dual-odd"'), 'columns in odd groups');
   assert.ok(step3.includes('class="chart-col dual-even"'), 'columns in even groups');
-  assert.ok(!step3.includes('class="chart-col"') && !step3.includes('chart-cat-'), 'every column has one of the two tones');
+  assert.ok(!step3.includes('class="chart-col"'), 'every column has one of the two tones');
   assert.ok(!step3.includes('fig__key') && !/fig__swatch/.test(step3.slice(step3.indexOf('<figure'), step3.indexOf('</figure>'))), 'no key');
   const css = CSS;
   assert.match(css.match(/\.chart-col\.dual-odd \{([^}]*)\}/)?.[1] ?? '', /fill: var\(--ink\)/);
@@ -155,10 +155,10 @@ test('Fig. 2: the columns alternate two tones by peer group, with no key, and ev
   }
 });
 
-test('figure: a categorical key swatch, and a free class or a bad swatch is refused', () => {
+test('figure: a key swatch from the list, and a free class or a bad swatch is refused', () => {
   const FIG = { n: 1, takeaway: 't', source: 's', alt: 'a', table: { columns: [{ name: 'x' }, { name: 'n', numeric: true }], rows: [['r', '1']] }, svg: columns({ bins: [{ x0: 0, x1: 1, n: 1, cls: 'chart-col', tip: 'x' }], domain: [0, 1], ticks: [0], format: String, width: 300, height: 100 }) };
-  assert.ok(String(figure({ ...FIG, key: [{ swatch: 'cat-1', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--cat-1" aria-hidden="true"></span>One</li>'));
-  for (const key of [[{ cls: 'swatch-g1', label: 'x' }], [{ swatch: 'cat-9', label: 'x' }], [{ swatch: 'this', label: '' }]]) assert.throws(() => figure({ ...FIG, key }), TypeError);
+  assert.ok(String(figure({ ...FIG, key: [{ swatch: 'bar-dark', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--bar-dark" aria-hidden="true"></span>One</li>'));
+  for (const key of [[{ cls: 'swatch-g1', label: 'x' }], [{ swatch: 'cat-1', label: 'x' }], [{ swatch: 'this', label: '' }]]) assert.throws(() => figure({ ...FIG, key }), TypeError);
 });
 
 test('a Part spaces its blocks itself: one 28px rule, and the old lede-to-figure patch is gone', () => {

@@ -20,13 +20,8 @@
 .fig__swatch--median::after { top: 0; bottom: 0; left: 6px; width: 2px; background: var(--ink); }
 /* Scores the same: the hatch, with the hairline where it starts. */
 .fig__swatch--same { width: 20px; height: 8px; border-left: 1px solid var(--ink-2); background: var(--hatch-fill); }
-/* A categorical tone (chart-cat-N), and the pen ramp's dark step and its light, outlined one (two kinds of bar). */
-.fig__swatch--cat-1, .fig__swatch--cat-2, .fig__swatch--cat-3, .fig__swatch--cat-4, .fig__swatch--cat-5, .fig__swatch--bar-dark, .fig__swatch--bar-light { width: 12px; height: 12px; }
-.fig__swatch--cat-1 { background: var(--cat-1); }
-.fig__swatch--cat-2 { background: var(--cat-2); }
-.fig__swatch--cat-3 { background: var(--cat-3); }
-.fig__swatch--cat-4 { background: var(--cat-4); }
-.fig__swatch--cat-5 { background: var(--cat-5); }
+/* The pen ramp's dark step and its light, outlined one (two kinds of bar). */
+.fig__swatch--bar-dark, .fig__swatch--bar-light { width: 12px; height: 12px; }
 .fig__swatch--bar-dark { background: var(--pen-seq-4); }
 .fig__swatch--bar-light { background: var(--pen-seq-1); border: 1px solid var(--pen-seq-3); }
 .fig__source { font-size: var(--fs-sm); color: var(--ink-2); }
@@ -123,12 +118,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-seq-3 { fill: var(--pen-seq-3); }
 .chart-seq-4 { fill: var(--pen-seq-4); }
 .chart-seq-5 { fill: var(--pen-seq-5); }
-/* The categorical tones (tokens.css --cat-N), for marks that sort a set into groups; a label or the key names each group too. */
-.chart-cat-1 { fill: var(--cat-1); }
-.chart-cat-2 { fill: var(--cat-2); }
-.chart-cat-3 { fill: var(--cat-3); }
-.chart-cat-4 { fill: var(--cat-4); }
-.chart-cat-5 { fill: var(--cat-5); }
 .chart-tile__code { fill: var(--ink); font-family: var(--font-type); font-size: 11px; font-weight: 700; paint-order: stroke; text-anchor: middle; }
 .chart-tile__value { fill: var(--ink); font-family: var(--font-type); font-size: 10px; paint-order: stroke; text-anchor: middle; font-variant-numeric: tabular-nums; }
 :is(.chart-tile__code, .chart-tile__value).chart-tile__code--on { fill: var(--on-mark); }
@@ -200,8 +189,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
    mark class is covered here or in whatif.css, components.css and the site styles. */
 @media (forced-colors: active) {
   .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { forced-color-adjust: none; background: CanvasText; }
-  .chart-cat-1, .chart-cat-2, .chart-cat-3, .chart-cat-4, .chart-cat-5 { fill: GrayText; }
-  .fig__swatch--cat-1, .fig__swatch--cat-2, .fig__swatch--cat-3, .fig__swatch--cat-4, .fig__swatch--cat-5 { forced-color-adjust: none; background: GrayText; }
   .fig__swatch--bar-dark { forced-color-adjust: none; background: CanvasText; }
   .fig__swatch--bar-light { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
   .chart-hatch { color: CanvasText; }

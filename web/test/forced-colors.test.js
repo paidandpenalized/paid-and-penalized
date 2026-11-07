@@ -11,7 +11,7 @@ const MARKS = [
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
   '.chart-boundary', '.chart-zone', '.chart-hatch', '.chart-dead__end', '.chart-tile', '.chart-tile-na', '.chart-tile-empty',
   '.chart-tile-zero', '.chart-tile-few', '.chart-geo-state', '.chart-geo-few', '.chart-geo-dot', '.chart-geo-halo', '.fig__swatch--this', '.fig__swatch--median', '.fig__swatch--same',
-  '.chart-cat-1', '.chart-cat-2', '.chart-cat-3', '.chart-cat-4', '.chart-cat-5', '.fig__swatch--cat-1', '.fig__swatch--cat-2', '.fig__swatch--cat-3', '.fig__swatch--cat-4', '.fig__swatch--cat-5', '.fig__swatch--bar-dark', '.fig__swatch--bar-light',
+  '.fig__swatch--bar-dark', '.fig__swatch--bar-light',
   // the money's charts (treemap, acrossLine, pairBars, geo usBubbles, columns)
   '.chart-tree__group', '.chart-tree__tile', '.chart-across__dot', '.chart-across__dot--over', '.chart-across__dot--faint', '.chart-pair__a',
   '.chart-pair__b', '.chart-land', '.chart-bubble', '.chart-col--rew', '.chart-band--tint',
