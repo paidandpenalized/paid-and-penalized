@@ -135,7 +135,7 @@ test('page: one header without an h1, one main, the body, canonical, skip link, 
 const tabsOf = (out) => [...headerOf(out).matchAll(/<a class="(tab[^"]*)" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>([\s\S]*?)<\/a>/g)]
   .map(([, cls, href, current, inner]) => [href, inner.replace(/<[^>]+>/g, ''), current ? 'page' : null, cls]);
 // An invented hospital the shell follows (no real name or CCN).
-const FOLLOWED = { ccn: '990001', name: 'Exampleton <General> & Sons', net: -58430, inTdr: true };
+const FOLLOWED = { ccn: '990001', name: 'Exampleton <General> & Sons', net: -58430, inHrrp: true };
 const SECTIONS = [{ id: 'how', label: 'How it works', href: '/hacrp/#how' }, { id: 'list', label: 'Every <one>', href: '/hacrp/#list' }];
 
 test('shell: one header, the skip link before it; the family bar runs wordmark, tagline, chip, then search and the theme toggle', () => {
@@ -212,8 +212,8 @@ test('shell: with a followed hospital, each tab opens that program\'s page for i
   assert.equal(href('HACRP'), '/hacrp/hospital/990001/');
   assert.equal(href('HVBP'), '/hvbp/');
   assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs and the programs with estimates');
-  // Not in Thirty Day Readmissions: the Readmissions folder.
-  const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inTdr: false } }));
+  // Not in the Readmissions file: the Readmissions folder.
+  const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inHrrp: false } }));
   assert.equal(notTdr[1][0], '/hrrp/');
 });
 

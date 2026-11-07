@@ -46,14 +46,14 @@ test('followedCcn: a CCN the page does not know is null, and known is asked only
   assert.deepEqual(asked, ['990001', '99000A'], 'asked with the uppercase CCN, and never about junk');
 });
 
-test('tabHref: All is the hospital page; Hacrp has one for every hospital; Readmissions only for a hospital Thirty Day Readmissions has', () => {
-  assert.equal(tabHref(null, '990001', { inTdr: false }), '/hospital/990001/');
+test('tabHref: All is the hospital page; Hacrp has one for every hospital; Readmissions only for a hospital the Readmissions site lists', () => {
+  assert.equal(tabHref(null, '990001', { inHrrp: false }), '/hospital/990001/');
   assert.equal(tabHref('hub', '99000A', null), '/hospital/99000a/', 'folders are lowercase');
-  assert.equal(tabHref('hacrp', '99000A', { inTdr: false }), '/hacrp/hospital/99000a/');
-  assert.equal(tabHref('hrrp', '990001', { inTdr: true }), '/hrrp/hospital/990001/');
-  assert.equal(tabHref('hrrp', '990001', { inTdr: false }), '/hrrp/?h=990001');
+  assert.equal(tabHref('hacrp', '99000A', { inHrrp: false }), '/hacrp/hospital/99000a/');
+  assert.equal(tabHref('hrrp', '990001', { inHrrp: true }), '/hrrp/hospital/990001/');
+  assert.equal(tabHref('hrrp', '990001', { inHrrp: false }), '/hrrp/?h=990001');
   assert.equal(tabHref('hrrp', '990001', null), '/hrrp/?h=990001');
-  assert.equal(tabHref('hvbp', '99000A', { inTdr: true }), '/hvbp/?h=99000A', 'any other program: its folder, with the hospital in the link');
+  assert.equal(tabHref('hvbp', '99000A', { inHrrp: true }), '/hvbp/?h=99000A', 'any other program: its folder, with the hospital in the link');
   for (const p of SITE.programs.filter((q) => !['hrrp', 'hacrp'].includes(q.id))) assert.equal(tabHref(p.id, '990001', null), `${p.path}?h=990001`, p.id);
   assert.throws(() => tabHref('nope', '990001', null), RangeError);
 });
@@ -242,7 +242,7 @@ function page({ hospital = null } = {}) {
   wordmark.setAttribute('href', '/');
   const tabs = [null, ...SITE.programs].map((p) => {
     const a = el('a');
-    const own = hospital && hospitalPathOf(p === null ? 'hub' : p.id, hospital.toLowerCase(), { inTdr: false });
+    const own = hospital && hospitalPathOf(p === null ? 'hub' : p.id, hospital.toLowerCase(), { inHrrp: false });
     a.setAttribute('href', own || (p === null ? '/' : p.path));
     return a;
   });
@@ -250,10 +250,10 @@ function page({ hospital = null } = {}) {
 }
 const hrefs = (tabs) => tabs.map((a) => a.getAttribute('href'));
 const ROWS = new Map([
-  ['990001', { ccn: '990001', name: 'Example General', inTdr: true, est: { net: -1234567 } }],
-  ['99000A', { ccn: '99000A', name: 'Sample Medical', inTdr: false, est: { net: 250000 } }],
-  ['990003', { ccn: '990003', name: 'No Estimate Hospital', inTdr: false, est: null }],
-  ['990004', { ccn: '990004', name: '<img src=x onerror=alert(1)>', inTdr: false, est: { net: 0 } }],
+  ['990001', { ccn: '990001', name: 'Example General', inHrrp: true, est: { net: -1234567 } }],
+  ['99000A', { ccn: '99000A', name: 'Sample Medical', inHrrp: false, est: { net: 250000 } }],
+  ['990003', { ccn: '990003', name: 'No Estimate Hospital', inHrrp: false, est: null }],
+  ['990004', { ccn: '990004', name: '<img src=x onerror=alert(1)>', inHrrp: false, est: { net: 0 } }],
 ]);
 function run({ search, here = '/hacrp/', hospital = null, rows = ROWS, fail = false } = {}) {
   const p = page({ hospital });
@@ -289,7 +289,7 @@ test('follow: a ?h= naming a known hospital fills the chip, points the tabs and 
   assert.deepEqual(hrefs(r.tabs), ['/hospital/99000a/', ...SITE.programs.map((p) => own[p.id] ?? `${p.path}?h=99000A`)]);
 });
 
-test('follow: a hospital Thirty Day Readmissions has gets its own Readmissions page', async () => {
+test('follow: a hospital the Readmissions site lists gets its own Readmissions page', async () => {
   const r = run({ search: '?h=990001' });
   await r.done;
   const at = SITE.programs.findIndex((p) => p.id === 'hrrp') + 1;
@@ -357,7 +357,7 @@ test('follow: a header naming something that is not a CCN is left alone', async 
 });
 
 test('follow: a hospital whose name holds "$&" or "$1" is printed as it is', async () => {
-  const rows = new Map([['990005', { ccn: '990005', name: 'A $& B $1 $$ C', inTdr: false, est: { net: -5 } }]]);
+  const rows = new Map([['990005', { ccn: '990005', name: 'A $& B $1 $$ C', inHrrp: false, est: { net: -5 } }]]);
   const r = run({ search: '?h=990005', rows });
   await r.done;
   assert.equal(r.chip.children[1].children[0].textContent, 'A $& B $1 $$ C');
@@ -370,7 +370,7 @@ test('rewriteLinks: only the front page and a program\'s folder are rewritten; a
     if (href !== null) a.setAttribute('href', href);
     return a;
   });
-  rewriteLinks({ tabs, wordmark: null }, '99000A', { inTdr: false });
+  rewriteLinks({ tabs, wordmark: null }, '99000A', { inHrrp: false });
   assert.deepEqual(hrefs(tabs), ['/hospital/99000a/', '/hvbp/?h=99000A', '/hvbp/?h=990001', '/somewhere/else/', 'https://example.org/hvbp/', null]);
 });
 

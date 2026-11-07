@@ -50,8 +50,8 @@ test('pageType: a hospital\'s page across the programs is hubHospital only at a 
 
 test('pageType: a Readmissions hospital page is a hospital only at a valid CCN\'s lowercase folder under /hrrp/hospital/, a place only at a known kind', () => {
   for (const ccn of ['990001', '99A001']) {
-    assert.equal(pageType(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hospital', ccn);
-    assert.equal(pageProgram(hospitalPathOf('hrrp', ccn, { inTdr: true })), 'hrrp', ccn);
+    assert.equal(pageType(hospitalPathOf('hrrp', ccn, { inHrrp: true })), 'hospital', ccn);
+    assert.equal(pageProgram(hospitalPathOf('hrrp', ccn, { inHrrp: true })), 'hrrp', ccn);
   }
   for (const path of ['/hrrp/hospital/', '/hrrp/hospital/99A001/', '/hrrp/hospital/12345/', '/hrrp/hospital/9900011/', '/hrrp/hospital/990001/extra/', '/hrrp/hospital/990001', '/hrrp/hospitals/990001/', '/hrrp', '/hrrp/x/',
     '/hrrp/state/', '/hrrp/state/CA/', '/hrrp/county/x/', '/hrrp/state/ca/extra/'])

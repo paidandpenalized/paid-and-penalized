@@ -22,7 +22,7 @@ test('paths', () => {
 });
 
 test("the site's hospital address and the shared registry's agree for every hospital in the data", () => {
-  for (const h of hospitals) assert.equal(hospitalPath(h.id), hospitalPathOf('hrrp', h.id, { inTdr: true }), 'one address');
+  for (const h of hospitals) assert.equal(hospitalPath(h.id), hospitalPathOf('hrrp', h.id, { inHrrp: true }), 'one address');
 });
 
 test('the places on the data', () => {

@@ -14,7 +14,7 @@ import { EXAMPLE_CCN, hubHospitals } from '../model.js';
 import { hubSearchForm } from '../search/form.js';
 import { comboForm } from '../../web/test/dom.js';
 
-const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inTdr: false, est: null });
+const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inHrrp: false, est: null });
 const SAMPLE = [
   h('990001', 'Example General Hospital', 'Exampleton', 'OH'),
   h('99000A', 'Sample Medical Center', 'Sampleville', 'NY'),

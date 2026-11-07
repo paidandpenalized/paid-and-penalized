@@ -157,12 +157,12 @@ export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origi
 
 // Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
 // robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
-// hospitals' story facts (storyFacts); tdr: loadHub().tdr (a hospital's Readmissions page shows its factor).
-function hospitalPages(ctx, { hospitals, facts, master, tdr, robots, never }) {
+// hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor).
+function hospitalPages(ctx, { hospitals, facts, master, hrrp, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
     const r = h.est ? robots : never;
-    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, tdr }) });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp }) });
   }
 }
 
@@ -185,7 +185,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
-  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, tdr: hub.tdr, robots, never });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });

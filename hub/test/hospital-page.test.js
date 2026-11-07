@@ -33,7 +33,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), tdr: HUB.tdr });
+const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp });
 // The markup of one element, from its opening tag's attribute to its closing tag (the first after it).
 const block = (text, attr, close) => {
   const at = text.indexOf(attr);
@@ -50,8 +50,8 @@ function sameState(h) {
 }
 const medianWords = (m) => (m === 0 ? 'no change' : `a ${shareText(m)} ${m < 0 ? 'cut' : 'bonus'}`);
 
-const CUT = pick((h) => h.est && h.est.cut && h.est.net < 0 && h.est.hrrpListed && h.est.vbpListed && h.est.hrrp < 0 && Math.abs(h.est.share) >= 1e-4 && h.inTdr, 'an estimated hospital with a HAC cut and a net cut, in all three programs and in Thirty Day Readmissions');
-const NOT_IN_TDR = pick((h) => h.est && !h.inTdr, 'an estimated hospital Thirty Day Readmissions does not have');
+const CUT = pick((h) => h.est && h.est.cut && h.est.net < 0 && h.est.hrrpListed && h.est.vbpListed && h.est.hrrp < 0 && Math.abs(h.est.share) >= 1e-4 && h.inHrrp, 'an estimated hospital with a HAC cut and a net cut, in all three programs and in Thirty Day Readmissions');
+const NOT_IN_TDR = pick((h) => h.est && !h.inHrrp, 'an estimated hospital the Readmissions site has no page for');
 const BONUS = pick((h) => h.est && h.est.net > 0 && h.est.vbpListed, 'an estimated hospital with a net bonus');
 const ZERO = pick((h) => h.est && h.est.net === 0, 'an estimated hospital with no net change');
 const NO_VBP = pick((h) => h.est && !h.est.vbpListed, 'an estimated hospital value-based purchasing does not list');
@@ -156,8 +156,8 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(hrrp.includes(`<span class="vh">Estimated FY${FY}: </span><span class="hh__num">${signed(CUT.est.hrrp)}</span> <span class="pill pill--pen">cut</span>`), 'Readmissions: its value and pill');
   assert.ok(hrrp.includes(`FY${FY} payment factor ${decimal(CUT.est.hrrpFactor, 4)}. Of the ${peers.length} ${esc(group)}: ${fig.hrrp.cut} with a cut, ${fig.hrrp.none} with no cut`), 'Readmissions: why, with the fiscal year beside the factor and the peer counts');
   // Its Readmissions page shows CMS's newer file's factor: the row names it, its year, and why this page's differs.
-  const record = HUB.tdr.hospitals.get(CUT.ccn);
-  assert.ok(hrrp.includes(esc(`Its Readmissions page shows CMS’s FY${HUB.tdr.fy} factor, ${decimal(record.paf, 4)}. This page uses FY${FY}’s, the latest year all three programs share.`)), 'Readmissions: the other year\'s factor and why');
+  const record = HUB.hrrp.hospitals.get(CUT.ccn);
+  assert.ok(hrrp.includes(esc(`Its Readmissions page shows CMS’s FY${HUB.hrrp.fy} factor, ${decimal(record.paf, 4)}. This page uses FY${FY}’s, the latest year all three programs share.`)), 'Readmissions: the other year\'s factor and why');
   // The HAC row counts the peers CMS didn't score and decide apart (cut or not), so its counts are the HACRP pages' own.
   const hac = whatifRow(whatif, 'hacrp');
   assert.equal(fig.hacrp.cut, peers.filter((x) => x.decided && x.est.cut).length, 'cut: the decided peers CMS cut, as the HACRP pages count them');
@@ -173,19 +173,19 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(whatifRow(block(mainOf(render(odd)), 'id="whatif"', '</section>'), 'hacrp').includes(`${oddFig.unscoredCut} with the ${pct(HAC_CUT_PCT / 100, 0)} cut but no score`), 'said as cut');
   // A hospital with a Readmissions page that FY's file did not list: its own words for the other year's factor.
   // (A real one when the data has it; otherwise one made from a listed hospital, so the line is always checked.)
-  const listedTdr = pick((h) => h.est && h.inTdr && h.est.hrrpListed && Number.isFinite(HUB.tdr.hospitals.get(h.ccn)?.paf), 'a hospital with a Readmissions page');
-  const out = HOSPITALS.find((h) => h.est && h.inTdr && !h.est.hrrpListed && Number.isFinite(HUB.tdr.hospitals.get(h.ccn)?.paf))
+  const listedTdr = pick((h) => h.est && h.inHrrp && h.est.hrrpListed && Number.isFinite(HUB.hrrp.hospitals.get(h.ccn)?.paf), 'a hospital with a Readmissions page');
+  const out = HOSPITALS.find((h) => h.est && h.inHrrp && !h.est.hrrpListed && Number.isFinite(HUB.hrrp.hospitals.get(h.ccn)?.paf))
     ?? { ...listedTdr, est: { ...listedTdr.est, hrrpListed: false } };
   assert.ok(whatifRow(block(mainOf(render(out)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`This page uses FY${FY}, the latest year all three programs share, whose file did not list it.`)), 'the unlisted hospital\'s year line');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');
   // The deep links: a built hospital page, or the program's folder, which holds its placeholder page (page not built yet).
-  assert.ok(hrrp.includes(`<a class="hh__deep" href="${hospitalPathOf('hrrp', CUT.ccn, { inTdr: true })}">Readmissions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'Readmissions: its interim page');
-  // A hospital Thirty Day Readmissions does not have has no such page: the row opens the program's own page, not a placeholder.
+  assert.ok(hrrp.includes(`<a class="hh__deep" href="${hospitalPathOf('hrrp', CUT.ccn, { inHrrp: true })}">Readmissions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'Readmissions: its page');
+  // A hospital without a Readmissions page has no such page: the row opens the program's own page, not a placeholder.
   const outside = whatifRow(block(mainOf(render(NOT_IN_TDR)), 'id="whatif"', '</section>'), 'hrrp');
   assert.ok(outside.includes('<a class="hh__deep" href="/hrrp/">Readmissions: program page<span class="ico ico--arrow" aria-hidden="true"></span></a>'), 'Readmissions: the program page for a hospital with none of its own');
-  assert.ok(!/hrrp\/hospital\//.test(outside), 'and no interim page link');
+  assert.ok(!/hrrp\/hospital\//.test(outside), 'and no hospital page link');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`<a class="hh__deep" href="${hospitalPathOf('hacrp', CUT.ccn)}">Hospital-acquired conditions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'HACRP: its hospital page');
   assert.ok(whatifRow(whatif, 'hacrp').includes(`CMS’s FY${FY} decision: the flat ${pct(HAC_CUT_PCT / 100, 0)} cut.`), 'HACRP: CMS\'s decision');
   assert.ok(whatifRow(whatif, 'hvbp').includes('<a class="hh__deep hh__deep--soon" href="/hvbp/">Value-based purchasing: page under construction</a>'), 'HVBP: its placeholder page');
@@ -300,17 +300,17 @@ test('Maryland\'s and a no-inputs hospital\'s pages are the variant: record, sta
   assert.ok(!decision(MARYLAND).includes('hospital-acquired conditions decision'), 'Maryland: no decision line');
 });
 
-test('the header follows the hospital: All programs is this page, the chip names it, Readmissions opens its interim page (the program\'s folder when Thirty Day Readmissions lacks the hospital)', () => {
+test('the header follows the hospital: All programs is this page, the chip names it, Readmissions opens its Readmissions page (the program\'s folder when the hospital has none)', () => {
   const page = render(CUT);
   const header = headerOf(page);
   assert.ok(header.includes(`data-hospital="${CUT.ccn}"`), 'the header names the hospital');
   const own = hospitalPathOf('hub', CUT.ccn);
   const tabs = [...header.matchAll(/<a class="tab[^"]*" href="([^"]*)"(?: title="[^"]*")?( aria-current="page")?>/g)].map((m) => [m[1] === own ? 'own' : m[1] === hospitalPathOf('hacrp', CUT.ccn) ? 'hacrp page' : m[1], Boolean(m[2])]);
-  const interim = hospitalPathOf('hrrp', CUT.ccn, { inTdr: true });
-  const named = tabs.map(([href, current]) => [href === interim ? 'interim page' : href, current]);
-  assert.deepEqual(named, [['own', true], ['interim page', false], ['hacrp page', false], ...LISTED_PROGRAMS.slice(2).map((p) => [p.path, false])]);
+  const readmissions = hospitalPathOf('hrrp', CUT.ccn, { inHrrp: true });
+  const named = tabs.map(([href, current]) => [href === readmissions ? 'its Readmissions page' : href, current]);
+  assert.deepEqual(named, [['own', true], ['its Readmissions page', false], ['hacrp page', false], ...LISTED_PROGRAMS.slice(2).map((p) => [p.path, false])]);
   const outside = [...headerOf(render(NOT_IN_TDR)).matchAll(/<a class="tab[^"]*" href="([^"]*)"/g)].map((m) => m[1]);
-  assert.equal(outside[1] === '/hrrp/', true, 'Readmissions opens its folder for a hospital Thirty Day Readmissions lacks');
+  assert.equal(outside[1] === '/hrrp/', true, 'Readmissions opens its folder for a hospital without a Readmissions page');
   assert.ok(chipOf(header).includes(`<a class="chip__n" href="${own}">`), 'the chip\'s name links this page');
   assert.ok(page.includes(`<link rel="canonical" href="${SITE.origin}${own}">`), 'the canonical address');
   assert.ok(page.includes('/assets/fonts/ibm-plex-mono-700.woff2'), 'the large figure\'s font is preloaded');

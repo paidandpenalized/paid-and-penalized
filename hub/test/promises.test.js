@@ -28,7 +28,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const hospital = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets, robots: 'noindex', master: HUB.master.get(h.ccn) ?? null, tdr: HUB.tdr });
+const hospital = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets, robots: 'noindex', master: HUB.master.get(h.ccn) ?? null, hrrp: HUB.hrrp });
 
 // The page's words, the data's names taken out, hold no future word; a hit names the page's kind and the word only.
 function assertNoPromise(page, what) {

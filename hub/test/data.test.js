@@ -11,7 +11,7 @@ test('the atlas id is exported from the map module and names a pinned input', as
   assert.ok(readManifest().some((e) => e.id === ATLAS_ID));
 });
 
-test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Readmissions file and the atlas, once', () => {
+test('loadHub reads the newest dollar file, the master, the Readmissions file and the atlas, once', () => {
   const hub = loadHub();
   assert.equal(loadHub(), hub, 'memoized');
   assert.equal(hub.fy, hub.dollars.fy);
@@ -19,12 +19,10 @@ test('loadHub reads the newest dollar file, the master, the pinned Thirty Day Re
   assert.match(hub.builtAt, /^\d{4}-\d{2}-\d{2}T/);
   assert.ok(hub.master instanceof Map && hub.master.size >= hub.dollars.hospitals.length);
   for (const row of hub.dollars.hospitals) assert.ok(hub.master.has(row.ccn));
-  assert.ok(hub.tdr.hospitals instanceof Map && hub.tdr.hospitals.size > 0);
-  assert.equal(typeof hub.tdr.fy, 'number');
-  assert.ok(Array.isArray(hub.tdr.conditions) && hub.tdr.conditions.length > 0);
-  // Each hospital's peer group has a median for each condition it has a ratio for.
-  for (const r of hub.tdr.hospitals.values()) for (const key of Object.keys(r.c)) assert.equal(typeof hub.tdr.peerMedians[String(r.peer)]?.[key], 'number', 'a peer median for each condition');
-  for (const [ccn, h] of hub.tdr.hospitals) assert.equal(h.id, ccn);
+  assert.ok(hub.hrrp.hospitals instanceof Map && hub.hrrp.hospitals.size > 0);
+  assert.equal(typeof hub.hrrp.fy, 'number');
+  assert.deepEqual(Object.keys(hub.hrrp).sort(), ['fy', 'hospitals']);
+  for (const [ccn, h] of hub.hrrp.hospitals) assert.equal(h.id, ccn);
   assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
   // The decided CCNs (scored, with a Yes or No), from the HACRP site's file for the same year: every one is in the
   // dollar file, those with an estimate are the dollar file's headline, and the rest of them are those CMS cut without an
@@ -52,11 +50,11 @@ test('hubModel works out the hub\'s hospitals and their story facts from loadHub
   assert.deepEqual(model.facts, storyFacts(model.hospitals));
 });
 
-// Invented inputs: one dollar file, its master and a TDR file.
+// Invented inputs: one dollar file, its master and a Readmissions year.
 const inputs = (over = {}) => ({
   dollars: { fy: 2026, hospitals: [{ ccn: '990001' }, { ccn: '990002' }] },
   masterFile: { programYears: { hacrp: 2026, hrrp: 2027 }, hospitals: [{ ccn: '990001' }, { ccn: '990002' }, { ccn: '990003' }] },
-  tdrFy: 2027,
+  hrrpFy: 2027,
   ...over,
 });
 
@@ -84,8 +82,8 @@ test('checkHubInputs stops when a dollar CCN has no master record', () => {
   assert.throws(() => checkHubInputs(inputs({ dollars })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'));
 });
 
-test('checkHubInputs stops when the Thirty Day Readmissions file is not for the master\'s HRRP year', () => {
-  assert.throws(() => checkHubInputs(inputs({ tdrFy: 2026 })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && /2026/.test(e.message) && /2027/.test(e.message));
+test('checkHubInputs stops when the Readmissions file is not for the master\'s HRRP year', () => {
+  assert.throws(() => checkHubInputs(inputs({ hrrpFy: 2026 })), (e) => e instanceof RangeError && /^hub: /.test(e.message) && /2026/.test(e.message) && /2027/.test(e.message));
 });
 
 // What every hub page, the chip, the search and the asset show: the master's names with each initialism in capitals.

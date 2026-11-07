@@ -11,7 +11,7 @@ const hub = loadHub();
 const hospitals = hubHospitals(hub);
 const asset = hubAsset(hospitals, { shapes: hub.shapes, fy: hub.fy });
 const COLS = ['ccn', 'name', 'city', 'state', 'status', 'beds', 'teach', 'x', 'y', 'base', 'total', 'hrrp', 'hvbp', 'hac', 'net',
-  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'tdr', 'decided'];
+  'hrrpF', 'vbpF', 'cut', 'hrrpL', 'vbpL', 'inHrrp', 'decided'];
 
 test('the asset is one row per hospital in the column order the browser reads', () => {
   assert.equal(MAP_WIDTH, 975);
@@ -26,7 +26,7 @@ test('the asset is one row per hospital in the column order the browser reads', 
     assert.equal(row[0], h.ccn);
     assert.ok(row.every((v) => v !== undefined), `${h.ccn} has an undefined value`);
     assert.equal(row[COLS.indexOf('status')], STATUS_CODES[h.status]);
-    assert.equal(row[COLS.indexOf('tdr')], h.inTdr ? 1 : 0);
+    assert.equal(row[COLS.indexOf('inHrrp')], h.inHrrp ? 1 : 0);
     assert.equal(row[COLS.indexOf('cut')], h.cut ? 1 : 0);
     assert.equal(row[COLS.indexOf('decided')], h.decided ? 1 : 0);
     assert.equal(row[COLS.indexOf('beds')], h.beds);
@@ -105,8 +105,8 @@ const KINDS = {
   'a Maryland hospital': (h) => h.status === 'maryland',
   'a hospital with no estimate': (h) => h.status === 'no-inputs',
   'a hospital with no teaching status': (h) => h.teach === null,
-  'a hospital outside the Thirty Day Readmissions file': (h) => !h.inTdr,
-  'a hospital in it': (h) => h.inTdr && h.est,
+  'a hospital outside the Readmissions file': (h) => !h.inHrrp,
+  'a hospital in it': (h) => h.inHrrp && h.est,
 };
 
 test('every hospital decodes to what the build holds, and a decoded hospital can be re-run through the what-if arithmetic', () => {
@@ -119,8 +119,8 @@ test('every hospital decodes to what the build holds, and a decoded hospital can
     const d = decoded.hospitals[i];
     const row = asset.rows[i];
     assert.equal(decoded.byCcn.get(h.ccn), d, h.ccn);
-    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.beds, d.teach, d.inTdr, d.x, d.y],
-      [h.ccn, h.name, h.city, h.state, h.status, h.beds, h.teach, h.inTdr, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
+    assert.deepEqual([d.ccn, d.name, d.city, d.state, d.status, d.beds, d.teach, d.inHrrp, d.x, d.y],
+      [h.ccn, h.name, h.city, h.state, h.status, h.beds, h.teach, h.inHrrp, row[COLS.indexOf('x')], row[COLS.indexOf('y')]], h.ccn);
     if (!h.est) {
       assert.equal(d.est, null, h.ccn);
       return;

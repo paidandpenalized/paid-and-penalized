@@ -22,11 +22,11 @@ export function followedCcn(search, known = () => true) {
 export const withFollow = (path, ccn) => `${path}?h=${ccn}`;
 
 // Where a program's tab goes for a hospital. program: a program's id (SITE.programs), or null for All programs, which is
-// the hospital's own page (so is 'hub'). row: the hospital as the asset decodes it ({ inTdr }), or null. A program that
+// the hospital's own page (so is 'hub'). row: the hospital as the asset decodes it ({ inHrrp }), or null. A program that
 // has a page for the hospital (hospitalPathOf) opens it; any other opens its folder carrying the hospital.
 export function tabHref(program, ccn, row = null) {
   if (program === null || program === 'hub') return hospitalPathOf('hub', ccn);
-  const own = hospitalPathOf(program, ccn, { inTdr: Boolean(row?.inTdr) });
+  const own = hospitalPathOf(program, ccn, { inHrrp: Boolean(row?.inHrrp) });
   if (own) return own;
   const folder = programById(program)?.path;
   if (!folder) throw new RangeError(`tabHref: no program "${program}"`);

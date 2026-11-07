@@ -35,7 +35,7 @@ export function hubAsset(hospitals, { shapes, fy }) {
       ccn: h.ccn, name: h.name, city: h.city, state: h.state, status: STATUS_CODES[h.status], beds: h.beds, teach: h.teach, x, y,
       base: e ? e.base : null, total: e ? e.total : null, hrrp: e ? e.hrrp : null, hvbp: e ? e.hvbp : null, hac: e ? e.hac : null,
       net: e ? e.net : null, hrrpF: e ? e.hrrpFactor : null, vbpF: e ? e.vbpFactor : null, cut: Number(h.cut),
-      hrrpL: e ? Number(e.hrrpListed) : null, vbpL: e ? Number(e.vbpListed) : null, tdr: Number(h.inTdr), decided: Number(h.decided),
+      hrrpL: e ? Number(e.hrrpListed) : null, vbpL: e ? Number(e.vbpListed) : null, inHrrp: Number(h.inHrrp), decided: Number(h.decided),
     };
     return HUB_COLS.map((col) => values[col]);
   });

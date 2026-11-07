@@ -42,7 +42,7 @@ export const shellOf = ({ edition, current = null, searchUrl = null, hospital = 
 // estimated net across the programs (the hospital view's net, as HACRP's pages show it; null without an estimate). Every hospital with a page here is in
 // Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub and HACRP have no page for
 // it, so the tabs and the chip link none.
-export const followed = ({ ccn, name, net, inHub }) => ({ ccn, name, net, inTdr: true, inHub });
+export const followed = ({ ccn, name, net, inHub }) => ({ ccn, name, net, inHrrp: true, inHub });
 
 // A numbered record card of the program and place pages: the title bar, then each field (an estimated one carries the tag).
 // card: { left, right, fields: [{ label, value, note, estimated }] }.

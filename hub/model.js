@@ -1,5 +1,5 @@
-// The hub's facts, computed from the dollar estimates joined to the hospital master and the pinned Thirty Day
-// Readmissions file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
+// The hub's facts, computed from the dollar estimates joined to the hospital master and the Readmissions site's emitted
+// file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
 import { rangeOf } from '../engine/js/dollars/ranges.js';
@@ -37,13 +37,13 @@ function netRange(bands, row) {
   return rangeOf(bands, 'net', row.stratum, row.net);
 }
 
-// Every hospital in the dollar file, in its order, joined to its master record, to whether Thirty Day Readmissions has
-// it and to whether the HACRP pages count it (`decided`, from loadHub's Set: hub/data.js). `est` holds the dollars of a
+// Every hospital in the dollar file, in its order, joined to its master record, to whether the Readmissions site has
+// a page for it and to whether the HACRP pages count it (`decided`, from loadHub's Set: hub/data.js). `est` holds the dollars of a
 // hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no inputs to
 // estimate from); `cut` is CMS's HAC decision (Yes) for every one of them. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
 // netRange: an estimated hospital's likely range of its net, [low, high] dollars (the back-test's net band for its group,
 // engine/js/dollars/ranges.js rangeOf, as the HACRP pages give it), null for a net of $0 and for one without an estimate.
-export function hubHospitals({ dollars, master, tdr, decided }) {
+export function hubHospitals({ dollars, master, hrrp, decided }) {
   if (!(decided instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of decided CCNs (loadHub().decided)');
   return dollars.hospitals.map((row) => {
     const m = masterRecord(master, row.ccn);
@@ -51,7 +51,7 @@ export function hubHospitals({ dollars, master, tdr, decided }) {
     const beds = m.beds ?? null;
     return {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
-      lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inTdr: tdr.hospitals.has(row.ccn),
+      lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inHrrp: hrrp.hospitals.has(row.ccn),
       cut: row.cut, decided: decided.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
       netRange: row.status === 'estimated' ? netRange(dollars.bands, row) : null,
     };

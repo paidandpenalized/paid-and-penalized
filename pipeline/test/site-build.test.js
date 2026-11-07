@@ -317,7 +317,7 @@ test('every internal link on the built pages lands on a file, and every fragment
 
 test('the Readmissions site has a page for every hospital the hub marks for Readmissions, so the hub\'s links never 404', () => {
   const have = new Set(HRRP_DATA.hospitals.map((h) => hrrpHospitalPath(h.id)));
-  const missing = [...loadHub().tdr.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
+  const missing = [...loadHub().hrrp.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
   assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
 });
 
