@@ -106,6 +106,8 @@ function markOf({ mark, x, y, right }) {
 }
 
 export function scoreSwarm({ items, edges, band, labels, width, pitch, cols, loupe = null, place = 'inset', hlOn = false, format, upper = false, line = band[1], zone = null, mark = null, ticks = null }) {
+  // The line needs a score: a band whose lowest Yes is null (left off) must pass one, or the line would land on zero.
+  if (!Number.isFinite(line)) throw new RangeError('scoreSwarm: the line needs a score (band[1], or line when band[1] is null)');
   const top = labels.title ? 54 : 40;
   const { x, at, base, left, right } = swarmLayout({ items, edges, width, pitch, cols, top, hlOn, upper });
   const groups = { pen: [], ink: [], penFaint: [], inkFaint: [] };

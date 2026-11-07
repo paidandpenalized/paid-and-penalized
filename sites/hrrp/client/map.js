@@ -17,9 +17,10 @@ function mountSwitches(box) {
   }
 }
 
-// A state's click (or Enter on the state the keyboard is on: web/client/figure.js marks it is-active) opens its page.
+// A state's click (or Enter on the state the keyboard is on: web/client/figure.js marks it is-active) opens its page. Only a
+// state with a value has one: a state outside the program (Maryland, hatched) is drawn with no value and has no page.
 function mountStateLinks(box) {
-  const open = (mark) => { if (mark?.dataset.state) window.location.assign(placePath('state', mark.dataset.state)); };
+  const open = (mark) => { if (mark?.dataset.state && mark.dataset.value !== undefined) window.location.assign(placePath('state', mark.dataset.state)); };
   for (const svg of box.querySelectorAll('svg.chart--us-map')) {
     svg.addEventListener('click', (e) => open(e.target.closest?.('[data-state]')));
     svg.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(svg.querySelector('.chart-mark.is-active[data-state]')); });

@@ -4,18 +4,14 @@
 // file. Rows with a bad CCN are dropped; an asset whose hospitalPath or place paths are not the site's own is refused.
 import { CCN } from '../../../engine/js/ccn.js';
 import { once } from '../../../web/client/once.js';
+import { fetchAsset } from './fetch-asset.js';
 import { KINDS, PROGRAM_PATH } from '../web/links.js';
 import { byId } from '../web/numbers.js';
 
 const PATH = new RegExp(`^${PROGRAM_PATH}[a-z0-9/-]*/$`);
 
 // The asset's parsed JSON (only /assets/ paths): one fetch for every script that reads it.
-export const loadAsset = once(async (src) => {
-  if (!src?.startsWith('/assets/')) throw new Error('not a site asset');
-  const res = await fetch(src);
-  if (!res.ok) throw new Error(`hospital list: HTTP ${res.status}`);
-  return res.json();
-});
+export const loadAsset = once((src) => fetchAsset(src, 'hospital list'));
 
 const byNameThenId = (a, b) => a.name.localeCompare(b.name, 'en') || byId(a.id, b.id);
 

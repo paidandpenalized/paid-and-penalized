@@ -28,6 +28,21 @@ export function decidedCcns(hacrp, fy) {
   return new Set(decidedHospitals(hacrp.hospitals).map((h) => h.ccn));
 }
 
+// The newest emitted Readmissions file's path; a missing folder, year or file stops the build with one message.
+function newestHrrpFile() {
+  const stop = (what) => new RangeError(`hub: ${what}: emit the Readmissions site's year first (make emit)`);
+  let fy;
+  try {
+    fy = newestYear('data/emitted/hrrp');
+  } catch (e) {
+    if (e instanceof RangeError) throw stop('there is no emitted Readmissions year');
+    throw e;
+  }
+  const file = hrrpPath(fy);
+  if (!existsSync(REPO_ROOT + file)) throw stop(`there is no ${file}`);
+  return file;
+}
+
 let loaded = null;
 
 // Everything the hub's pages are built from, read once per build:
@@ -43,8 +58,7 @@ export function loadHub() {
   if (loaded) return loaded;
   const dollars = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
   const masterFile = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
-  const hrrpFile = hrrpPath(newestYear('data/emitted/hrrp'));
-  if (!existsSync(REPO_ROOT + hrrpFile)) throw new RangeError(`hub: there is no ${hrrpFile}: emit the Readmissions site's year first (make emit)`);
+  const hrrpFile = newestHrrpFile();
   const hrrp = readJson(REPO_ROOT + hrrpFile);
   checkHubInputs({ dollars, masterFile, hrrpFy: hrrp.fy });
   const hacrpFile = hacrpPath(dollars.fy);

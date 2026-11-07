@@ -333,10 +333,18 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
       assert.equal(off.footer, true, 'the footer shows');
       assert.equal(off.feedback, 1, 'the footer\'s feedback link shows');
 
+      // The Readmissions site's pages carry the same bar search and theme toggle, hidden without scripts because they do
+      // nothing then; their figures' controls (switches, pagers, the what-if) add words with scripts, so only the bar is
+      // checked here (each control has its own browser check).
+      if (type.startsWith('hrrp')) {
+        const on = await look(withJs, path);
+        assert.ok(on.toggle, 'the theme toggle shows with scripts');
+        assert.ok(on.search.length > 0, 'the bar\'s search shows with scripts');
+        assert.deepEqual(off.search, [], 'and not without');
+      }
       // The hub's own pages lose no words without scripts. What scripts add is the theme toggle, the bar's search (its
       // words, and the list it shows once a reader types) and, on the front page, the story's search and the hint that
-      // points at it, which are hidden in the markup because they do nothing without them. (The Readmissions site's pages
-      // have no search bar yet, so they are not here.)
+      // points at it, which are hidden in the markup because they do nothing without them.
       if (['hub', 'policy', 'coming', 'not-found'].includes(type)) {
         const on = await look(withJs, path);
         assert.ok(on.toggle, 'the theme toggle shows with scripts');

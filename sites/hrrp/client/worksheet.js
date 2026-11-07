@@ -13,11 +13,10 @@ import { estimateTag } from '../web/estimate-tag.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
 import { worksheetHtml, worksheetRows } from '../web/worksheet.js';
 import { loadIndex, searchWords } from './search.js';
+import { fetchAsset } from './fetch-asset.js';
 
 const loadSheets = once(async (src) => {
-  const res = await fetch(src);
-  if (!res.ok) throw new Error(`worksheet data: HTTP ${res.status}`);
-  const { meta, rows } = await res.json();
+  const { meta, rows } = await fetchAsset(src, 'worksheet data');
   return { meta, rows: new Map(rows.filter((r) => CCN.test(r[0])).map((r) => [r[0].toLowerCase(), r])) };
 });
 

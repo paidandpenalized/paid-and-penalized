@@ -64,7 +64,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   const dollarsRel = dollarsPath(newest('data/emitted/dollars'));
   const dollarsFile = readJson(REPO_ROOT + dollarsRel);
   builtFiles.push([dollarsRel, dollarsFile]);
-  const masterRel = masterPath(newestYear('data/emitted/hospital'));
+  const masterRel = masterPath(newest('data/emitted/hospital'));
   const masterFile = readJson(REPO_ROOT + masterRel);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.

@@ -48,7 +48,9 @@ export function whatIfState(h, meta, over = {}) {
 export function movedHospital(h, meta, over = {}) {
   const c = { ...h.c };
   for (const [k, err] of Object.entries(over)) {
-    if (c[k]) c[k] = { ...c[k], err, flag: err > peerMedian(meta, h.peer, k) ? 1 : 0 };
+    // A condition with no published peer median is never over it (formula.js counts nothing for it either).
+    const med = peerMedian(meta, h.peer, k);
+    if (c[k]) c[k] = { ...c[k], err, flag: med !== null && err > med ? 1 : 0 };
   }
   return { ...h, c };
 }
@@ -64,7 +66,7 @@ export function sliderRows(h, meta, conditions) {
     const c = h.c[k];
     const med = peerMedian(meta, h.peer, k);
     const [min, max] = sliderRange(c.err);
-    const over = c.err > med;
+    const over = med !== null && c.err > med;
     let escape = null;
     if (over) {
       const { paf, dollars: after } = whatIfState(h, meta, { [k]: med });

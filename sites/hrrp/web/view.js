@@ -98,10 +98,9 @@ function crumbsOf(h, ctx) {
   return out;
 }
 
-// Whether the hub's dollar file holds the hospital, so the hub and the HACRP site have a page for it: the file holds the
-// hospitals the master lists in HACRP (a test holds this equal to the hub's file). A hospital the master lacks is not in
-// the hub. True only where the context has no master at all (a test's slice).
-const inHubOf = (h, ctx) => (ctx.master ? ctx.master.get(h.id)?.programs?.hacrp?.inProgram === true : true);
+// Whether the hub's dollar file holds the hospital, so the hub and the HACRP site have a page for it (web/site.js
+// hospitalPathOf): read from the file itself. True only where the context has no dollar file at all (a test's slice).
+const inHubOf = (h, ctx) => (ctx.dollars ? ctx.dollars.has(h.id) : true);
 
 // The hospital's estimated net from the dollar estimates, as HACRP's pages show it; null without an estimate.
 const netOf = (h, ctx) => {
