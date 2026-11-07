@@ -295,6 +295,8 @@ export function drawSpread({ traits, national, width, format, head }) {
   const rowH = narrow ? 100 : 80;
   // Label rows around the dots: on a phone the rows above (and below) sit a full line apart, so stacked labels never touch.
   const SLOTS = narrow ? [-9, 22, -23, 36] : [-10, 19, -22, 31];
+  // The national line, drawn under the labels (their paper halo breaks it where one crosses); a label keeps off it when a free row allows.
+  const nx = x(national.share);
   let y = 8;
   const blocks = traits.map((t) => {
     const cy = y + (narrow ? 58 : 40);
@@ -302,9 +304,13 @@ export function drawSpread({ traits, national, width, format, head }) {
     const dots = [...t.groups].sort((a, b) => a.share - b.share).map((g) => {
       const w = textWidth(g.label, NOTE_PX) + 16;
       // The label's span where it is drawn (kept inside the drawing), so a label pushed in from an edge is checked where it sits.
-      const at = clamp(x(g.share), w / 2, width - w / 2);
+      const center = clamp(x(g.share), w / 2, width - w / 2);
+      // Off the line: shift the label to the dot's side of the line when it would cross it and still covers its dot.
+      const off = nx > center - w / 2 + 2 && nx < center + w / 2 - 2 ? (x(g.share) < nx ? nx - 3 - w / 2 : nx + 3 + w / 2) : center;
+      const at = Math.abs(off - x(g.share)) < w / 2 - 4 ? clamp(off, w / 2, width - w / 2) : center;
       const [a0, a1] = [at - w / 2, at + w / 2];
-      const k = taken.findIndex((spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1));
+      const free = (spans) => spans.every(([b0, b1]) => a1 < b0 || a0 > b1);
+      const k = taken.findIndex(free);
       const slot = k < 0 ? 0 : k;
       taken[slot].push([a0, a1]);
       return mark({
@@ -319,12 +325,11 @@ export function drawSpread({ traits, national, width, format, head }) {
     y += rowH;
     return out;
   });
-  const nx = r2(x(national.share));
   const ticks = [];
   for (let v = lo; v <= hi; v += narrow ? 20 : 10) ticks.push(v);
   return frame({
     kind: 'spread', width, height: y + 40, body: html`${narrow ? '' : text({ x: width, y: 8, anchor: 'end', cls: 'chart-cap', body: head })}
-${blocks}<line class="chart-ref" x1="${nx}" x2="${nx}" y1="4" y2="${r2(y - 4)}"/>
+<line class="chart-ref" x1="${r2(nx)}" x2="${r2(nx)}" y1="4" y2="${r2(y - 4)}"/>${blocks}
 <g transform="translate(0 ${r2(y)})">${axis({ scale: x, orient: 'bottom', ticks, format })}</g>
 ${text({ x: nx, y: y + 32, cls: 'chart-note', body: national.text })}`,
   });

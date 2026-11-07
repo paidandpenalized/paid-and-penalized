@@ -74,7 +74,7 @@ ${section('read', t('readHeading'), html`<ul>
 ${view.figures.length ? section('figures', t('figuresHeading'), html`<ul>${view.figures.map((line) => html`<li>${line}</li>`)}</ul>`) : ''}
 ${section('places', t('placesHeading'), html`${view.places && html`<p>${view.places}</p>`}<p>${t('placesText')}</p>`)}
 ${section('history', t('historyHeading'), html`<p>${view.history}</p>
-<p>${view.historyListed}</p>
+${view.historyListed && html`<p>${view.historyListed}</p>`}
 <p>${view.historyTotals.text}${view.historyTotals.noTotal && html` ${view.historyTotals.noTotal}`}</p>
 ${printout(html`<table class="gb" aria-labelledby="history-h">
 <thead><tr><th scope="col">${t('historyColYear')}</th><th scope="col" class="num">${t('historyColTotal')}</th><th scope="col">${t('historyColSource')}</th></tr></thead>

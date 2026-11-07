@@ -176,9 +176,9 @@ test('history: the place among hospitals ranks within each year\'s file, ties at
 test('history: the pandemic years are shaded with their note, the cap steps ruled, and FY2027 says the measure changed', () => {
   const fig = historyOf(pageOf(CUT, hctx));
   assert.equal((fig.match(/class="hist-covid"/g) ?? []).length, 2);
-  assert.ok(fig.includes('CMS left claims from January 1, 2020 through June 30, 2020 out of the program’s calculations'));
+  assert.ok(fig.includes('Shaded: the years whose data reach the claims of January 1, 2020 to June 30, 2020, which CMS left out.'));
   assert.ok(fig.includes('The pandemic years'));
-  assert.ok(fig.includes('out of the program’s calculations, which reaches the data behind these years.</p>'), 'the note is in the text, not only in a tooltip');
+  assert.ok(fig.includes('which CMS left out.</p>'), 'the note is in the text, not only in a tooltip');
   assert.ok(fig.includes('>Measure changed</text>'));
   assert.equal((fig.match(/class="chart-rank__break"/g) ?? []).length, 2 + 2, 'the cap step and the measure change, each narrow and wide');
   assert.ok(fig.includes('2% cap') === false && fig.includes('3% cap'), 'the first year\'s cap is not a step');

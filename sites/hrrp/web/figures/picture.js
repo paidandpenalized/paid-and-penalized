@@ -22,25 +22,27 @@ import { PER_STEP } from './hospital-data.js';
 import { drawCuts, drawFlips, drawMeasured, drawSizeBands, drawSpread, drawStrip, drawWorth } from './picture-draw.js';
 import { BESIDE, FULL, HALF, SIDE, pair, pic } from './layout.js';
 
-// The Part's lede paragraph.
+// The Part's lede paragraph: how few hospitals carry half of the year's modeled dollars, a fact the size-of-cuts figure under it
+// doesn't state (its takeaway gives the median cut, the 1%-or-more count and the cap count).
 export function ledeText({ lede }) {
   if (!lede.nCut) return t('pictureLedeNone');
-  const some = (n, many, one, extra) => fill(n === 1 ? one : many, { hospitals: noun(n, 'hospital'), ...extra });
-  return [
-    lede.nCut === 1 ? fill('pictureLedeOne', { median: fmtPct(lede.medianCut) }) : fill('pictureLede', { hospitals: noun(lede.nCut, 'hospital'), median: fmtPct(lede.medianCut) }),
-    some(lede.nOnePlus, 'pictureOnePlus', 'pictureOnePlusOne', { one: String(lede.onePlus) }),
-    some(lede.nCap, 'pictureCap', 'pictureCapOne', { cap: String(lede.cap) }),
-  ].join(' ');
+  if (lede.nCut === 1) return t('pictureLedeOne');
+  if (lede.nHalf === null) return t('pictureLedeNoDollars');
+  return fill('pictureLede', { n: fmtInt(lede.nHalf), hospitals: noun(lede.nCut, 'hospital'), share: fmtPct((100 * lede.nHalf) / lede.nCut, 0) });
 }
 
 // The largest-penalties table as the figure's chart: a row for each hospital, its name linking to its page with its place under
 // it (as the explorer's rows have it), then its cut, its modeled dollars and the glyph (with the conditions in words for a screen reader).
+// On a phone the three number columns give way to one line under the place (the cut and the dollars in words, then the glyph), so
+// the table fits the screen; each width shows one copy (the other is display: none, out of the accessibility tree too).
 function penTable(rows, conditions) {
   return html`<div class="pen">${printout(html`<table class="gb pen__table">
 <thead><tr><th scope="col">${t('penColHospital')}</th><th scope="col" class="num">${t('penColCut')}</th><th scope="col" class="num">${t('penColDollars')}</th><th scope="col">${t('penColConds')}</th></tr></thead>
 <tbody>${rows.map((r, i) => {
     const names = countedNames(r, conditions);
-    return html`<tr><th scope="row"><a href="${hospitalPath(r.h.id)}">${r.h.name}</a><span class="nb__place">${placeText({ city: r.h.city, state: r.h.st })}</span></th><td class="num">${fmtPct(r.h.red)}</td><td class="num">${fmtMoney(r.h.pen)}</td><td><span class="pen__glyph">${glyph(r, i + 1, conditions)}</span><span class="vh">${names.length ? fill('penCondsSpoken', { list: listText(names) }) : t('penCondsNone')}</span></td></tr>`;
+    const spoken = html`<span class="vh">${names.length ? fill('penCondsSpoken', { list: listText(names) }) : t('penCondsNone')}</span>`;
+    const phone = html`<span class="pen__phone"><span class="pen__nums">${fill('penPhoneLine', { cut: fmtPct(r.h.red), dollars: fmtMoney(r.h.pen) })}</span><span class="pen__glyph">${glyph(r, i + 1, conditions, 'penp')}</span>${spoken}</span>`;
+    return html`<tr><th scope="row"><a href="${hospitalPath(r.h.id)}">${r.h.name}</a><span class="nb__place">${placeText({ city: r.h.city, state: r.h.st })}</span>${phone}</th><td class="num">${fmtPct(r.h.red)}</td><td class="num">${fmtMoney(r.h.pen)}</td><td><span class="pen__glyph">${glyph(r, i + 1, conditions)}</span>${spoken}</td></tr>`;
   })}</tbody>
 </table>`)}</div>`;
 }
@@ -367,7 +369,7 @@ export function barsTakeaway(b, conditions) {
 function barsFigure({ b, conditions, edition, n }) {
   if (!b.takeaway) return '';
   const draw = (width) => pairBars({
-    width, labels: { a: fill('barsKeyFlags', { flags: fmtInt(b.totalFlags) }), b: t('barsKeyDollars') },
+    width, labels: { a: fill('barsKeyFlags', { flags: fmtInt(b.totalFlags) }), b: t('barsKeyDollars') }, direct: { a: t('barsNameFlags'), b: t('barsNameDollars') },
     sections: [{
       heading: t('barsHead'),
       rows: b.rows.map((r) => {

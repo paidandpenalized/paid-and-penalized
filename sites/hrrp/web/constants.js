@@ -17,12 +17,10 @@ export const ROUND_COUNT_TO = 100;
 
 // Methods' display choices (not claims): the resident-to-bed ratio at which this site's hospital master calls a hospital major
 // teaching (engine/py/pp_engine/master.py MAJOR_TEACHING); the "within this share" band of the dollar check, which is the
-// check's own `within15` key (data meta.dollarCheck); the first and last fiscal years whose CMS files also listed hospitals
-// the history's share penalized leaves out.
+// check's own `within15` key (data meta.dollarCheck).
 export const TEACH_MAJOR = 0.25;
 export const ACCURACY_BAND = 15;
 export const SMALL_HOSPITAL_BEDS = 100;
-export const HISTORY_LISTED_FYS = Object.freeze([2013, 2018]);
 // The history years whose total is a later CMS simulation of that year under the earlier method, not the rule's own table
 // (the data's source label for FY2025 says so; a test pins this list to the data).
 export const HISTORY_SIMULATED_FYS = Object.freeze([2025]);
@@ -82,6 +80,17 @@ export const HISTORY_MARKS = Object.freeze([
 // claims it left out (HRRP-18), which are those left out, January 1 to June 30, 2020. The data test checks the windows.
 export const COVID_FYS = Object.freeze([2022, 2024]);
 export const COVID_EXCLUDED = Object.freeze(['2020-01-01', '2020-06-30']);
+
+// A data window a year's file does not state, from that year's final rule (HRRP-26): the FY2018 file names only "FY 18
+// applicable period". Fiscal year: [first day, last day]. The data windows chart draws it and its table says where it is from.
+export const RULE_WINDOWS = Object.freeze({
+  2018: Object.freeze({ window: Object.freeze(['2013-07-01', '2016-06-30']), src: Object.freeze({ label: 'FY2018 IPPS final rule, 82 FR 38224', url: 'https://www.federalregister.gov/documents/2017/08/14/2017-16434' }) }),
+});
+
+// The discharges the files leave out of the windows that span them (HRRP-27): the FY2023 and FY2024 files state their
+// windows in two pieces, the first ending December 1, 2019 and the second starting July 1, 2020. A window that runs across
+// these days is drawn as two bars.
+export const WINDOW_GAP = Object.freeze(['2019-12-02', '2020-06-30']);
 
 // Every paged table of hospitals or places (the explorer, a hospital page's area table, a place page's two tables) shows this many
 // rows to a page (design: 25). The program page's "Every state" table has its own size below.

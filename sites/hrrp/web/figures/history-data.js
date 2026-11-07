@@ -1,12 +1,13 @@
 // The numbers behind the program page's History Part, as plain data (no markup). The small multiples (share penalized,
 // average cut, estimated totals; drawn by figures/history-draw.js) and the roll call (not drawn yet) are each a pure function returning its series,
 // marks and table rows; the timeline and the data windows are drawn (figures/history.js) from timelineData and windowRows.
-// Denominators: a year's share penalized is TDR's pctPen, over the hospitals in that year's file as the history pin holds them (n; not the page's share of the hospitals measured on a condition; which hospitals the FY2013-FY2018 files leave out is not checked here);
-// the average cuts are over every hospital in that year's file (all) or over those cut (penalized). The roll call covers
+// Denominators: a year's share penalized is the history's pctPen, over the hospitals in that year's file less the groups only the
+// early files list (scopeYears names them; n; not the page's share of the hospitals measured on a condition); the average cuts
+// are over the same hospitals (all) or over those cut (penalized). The roll call covers
 // today's hospitals only, so its per-year shares can run above CMS's national share for the year;
 // any words built from it say "of today's hospitals". Pure.
 import { isoDate, listText } from '../../../../web/render/format.js';
-import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS } from '../constants.js';
+import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS, RULE_WINDOWS, WINDOW_GAP } from '../constants.js';
 import { capMarks, pafByYear } from '../derive.js';
 import { httpsUrl } from '../links.js';
 import { fyLabel } from '../copy.js';
@@ -137,13 +138,40 @@ export function timelineData(content, { edition, today }) {
 
 // ---------- the data windows ----------
 
-// One row for each fiscal year with a payment year: { fy, perf: [start, end] | null, pay: [start, end] }, newest first.
+// A window as the pieces the files state: [[start, end]], or two pieces when it runs across the discharges they leave out
+// (WINDOW_GAP). ISO dates, so they compare as strings.
+const DAY = 86400000;
+const dayBefore = (iso) => new Date(Date.parse(iso) - DAY).toISOString().slice(0, 10);
+const dayAfter = (iso) => new Date(Date.parse(iso) + DAY).toISOString().slice(0, 10);
+export function windowPieces([start, end], [gapStart, gapEnd] = WINDOW_GAP) {
+  return start < gapStart && end > gapEnd ? [[start, dayBefore(gapStart)], [dayAfter(gapEnd), end]] : [[start, end]];
+}
+
+// One row for each fiscal year with a payment year, newest first: { fy, perf: [start, end] | null, pieces: [[start, end]] (the
+// window as the files state it; empty without one), src: { label, url } | null (where a window the file doesn't state comes
+// from: RULE_WINDOWS), pay: [start, end] }.
 export function windowRows({ history }) {
-  return [...history.national].reverse().map((r) => ({
-    fy: r.fy,
-    perf: r.perf?.[0] && r.perf?.[1] ? r.perf : null,
-    pay: [`${r.fy - 1}-10-01`, `${r.fy}-09-30`],
-  }));
+  return [...history.national].reverse().map((r) => {
+    const stated = r.perf?.[0] && r.perf?.[1] ? r.perf : null;
+    const rule = stated ? null : RULE_WINDOWS[r.fy] ?? null;
+    const perf = stated ?? rule?.window ?? null;
+    return { fy: r.fy, perf, pieces: perf ? windowPieces(perf) : [], src: rule ? { label: rule.src.label, url: httpsUrl(rule.src.url) } : null, pay: [`${r.fy - 1}-10-01`, `${r.fy}-09-30`] };
+  });
+}
+
+// ---------- who the history counts ----------
+
+// The groups the early year files list and later files drop, which the history's shares and averages leave out, from the
+// history pin's scope column: for each, the fiscal years whose file lists at least one, ascending. rows: the pinned file's rows
+// ({ fy, scope_flag }). { maryland, puertoRico, noData }.
+const SCOPES = Object.freeze({ maryland_exempt: 'maryland', puerto_rico_excluded: 'puertoRico', no_measure_data: 'noData' });
+export function scopeYears(rows) {
+  const out = { maryland: new Set(), puertoRico: new Set(), noData: new Set() };
+  for (const r of rows) {
+    const key = SCOPES[r.scope_flag];
+    if (key) out[key].add(Number(r.fy));
+  }
+  return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, [...v].sort((a, b) => a - b)]));
 }
 
 // ---------- the research ----------

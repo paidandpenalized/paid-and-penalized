@@ -35,21 +35,30 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 `)}</ol>`;
 }
 
-// rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws.
+// rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws. A window the files
+// state in two pieces is two bars; a window from the year's final rule (row.src) is drawn and its table cell and the source line
+// say where it is from. Gridlines every GRID_YEARS years, so the bars carry the ink; a phone's axis ends on the last year.
+const GRID_YEARS = 5;
 export function windowsFigure(rows, { n }) {
   if (!rows.length) return '';
-  const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...(r.perf ? [span('perf', r.fy, r.perf)] : []), span('pay', r.fy, r.pay)] }));
-  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width });
+  const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...r.pieces.map((p) => span('perf', r.fy, p)), span('pay', r.fy, r.pay)] }));
+  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width, grid: (yr) => yr % GRID_YEARS === 0, labelEnd: true });
   const newest = rows[0];
+  const ruled = rows.filter((r) => r.src);
+  const split = rows.filter((r) => r.pieces.length > 1);
+  const gap = split.length ? [split[0].pieces[0][1], split[0].pieces[1][0]] : null;
+  const cell = (r) => (r.pieces.length ? r.pieces.map(range).join('; ') : t('winNone')) + (r.src ? ` (${r.src.label})` : '');
   return figure({
-    n: n(), source: t('winSource'), csvName: 'hrrp-data-windows', alt: t('winAlt'), note: t('winKey'),
+    n: n(), csvName: 'hrrp-data-windows', alt: t('winAlt'),
+    source: ruled.length ? fill('winSourceRule', { fys: ruled.map((r) => fyLabel(r.fy)).join(', '), rule: ruled.map((r) => r.src.label).join('; ') }) : t('winSource'),
+    note: gap ? fill('winKeyGap', { after: isoDate(gap[0]), before: isoDate(gap[1]) }) : t('winKey'),
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),
     ...drawn(draw, HALF),
     table: {
       columns: [{ name: t('winColFy') }, { name: t('winColPerf') }, { name: t('winColPay') }],
-      rows: rows.map((r) => [fyLabel(r.fy), r.perf ? range(r.perf) : t('winNone'), range(r.pay)]),
+      rows: rows.map((r) => [fyLabel(r.fy), cell(r), range(r.pay)]),
     },
   });
 }
@@ -88,13 +97,11 @@ export function historyFigure(lines, { n }) {
   const known = lines.share.filter((s) => s.value !== null);
   if (!known.length) return '';
   const latest = known[known.length - 1];
-  const prose = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null].filter(Boolean).join(' ');
-  const note = lines.noTotalText ? html`${prose}<span class="hist-note__none">${lines.noTotalText}</span>` : prose;
+  const note = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null].filter(Boolean).join(' ');
   const sourceOf = (r) => r.total && (r.total.label ?? t(r.total.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms'));
   return figure({
     n: n(), takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
     alt: t('histAlt'), note: note || null,
-    key: [{ swatch: 'bar-dark', label: t('histKeyCms') }, { swatch: 'bar-light', label: t('histKeyKff') }],
     ...drawn((width) => drawHistory({ lines, width }), FULL),
     table: {
       columns: [{ name: t('histColFy') }, { name: t('histColN'), numeric: true }, { name: t('histColShare'), numeric: true }, { name: t('histColAvgPen'), numeric: true },

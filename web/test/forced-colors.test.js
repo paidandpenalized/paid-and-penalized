@@ -49,7 +49,7 @@ const MARKS = [
   // the Readmissions data windows' data-window bar (sites/hrrp/web/styles.css)
   '.chart-periods__perf',
   // the History figure's small multiples (sites/hrrp/web/styles.css)
-  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-none', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff',
+  '.hist-covid', '.hist-line--share', '.hist-line--pen', '.hist-line--all', '.hist-dot--share', '.hist-dot--pen', '.hist-bar--cms', '.hist-bar--kff',
   // Step 2's lens zone on the swarm's main axis (sites/hrrp/web/styles.css)
   '.chart-lens-zone',
   // the Readmissions medians' shaded cells (sites/hrrp/web/styles.css)

@@ -1,12 +1,16 @@
 // What the Readmissions pages read at build time: the newest emitted HRRP file (else the pinned Thirty Day Readmissions output), the site's content files, the newest hospital master and the state and county outlines.
 // File reads live here; views and pages stay pure.
 import { existsSync, readFileSync } from 'node:fs';
+import { parseCsv } from '../../../engine/js/csv.js';
 import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { scopeYears } from './figures/history-data.js';
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
 export const PIN_ID = 'tdr-hrrp-fy2027';
+// The per-hospital history of the year files, whose scope column names the groups the early files list and later ones drop.
+export const HISTORY_PIN_ID = 'hrrp-history-fy2013-2026';
 const EMITTED_DIR = 'data/emitted/hrrp';
 const CONTENT = REPO_ROOT + 'sites/hrrp/content/';
 const DICTIONARY_FILE = 'sites/hrrp/DATA-DICTIONARY.md';
@@ -64,7 +68,7 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   const masterFile = readJson(REPO_ROOT + masterRel);
   const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
-  const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
+  const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), HISTORY_PIN_ID, ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
   const atlas = JSON.parse(readPinned(ATLAS_ID));
   const whatsNew = readJson(CONTENT + 'whats_new.json');
   return {
@@ -74,6 +78,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     conditions: data.conditions,
     hospitals: data.hospitals,
     history: data.history,
+    // The fiscal years whose file lists each group the history leaves out (history-data.js scopeYears), for Methods.
+    historyScope: scopeYears(parseCsv(readPinned(HISTORY_PIN_ID))),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
     whatsNew: whatsNew.items,
     // The fiscal year the notes are for: the program page shows them only in that year's edition.

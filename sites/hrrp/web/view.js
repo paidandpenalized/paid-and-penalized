@@ -8,7 +8,7 @@ import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
-import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_LISTED_FYS, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
+import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { PER_STEP, historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
@@ -384,6 +384,23 @@ function assumptionRows(ctx) {
   ].filter(Boolean);
 }
 
+// Fiscal years as words: a run of consecutive years as "FY2013–FY2015", else a list.
+const fyYears = (fys) => (fys.length > 1 && fys.every((fy, i) => i === 0 || fy === fys[i - 1] + 1)
+  ? `${fyLabel(fys[0])}–${fyLabel(fys[fys.length - 1])}` : listText(fys.map(fyLabel)));
+
+// Methods' line on who the history counts: the groups the early files list and later ones drop, each with its years
+// (history-data.js scopeYears; Maryland and Puerto Rico named together when their years are the same). scope null (a build
+// without the history pin's scope): no line.
+function historyListed(scope) {
+  if (!scope) return null;
+  const same = scope.maryland.length && scope.maryland.join() === scope.puertoRico.join();
+  const groups = [
+    ...(same ? [['scopeMarylandPuertoRico', scope.maryland]] : [['scopeMaryland', scope.maryland], ['scopePuertoRico', scope.puertoRico]]),
+    ['scopeNoData', scope.noData],
+  ].filter(([, fys]) => fys.length).map(([key, fys]) => methodsFill(key, { years: fyYears(fys) }));
+  return groups.length ? methodsFill('historyListed', { groups: listText(groups) }) : methodsT('historyListedAll');
+}
+
 // The history's annual totals as table rows with their sources, and the sentence about where they come from.
 function historyTotals(history) {
   const rows = history.national.map((r) => ({
@@ -461,7 +478,7 @@ export function methodsView(ctx) {
         + (meta.geocode.none ? methodsFill(meta.geocode.none === 1 ? 'placesNoneOne' : 'placesNone', { none: hospitals(meta.geocode.none) }) : '')
       : null,
     history: methodsFill('historyText', span),
-    historyListed: methodsFill('historyListed', { first: fyLabel(HISTORY_LISTED_FYS[0]), last: fyLabel(HISTORY_LISTED_FYS[1]) }),
+    historyListed: historyListed(ctx.historyScope),
     historyTotals: historyTotals(ctx.history),
     feedback: methodsT('feedbackText'),
     reuse: methodsFill('reuseText', { minCases: String(MIN_DISCHARGES) }),

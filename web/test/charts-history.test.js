@@ -224,6 +224,17 @@ const PERIODS = (over = {}) => ({
   kinds: ['psi', 'hai', 'pay'], width: 640, ...over,
 });
 
+test('periodsChart grid and labelEnd: gridlines only at the years asked for; a phone\'s every-other labels end on the last year', () => {
+  const rows = [{ label: 'FY2027', spans: [SPAN('pay', [2008, 7, 1], [2027, 6, 30])] }];
+  const all = String(periodsChart({ rows, kinds: ['pay'], width: 640 }));
+  const fives = String(periodsChart({ rows, kinds: ['pay'], width: 640, grid: (yr) => yr % 5 === 0 }));
+  assert.equal((all.match(/class="chart-grid"/g) ?? []).length, 21, 'every year by default');
+  assert.equal((fives.match(/class="chart-grid"/g) ?? []).length, 4, '2010, 2015, 2020, 2025');
+  const labels = (svg) => [...svg.matchAll(/class="chart-tick"[^>]*>(\d+)</g)].map((m) => m[1]);
+  assert.equal(labels(String(periodsChart({ rows, kinds: ['pay'], width: 330 }))).at(-1), '26', 'from the first year: the last is skipped');
+  assert.equal(labels(String(periodsChart({ rows, kinds: ['pay'], width: 330, labelEnd: true }))).at(-1), '27', 'from the last year');
+});
+
 test('periodsChart refuses no rows and no kinds', () => {
   assert.throws(() => periodsChart(PERIODS({ rows: [] })), /periodsChart: rows and kinds/);
   assert.throws(() => periodsChart(PERIODS({ kinds: [] })), /periodsChart: rows and kinds/);

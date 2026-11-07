@@ -80,11 +80,23 @@ const lineOf = (pts) => lineD(pts.map((q) => ({ x: q.px, y: q.py })), (v) => v, 
 
 // ---------- one panel's furniture ----------
 
+// A panel's key on the line under its title: a swatch and its words for each entry ({ cls, label }), side by side.
+const KEY_SW = 10;
+function panelKey(entries, ox, y) {
+  let x = ox;
+  return entries.map(({ cls, label }) => {
+    const at = x;
+    x += KEY_SW + 5 + textWidth(label, NOTE_PX) + 14;
+    return html`<rect class="${cls}" x="${r2(at)}" y="${r2(y - 8)}" width="${KEY_SW}" height="${KEY_SW - 2}"/>${text({ x: at + KEY_SW + 5, y, anchor: 'start', cls: 'chart-note', body: label })}`;
+  });
+}
+
 // The panel's axes: its title, the tick labels (left) and years (below), gridlines above the base, the pandemic band behind it all.
-//   p { ox, oy, w, h, title, sub, years, domain, ticks, fmt, covid, tag }; returns { x, y, box, base, markup }
+//   p { ox, oy, w, h, title, sub, key, years, domain, ticks, fmt, covid, tag }; key: entries for panelKey on the sub line (instead of
+//   sub), with room under it for a value set over the tallest bar; returns { x, y, box, base, markup }
 function furniture(p) {
   const { ox, oy, w, h, left } = p;
-  const top = oy + (p.sub ? 36 : 28);
+  const top = oy + (p.key ? 48 : p.sub ? 36 : 28);
   const base = oy + h - 18;
   const x = scaleLinear().domain([p.years[0] - 0.5, p.years[p.years.length - 1] + 0.5]).range([ox + left, ox + w - RIGHT]);
   const y = scaleLinear().domain(p.domain).range([base, top]);
@@ -95,7 +107,7 @@ function furniture(p) {
     ? mark({ tip: p.covid.note, hit: null, body: html`<rect class="hist-covid" x="${r2(Math.max(c0, ox + left))}" y="${r2(top)}" width="${r2(Math.min(c1, ox + w - RIGHT) - Math.max(c0, ox + left))}" height="${r2(base - top)}"/>` }) : '';
   const tag = p.tag && p.covid.fys.length
     ? (capsWidth(p.tag) > (c1 - c0) * 1.15 ? p.tag.split(' ') : [p.tag]).map((line, k, all) => text({ x: (c0 + c1) / 2, y: base - 6 - (all.length - 1 - k) * 11, cls: 'chart-cap', body: line })) : '';
-  const markup = html`${band}${text({ x: ox, y: oy + 11, anchor: 'start', cls: 'chart-label', body: p.title })}${p.sub ? text({ x: ox, y: oy + 25, anchor: 'start', cls: 'chart-cap', body: p.sub }) : ''}
+  const markup = html`${band}${text({ x: ox, y: oy + 11, anchor: 'start', cls: 'chart-label', body: p.title })}${p.sub ? text({ x: ox, y: oy + 25, anchor: 'start', cls: 'chart-cap', body: p.sub }) : ''}${p.key ? panelKey(p.key, ox, oy + 26) : ''}
 ${p.ticks.map((v) => html`${v === p.domain[0] ? '' : html`<line class="chart-grid" x1="${r2(ox + left)}" x2="${r2(ox + w - RIGHT)}" y1="${r2(y(v))}" y2="${r2(y(v))}"/>`}${text({ x: ox + left - 4, y: y(v) + 4, anchor: 'end', cls: 'chart-tick', body: p.fmt(v) })}`)}
 <line class="chart-axis__line" x1="${r2(ox + left)}" x2="${r2(ox + w - RIGHT)}" y1="${r2(base)}" y2="${r2(base)}"/>
 ${p.years.filter(every).map((fy) => text({ x: x(fy), y: base + 14, cls: 'chart-tick', body: yy(fy) }))}${tag}`;
@@ -172,20 +184,23 @@ function avgPanel(lines, p, narrow) {
   return html`<g class="hist-panel hist-panel--avg">${f.markup}<path class="hist-line hist-line--all" d="${lineOf(all)}"/><path class="hist-line hist-line--pen" d="${lineOf(pen)}"/>${dots}${words}</g>`;
 }
 
-// The estimated totals: a bar for each year that has one, CMS's dark and KFF's light (a source for each bar, in its tip and the table),
-// a dash on the base for a year with none (nothing is drawn as a zero); the first, the highest and the latest labeled.
+// The estimated totals: a bar for each year that has one, CMS's dark and KFF's light, keyed under the panel's title (a source for each
+// bar, in its tip and the table), "n/a" over the base for a year with none (nothing is drawn as a zero); the first, the highest and
+// the latest labeled.
 function totalPanel(lines, p, narrow) {
   if (!lines.totals.length) return '';
   const top = Math.max(...lines.totals.map((r) => r.value));
   const step = 2e8;
   const yMax = Math.max(step, Math.ceil(top / step) * step);
-  const f = furniture({ ...p, years: lines.years, left: 42, domain: [0, yMax], ticks: [0, yMax / 2, yMax], fmt: usdM, covid: lines.covid, tag: null, tickEvery: narrow ? 4 : 2 });
+  const kinds = new Set(lines.totals.map((r) => (r.kind === 'KFF' ? 'kff' : 'cms')));
+  const key = [['cms', 'histKeyCms'], ['kff', 'histKeyKff']].filter(([k]) => kinds.has(k)).map(([k, label]) => ({ cls: `hist-bar hist-bar--${k}`, label: t(label) }));
+  const f = furniture({ ...p, key, years: lines.years, left: 42, domain: [0, yMax], ticks: [0, yMax / 2, yMax], fmt: usdM, covid: lines.covid, tag: null, tickEvery: narrow ? 4 : 2 });
   const bw = Math.max(3, (f.x(1) - f.x(0)) * 0.62);
   const by = new Map(lines.totals.map((r) => [r.fy, r]));
   const bars = lines.years.map((fy) => {
     const r = by.get(fy);
     const cx = f.x(fy);
-    if (!r) return mark({ tip: fill('histTipNoTotal', { fy: fyLabel(fy) }), hit: null, body: html`<line class="hist-none" x1="${r2(cx - bw / 3)}" x2="${r2(cx + bw / 3)}" y1="${r2(f.base - 3)}" y2="${r2(f.base - 3)}"/>` });
+    if (!r) return mark({ tip: fill('histTipNoTotal', { fy: fyLabel(fy) }), hit: null, body: text({ x: cx, y: f.base - 4, cls: 'chart-note hist-na', body: t('histNa') }) });
     return mark({
       tip: fill('histTipTotal', { fy: fyLabel(fy), total: usdM(r.value), source: r.label ?? t(r.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms') }), value: r.value, data: { fy, kind: r.kind ?? '' }, hit: null,
       body: html`<rect class="hist-bar hist-bar--${r.kind === 'KFF' ? 'kff' : 'cms'}" x="${r2(cx - bw / 2)}" y="${r2(f.y(r.value))}" width="${r2(bw)}" height="${r2(f.base - f.y(r.value))}"/>`,

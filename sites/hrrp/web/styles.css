@@ -330,9 +330,16 @@
 .wsr__totals b { white-space: nowrap; }
 .wsr__check { background: var(--paper-2); }
 
-/* Part 2's largest-penalties table: wider than a phone, so it scrolls sideways inside its printout box. One line a row: the glyph
-   at its drawing's size, as the explorer's rows have it. */
+/* Part 2's largest-penalties table: one line a row, the glyph at its drawing's size, as the explorer's rows have it. On a phone the
+   number columns give way to a line under the place (penTable), so the table fits the screen with nothing out of view. */
 .pen__table { min-width: 36rem; }
+.pen__phone { display: none; }
+@media (max-width: 559px) {
+  .pen__table { min-width: 0; }
+  .pen__table :is(thead th, td):not(:first-child) { display: none; }
+  .pen__phone { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 4px; }
+  .pen__nums { font: 400 var(--fs-xs)/1.35 var(--font-type); color: var(--ink); }
+}
 /* Step 1's punch card on a phone: its row names reach left of the drawing, so it sits in from the column's edge. */
 @media (max-width: 559px) { #step-1 .chart--punch { width: calc(100% - 14px); margin-left: 14px; } }
 /* The conditions glyph at its drawing's size in every table. */
@@ -417,8 +424,9 @@
   .strip__band { fill: Canvas; stroke: GrayText; }
 }
 
-/* The data windows (the kit's periods chart): the window the ratios come from is dark, the payment year is the penalty's color. */
-.chart-periods__perf { fill: var(--ink); }
+/* The data windows (the kit's periods chart): the window the ratios come from in the kit's gray (as the years-cut columns beside
+   it), so the payment year in the penalty's color carries the ink. */
+.chart-periods__perf { fill: var(--ink-3); }
 /* The History figure's small multiples [HI-09]: the share cut and the penalized hospitals' average in the penalty ink, all hospitals in gray,
    the totals in the penalty ramp (CMS's dark, KFF's light, with an edge), the pandemic years a quiet band behind every panel. */
 .hist-covid { fill: var(--ink); fill-opacity: 0.07; }
@@ -429,10 +437,9 @@
 .hist-bar--cms { fill: var(--pen); }
 @media not (forced-colors: active) { .page--prog .fig__swatch--bar-dark { background: var(--pen); } }
 .hist-bar--kff { fill: var(--pen-seq-1); stroke: var(--pen-seq-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.hist-none { stroke: var(--ink-3); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.hist-na { font-size: 9px; }
 .hist-name--pen { fill: var(--pen-ink); }
 .hist-name--all { fill: var(--ink-2); }
-.hist-note__none { display: block; margin-top: 4px; font-weight: 600; }
 /* The timeline, as Thirty Day Readmissions set it: each entry its date at the left, then a bold title, the words and the source,
    entries ruled apart, in two columns where there is room; a year not yet in effect set apart by a dashed rule and a tag. */
 .tl { margin: 12px 0 0; padding: 0; list-style: none; columns: 2 26rem; column-gap: 48px; }
@@ -486,9 +493,9 @@
   /* The place's columns gray, so the all-hospitals outline (CanvasText) shows where it crosses them. */
   .chart--compare .chart-col--pen { fill: GrayText; }
   .meds__table td.hi { forced-color-adjust: none; background: Canvas; border: 1px solid CanvasText; }
-  .chart-periods__perf { fill: CanvasText; }
+  .chart-periods__perf { fill: GrayText; }
   .hist-covid { fill: GrayText; fill-opacity: 0.15; }
-  .hist-line--share, .hist-line--pen, .hist-line--all, .hist-none { stroke: CanvasText; }
+  .hist-line--share, .hist-line--pen, .hist-line--all { stroke: CanvasText; }
   .hist-line--all { stroke: GrayText; }
   .hist-dot--share, .hist-dot--pen, .hist-bar--cms { fill: CanvasText; }
   .hist-bar--kff { fill: Canvas; stroke: CanvasText; }

@@ -136,3 +136,16 @@ test('pairBars: the name column holds its longest label at a phone\'s width and 
   const plain = String(pairBars({ sections: [{ heading: 'Beds', rows: [row('Short')] }], labels: { a: 'Count', b: 'Money' }, width: 358 }));
   assert.match(plain, /<line class="chart-baseline" x1="92"/);
 });
+
+test('pairBars direct: the first row with room names its bars after their numbers and the key goes; no row with room keeps the key', () => {
+  const row = (label, a, b) => ({ label, a, b, aText: `${Math.round(a * 100)}%`, bText: `${Math.round(b * 100)}%`, tipA: 'a', tipB: 'b' });
+  const sections = [{ heading: 'Conditions', rows: [row('Widest', 0.2, 0.4), row('Next', 0.2, 0.2)] }];
+  const direct = { a: 'of flags', b: 'of dollars' };
+  const svg = String(pairBars({ sections, labels: { a: 'Count key', b: 'Money key' }, width: 640, direct }));
+  assert.ok(!svg.includes('Count key') && !svg.includes('Money key'), 'no key');
+  assert.equal((svg.match(/<tspan class="chart-note">of flags<\/tspan>/g) ?? []).length, 1);
+  assert.match(svg, />20% <tspan class="chart-note">of dollars<\/tspan>/, 'on the second row: the first row\'s longest bar leaves no room');
+  const none = String(pairBars({ sections: [{ heading: 'C', rows: [row('Only', 0.4, 0.4)] }], labels: { a: 'Count key', b: 'Money key' }, width: 200, direct }));
+  assert.ok(none.includes('Count key') && !none.includes('of flags'), 'the key stays when no row has room');
+  assert.equal(String(pairBars({ sections, labels: { a: 'Count key', b: 'Money key' }, width: 640 })).includes('Count key'), true, 'no direct: the key as before');
+});

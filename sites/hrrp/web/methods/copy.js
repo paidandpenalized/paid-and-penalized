@@ -184,10 +184,12 @@ export const COPY = {
   historyHeading: { text: 'History', claim: null },
   historyText: { text: 'Penalties for {first} through {last} come from CMS’s archived final-rule supplemental files.', claim: null },
 
-  historyListed: {
-    text: 'The history’s share penalized counts every hospital in each year’s file, except that for {first} through {last} it leaves out Maryland, Puerto Rico, and hospitals with no data for any condition, which those early files also listed.',
-    claim: null,
-  },
+  historyListed: { text: 'The history’s shares and average cuts count every hospital in each year’s file except {groups}, which the early files list and later files drop.', claim: null },
+  historyListedAll: { text: 'The history’s shares and average cuts count every hospital in each year’s file.', claim: null },
+  scopeMaryland: { text: 'Maryland hospitals ({years})', claim: null },
+  scopePuertoRico: { text: 'Puerto Rico hospitals ({years})', claim: null },
+  scopeMarylandPuertoRico: { text: 'Maryland and Puerto Rico hospitals ({years})', claim: null },
+  scopeNoData: { text: 'hospitals with no data for any condition ({years})', claim: null },
   historyTotals: {
     text: 'Annual dollar totals come from CMS, as a payment-rule estimate, or from KFF Health News reporting. The table gives each year’s total and its source.',
     claim: null,

@@ -6,7 +6,7 @@ import { COVID_FYS } from '../web/constants.js';
 import { capMarks } from '../web/derive.js';
 import { escapesFigure, historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
 import { drawHistory } from '../web/figures/history-draw.js';
-import { ROLL, noTotalText, researchData, rollCall, rollText, smallLines, timelineData, windowRows, yearsCut } from '../web/figures/history-data.js';
+import { ROLL, noTotalText, researchData, rollCall, rollText, scopeYears, smallLines, timelineData, windowPieces, windowRows, yearsCut } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
 import { FUTURE_WORDS } from '../../../pipeline/test/helpers.js';
@@ -61,7 +61,7 @@ test('the cap steps come from the data, and the three rule marks and the COVID b
   assert.deepEqual(s.marks.map((m) => [m.fy, m.key]), [[2019, 'histMarkPeer'], [2023, 'histMarkPn'], [2027, 'histMarkMa']]);
   assert.deepEqual(s.marks.map((m) => m.label), ['Peer groups begin', 'Pneumonia measure paused', 'Medicare Advantage stays counted']);
   assert.deepEqual(s.covid.fys, [2022, 2023, 2024]);
-  assert.match(s.covid.note, /^CMS left claims from January 1, 2020 through June 30, 2020 out of the program/);
+  assert.match(s.covid.note, /^Shaded: the years whose data reach the claims of January 1, 2020 to June 30, 2020, which CMS left out\.$/);
   const short = smallLines({ history: { ...HISTORY, national: NATIONAL.slice(0, 4) } });
   assert.deepEqual(short.marks.map((m) => m.fy), [], 'a mark outside the data\'s years is not placed');
   assert.deepEqual(short.covid.fys, []);
@@ -128,11 +128,11 @@ test('the figure: the axis start is said on the chart when it is not 0, and not 
 test('the figure: the pandemic years are shaded in every panel, with the note on hover, and named on the large panel', () => {
   const svg = svgOf(smallLines({ history: HISTORY }), WIDE);
   assert.equal((svg.match(/class="hist-covid"/g) ?? []).length, 3);
-  assert.match(svg, /<title>CMS left claims from January 1, 2020 through June 30, 2020/);
+  assert.match(svg, /<title>Shaded: the years whose data reach the claims of January 1, 2020 to June 30, 2020/);
   assert.match(sharePanelOf(svg), />Pandemic years</);
 });
 
-test('the figure: totals are CMS dark and KFF light, a source on each bar, and a year with none is a dash, never a bar or a zero', () => {
+test('the figure: totals are CMS dark and KFF light, keyed under the panel title, a source on each bar, and a year with none is "n/a", never a bar or a zero', () => {
   const svg = svgOf(smallLines({ history: HISTORY }), WIDE);
   const bars = [...svg.matchAll(/<g class="chart-mark" data-mark data-fy="(\d+)" data-kind="(CMS|KFF)" data-value="([^"]+)"><title>([^<]*)<\/title><rect class="hist-bar hist-bar--(cms|kff)"/g)];
   assert.equal(bars.length, 13);
@@ -143,7 +143,9 @@ test('the figure: totals are CMS dark and KFF light, a source on each bar, and a
   assert.match(by[2022][4], /KFF estimate/);
   assert.match(by[2014][4], /CMS 2014/);
   assert.ok(!by[2016] && !by[2024], 'no bar for a year with no total');
-  assert.equal((svg.match(/class="hist-none"/g) ?? []).length, 2);
+  assert.equal((svg.match(/class="chart-note hist-na"[^>]*>n\/a</g) ?? []).length, 2);
+  const total = svg.slice(svg.indexOf('hist-panel--total'));
+  assert.match(total, /<rect class="hist-bar hist-bar--cms"[^>]*\/><text[^>]*>CMS’s estimate<\/text><rect class="hist-bar hist-bar--kff"[^>]*\/><text[^>]*>KFF’s report of it<\/text>/, 'the key sits in the totals panel');
   assert.match(svg, /FY2016: no published total/);
   assert.ok(!/data-value="0"/.test(svg), 'nothing is plotted as zero');
 });
@@ -160,13 +162,13 @@ test('the figure: a year with no share draws no dot and breaks the line; no valu
   assert.match(fig, /<th scope="row">FY2018<\/th><td class="num" data-value="3005">3,005<\/td><td class="num">–<\/td>/);
 });
 
-test('the figure: frame, takeaway from the latest year, no-total words and the table of every plotted value', () => {
+test('the figure: frame, takeaway from the latest year, a two-sentence note, and the table of every plotted value', () => {
   const lines = smallLines({ history: HISTORY });
   const text = historyFigure(lines, { n: () => 3 }).text;
   assert.match(text, /74\.0% of hospitals are cut in FY2027\./);
-  assert.match(text, /No total for FY2016 and FY2024\./);
-  assert.match(text, /fig__swatch--bar-dark/);
-  assert.match(text, /fig__swatch--bar-light/);
+  assert.doesNotMatch(text, /No total for/, 'the drawing says n/a; the note does not repeat it');
+  assert.doesNotMatch(text, /fig__swatch--bar-(dark|light)/, 'no key over the whole figure');
+  assert.match(text, /Each year counts the hospitals in its CMS file, less the groups only the early files list \(Methods names them\)/);
   assert.match(text, /<th scope="row">FY2016<\/th>[^]*?No total found/);
   assert.match(text, /<th scope="row">FY2022<\/th>[^]*?KFF estimate/);
   assert.equal(historyFigure(smallLines({ history: { ...HISTORY, national: [] } }), { n: () => 1 }), '');
@@ -180,31 +182,30 @@ test('the figure: a hostile source label is escaped in the tip and the table', (
   assert.ok(text.includes('&lt;img src=x onerror=alert(1)&gt;'));
 });
 
-test('real data: the figure builds at both widths; FY2024 and FY2026 are listed as having no published total; every mark is placed', () => {
+test('real data: the figure builds at both widths; FY2024 and FY2026 draw n/a, with no published total in their tips; every mark is placed', () => {
   const { history } = loadHrrpOnce();
   const lines = smallLines({ history });
   const fig = historyFigure(lines, { n: () => 1 }).text;
-  assert.match(fig, /No total for FY2024 and FY2026\./);
+  assert.match(fig, /FY2024: no published total[^]*FY2026: no published total/);
   assert.match(fig, /80\.2% of hospitals are cut in FY2027\./);
   for (const width of [PHONE, WIDE]) {
     const panel = sharePanelOf(svgOf(lines, width));
     assert.equal((panel.match(/class="hist-ann"/g) ?? []).length, lines.caps.length + lines.marks.length);
     assert.match(panel, /Axis starts at 40%/);
   }
-  assert.equal((svgOf(lines, WIDE).match(/hist-bar--/g) ?? []).length, lines.totals.length);
+  assert.equal((svgOf(lines, WIDE).match(/data-kind="(CMS|KFF)"/g) ?? []).length, lines.totals.length);
 });
 
 test('no raw ISO date reaches the History figure\'s words, tips or table; a year with no all-hospitals average still has a whole tip', () => {
   const real = historyFigure(smallLines({ history: loadHrrpOnce().history }), { n: () => 1 }).text.replace(/<[^>]*>/g, ' ');
   assert.doesNotMatch(real, /\d{4}-\d{2}-\d{2}/);
-  assert.match(real, /January 1, 2020 through June 30, 2020/);
+  assert.match(real, /January 1, 2020 to June 30, 2020/);
   const part = historyFigure(smallLines({ history: HISTORY }), { n: () => 1 }).text;
   assert.doesNotMatch(part, /<title>[^<]*\d{4}-\d{2}-\d{2}/);
   const gap = { ...HISTORY, national: HISTORY.national.map((r) => (r.fy === 2018 ? { ...r, meanRed: null } : r)) };
   const svg = svgOf(smallLines({ history: gap }), WIDE);
   assert.match(svg, /FY2018: average cut 0\.45% among penalized hospitals<\/title>/);
   assert.ok(!/among all hospitals<\/title>/.test(svg.replace(/FY\d{4}: average cut [\d.]+% among penalized hospitals, [\d.]+% among all hospitals/g, '')));
-  assert.match(part, /hist-note__none">No total for FY2016 and FY2024\./);
 });
 
 // ---------- the roll call ----------
@@ -331,15 +332,56 @@ test('the real timeline\'s words promise nothing: no future word, no fiscal year
 
 // ---------- the data windows ----------
 
-test('the data windows: a row for each fiscal year, newest first, the payment year October to September; a missing window is said', () => {
-  const rows = windowRows({ history: { national: [{ fy: 2018, perf: [null, null] }, { fy: 2019, perf: ['2014-07-01', '2017-06-30'] }] } });
-  assert.deepEqual(rows.map((r) => r.fy), [2019, 2018]);
+test('a window across the discharges the files leave out is two pieces; one that ends before or starts after them is one', () => {
+  assert.deepEqual(windowPieces(['2018-07-01', '2021-06-30']), [['2018-07-01', '2019-12-01'], ['2020-07-01', '2021-06-30']]);
+  assert.deepEqual(windowPieces(['2017-07-01', '2019-12-01']), [['2017-07-01', '2019-12-01']]);
+  assert.deepEqual(windowPieces(['2020-07-01', '2023-06-30']), [['2020-07-01', '2023-06-30']]);
+  const rows = windowRows({ history: { national: [{ fy: 2023, perf: ['2018-07-01', '2021-06-30'] }] } });
+  const text = windowsFigure(rows, { n: () => 1 }).text;
+  const first = text.slice(text.indexOf('<svg'), text.indexOf('</svg>'));
+  assert.equal((first.match(/class="chart-periods__perf"/g) ?? []).length, 2, 'two bars');
+  assert.match(text, /<td>July 1, 2018 – December 1, 2019; July 1, 2020 – June 30, 2021<\/td>/);
+  assert.match(text, /broken between December 1, 2019 and July 1, 2020, the discharges the files leave out/);
+});
+
+test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its rule; gridlines every five years; a phone axis ends on the last year', () => {
+  const rows = windowRows(loadHrrpOnce());
+  const by = Object.fromEntries(rows.map((r) => [r.fy, r]));
+  assert.equal(by[2023].pieces.length, 2);
+  assert.equal(by[2024].pieces.length, 2);
+  assert.equal(by[2022].pieces.length, 1);
+  assert.ok(by[2018].src && by[2018].pieces.length === 1);
+  assert.ok(rows.every((r) => r.pieces.length), 'every year has a window');
+  const fig = windowsFigure(rows, { n: () => 1 });
+  const grid = (svg) => (svg.match(/class="chart-grid"/g) ?? []).length;
+  assert.equal(grid(fig.text.slice(fig.text.indexOf('<svg'), fig.text.indexOf('</svg>'))), 4, '2010, 2015, 2020, 2025');
+  const phone = fig.text.slice(fig.text.lastIndexOf('<svg'));
+  assert.match(phone, />27<\/text>/, 'the phone axis labels the last year');
+});
+
+test('who the history counts: the years whose file lists each group it leaves out', () => {
+  const rows = [
+    { fy: '2013', scope_flag: 'maryland_exempt' }, { fy: '2014', scope_flag: 'puerto_rico_excluded' }, { fy: '2013', scope_flag: 'no_measure_data' },
+    { fy: '2016', scope_flag: 'no_measure_data' }, { fy: '2019', scope_flag: '' },
+  ];
+  assert.deepEqual(scopeYears(rows), { maryland: [2013], puertoRico: [2014], noData: [2013, 2016] });
+  assert.deepEqual(scopeYears([]), { maryland: [], puertoRico: [], noData: [] });
+});
+
+test('the data windows: a row for each fiscal year, newest first, the payment year October to September; a window the file lacks comes from its rule, or is said', () => {
+  const rows = windowRows({ history: { national: [{ fy: 2017, perf: [null, null] }, { fy: 2018, perf: [null, null] }, { fy: 2019, perf: ['2014-07-01', '2017-06-30'] }] } });
+  assert.deepEqual(rows.map((r) => r.fy), [2019, 2018, 2017]);
   assert.deepEqual(rows[0].pay, ['2018-10-01', '2019-09-30']);
-  assert.equal(rows[1].perf, null);
+  assert.deepEqual(rows[1].perf, ['2013-07-01', '2016-06-30'], 'FY2018 from its final rule');
+  assert.equal(rows[1].src.label, 'FY2018 IPPS final rule, 82 FR 38224');
+  assert.equal(rows[2].perf, null);
+  assert.deepEqual(rows[2].pieces, []);
   const text = windowsFigure(rows, { n: () => 4 }).text;
   assert.match(text, /chart-periods__perf/);
   assert.match(text, /chart-periods__pay/);
-  assert.match(text, /<th scope="row">FY2018<\/th><td>not available<\/td><td>October 1, 2017 – September 30, 2018<\/td>/);
+  assert.match(text, /<th scope="row">FY2018<\/th><td>July 1, 2013 – June 30, 2016 \(FY2018 IPPS final rule, 82 FR 38224\)<\/td>/);
+  assert.match(text, /the window for FY2018, which its file doesn’t state, from the FY2018 IPPS final rule, 82 FR 38224\./);
+  assert.match(text, /<th scope="row">FY2017<\/th><td>not available<\/td><td>October 1, 2016 – September 30, 2017<\/td>/);
   assert.match(text, /The data behind a year’s cut ends months before the cut begins: for FY2019 the data window ends June 30, 2017 and payments change October 1, 2018\./);
   assert.match(text, /id="figure-4"/);
   assert.doesNotMatch(text.replace(/<[^>]*>/g, ' '), /\d{4}-\d{2}-\d{2}/, 'no raw ISO date in the windows\' words');

@@ -3,6 +3,8 @@
 //   rows   [{ label, spans: [{ kind, start, end, tip }] }]: start and end as [year, month (1-12), day]; kind names
 //          the bar's class (chart-periods__<kind>)
 //   kinds  the span kinds in the order their bars stack within a row
+//   grid   which years' starts carry a gridline (a year in, true or false out); every year's by default
+//   labelEnd  on a phone, count the every-other labels back from the last year, so the axis ends on a label
 // The axis runs over whole calendar years, each labeled at its middle (every other one on a phone); a year narrower than a
 // four-digit label is labeled by its last two digits.
 import { html } from '../render/html.js';
@@ -24,7 +26,7 @@ const SHORT_BELOW = 36;
 // figure set beside one stands its own axis on this line.
 export const periodsPlotBase = (rowCount) => TOP + rowCount * ROW;
 
-export function periodsChart({ rows, kinds, width }) {
+export function periodsChart({ rows, kinds, width, grid: gridAt = () => true, labelEnd = false }) {
   if (!rows.length || !kinds.length) throw new RangeError('periodsChart: rows and kinds');
   const all = rows.flatMap((r) => r.spans.flatMap((s) => [day(s.start), day(s.end)]));
   const y0 = new Date(Math.min(...all) * 86400000).getUTCFullYear();
@@ -37,8 +39,9 @@ export function periodsChart({ rows, kinds, width }) {
   const years = Array.from({ length: y1 - y0 + 1 }, (_, i) => y0 + i);
   const every = isNarrow(width) ? 2 : 1;
   const short = isNarrow(width) || x(day([y0 + 1, 1, 1])) - x(lo) < SHORT_BELOW;
-  const grid = years.map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(base)}"/>`);
-  const tickLabels = years.slice(0, -1).filter((_, i) => i % every === 0)
+  const grid = years.filter(gridAt).map((yr) => html`<line class="chart-grid" x1="${r2(x(day([yr, 1, 1])))}" x2="${r2(x(day([yr, 1, 1])))}" y1="${TOP - 4}" y2="${r2(base)}"/>`);
+  const labeled = years.slice(0, -1);
+  const tickLabels = labeled.filter((_, i) => (labelEnd ? labeled.length - 1 - i : i) % every === 0)
     .map((yr) => text({ x: (x(day([yr, 1, 1])) + x(day([yr + 1, 1, 1]))) / 2, y: base + 15, cls: 'chart-tick', body: String(yr).slice(short ? 2 : 0) }));
   const body = rows.map((r, i) => {
     const mid = TOP + i * ROW + ROW / 2;

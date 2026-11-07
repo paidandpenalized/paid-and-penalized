@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { CONDS } from '../../../engine/js/hrrp/formula.js';
 import { parseCsv } from '../../../engine/js/csv.js';
 import { HOSPITAL_COLUMNS, hospitalCsv } from '../web/csv.js';
-import { largestPenalties, moreConditions, pairedBars, peerGroups, pictureData, pictureLede, sizeSwarm, typeDots, typeSpread, wilson } from '../web/figures/picture-data.js';
+import { dollarHalf, largestPenalties, moreConditions, pairedBars, peerGroups, pictureData, pictureLede, sizeSwarm, typeDots, typeSpread, wilson } from '../web/figures/picture-data.js';
 import { barsTakeaway, cutsTakeaway, ledeText, measuredTakeaway, peerTakeaway, picturePart, typeTakeaway } from '../web/figures/picture.js';
 import { stripShade } from '../web/figures/picture-draw.js';
 import { CONDITIONS } from './fixtures.js';
@@ -209,15 +209,20 @@ test('the type dots: four blocks, empty groups hidden, each against the national
   assert.equal(typeDots([hospital({ own: 'Government' })]).blocks[3].rows.length, 1);
 });
 
+test('the lede\'s count: the fewest hospitals whose modeled dollars reach half of all, largest first; none modeled is null', () => {
+  const h = (pen) => hospital({ pen });
+  assert.equal(dollarHalf([h(10), h(60), h(30)]), 1, '60 of 100');
+  assert.equal(dollarHalf([h(25), h(25), h(25), h(25)]), 2, 'exactly half counts');
+  assert.equal(dollarHalf([h(40), h(35), h(25)]), 2);
+  assert.equal(dollarHalf([h(0), h(null)]), null);
+  assert.equal(dollarHalf([]), null);
+});
+
 test('singular forms: the lede, the table takeaway and the coin-flip words at a count of one', () => {
-  const one = ledeText({ lede: { nCut: 1, medianCut: 3, nOnePlus: 1, nCap: 1, onePlus: 1, cap: 3 } });
-  assert.match(one, /The one hospital with a cut loses 3\.00%/);
-  assert.match(one, /1 hospital loses 1% or more\./);
-  assert.match(one, /1 hospital reaches the 3% maximum\./);
-  assert.doesNotMatch(one, /1 hospitals|Half of/);
-  const many = ledeText({ lede: { nCut: 5, medianCut: 1, nOnePlus: 2, nCap: 0, onePlus: 1, cap: 3 } });
-  assert.match(many, /Half of the 5 hospitals/); assert.match(many, /2 hospitals lose/); assert.match(many, /0 hospitals reach/);
-  assert.equal(ledeText({ lede: { nCut: 0, medianCut: 0, nOnePlus: 0, nCap: 0, onePlus: 1, cap: 3 } }), 'No hospital takes a cut.');
+  assert.equal(ledeText({ lede: { nCut: 1, nHalf: 1 } }), 'One hospital takes a cut, so it carries all of the year’s modeled penalty dollars.');
+  assert.equal(ledeText({ lede: { nCut: 5, nHalf: 2 } }), 'Half of the year’s modeled penalty dollars fall on 2 of the 5 hospitals with a cut (40%).');
+  assert.equal(ledeText({ lede: { nCut: 5, nHalf: null } }), 'Where the cuts land, by size, condition, peer group and kind of hospital.');
+  assert.equal(ledeText({ lede: { nCut: 0, nHalf: null } }), 'No hospital takes a cut.');
   const view = programView(areaOf([hospital({ id: '990040', red: 2 })]));
   const html = picturePart(view.picture, { figure: () => 1, edition: view.edition }).text;
   assert.match(html, /The largest cut is 2\.00% of base payments\./);
@@ -258,7 +263,11 @@ test('the Part: the lede in words and the table with the six-cell glyph, its key
   const view = programView(areaOf(POOL));
   const html = picturePart(view.picture, { figure: (() => { let n = 4; return () => ++n; })(), edition: view.edition }).text;
   assert.match(html, /class="part__intro"/);
-  assert.equal([...html.matchAll(/<svg [^>]*chart--cards/g)].length, 3);
+  // Each row's glyph twice, in its column and on the phone's line under the place (one shown at each width), each with its own id.
+  assert.equal([...html.matchAll(/<svg [^>]*chart--cards/g)].length, 6);
+  const ids = [...html.matchAll(/ id="((?:pen|penp)-[^"]+)"/g)].map((m) => m[1]);
+  assert.equal(new Set(ids).size, ids.length, 'no id twice');
+  assert.match(html, /<span class="pen__nums">Cut [\d.]+% · [^<]+ estimated<\/span>/);
   assert.match(html, /largest-penalties\.csv"/);
   assert.match(html, /data-figure-csv="hrrp-largest-penalties\.csv"/);
   assert.doesNotMatch(html, /undefined|NaN/);

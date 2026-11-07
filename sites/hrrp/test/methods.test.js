@@ -23,7 +23,9 @@ const PINS = [
   { id: 'a', title: 'Example file A', bytes: 1234567, sha256: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789', retrieved: '2026-10-20', landingPage: 'https://example.org/a', downloadUrl: 'https://example.org/a.csv' },
   { id: 'b', title: 'Example file B', bytes: 42, sha256: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef', retrieved: '2026-10-21', downloadUrl: 'http://insecure.example/b' },
 ];
-const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed });
+// The years the early files list each group the history leaves out (history-data.js scopeYears), as the pinned file has them.
+const SCOPE = { maryland: [2013, 2014, 2015], puertoRico: [2013, 2014, 2015], noData: [2013, 2014, 2015, 2016, 2017, 2018] };
+const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS, historyScope = SCOPE } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed, historyScope });
 const page = (ctx = ctxOf()) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const rowsOf = (text) => [...text.matchAll(/<tr><th scope="row">([^<]*(?:<[^>]+>[^<]*)*?)<\/th><td>(.*?)<\/td><\/tr>/gs)].map(([, a, e]) => [textOf(a), textOf(e)]);
 const assumptions = (text) => rowsOf(text.slice(text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'), text.indexOf('</table>', text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'))));
@@ -103,7 +105,11 @@ test('places: the geocode counts; history: the early-file exclusions, and each y
   const text = textOf(page());
   assert.ok(text.includes('(2,526 hospitals)') && text.includes('ZIP code (371)') && text.includes('county (15)') && !text.includes('have no dot'));
   assert.ok(textOf(page(ctxOf({ meta: { ...DOLLAR_META, geocode: { address: 1, zip: 1, county: 1, none: 3 } } }))).includes('3 hospitals have no dot.'));
-  assert.ok(text.includes('for FY2013 through FY2018 it leaves out Maryland, Puerto Rico, and hospitals with no data for any condition'));
+  assert.ok(text.includes('The history’s shares and average cuts count every hospital in each year’s file except Maryland and Puerto Rico hospitals (FY2013–FY2015) and hospitals with no data for any condition (FY2013–FY2018), which the early files list and later files drop.'));
+  const apart = textOf(page(ctxOf({ historyScope: { maryland: [2013], puertoRico: [2013, 2014], noData: [] } })));
+  assert.ok(apart.includes('except Maryland hospitals (FY2013) and Puerto Rico hospitals (FY2013–FY2014), which'), 'each group with its own years when they differ');
+  assert.ok(textOf(page(ctxOf({ historyScope: { maryland: [], puertoRico: [], noData: [] } }))).includes('count every hospital in each year’s file.'));
+  assert.ok(!textOf(page(ctxOf({ historyScope: null }))).includes('The history’s shares'), 'no line without the scope');
   const history = { ...HISTORY, national: [
     { fy: 2024, totalEst: 500000000, totalSrc: { kind: 'CMS', label: 'CMS rule table', url: 'https://example.org/rule' } },
     { fy: 2025, totalEst: 316000000, totalSrc: { kind: 'CMS', label: 'CMS simulation of FY2025 penalties', url: 'http://insecure.example/' } },

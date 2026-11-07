@@ -17,11 +17,26 @@ import { binIndex, byId, countBy, roundTo } from '../numbers.js';
 
 // ---------- the lede ----------
 
+// The fewest hospitals whose modeled dollars (pen) reach half of all hospitals' modeled dollars, largest first: their count, or
+// null when no hospital has modeled dollars.
+export function dollarHalf(hospitals) {
+  const pens = hospitals.map((h) => h.pen ?? 0).filter((v) => v > 0).sort((a, b) => b - a);
+  const total = pens.reduce((a, v) => a + v, 0);
+  if (!total) return null;
+  let sum = 0;
+  for (let i = 0; i < pens.length; i++) {
+    sum += pens[i];
+    if (sum >= total / 2) return i + 1;
+  }
+  return pens.length;
+}
+
 // n: all hospitals; nMeasured: those measured on a condition; nCut: those cut (of the measured); medianCut: the median cut
-// (percent) among the hospitals cut; nOnePlus and nCap: counts of hospitals (cut GE_CUT_PCT percent or more; at the cap).
+// (percent) among the hospitals cut; nOnePlus and nCap: counts of hospitals (cut GE_CUT_PCT percent or more; at the cap);
+// nHalf: dollarHalf's count (the Part's lede), or null.
 export function pictureLede(hospitals) {
   const s = summarize(hospitals);
-  return { n: s.n, nMeasured: s.nMeasured, nCut: s.nPen, medianCut: s.medianRedPen, nOnePlus: s.nGe1, nCap: s.nMax, onePlus: GE_CUT_PCT, cap: CAP_PCT };
+  return { n: s.n, nMeasured: s.nMeasured, nCut: s.nPen, medianCut: s.medianRedPen, nOnePlus: s.nGe1, nCap: s.nMax, onePlus: GE_CUT_PCT, cap: CAP_PCT, nHalf: dollarHalf(hospitals) };
 }
 
 // ---------- the size of the cuts  ----------
