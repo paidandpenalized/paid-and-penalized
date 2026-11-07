@@ -12,6 +12,7 @@ import { saveCsv } from '../../../web/client/download.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
+import { isSiteAsset } from './fetch-asset.js';
 import { loadAsset } from './hospitals.js';
 import { mountPager, statusLine } from './pager.js';
 
@@ -62,6 +63,8 @@ export function mountHospitals(box) {
   const [prev, next] = [box.querySelector('[data-prev]'), box.querySelector('[data-next]')];
   const size = Number(box.dataset.pageSize);
   if (!body || !controls || !status || !size) return;
+  // A source that is not one of the site's assets (fetch-asset.js's rule) leaves the table as the server drew it, untouched.
+  if (box.dataset.src && !isSiteAsset(box.dataset.src)) return;
   // Copy works from the CSV alone, so it is there whether or not the rows load: the whole file until the table's rows are drawn, then
   // the rows that pass the filters.
   const csv = csvOf(box);
@@ -82,7 +85,6 @@ export function mountHospitals(box) {
     });
   }
   // A table that fits on one page has every row and names no asset.
-  // A source that is not one of the site's assets fails to load as any failed load does, in words (fetch-asset.js holds the rule).
   if (!box.dataset.src) return;
   const prefix = box.dataset.prefix ?? 'ph';
   const el = (id) => box.querySelector(`#${prefix}-${id}`);

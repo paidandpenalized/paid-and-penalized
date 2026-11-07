@@ -22,11 +22,9 @@ function mountSwitches(box) {
 // has none. Only the clicked state's own page is followed.
 function mountStateLinks(box) {
   const open = (mark) => {
-    const href = mark?.dataset.href;
-    if (!href) return;
-    // Resolved, then held to the clicked state's own page: the build names it with the same placePath.
-    const url = new URL(href, location.origin);
-    if (url.origin === location.origin && url.pathname === placePath('state', mark.dataset.state)) window.location.assign(url.pathname);
+    // Held to the clicked state's own page, which the build names with this same placePath.
+    const { href, state } = mark?.dataset ?? {};
+    if (href && state && href === placePath('state', state)) window.location.assign(href);
   };
   for (const svg of box.querySelectorAll('svg.chart--us-map')) {
     svg.addEventListener('click', (e) => open(e.target.closest?.('[data-state]')));

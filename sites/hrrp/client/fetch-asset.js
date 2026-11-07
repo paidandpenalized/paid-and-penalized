@@ -1,16 +1,19 @@
 // One of the site's own content-hashed assets (under /assets/, as the build writes them with ctx.asset), fetched and read as
 // JSON. what: the asset in words, for the error. A source outside /assets/ is refused, so a page's data-src can never point
 // a script at anything else. The callers wrap it in once() each, one asset apiece.
-// src as one of the site's assets, resolved (so a source with dot segments, "/assets/../x", is judged by where it leads), or
-// null for any other source, or one that is no URL at all.
+// src as one of the site's assets, resolved (so a source with dot segments, "/assets/../x", is judged by where it leads, and one
+// that hides them as %2e or %2f is refused), or null for any other source, or one that is no URL at all.
 function siteAsset(src) {
   try {
     const url = new URL(src, location.origin);
-    return url.origin === location.origin && url.pathname.startsWith('/assets/') ? url : null;
+    return url.origin === location.origin && url.pathname.startsWith('/assets/') && !/%2e|%2f|%5c/i.test(url.pathname) ? url : null;
   } catch {
     return null;
   }
 }
+
+// Whether src is one of the site's assets (siteAsset).
+export const isSiteAsset = (src) => siteAsset(src) !== null;
 
 export async function fetchAsset(src, what) {
   const url = siteAsset(src);

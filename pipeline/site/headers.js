@@ -64,7 +64,7 @@ export function noindexPaths(noindexFiles, emitted = null) {
   // A splat matches slashes too, so a folder is open when any file it holds, in it or in a folder under it, may be indexed:
   // every folder above each such file, once.
   const open = new Set();
-  for (const path of emitted ?? []) {
+  for (const path of (emitted ?? []).map(asFile)) {
     if (shut.has(path)) continue;
     for (let i = path.indexOf('/'); i >= 0; i = path.indexOf('/', i + 1)) open.add(path.slice(0, i + 1));
   }

@@ -74,6 +74,9 @@ test('noindex data files: a folder whose every file is noindex takes one splat; 
   assert.deepEqual(noindexPaths(['/data/xx/a.csv'], ['/data/xx/a.csv', '/data/xx/sub/public.csv']), ['/data/xx/a.csv']);
   // A page emitted at a folder address is its index.html among the files.
   assert.deepEqual(noindexPaths(['/data/ww/'], ['/data/ww/index.html']), ['/data/ww/*']);
+  assert.deepEqual(noindexPaths(['/data/ww/'], ['/data/ww/']), ['/data/ww/*'], 'either form in either list');
+  const folderRules = parseHeaders(headersFile({ env: 'production', noindexFiles: ['/data/ww/'], emitted: ['/data/ww/index.html'] }));
+  assert.equal(headersFor(folderRules, '/data/ww/')['x-robots-tag'], 'noindex', 'the splat covers the folder address itself');
   const rules = parseHeaders(headersFile({ env: 'production', noindexFiles: [...shut, ...mixed], emitted }));
   assert.equal(headersFor(rules, '/data/zz/fy2099/file-7.csv')['x-robots-tag'], 'noindex');
   assert.equal(headersFor(rules, '/data/yy/b.csv')['x-robots-tag'], 'noindex');

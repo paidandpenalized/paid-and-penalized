@@ -252,8 +252,10 @@ describe('map', () => {
     const named = await svg.locator('.chart-mark[data-href]').evaluateAll((els) => els.map((e) => [e.dataset.state, e.dataset.href]));
     assert.ok(named.length > 0, 'states name their pages');
     for (const [state, href] of named) assert.equal(href, placePath('state', state), state);
-    const none = svg.locator('.chart-mark[data-state]:not([data-href])').filter({ has: page.locator('.chart-tile-na') }).first();
-    assert.equal(await none.count(), 1, 'the state outside the program is drawn hatched, with no page');
+    const hatched = svg.locator('.chart-mark[data-state]').filter({ has: page.locator('.chart-tile-na') });
+    assert.equal(await hatched.count(), 1, 'one state is drawn outside the program');
+    assert.equal(await hatched.first().getAttribute('data-href'), null, 'and it names no page');
+    const none = hatched.first();
     const before = page.url();
     await none.locator('path, rect').first().click({ force: true });
     await page.waitForTimeout(300);
