@@ -49,6 +49,9 @@ test('noneMeasured and penalizedOfMeasured: share of those measured, or the none
   assert.equal(penalizedOfMeasured(none), 'none measured on any condition');
   const list = [{ red: 0.5, c: MEASURED }, { red: 0, c: MEASURED }];
   assert.equal(penalizedOfMeasured(summarize(list)), '50% of 2 measured');
+  // Thousands take a separator and the share rounds to whole percent: 2,330 of 2,798 is 83%.
+  const many = Array.from({ length: 2798 }, (_, i) => ({ red: i < 2330 ? 0.2 : 0, c: MEASURED }));
+  assert.equal(penalizedOfMeasured(summarize(many)), '83% of 2,798 measured');
 });
 
 test('vsLabel compares after rounding', () => {
@@ -90,6 +93,9 @@ test('rankLine: the share of hospitals with a smaller cut, nationally, in the st
   const withZeros = (n) => list.map((y, i) => ({ ...y, red: i < n ? 0 : 0.5 }));
   const zeros3 = withZeros(3);
   assert.equal(rankLine(zeros3[0], rankContext(zeros3, states)), 'No reduction, like 2 other hospitals.');
+  // The biggest cut in a set is larger than every other hospital's, and the line still says 99%, never 100%.
+  const big = Array.from({ length: 300 }, (_, i) => hosp({ id: String(990001 + i), red: (i + 1) / 1000 }));
+  assert.match(rankLine(big[299], rankContext(big, states)), /^Larger cut than 99% of hospitals nationally, 99% of the 300 in Zedland, and 99% in peer group 1\.$/);
   // The source printed "1 other hospitals"; one reads singular here.
   const zeros2 = withZeros(2);
   assert.equal(rankLine(zeros2[0], rankContext(zeros2, states)), 'No reduction, like 1 other hospital.');

@@ -2,7 +2,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { capMarks, edition, exampleHospital, meanCutByYear, pafByYear, withDerived } from '../web/derive.js';
-import { ALL, CUT, HISTORY, META, hospital } from './fixtures.js';
+import { summarize } from '../../../engine/js/hrrp/summary.js';
+import { ALL, CUT, HISTORY, META, hospital, loadHrrpOnce } from './fixtures.js';
 
 test('edition: every phrase comes from the fiscal year and the history', () => {
   const e = edition(META, { ...HISTORY, years: [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026] });
@@ -54,4 +55,10 @@ test('exampleHospital: the median cut of the penalized, mid-size, several-condit
   assert.equal(exampleHospital(list).id, '990013');
   const none = [{ ...hospital({ id: '990021' }), flags: [] }, { ...hospital({ id: '990022' }), flags: [] }];
   assert.equal(exampleHospital(none).id, '990021');
+});
+
+test('real data: a hospital with a cut (red above zero) is one whose payment factor is below 1, so the share card\'s red dots match the penalized count', () => {
+  const { hospitals } = loadHrrpOnce();
+  assert.equal(summarize(hospitals).nPen, hospitals.filter((h) => h.paf < 1).length);
+  assert.ok(hospitals.every((h) => (h.red > 0) === (h.paf < 1)));
 });

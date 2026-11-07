@@ -187,7 +187,7 @@ test('the At-a-glance notes: penalized of measured, and the maximum\'s "hospital
 });
 
 test('the place Penalized note: the gap to the nation both ways, same as nation, and none measured', () => {
-  // Two cut hospitals in ZZ, two with no cut in ZY, one cut in ZY: ZZ 100% against the nation's 75%, ZY 50%... by property below.
+  // Five hospitals, three of them cut: the nation is 60%. ZZ has two cut of two (+40 pts); ZY has one cut of three (33%, -27 pts).
   const ctx = areaOf([cut('990081', 'ZZ'), cut('990082', 'ZZ'), cut('990083', 'ZY'), below('990084', 'ZY'), below('990085', 'ZY')]);
   const zz = placeView(placeOf('state', 'zz', ctx), ctx);
   const zy = placeView(placeOf('state', 'zy', ctx), ctx);

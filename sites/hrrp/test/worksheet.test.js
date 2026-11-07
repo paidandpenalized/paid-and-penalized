@@ -36,7 +36,7 @@ test('each reason a condition does not count, and none for one that does', () =>
       HF: m(40, 1.1, 1), AMI: m(30, 0.9), COPD: m(10, 1.5), PN: { n: 40, err: 1.0000001, flag: 1, ratio: 0.1 }, CABG: { n: 40, err: 1.2, flag: 1, ratio: null },
     },
   });
-  const rows = worksheetRows(withDerived(h, META), META, CONDITIONS);
+  const rows = worksheetRows(withDerived(h, META), META);
   assert.deepEqual(rows.lines.map((l) => l.cond), CONDS);
   assert.equal(line(rows, 'HF').reason, null);
   assert.equal(line(rows, 'AMI').reason, 'at or below median');
@@ -51,7 +51,7 @@ test('each reason a condition does not count, and none for one that does', () =>
 
 test('a flagged condition that rounds to its median is counted by CMS but adds nothing here', () => {
   const h = hospital({ c: { HF: { n: 40, err: 1, flag: 1, ratio: 0.1 } } });
-  const rows = worksheetRows(withDerived(h, META), META, CONDITIONS);
+  const rows = worksheetRows(withDerived(h, META), META);
   assert.equal(line(rows, 'HF').reason, 'rounds to the median; CMS counted it');
   assert.equal(line(rows, 'HF').part, 0);
   assert.equal(line(rows, 'HF').state, 'counted');
@@ -62,26 +62,26 @@ test('a flagged condition that rounds to its median is counted by CMS but adds n
 });
 
 test('lines 7 to 9: the sum, the cap at 3 percent, the rounded cut and the factor', () => {
-  const small = worksheetRows(withDerived(hospital(), META), META, CONDITIONS);
+  const small = worksheetRows(withDerived(hospital(), META), META);
   assert.ok(Math.abs(small.totals.sum - 0.01) < 1e-9, 'a ratio 0.1 over a median, at a weight of 0.1');
   assert.equal(small.totals.capped, false);
   assert.equal(small.totals.reduction, 0.01);
   assert.equal(small.totals.factor, 0.99);
   assert.deepEqual(small.cms, { factor: 0.99, matches: true, diff: 0 });
   const big = hospital({ paf: 0.97, c: { HF: m(40, 2, 1, 0.5), AMI: m(30, 1.5, 1, 0.5) } });
-  const capped = worksheetRows(withDerived(big, META), META, CONDITIONS);
+  const capped = worksheetRows(withDerived(big, META), META);
   assert.ok(capped.totals.sum > CAP);
   assert.equal(capped.totals.capped, true);
   assert.equal(capped.totals.reduction, CAP, 'line 8 is capped at 3 percent');
   assert.equal(capped.totals.factor, 0.97);
-  const odd = worksheetRows(withDerived(hospital({ paf: 0.9, c: { HF: m(40, 1.123456, 1, 0.1) } }), META), META, CONDITIONS);
+  const odd = worksheetRows(withDerived(hospital({ paf: 0.9, c: { HF: m(40, 1.123456, 1, 0.1) } }), META), META);
   assert.equal(odd.totals.reduction, Math.round(odd.totals.sum * 1e4) / 1e4, 'line 8 is rounded to four decimals');
   assert.equal(odd.cms.matches, false);
   assert.ok(odd.cms.diff > 0.07);
 });
 
 test('the three fields: hospital, peer group, neutrality modifier', () => {
-  const rows = worksheetRows(withDerived(hospital(), META), META, CONDITIONS);
+  const rows = worksheetRows(withDerived(hospital(), META), META);
   assert.deepEqual(rows.fields.map((f) => f.no), ['A', 'B', 'C']);
   assert.equal(rows.fields[0].value, 'EXAMPLE GENERAL HOSPITAL');
   assert.equal(rows.fields[0].id, '990001');
@@ -91,7 +91,7 @@ test('the three fields: hospital, peer group, neutrality modifier', () => {
 });
 
 test('the form: every line, the reasons, the CMS check, and the dollars line only when not compact', () => {
-  const rows = worksheetRows(withDerived(hospital(), META), META, CONDITIONS);
+  const rows = worksheetRows(withDerived(hospital(), META), META);
   const full = String(worksheetHtml(rows, { compact: false, dollars: DOLLARS, conditions: CONDITIONS }));
   assert.match(full, /Worksheet R · Readmissions payment adjustment/);
   for (const n of [1, 2, 3, 4, 5, 6, 7, 8, 9]) assert.ok(full.includes(`Line ${n}`), `Line ${n}`);
@@ -109,20 +109,20 @@ test('the form: every line, the reasons, the CMS check, and the dollars line onl
   const compact = String(worksheetHtml(rows, { compact: true, dollars: DOLLARS, conditions: CONDITIONS }));
   assert.doesNotMatch(compact, /Applied to every/);
   assert.doesNotMatch(String(worksheetHtml(rows, { conditions: CONDITIONS })), /Applied to every/);
-  const none = worksheetRows(withDerived(hospital({ pen: null }), META), META, CONDITIONS);
+  const none = worksheetRows(withDerived(hospital({ pen: null }), META), META);
   assert.match(String(worksheetHtml(none, { dollars: DOLLARS, conditions: CONDITIONS })), /no estimate/);
 });
 
 test('a sliver of excess prints "< 0.0001" on the form, and a hospital name is escaped', () => {
   const h = hospital({ name: 'A <b>&</b> B', c: { HF: { n: 40, err: 1.00004, flag: 1, ratio: 0.1 } } });
-  const out = String(worksheetHtml(worksheetRows(withDerived(h, META), META, CONDITIONS), { conditions: CONDITIONS }));
+  const out = String(worksheetHtml(worksheetRows(withDerived(h, META), META), { conditions: CONDITIONS }));
   assert.match(out, /&lt; 0\.0001/);
   assert.match(out, /A &lt;b&gt;&amp;&lt;\/b&gt; B/);
 });
 
 test('the waterfall: parts in order summing to line 7, running totals, the cap and the rounded line 8', () => {
   const big = hospital({ paf: 0.97, c: { HF: m(40, 2, 1, 0.5), AMI: m(30, 1.5, 1, 0.5), COPD: m(10, 1.5), PN: m(40, 0.9) } });
-  const rows = worksheetRows(withDerived(big, META), META, CONDITIONS);
+  const rows = worksheetRows(withDerived(big, META), META);
   const wf = waterfallData(rows, CONDITIONS);
   assert.deepEqual(wf.parts.map((p) => p.cond), CONDS);
   assert.deepEqual(wf.parts.map((p) => p.label), CONDITIONS.map((c) => c.short));
@@ -136,7 +136,7 @@ test('the waterfall: parts in order summing to line 7, running totals, the cap a
   assert.equal(line(rows, 'COPD').reason, 'under 25 cases');
   assert.equal(wf.parts.find((p) => p.cond === 'COPD').why, 'under 25 cases');
   assert.equal(wf.parts.find((p) => p.cond === 'HF').why, null);
-  const small = waterfallData(worksheetRows(withDerived(hospital(), META), META, CONDITIONS), CONDITIONS);
+  const small = waterfallData(worksheetRows(withDerived(hospital(), META), META), CONDITIONS);
   assert.equal(small.binds, false);
   assert.equal(small.line8, 0.01);
   // The figure's table: a row for each part, then the sum, the cap and the cut after it.

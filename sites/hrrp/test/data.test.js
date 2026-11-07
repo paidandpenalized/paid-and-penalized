@@ -43,7 +43,7 @@ test('pinsUsed lists every manifest pin the read file was built from', () => {
     const got = new Set(d.pinsUsed.map((e) => e.id));
     for (const e of d.pinsUsed) assert.ok(manifestIds.has(e.id), e.id);
     assert.ok(got.has(PIN_ID), `${mode}: the pin`);
-    for (const id of want[mode].filter((i) => manifestIds.has(i))) assert.ok(got.has(id), `${mode}: ${id}`);
+    for (const id of want[mode]) assert.ok(got.has(id), `${mode}: ${id}`);
   }
 });
 

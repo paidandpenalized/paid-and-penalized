@@ -184,7 +184,7 @@ test('scoreSwarm: defaults draw as before: no title, no zone, no mark, the caps 
 
 // ---------- Step 5 ----------
 
-const rowsOf = (extra, hospitalFields = {}) => worksheetRows(withDerived(hospital({ peer: 2, ...hospitalFields, c: extra }), META), META, CONDITIONS);
+const rowsOf = (extra, hospitalFields = {}) => worksheetRows(withDerived(hospital({ peer: 2, ...hospitalFields, c: extra }), META), META);
 
 test('Step 5: each zero row gives its reason: none measured, under 25 cases, at or under the median', () => {
   const rows = rowsOf({ HF: m(40, 1.1, 1), AMI: m(30, 0.9), COPD: m(10, 1.5), PN: m(40, 1.2, 1) });
@@ -235,10 +235,10 @@ test('Step 5: the takeaway for no part, one part, several parts and a sum over t
   assert.equal(several.counted, 3);
   assert.match(waterfallTakeaway(several), /^Three conditions add [\d.]+%, about \d+% of the 3% cap; heart attack alone is \d+% of the sum\.$/);
   const big = { ...hospital({ peer: 2, c: { HF: m(40, 1.1, 1, 0.5), AMI: m(30, 1.2, 1, 0.5) } }) };
-  const over = waterfallData(worksheetRows(withDerived(big, META), META, CONDITIONS), CONDITIONS);
+  const over = waterfallData(worksheetRows(withDerived(big, META), META), CONDITIONS);
   assert.equal(over.binds, true);
   assert.match(waterfallTakeaway(over), /^Two conditions add [\d.]+%, over the 3% cap, so the cut stops at 3%; heart attack alone is \d+% of the sum\.$/);
-  const figure = waterfallFigure({ rows: worksheetRows(withDerived(big, META), META, CONDITIONS), conditions: CONDITIONS, n: 4, edition: 'FY2027' }).text;
+  const figure = waterfallFigure({ rows: worksheetRows(withDerived(big, META), META), conditions: CONDITIONS, n: 4, edition: 'FY2027' }).text;
   assert.match(figure, /the sum is over the cap, so the cut stops at 3% and the factor is 0\.9700/);
 });
 

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { normalize } from '../../web/client/search.js';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
 import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
-import { METHODS_PATH } from '../../sites/hrrp/web/links.js';
+import { METHODS_PATH, placePath } from '../../sites/hrrp/web/links.js';
 import { STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
 import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, fetchesOf, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
@@ -227,6 +227,23 @@ describe('map', () => {
     assert.equal(await box.getAttribute('data-dots'), 'on', 'checked: dots on');
     await dots.uncheck();
     assert.equal(await box.getAttribute('data-dots'), 'off', 'unchecked: dots off');
+  }));
+
+  it('arrow keys move through the states and Enter opens the one the keyboard is on', () => withPage(tabs, { path: PATH }, async (page) => {
+    const svg = page.locator('.usmap__m:not([hidden]) svg.chart--us-map:visible').first();
+    const mark = svg.locator('.chart-mark.is-active[data-state]');
+    // The figure script adds the keyboard stops once it runs, and scrolling the page to the focused map clears the active state,
+    // so press an arrow until a state is active, then Enter on it, and repeat if the page has not moved.
+    let opened = null;
+    await eventually(async () => {
+      if (opened && new URL(page.url()).pathname === opened) return true;
+      await svg.focus().catch(() => {});
+      if ((await mark.count()) !== 1) { await svg.press('ArrowRight').catch(() => {}); return false; }
+      opened = placePath('state', await mark.getAttribute('data-state'));
+      await svg.press('Enter').catch(() => {});
+      await page.waitForTimeout(100);
+      return new URL(page.url()).pathname === opened;
+    }, 'Enter on a state does not open its page');
   }));
 
   it('"Every state" pages by STATES_PAGE_SIZE', () => withPage(tabs, { path: PATH }, async (page) => {
