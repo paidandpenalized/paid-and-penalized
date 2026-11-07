@@ -522,7 +522,6 @@ export const COPY = {
   histColTotal: { text: 'Estimated total', claim: null },
   histColSource: { text: 'Source of the total', claim: null },
   histCellNone: { text: 'No total found', claim: null },
-  rollSummary: { text: 'Of today’s {n} hospitals: {never} never cut; {always} cut in every year they appear in the file; {all} cut in all {years} years.', claim: null },
   rollNote: { text: 'This counts today’s hospitals only, so each year’s share runs above CMS’s national share for that year. A blank is a year the hospital is not in the file, never a year it was not cut.', claim: null },
   historyIntro: { text: 'The program’s record: its dated rule changes, and the period of care each year’s cut is based on.', claim: null },
   historyLede: { text: 'At least {share} of hospitals have been cut every year since the cap reached {cap}% in {fy}.', claim: 'HRRP-09' },

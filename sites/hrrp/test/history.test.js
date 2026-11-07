@@ -6,7 +6,7 @@ import { COVID_FYS } from '../web/constants.js';
 import { capMarks } from '../web/derive.js';
 import { escapesFigure, historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
 import { drawHistory } from '../web/figures/history-draw.js';
-import { ROLL, noTotalText, researchData, rollCall, rollText, scopeYears, smallLines, timelineData, windowPieces, windowRows, yearsCut } from '../web/figures/history-data.js';
+import { ROLL, noTotalText, researchData, rollCall, scopeYears, smallLines, timelineData, windowPieces, windowRows, yearsCut } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
 import { FUTURE_WORDS } from '../../../pipeline/test/helpers.js';
@@ -256,11 +256,6 @@ test('the roll call: "cut every year it was in the file" differs from "cut in al
   assert.equal(counts.everCut, 5);
   assert.deepEqual(counts.byYear.map((y) => [y.fy, y.present, y.cut]), [[2025, 5, 2], [2026, 5, 3], [2027, 6, 3]]);
   assert.equal(counts.byYear[0].share, 2 / 5);
-});
-
-test('the roll call\'s words say "of today\'s hospitals"', () => {
-  const text = rollText(rollCall({ hospitals: ROLL_HOSPITALS, history: ROLL_HISTORY, meta: META }));
-  assert.match(text, /^Of today’s 6 hospitals: 1 never cut; 2 cut in every year they appear in the file; 1 cut in all 3 years\.$/);
 });
 
 test('real data: every hospital has a record of one character per year; all-years is fewer than every-year-in-the-file', () => {

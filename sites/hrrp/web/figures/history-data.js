@@ -128,9 +128,6 @@ export function yearsCut(roll) {
   };
 }
 
-// The roll call's summary sentence, always "of today's hospitals" (the roll call leaves out hospitals that left the program).
-export const rollText = ({ counts }) => fill('rollSummary', { n: String(counts.n), never: String(counts.neverCut), always: String(counts.cutEveryYearInFile), all: String(counts.cutAllYears), years: String(counts.nYears) });
-
 // ---------- the timeline ----------
 
 // content: loadHrrp().timeline ([{ date, fy, title, body, src: { label, url } }]); edition: { fy }; today: the data file's date
