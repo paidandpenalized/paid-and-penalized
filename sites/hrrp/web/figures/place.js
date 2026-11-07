@@ -16,13 +16,13 @@ import { placeText } from '../../../../web/render/format.js';
 import { PLACE_MAP_WIDE, PLACE_SHADES } from '../constants.js';
 import { conditionShort } from '../derive.js';
 import { hospitalPath } from '../links.js';
-import { fmtInt, fmtMoney, fmtPct, roundTo } from '../numbers.js';
+import { fmtInt, fmtMoney, fmtPct, fmtShare, roundTo } from '../numbers.js';
 import { fill as placeFill, t as placeT } from '../place/copy.js';
 import { fyLabel } from '../copy.js';
 import { hospitals as hospitalsText } from '../wording.js';
 import { yearAxis } from './year-axis.js';
 
-const pct0 = (share) => fmtPct(share * 100, 0);
+const pct0 = (share) => fmtShare(share, 0);
 
 // ---------- the map ----------
 

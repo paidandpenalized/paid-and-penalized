@@ -56,3 +56,11 @@ test('factor4, ratio and points: fixed decimals as CMS and the worksheet print t
   assert.deepEqual([ratio(1.0259), ratio(0.9970, 3), ratio(undefined)], ['1.0259', '0.997', '—']);
   assert.deepEqual([points(0.00342), points(0.0034, 2), points(NaN)], ['0.342', '0.34', '—']);
 });
+
+test('fmtShare: a fraction as a percentage, an exact half at the last place shown rounding up (float noise off first)', async () => {
+  const { fmtShare } = await import('../web/numbers.js');
+  assert.equal(fmtShare(207 / 360), '58%');
+  assert.equal(fmtShare(0.574), '57%');
+  assert.equal(fmtShare(0.12345, 1), '12.3%');
+  assert.equal(fmtShare(null), '—');
+});

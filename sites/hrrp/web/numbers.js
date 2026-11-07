@@ -9,6 +9,10 @@ const missing = (v) => v == null || !Number.isFinite(v);
 // A percentage already in percent units (2.5 is "2.50%"). The source's toFixed is kept: format.js pct() takes a fraction.
 export const fmtPct = (v, dp = 2) => (missing(v) ? DASH : `${v.toFixed(dp)}%`);
 
+// A fraction as a percentage (fmtPct), its float noise rounded off first, so a share that is exactly a half at the last place
+// shown rounds up as the arithmetic says: 207 of 360 is 57.5%, "58%", where 207 / 360 * 100 alone is 57.4999… and prints "57%".
+export const fmtShare = (f, dp = 0) => (missing(f) ? DASH : fmtPct(Number((f * 100).toPrecision(12)), dp));
+
 // A whole number with thousands separators: 2912 is "2,912".
 export const fmtInt = (n) => (missing(n) ? DASH : count(Math.round(n)));
 

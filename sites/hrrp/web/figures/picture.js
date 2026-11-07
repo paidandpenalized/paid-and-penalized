@@ -265,8 +265,8 @@ function typeFigure({ ty, edition, n }) {
     n: n(), takeaway: typeTakeaway(ty), source: fill('pictSourceTypes', { edition }), claimLevel: 'recomputed', csvName: 'hrrp-share-cut-by-trait',
     chart: imagePair(drawn(draw, SIDE), t('typeAlt')), note: t('typeKey'),
     table: {
-      columns: [{ name: t('typeColTrait') }, { name: t('typeColGroup') }, { name: t('typeColN'), numeric: true }, { name: t('typeColShare'), numeric: true }],
-      rows: ty.table.map((r) => [traitName(r.block), groupName(r.block, r), num(count(r.nMeasured), r.nMeasured), num(fmtPct(r.share, 0), r.share)]),
+      columns: [{ name: t('typeColTrait') }, { name: t('typeColGroup') }, { name: t('typeColAll'), numeric: true }, { name: t('typeColN'), numeric: true }, { name: t('typeColShare'), numeric: true }],
+      rows: ty.table.map((r) => [traitName(r.block), groupName(r.block, r), num(count(r.n), r.n), num(count(r.nMeasured), r.nMeasured), num(fmtPct(r.share, 0), r.share)]),
     },
   });
 }

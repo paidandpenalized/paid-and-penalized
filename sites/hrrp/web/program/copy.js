@@ -319,6 +319,7 @@ export const COPY = {
   typeGroupRural: { text: 'Rural', claim: null },
   typeColTrait: { text: 'Trait', claim: null },
   typeColGroup: { text: 'Group', claim: null },
+  typeColAll: { text: 'Hospitals', claim: null },
   typeColN: { text: 'Hospitals measured', claim: null },
   typeColShare: { text: 'Share cut', claim: null },
 
