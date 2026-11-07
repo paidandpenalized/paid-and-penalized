@@ -47,6 +47,10 @@ async function exerciseTable(page, t, scope, { state }) {
   const n = scope.length;
   const pages = Math.ceil(n / PAGE_SIZE);
   assert.equal(await t.rows.count(), PAGE_SIZE, 'a page of rows shows');
+  // It opens on the largest cut first (the explorer as the old site's did, a place table as it always has).
+  assert.equal(await t.control('sort').inputValue(), 'cut', 'opens sorted by cut');
+  const cuts = (await t.column(2)).map((s) => Number(s.match(/[\d.]+/)[0]));
+  assert.ok(cuts.every((v, i) => !i || v <= cuts[i - 1]), 'page 1 runs from the largest cut down');
   assert.equal(await t.total(), n, 'the status counts every hospital in scope');
   assert.match(await t.status(), new RegExp(`^1–${PAGE_SIZE} of`));
   // Pager: next, then previous (disabled on page 1); the last page holds the rest.
