@@ -59,7 +59,8 @@ The 175, grouped (the counts are approximate where a group's rows share a sectio
 - **Bed bands as menu options (about 30).** The old place tables show the bed bands (`<100`, `100-299` …) as buttons; the new
   tables offer the same four bands in a menu, whose options are not visible text.
 - **Rows on later table pages (about 40).** Rows the old site's paged tables show on a later page, matched against rows the new
-  tables show in another order (the explorer opens in name order; the old site opened largest cut first). Each one checked
+  tables show in another order (both open largest cut first, but hospitals with the same cut fall differently: the new tables
+  break a tie by dollars, then CCN; the old kept its file's order). Each one checked
   is on the new page with the same value, or is one of the Medicare-dependent hospitals below.
 - **Medicare-dependent hospitals' dollars (included above).** The new pipeline prices the Medicare-dependent hospital add-on
   with the hospital-specific case mix (`hrrp methods_version 2`), which moves 101 hospitals' modeled dollars by at most
