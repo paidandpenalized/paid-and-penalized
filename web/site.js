@@ -23,7 +23,7 @@ export const SITE = {
   hub: { released: true },
   sites: {
     hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
-    hrrp: { path: '/hrrp/', released: false, title: 'Readmissions', subtitle: 'HRRP' },
+    hrrp: { path: '/hrrp/', released: true, title: 'Readmissions', subtitle: 'HRRP' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
