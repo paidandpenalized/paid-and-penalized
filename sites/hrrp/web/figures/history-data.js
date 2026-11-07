@@ -22,7 +22,7 @@ const totalOf = (r) => (r.totalEst == null ? null : { value: r.totalEst, kind: r
 // The fiscal years with no total, in words ("FY2024 and FY2026"), or null when every year has one.
 export const noTotalText = (fys) => (fys.length ? fill('histNoTotal', { years: listText(fys.map(fyLabel)) }) : null);
 
-// history: loadHrrp().history. Returns { years, share, avgPen, avgAll, totals, noTotal, noTotalText, caps, marks, covid, table, steady }:
+// history: loadHrrp().history. Returns { years, share, avgPen, avgAll, totals, noTotal, caps, marks, covid, table, steady }:
 // share, avgPen and avgAll are [{ fy, value }] (percent; value null when the year has none); totals [{ fy, value, kind, label, url
 // }] for the years with one; noTotal the years without; caps the cap steps read from the data [{ fy, label, short }]; marks the
 // rule marks [{ fy, key, label }] (the copy entry carries the claim) (FY2019, FY2023, FY2027); covid { first, last, label, note, fys }; table one row for each
@@ -41,7 +41,6 @@ export function smallLines({ history }) {
     avgAll: points('meanRed'),
     totals,
     noTotal,
-    noTotalText: noTotalText(noTotal),
     caps: capMarks(national),
     marks: HISTORY_MARKS.filter((m) => years.includes(m.fy)).map(({ fy, key }) => ({ fy, key, label: t(key) })),
     covid: { first, last, fys: years.filter((fy) => fy >= first && fy <= last), label: t('histCovid'), note: fill('histCovidNote', { from: isoDate(COVID_EXCLUDED[0]), to: isoDate(COVID_EXCLUDED[1]) }) },

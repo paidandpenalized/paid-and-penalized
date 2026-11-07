@@ -41,7 +41,7 @@ test('the estimated totals carry their source kind; years with none are named in
   assert.deepEqual(s.totals.find((r) => r.fy === 2022), { fy: 2022, value: 100000009, kind: 'KFF', label: 'KFF estimate', url: 'https://example.org/kff' });
   assert.equal(s.totals.find((r) => r.fy === 2014).kind, 'CMS');
   assert.deepEqual(s.noTotal, [2016, 2024]);
-  assert.equal(s.noTotalText, 'No total for FY2016 and FY2024.');
+  assert.equal(noTotalText(s.noTotal), 'No total for FY2016 and FY2024.');
   assert.equal(s.table.find((r) => r.fy === 2016).total, null);
   assert.equal(noTotalText([]), null);
   assert.equal(noTotalText([2026]), 'No total for FY2026.');

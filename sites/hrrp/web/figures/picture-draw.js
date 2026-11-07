@@ -209,6 +209,7 @@ const BAND_GRID = 0.1;
 // neighbour (next: its x, y) and the neighbour's dot weigh most, then the dashed half line (at half) anywhere in the words' height (a
 // dash run into the number reads as a minus sign), then the wrong side of half (a share over half written under the half line reads
 // as under it), then the farther spot. The label runs about 24 units from its dot, to the right (anchor 'start') or the left.
+const FARTHER = 1.5;
 function endLabelY({ x, y, share, next, half, anchor }) {
   const dir = anchor === 'start' ? 1 : -1;
   const span = [x + dir * 2, x + dir * 26].sort((a, c) => a - c);
@@ -220,7 +221,7 @@ function endLabelY({ x, y, share, next, half, anchor }) {
     return (crosses || onDot ? 10 : 0) + (half >= ly - 12 && half <= ly + 4 ? 4 : 0) + (share > 0.5 && ly > half ? 3 : 0) + (share < 0.5 && ly < half ? 1 : 0);
   };
   const spots = [r2(y - 8), r2(y + 15), r2(y - 20)];
-  return spots.map((ly, i) => ({ ly, cost: score(ly) + (i === 2 ? 1.5 : 0) })).reduce((a, b) => (b.cost < a.cost ? b : a)).ly;
+  return spots.map((ly, i) => ({ ly, cost: score(ly) + (i === 2 ? FARTHER : 0) })).reduce((a, b) => (b.cost < a.cost ? b : a)).ly;
 }
 
 export function drawSizeBands({ panels, width, labels, format, signed }) {

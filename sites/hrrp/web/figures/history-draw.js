@@ -20,6 +20,10 @@ const SHARE_STEP = 20;
 const OUTSIDE = 100;
 const CROSSES_LINE = 1;
 const OVERLAPS_WORDS = 10;
+// A phone's share panel: the outer share of the plot where words start (or end) at their point; the height the pandemic tag
+// takes at the band's foot.
+const END_ZONE = 0.3;
+const TAG_ROOM = 30;
 
 export const usdM = (v) => `$${Math.round(v / 1e6)}M`;
 
@@ -97,7 +101,8 @@ function panelKey(entries, ox, y) {
 
 // The panel's axes: its title, the tick labels (left) and years (below), gridlines above the base, the pandemic band behind it all.
 //   p { ox, oy, w, h, title, sub, key, years, domain, ticks, fmt, covid, tag }; key: entries for panelKey on the sub line (instead of
-//   sub), with room under it for a value set over the tallest bar; returns { x, y, box, base, markup }
+//   sub), with room under it for a value set over the tallest bar; returns { x, y, box, base, covid ([x0, x1] of the pandemic band, or
+//   null), markup }
 function furniture(p) {
   const { ox, oy, w, h, left } = p;
   const top = oy + (p.key ? 48 : p.sub ? 36 : 28);
@@ -115,7 +120,7 @@ function furniture(p) {
 ${p.ticks.map((v) => html`${v === p.domain[0] ? '' : html`<line class="chart-grid" x1="${r2(ox + left)}" x2="${r2(ox + w - RIGHT)}" y1="${r2(y(v))}" y2="${r2(y(v))}"/>`}${text({ x: ox + left - 4, y: y(v) + 4, anchor: 'end', cls: 'chart-tick', body: p.fmt(v) })}`)}
 <line class="chart-axis__line" x1="${r2(ox + left)}" x2="${r2(ox + w - RIGHT)}" y1="${r2(base)}" y2="${r2(base)}"/>
 ${p.years.filter(every).map((fy) => text({ x: x(fy), y: base + 14, cls: 'chart-tick', body: yy(fy) }))}${tag}`;
-  return { x, y, base, box: { x0: ox + left, x1: ox + w - RIGHT, top: top - 2, bottom: base }, markup };
+  return { x, y, base, box: { x0: ox + left, x1: ox + w - RIGHT, top: top - 2, bottom: base }, covid: p.covid.fys.length ? [c0, c1] : null, markup };
 }
 
 // ---------- the three panels ----------
@@ -136,7 +141,7 @@ function sharePanel(lines, p, narrow) {
   const anchorsAt = (px) => {
     if (!narrow) return ['middle', 'start', 'end'];
     const t = (px - f.box.x0) / (f.box.x1 - f.box.x0);
-    return t < 0.3 ? ['start', 'middle', 'end'] : t > 0.7 ? ['end', 'middle', 'start'] : ['middle', 'start', 'end'];
+    return t < END_ZONE ? ['start', 'middle', 'end'] : t > 1 - END_ZONE ? ['end', 'middle', 'start'] : ['middle', 'start', 'end'];
   };
   const item = (fy, label, data) => {
     const q = at(fy);
@@ -153,8 +158,7 @@ function sharePanel(lines, p, narrow) {
   // On a phone the gridlines are kept clear of too, so a value never reads as the tick beside it.
   const grid = narrow ? ticks.filter((v) => v > start).map((v) => [{ px: f.box.x0, py: f.y(v) }, { px: f.box.x1, py: f.y(v) }]) : [];
   // The pandemic tag at the band's foot is kept clear of too.
-  const [c0, c1] = [f.x(lines.covid.first - 0.5), f.x(lines.covid.last + 0.5)];
-  const tagRect = lines.covid.fys.length ? [{ x0: c0, x1: c1, y0: f.base - 30, y1: f.base }] : [];
+  const tagRect = f.covid ? [{ x0: f.covid[0], x1: f.covid[1], y0: f.base - TAG_ROOM, y1: f.base }] : [];
   const ann = place(notes, { box: f.box, polys: [pts, ...grid], rects: tagRect });
   return html`<g class="hist-panel hist-panel--share">${f.markup}<path class="hist-line hist-line--share" d="${lineOf(pts)}"/>${dots}${ann}</g>`;
 }
