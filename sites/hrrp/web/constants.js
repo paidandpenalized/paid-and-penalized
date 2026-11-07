@@ -84,7 +84,7 @@ export const COVID_EXCLUDED = Object.freeze(['2020-01-01', '2020-06-30']);
 // A data window a year's file does not state, from that year's final rule (HRRP-26): the FY2018 file names only "FY 18
 // applicable period". Fiscal year: [first day, last day]. The data windows chart draws it and its table says where it is from.
 export const RULE_WINDOWS = Object.freeze({
-  2018: Object.freeze({ window: Object.freeze(['2013-07-01', '2016-06-30']), src: Object.freeze({ label: 'FY2018 IPPS final rule, 82 FR 38224', url: 'https://www.federalregister.gov/documents/2017/08/14/2017-16434' }) }),
+  2018: Object.freeze({ window: Object.freeze(['2013-07-01', '2016-06-30']), src: Object.freeze({ label: 'IPPS final rule, 82 FR 38224', url: 'https://www.federalregister.gov/documents/2017/08/14/2017-16434' }) }),
 });
 
 // The discharges the files leave out of the windows that span them (HRRP-27): the FY2023 and FY2024 files state their

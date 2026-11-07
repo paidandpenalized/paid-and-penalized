@@ -205,9 +205,10 @@ ${text({ x: 0, y: narrow ? y0 + 11 : cy + 4, anchor: 'start', cls: 'chart-label'
 // The middle-half tier's scale step: the shared reach rounds up to one, and a faint line marks each.
 const BAND_GRID = 0.1;
 
-// An end band's share, written over or under its dot (at x, y), whichever crosses less: the line to its neighbour (next: its x, y)
-// and the neighbour's dot weigh most, then the dashed half line (at half), then the wrong side of half (a share over half written
-// under the half line reads as under it). The label runs about 24 units from its dot, to the right (anchor 'start') or the left.
+// An end band's share, written over or under its dot (at x, y), or a line higher still, whichever crosses least: the line to its
+// neighbour (next: its x, y) and the neighbour's dot weigh most, then the dashed half line (at half) anywhere in the words' height (a
+// dash run into the number reads as a minus sign), then the wrong side of half (a share over half written under the half line reads
+// as under it), then the farther spot. The label runs about 24 units from its dot, to the right (anchor 'start') or the left.
 function endLabelY({ x, y, share, next, half, anchor }) {
   const dir = anchor === 'start' ? 1 : -1;
   const span = [x + dir * 2, x + dir * 26].sort((a, c) => a - c);
@@ -216,10 +217,10 @@ function endLabelY({ x, y, share, next, half, anchor }) {
     const hits = (v) => v !== null && v >= ly - 10 && v <= ly + 2;
     const onDot = next && next.x + 4 >= span[0] && next.x - 4 <= span[1] && next.y + 4 >= ly - 10 && next.y - 4 <= ly + 2;
     const crosses = Array.from({ length: 7 }, (_, k) => span[0] + (k * (span[1] - span[0])) / 6).some((at) => hits(segY(at)));
-    return (crosses || onDot ? 10 : 0) + (hits(half) ? 4 : 0) + (share > 0.5 && ly > half ? 3 : 0) + (share < 0.5 && ly < half ? 1 : 0);
+    return (crosses || onDot ? 10 : 0) + (half >= ly - 12 && half <= ly + 4 ? 4 : 0) + (share > 0.5 && ly > half ? 3 : 0) + (share < 0.5 && ly < half ? 1 : 0);
   };
-  const [over, under] = [r2(y - 8), r2(y + 15)];
-  return score(over) <= score(under) ? over : under;
+  const spots = [r2(y - 8), r2(y + 15), r2(y - 20)];
+  return spots.map((ly, i) => ({ ly, cost: score(ly) + (i === 2 ? 1.5 : 0) })).reduce((a, b) => (b.cost < a.cost ? b : a)).ly;
 }
 
 export function drawSizeBands({ panels, width, labels, format, signed }) {

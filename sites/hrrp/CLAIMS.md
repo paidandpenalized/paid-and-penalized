@@ -35,6 +35,7 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-25 | For a Medicare-dependent, small rural hospital, the base operating DRG payment amount includes the difference between its hospital-specific payment rate and the Federal payment rate. | https://www.law.cornell.edu/cfr/text/42/412.152 | "includes the difference between the hospital-specific payment rate and the Federal payment rate" | 2026-11-05 |
 | HRRP-26 | The FY2018 cut was worked out from discharges of July 1, 2013 through June 30, 2016; the FY2018 file does not state this window. | https://www.federalregister.gov/documents/2017/08/14/2017-16434 | "we are finalizing as proposed, without modification, the applicable period of the 3-year time period of July 1, 2013 through June 30, 2016" | 2026-11-06 |
 | HRRP-27 | The FY2024 file states its data window in two pieces, July 1 to December 1, 2019 and July 1, 2020 to June 30, 2022, leaving out the discharges between; the FY2023 file does the same for its window. | https://www.cms.gov/files/zip/fy24-ipps-fr-hospital-readmissions-reduction-program-supplemental-data-file.zip | "based on discharges between July 1, 2019 to December 1, 2019 and July 1, 2020 to June 30, 2022" | 2026-11-06 |
+| HRRP-28 | CMS shortened the FY2022 data window to end December 1, 2019, so that it uses no data from the COVID-19 public health emergency, whose first-half 2020 claims it left out. | https://www.federalregister.gov/documents/2021/08/13/2021-16519 | "would only be affected by a shortened performance period (July 1, 2017 through December 1, 2019) that does not use data from the COVID-19 PHE" | 2026-11-06 |
 | HRRP-22 | Congress extended the Medicare-dependent hospital program through December 31, 2026, which falls inside fiscal year 2027. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" | 2026-11-05 |
 | HRRP-23 | The readmission measures count unplanned readmissions within 30 days of discharge. | https://www.federalregister.gov/documents/2026/08/04/2026-15833 | "assesses unplanned readmissions occurring within 30 days of discharge" | 2026-11-05 |
 
@@ -131,6 +132,10 @@ A claim marked `unverified` may not be used in copy.
   `hrrp-supplemental-fy2024` zip). The FY2023 file's two pieces (July 1, 2018 to December 1, 2019 and July 1, 2020 to June
   30, 2021) are as the pinned history's provenance notes record them (`hrrp-history-provenance`). constants.js WINDOW_GAP
   holds the days between.
+- **HRRP-28** is the FY2022 IPPS/LTCH PPS final rule (86 FR 45254), in its section on the condition-specific measures for
+  FY2022, read from the Federal Register's XML text: with the September 2020 interim final rule's exception for first- and
+  second-quarter 2020 claims, the FY2022 window "would only be affected by a shortened performance period". The FY2023 and
+  FY2024 files' first pieces end the same day (HRRP-27).
 - **HRRP-20, checked again 2026-11-05 for an FY2027 confirmation:** the FY2027 final rule text (2026-15833), CMS's FY2027
   HRRP fact sheet and methodology infographic, and the CMS program page do not mention the COVID-19 exclusion; secondary
   summaries repeat the FY2026 notice. So the register and the "New for" note say what CMS gave notice of.

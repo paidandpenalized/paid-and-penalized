@@ -349,7 +349,7 @@ test('a window across the discharges the files leave out is two pieces; one that
   const first = text.slice(text.indexOf('<svg'), text.indexOf('</svg>'));
   assert.equal((first.match(/class="chart-periods__perf"/g) ?? []).length, 2, 'two bars');
   assert.match(text, /<td>July 1, 2018 – December 1, 2019; July 1, 2020 – June 30, 2021<\/td>/);
-  assert.match(text, /the break is those the files leave out, December 2, 2019 to June 30, 2020\./);
+  assert.match(text, /the break, December 2, 2019 to June 30, 2020, keeps them clear of the early-2020 claims CMS left out\./);
 });
 
 test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its rule; no gridlines; labels every other year in the small multiples\' style, ending on the last', () => {
@@ -363,9 +363,11 @@ test('real data: FY2023 and FY2024 are drawn in two pieces and FY2018 from its r
   const fig = windowsFigure(rows, { n: () => 1 });
   const grid = (svg) => (svg.match(/class="chart-grid"/g) ?? []).length;
   assert.equal(grid(fig.text), 0, 'no gridlines: the bars carry the ink');
-  assert.match(fig.text.slice(fig.text.indexOf('<svg'), fig.text.indexOf('</svg>')), />’27<\/text><\/svg>|>’27<\/text>/, 'the wide axis ends on the last year too');
-  const phone = fig.text.slice(fig.text.lastIndexOf('<svg'));
+  const phone = fig.text.slice(fig.text.indexOf('<svg'), fig.text.indexOf('</svg>'));
+  const wide = fig.text.slice(fig.text.lastIndexOf('<svg'));
+  assert.match(wide, />’27<\/text>/, 'the wide axis ends on the last year too');
   assert.match(phone, />’27<\/text>/, 'the phone axis labels the last year');
+  assert.deepEqual([...phone.matchAll(/class="chart-tick"[^>]*>(’\d\d)</g)].map((m) => m[1]), ['’11', '’15', '’19', '’23', '’27'], 'every fourth year on a phone');
 });
 
 test('who the history counts: the years whose file lists each group it leaves out', () => {
@@ -382,14 +384,14 @@ test('the data windows: a row for each fiscal year, newest first, the payment ye
   assert.deepEqual(rows.map((r) => r.fy), [2019, 2018, 2017]);
   assert.deepEqual(rows[0].pay, ['2018-10-01', '2019-09-30']);
   assert.deepEqual(rows[1].perf, ['2013-07-01', '2016-06-30'], 'FY2018 from its final rule');
-  assert.equal(rows[1].src.label, 'FY2018 IPPS final rule, 82 FR 38224');
+  assert.equal(rows[1].src.label, 'IPPS final rule, 82 FR 38224');
   assert.equal(rows[2].perf, null);
   assert.deepEqual(rows[2].pieces, []);
   const text = windowsFigure(rows, { n: () => 4 }).text;
   assert.match(text, /chart-periods__perf/);
   assert.match(text, /chart-periods__pay/);
   assert.match(text, /<th scope="row">FY2018<\/th><td>July 1, 2013 – June 30, 2016 \(FY2018 IPPS final rule, 82 FR 38224\)<\/td>/);
-  assert.match(text, /for FY2018, whose file doesn’t state it, the FY2018 IPPS final rule, 82 FR 38224\./);
+  assert.match(text, /one for each fiscal year \(FY2018’s window: IPPS final rule, 82 FR 38224\)\./);
   assert.match(text, /<th scope="row">FY2017<\/th><td>not available<\/td><td>October 1, 2016 – September 30, 2017<\/td>/);
   assert.match(text, /The data behind a year’s cut ends months before the cut begins: for FY2019 the data window ends June 30, 2017 and payments change October 1, 2018\./);
   assert.match(text, /id="figure-4"/);

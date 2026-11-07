@@ -3,9 +3,11 @@
 // timeline (dated entries with their sources, years not yet in effect marked). figures/history-data.js holds their numbers.
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { periodsChart, periodsPlotBase } from '../../../../web/charts/periods.js';
+import { isNarrow } from '../../../../web/charts/svg.js';
 import { isoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink } from '../../../../web/render/layout.js';
+import { COVID_EXCLUDED } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, t } from '../program/copy.js';
 import { fmtInt, fmtPct } from '../numbers.js';
@@ -39,21 +41,21 @@ ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : 
 
 // rows: history-data.js windowRows() (newest first); n: the figure counter, called only when the figure draws. A window the files
 // state in two pieces is two bars; a window from the year's final rule (row.src) is drawn and its table cell and the source line
-// say where it is from. No gridlines, so the bars carry the ink; every other year labeled as the small multiples label theirs ('13),
-// counted back from the last so the axis ends on it.
+// say where it is from. No gridlines, so the bars carry the ink; every other year labeled (every fourth on a phone, as the small
+// multiples' phone axis) as the small multiples label theirs ('13), counted back from the last so the axis ends on it.
 export function windowsFigure(rows, { n }) {
   if (!rows.length) return '';
   const spans = rows.map((r) => ({ label: fyLabel(r.fy), spans: [...r.pieces.map((p) => span('perf', r.fy, p)), span('pay', r.fy, r.pay)] }));
-  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width, grid: () => false, every: 2, labelEnd: true, format: yy });
+  const draw = (width) => periodsChart({ rows: spans, kinds: ['perf', 'pay'], width, grid: () => false, every: isNarrow(width) ? 4 : 2, labelEnd: true, format: yy });
   const newest = rows[0];
   const ruled = rows.filter((r) => r.src);
   const split = rows.filter((r) => r.pieces.length > 1);
   const gap = split.length ? [split[0].pieces[0][1], split[0].pieces[1][0]] : null;
-  const cell = (r) => (r.pieces.length ? r.pieces.map(range).join('; ') : t('winNone')) + (r.src ? ` (${r.src.label})` : '');
+  const cell = (r) => (r.pieces.length ? r.pieces.map(range).join('; ') : t('winNone')) + (r.src ? ` (${fyLabel(r.fy)} ${r.src.label})` : '');
   return figure({
     n: n(), csvName: 'hrrp-data-windows', alt: t('winAlt'),
-    source: ruled.length ? fill('winSourceRule', { fys: ruled.map((r) => fyLabel(r.fy)).join(', '), rule: ruled.map((r) => r.src.label).join('; ') }) : t('winSource'),
-    note: gap ? fill('winKeyGap', { from: isoDate(dayAfter(gap[0])), to: isoDate(dayBefore(gap[1])) }) : t('winKey'),
+    source: ruled.length ? fill('winSourceRule', { rules: ruled.map((r) => fill('winSourceOne', { fy: fyLabel(r.fy), rule: r.src.label })).join('; ') }) : t('winSource'),
+    note: gap ? fill('winKeyGap', { from: isoDate(dayAfter(gap[0])), to: isoDate(dayBefore(gap[1])), year: COVID_EXCLUDED[0].slice(0, 4) }) : t('winKey'),
     takeaway: newest.perf
       ? fill('winTakeaway', { fy: fyLabel(newest.fy), end: isoDate(newest.perf[1]), start: isoDate(newest.pay[0]) })
       : fill('winTakeawayNone', { fy: fyLabel(newest.fy) }),

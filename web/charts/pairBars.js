@@ -43,7 +43,8 @@ export function pairBars({ sections, labels, width, direct = null }) {
       body.push(text({ x: nameW - LABEL_GAP, y: ya + BAR + 3, anchor: 'end', cls: 'chart-label', body: r.label }));
       body.push(mark({ tip: r.tipA, value: r.a, hit: null, body: html`<rect class="chart-pair__a" x="${x0}" y="${r2(ya)}" width="${r2(Math.max(0.5, x(r.a) - x0))}" height="${BAR}"/>` }));
       body.push(mark({ tip: r.tipB, value: r.b, hit: null, body: html`<rect class="chart-pair__b" x="${x0}" y="${r2(yb)}" width="${r2(Math.max(0.5, x(r.b) - x0))}" height="${BAR}"/>` }));
-      body.push(text({ x: x(r.a) + 4, y: ya + BAR - 1, anchor: 'start', cls: 'chart-value chart-pair__v', body: html`${r.aText}${suffix(r, 'a')}` }));
+      // A named row's first words sit a unit higher, so a descender ("flags") clears the bar under them.
+      body.push(text({ x: x(r.a) + 4, y: ya + BAR - (r === named ? 2 : 1), anchor: 'start', cls: 'chart-value chart-pair__v', body: html`${r.aText}${suffix(r, 'a')}` }));
       body.push(text({ x: x(r.b) + 4, y: yb + BAR - 1, anchor: 'start', cls: 'chart-value chart-pair__v chart-pair__v--b', body: html`${r.bText}${suffix(r, 'b')}` }));
       y += ROW;
     }

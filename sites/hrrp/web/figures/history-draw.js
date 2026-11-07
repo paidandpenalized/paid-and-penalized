@@ -37,7 +37,8 @@ function lineAt(pts, px) {
 
 // Each item is words at a point, set above or below it (a short leader joining them when the item asks), at the first position that stays
 // inside the plot, clear of every line and of the words already set; if none is clear, at the one that breaks the fewest rules.
-//   items  [{ at: [{ px, py }] (the points it may sit at, best first), lines: [{ text, cls, mono }], sides, anchors, gap, leader, cls (a hook for tests, no style), data }]
+//   items  [{ at: [{ px, py }] (the points it may sit at, best first), lines: [{ text, cls, mono }], sides, anchors, gap (or gaps, nearest
+//          first: a longer leader is a later choice), leader, cls (a hook for tests, no style), data }]
 //   box    { x0, x1, top, bottom }: the plot's limits; polys: the lines to keep clear of, [[{ px, py }]]; rects: marks to keep clear
 //   of, [{ x0, x1, y0, y1 }] (a bar), each costing as words do
 function place(items, { box, polys, rects = [] }) {
@@ -47,9 +48,9 @@ function place(items, { box, polys, rects = [] }) {
     const w = Math.max(...it.lines.map((l) => (l.mono ? textWidth(l.text, NOTE_PX, { mono: true }) : l.caps ? capsWidth(l.text) : textWidth(l.text, NOTE_PX))));
     const h = it.lines.length * LINE_H + 1;
     // The positions in order of preference (points, then sides, then anchors); the first clear one wins, else the least bad.
-    const fits = ({ pt, side, anchor }) => {
+    const fits = ({ pt, side, anchor, gap }) => {
       const [bx0, bx1] = { middle: [pt.px - w / 2, pt.px + w / 2], start: [pt.px - 3, pt.px - 3 + w], end: [pt.px + 3 - w, pt.px + 3] }[anchor];
-      const by0 = side === 'above' ? pt.py - it.gap - h : pt.py + it.gap;
+      const by0 = side === 'above' ? pt.py - gap - h : pt.py + gap;
       const by1 = by0 + h;
       let bad = 0;
       if (bx0 < box.x0 || bx1 > box.x1 || by0 < box.top || by1 > box.bottom) bad += OUTSIDE;
@@ -60,7 +61,8 @@ function place(items, { box, polys, rects = [] }) {
       if (rects.some((q) => bx0 < q.x1 + 2 && bx1 > q.x0 - 2 && by0 < q.y1 && by1 > q.y0 - 2)) bad += OVERLAPS_WORDS;
       return { bad, pt, side, anchor, bx0, bx1, by0, by1 };
     };
-    const options = it.at.flatMap((pt) => it.sides.flatMap((side) => it.anchors.map((anchor) => ({ pt, side, anchor }))));
+    const gaps = [it.gap].flat();
+    const options = it.at.flatMap((pt) => gaps.flatMap((gap) => it.sides.flatMap((side) => it.anchors.map((anchor) => ({ pt, side, anchor, gap })))));
     let best = null;
     for (const option of options) {
       const tried = fits(option);
@@ -129,9 +131,16 @@ function sharePanel(lines, p, narrow) {
   const at = (fy) => pts.find((q) => q.fy === fy);
   const maxW = narrow ? 86 : 118;
   const words = (label) => wrapText(label, maxW, NOTE_PX).map((s) => ({ text: s.trimEnd(), cls: 'chart-note' }));
+  // A phone's narrow plot: words near an end start (or end) at their point, so they sit over it rather than its neighbour's, and may
+  // drop on a longer leader into the empty space under the line.
+  const anchorsAt = (px) => {
+    if (!narrow) return ['middle', 'start', 'end'];
+    const t = (px - f.box.x0) / (f.box.x1 - f.box.x0);
+    return t < 0.3 ? ['start', 'middle', 'end'] : t > 0.7 ? ['end', 'middle', 'start'] : ['middle', 'start', 'end'];
+  };
   const item = (fy, label, data) => {
     const q = at(fy);
-    return { at: [q], lines: [...words(label), { text: fmtPct(q.value, 1), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above', 'below'], anchors: ['middle', 'start', 'end'], gap: 12, leader: true, cls: 'hist-ann', data };
+    return { at: [q], lines: [...words(label), { text: fmtPct(q.value, 1), cls: 'chart-value chart-value--mark', mono: true }], sides: ['above', 'below'], anchors: anchorsAt(q.px), gap: narrow ? [12, 30] : 12, leader: true, cls: 'hist-ann', data };
   };
   const notes = [
     ...lines.caps.filter((c) => at(c.fy)?.value != null).map((c) => item(c.fy, c.label, { fy: c.fy, key: 'cap' })),
@@ -143,7 +152,10 @@ function sharePanel(lines, p, narrow) {
   }));
   // On a phone the gridlines are kept clear of too, so a value never reads as the tick beside it.
   const grid = narrow ? ticks.filter((v) => v > start).map((v) => [{ px: f.box.x0, py: f.y(v) }, { px: f.box.x1, py: f.y(v) }]) : [];
-  const ann = place(notes, { box: f.box, polys: [pts, ...grid] });
+  // The pandemic tag at the band's foot is kept clear of too.
+  const [c0, c1] = [f.x(lines.covid.first - 0.5), f.x(lines.covid.last + 0.5)];
+  const tagRect = lines.covid.fys.length ? [{ x0: c0, x1: c1, y0: f.base - 30, y1: f.base }] : [];
+  const ann = place(notes, { box: f.box, polys: [pts, ...grid], rects: tagRect });
   return html`<g class="hist-panel hist-panel--share">${f.markup}<path class="hist-line hist-line--share" d="${lineOf(pts)}"/>${dots}${ann}</g>`;
 }
 
