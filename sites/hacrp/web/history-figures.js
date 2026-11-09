@@ -350,7 +350,8 @@ export function ruleBreaks(fys) {
 // A computed share as a mark and a table cell carry it: to 4 decimals.
 const r4 = (x) => (x === null ? null : toUnit(x, 4));
 
-export function yearsFigure(rec, hd, { n, source }) {
+// ccn: the hospital's, which names the CSV download as the other hospital figures' do.
+export function yearsFigure(rec, hd, { n, source, ccn }) {
   const years = rec.years.map((y, i) => ({
     label: String(y.fy).slice(-2),
     share: r4(y.share),
@@ -359,7 +360,7 @@ export function yearsFigure(rec, hd, { n, source }) {
     tip: y.share === null ? `${fyLabel(y.fy)}: ${decisionWords(y)}` : fill('yearsTip', { fy: String(y.fy), score: cmsText(y.totalText), share: pctFloor(y.share), what: decisionWords(y) }),
   }));
   return figure({
-    n, source, csvName: 'hacrp-hospital-years', alt: t('yearsAlt'), claimLevel: 'recomputed', note: t('yearsKey'),
+    n, source, csvName: `hacrp-${ccn.toLowerCase()}-years`, alt: t('yearsAlt'), claimLevel: 'recomputed', note: t('yearsKey'),
     takeaway: rec.cut ? fill('yearsTakeaway', { cut: String(rec.cut), decided: String(rec.decided) }) : fill('yearsTakeawayNone', { decided: String(rec.decided) }),
     ...drawn((width) => rankYears({ years, breaks: ruleBreaks(hd.fys), labels: { top: t('yearsTop'), mid: t('yearsMid'), bottom: t('yearsBottom'), none: t('yearsNone') }, width })),
     table: {
@@ -429,7 +430,7 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
   const inline = { fys: hd.fys, ccns: order.map(([c]) => c), recs: records, states: order.map(([c]) => hd.stateOf.get(c) ?? '') };
   const chart = rollBox({ hd, records, ever, notes, wide: PLACE_WIDE, attrs: html` data-inline="${PLACE_ORDER_ID}"${src ? html` data-src="${src}"` : ''}`, live: Boolean(src), after: jsonScript(PLACE_ORDER_ID, inline) });
   return figure({
-    n: next(), source, chart, csvName: 'hacrp-place-years',
+    n: next(), source, chart, csvName: `hacrp-${place.kind}-${place.key.toLowerCase()}-years`,
     takeaway: fill('placeYearsTakeaway', { name: nameInText(place, { start: true }), k: String(above), n: String(hd.cutYears), ever: count(ever), hospitals: count(records.length) }),
     table: {
       columns: [{ name: t('rollColFy') }, { name: t('rollColDecided'), numeric: true }, { name: t('rollColCut'), numeric: true }, { name: t('placeYearsColShare'), numeric: true }, { name: t('placeYearsColNation'), numeric: true }],
@@ -541,7 +542,7 @@ export function infectionsFigure(hd, { n, source }) {
 
 // One hospital's infection rates by calendar year, a panel per measure it has at least two years of results on, each
 // over the nation's median hospital (the solid gray line). sir: [{ cy, sir: { CLABSI: number|null, … } }].
-export function hospitalInfectionsFigure(sir, hd, { n, source }) {
+export function hospitalInfectionsFigure(sir, hd, { n, source, ccn }) {
   const inf = hd.infections;
   if (!sir?.length || !inf?.length) return null;
   const { xs } = infAxis(inf);
@@ -564,7 +565,7 @@ export function hospitalInfectionsFigure(sir, hd, { n, source }) {
   const down = panels.filter((p) => p.delta < 0).length;
   const draw = (width) => smallLines({ panels: clipped, xs, yMax, ref: 1, labels: { ref: t('infRef'), x: yearTick }, width, format: (v) => String(v) });
   return figure({
-    n, source, csvName: 'hacrp-hospital-infections', alt: t('hinfAlt'),
+    n, source, csvName: `hacrp-${ccn.toLowerCase()}-infections`, alt: t('hinfAlt'),
     takeaway: fill('hinfTakeaway', { down: String(down), m: String(panels.length) }),
     key: null,
     note: top > yMax ? fill('hinfClip', { max: String(yMax) }) : null,
