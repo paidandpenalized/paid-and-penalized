@@ -186,7 +186,7 @@ labels, or a statement about the site: the next section).
 | `web/copy.js` | notInHrrp | HRRP-11, HRRP-12, HRRP-13, HRRP-16 |
 | `hub/claims.js` | HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT, HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES (`web/programs.js`) | HRRP-09, HACRP-01, HUB-01, HRRP-23, HACRP-02, HUB-06, HUB-07, HUB-11 |
 | `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25 |
-| `hub/home/copy.js` | hrrpText | HRRP-06, HRRP-09, HRRP-15, HRRP-04 |
+| `hub/home/copy.js` | hrrpText | HRRP-06, HRRP-09, HRRP-04 |
 | `hub/home/copy.js` | hacHead | HACRP-01, HACRP-02 |
 | `hub/home/copy.js` | hacText | HACRP-17, HACRP-02, HACRP-01, HACRP-75 |
 | `hub/home/copy.js` | vbpText | HUB-01, HUB-02, HUB-03 |

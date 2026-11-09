@@ -34,7 +34,7 @@ export const COPY = typesetCopy({
   // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} it does not list (never counted at $0),
   // when there are any.
   hrrpHead: 'Readmissions: most hospitals take a small cut.',
-  hrrpText: { text: 'The readmissions program (HRRP) cuts a hospital’s base payments, by up to {cap}, when its risk-adjusted readmissions run above its peer group’s median. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.', claim: ['HRRP-06', 'HRRP-09', 'HRRP-15', 'HRRP-04'] },
+  hrrpText: { text: 'HRRP cuts a hospital’s base payments, by up to {cap}, when its readmissions run above its peers’ median. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.', claim: ['HRRP-06', 'HRRP-09', 'HRRP-04'] },
   hrrpZero: '{zeroN} pass through at {zero}.',
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
@@ -67,7 +67,7 @@ export const COPY = typesetCopy({
   // "add" when the highest state comes out ahead, "less" when every state takes a cut.
   statesHead: 'The programs take {lowShare} of hospital pay in {low} and add {highShare} in {high}.',
   statesHeadLess: 'The programs take {lowShare} of hospital pay in {low} and {highShare} in {high}.',
-  statesText: { text: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model, so these programs don’t adjust its hospitals’ pay.', claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
+  statesText: { text: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model; these programs don’t adjust it.', claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
   // Which states come out ahead ({states}: their names, as a list).
   aheadMany: 'Only {states} come out ahead.',
   aheadOne: 'Only {states} comes out ahead.',
