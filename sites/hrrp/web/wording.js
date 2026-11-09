@@ -3,7 +3,7 @@
 // Typesetting (copy.js text goes through fillCopy) turns a straight apostrophe into a curly one, so sentences that
 // hold one differ from the source's by that character alone.
 import { CONDS, MIN_DISCHARGES, verdict } from '../../../engine/js/hrrp/formula.js';
-import { noEstimate, percentileRank } from '../../../engine/js/hrrp/summary.js';
+import { noEstimate, percentileRank, rankPctOf } from '../../../engine/js/hrrp/summary.js';
 import { capitalize, spelled } from '../../../web/render/format.js';
 import { fill, t } from './copy.js';
 import { conditionShort } from './derive.js';
@@ -67,11 +67,10 @@ export function rankLine(h, ctx) {
   const inState = ctx.byState.get(h.st);
   const inPeer = ctx.byPeer.get(h.peer);
   // When no hospital in the group has a smaller cut, the clause says so in words ("none of the 6 in Delaware"), not "0% of
-  // the 6"; a share above none that would round down to 0% (one of 150) reads "less than 1%".
+  // the 6"; a share above none keeps its floored percent, as the page's history table prints it.
   const clause = (key, sorted, extra) => {
     const p = percentileRank(sorted, h.red);
-    if (p === 0) return fill(`${key}None`, extra);
-    return fill(key, { pct: p < 1 ? fill('rankUnder', { n: '1' }) : String(Math.min(99, Math.floor(p))), ...extra });
+    return p === 0 ? fill(`${key}None`, extra) : fill(key, { pct: String(rankPctOf(p)), ...extra });
   };
   return fill('rankLine', {
     nation: clause('rankNation', ctx.sortedRed, {}),

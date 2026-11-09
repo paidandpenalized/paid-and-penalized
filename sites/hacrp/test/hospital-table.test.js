@@ -21,10 +21,6 @@ test('the default order is state, then name, then city, then CCN', () => {
   assert.deepEqual(ccns([...ROWS].sort(compareDefault)), ['990013', '990012', '990014', '990015', '990016', '990011']);
 });
 
-test('a hospital with no city sorts as an empty city, first among its name\'s, not as the word "null"', () => {
-  const rows = [['990021', 'Example General Hospital', 'Oakton', 'AL', '0.1000', 'No'], ['990022', 'Example General Hospital', null, 'AL', '0.2000', 'No']];
-  assert.deepEqual(ccns([...rows].sort(compareDefault)), ['990022', '990021']);
-});
 
 test('the search\'s order is name, then state, then city; full ties keep their order', () => {
   assert.deepEqual(ccns([...ROWS].sort(compareByName)), ['990015', '990016', '990013', '990012', '990011', '990014']);

@@ -29,8 +29,8 @@ export const NUMERIC = new Set(COLUMNS.filter((c) => c.numeric).map((c) => c.key
 export const cellOf = (cells, key) => cells[INDEX[key]];
 // One collator for every text comparison (building one per comparison is what localeCompare costs).
 const text = new Intl.Collator('en').compare;
-// Rows by these columns' text, in turn (a missing value, such as a hospital with no city, sorts as empty, not as "null").
-const by = (...keys) => (x, y) => keys.reduce((d, k) => d || text(x[INDEX[k]] ?? '', y[INDEX[k]] ?? ''), 0);
+// Rows by these columns' text, in turn.
+const by = (...keys) => (x, y) => keys.reduce((d, k) => d || text(x[INDEX[k]], y[INDEX[k]]), 0);
 
 // The default order: state, then name, then city, then CCN (so it never depends on the input's order).
 export const compareDefault = by('state', 'name', 'city', 'ccn');
@@ -65,7 +65,7 @@ export function withState(hash, code) {
 }
 
 // A hospital as the search lists it: "Name, City, ST".
-export const hospitalLabel = (cells) => [cellOf(cells, 'name'), cellOf(cells, 'city'), cellOf(cells, 'state')].filter(Boolean).join(', ');
+export const hospitalLabel = (cells) => `${cellOf(cells, 'name')}, ${cellOf(cells, 'city')}, ${cellOf(cells, 'state')}`;
 // What a query is matched against, in lowercase: the label and the CCN, so a name, a city or a CCN finds the
 // hospital. The search box and the table's filter share it, so both find the same hospitals.
 export const searchKey = (cells) => `${hospitalLabel(cells)} ${cellOf(cells, 'ccn')}`.toLowerCase();

@@ -1,7 +1,7 @@
 // hospitalView: one hospital's record card, verdict and rank line as plain strings (no markup).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { rankPct } from '../../../engine/js/hrrp/summary.js';
+import { percentileRank, rankPct } from '../../../engine/js/hrrp/summary.js';
 import { hospitalContext, hospitalView } from '../web/view.js';
 import { CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, hospital, ctxOf, loadHrrpOnce } from './fixtures.js';
 
@@ -53,8 +53,9 @@ test('on the data: every hospital\'s rank line equals the direct computation', (
     }
     const inState = asc(all.filter((y) => y.st === h.st));
     const inPeer = asc(all.filter((y) => y.peer === h.peer));
-    const share = (pct, whole, none) => (pct ? whole(pct) : none);
-    assert.equal(got, `Larger cut than ${share(rankPct(sortedRed, h.red), (p) => `${p}% of hospitals nationally`, 'no hospital nationally')}, ${share(rankPct(inState, h.red), (p) => `${p}% of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`, `none of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`)}, and ${share(rankPct(inPeer, h.red), (p) => `${p}% in peer group ${h.peer}`, `none in peer group ${h.peer}`)}.`, h.id);
+    // "None" only when no hospital in the group has a smaller cut; above that, the floored percent.
+    const share = (sorted, whole, none) => (percentileRank(sorted, h.red) > 0 ? whole(rankPct(sorted, h.red)) : none);
+    assert.equal(got, `Larger cut than ${share(sortedRed, (p) => `${p}% of hospitals nationally`, 'no hospital nationally')}, ${share(inState, (p) => `${p}% of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`, `none of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`)}, and ${share(inPeer, (p) => `${p}% in peer group ${h.peer}`, `none in peer group ${h.peer}`)}.`, h.id);
   }
 });
 

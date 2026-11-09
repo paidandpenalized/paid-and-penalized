@@ -148,6 +148,9 @@ test('cmsDecimal rounds as the engines store CMS values (toFixed), not as Intl d
   assert.equal(cmsDecimal(0.01265, 4), '0.0126');
   assert.equal(factor(1), '1.0000');
   assert.equal(factor(0.9988), '0.9988');
+  // The one place they differ: a stored tie, which factor() (a computed factor, as the page rounds) reads Intl's way.
+  assert.equal(factor(1.00505), '1.0051');
+  assert.notEqual(factor(1.00505), cmsDecimal(1.00505, 4));
   assert.equal(cmsDecimal(-0.0173, 4), '−0.0173');
   assert.equal(cmsDecimal(-0.00004, 4), '0.0000', 'no sign on a value that rounds to zero');
 });

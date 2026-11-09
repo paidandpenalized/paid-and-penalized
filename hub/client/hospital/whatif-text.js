@@ -3,7 +3,7 @@
 // hub/hospital/copy.js's: "would" and "hypothetical", never a verdict.
 import { netShare } from '../../../engine/js/dollars/whatif.js';
 import { fillCopy } from '../../../web/render/components.js';
-import { factor } from '../../../web/render/format.js';
+import { cmsDecimal, factor } from '../../../web/render/format.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROW_KEY, rowFigures } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, rowWord, signedMoney as usd, signedShareText } from '../../hospital/text.js';
@@ -15,9 +15,10 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 function clauses(state, h) {
   const a = initial(h);
   const out = [];
-  if (state.hrrp !== a.hrrp) out.push(fill('wiIfHrrp', { to: factor(state.hrrp), from: factor(a.hrrp) }));
+  // "from" is CMS's own factor, so it prints as CMS's file has it (cmsDecimal); "to" is the reader's.
+  if (state.hrrp !== a.hrrp) out.push(fill('wiIfHrrp', { to: factor(state.hrrp), from: cmsDecimal(a.hrrp, 4) }));
   if (state.hac !== a.hac) out.push(state.hac ? fill('wiIfHacOn', { rate: HAC_CUT_TEXT }) : fill('wiIfHacOff'));
-  if (state.hvbp !== a.hvbp) out.push(fill('wiIfHvbp', { to: factor(state.hvbp), from: factor(a.hvbp) }));
+  if (state.hvbp !== a.hvbp) out.push(fill('wiIfHvbp', { to: factor(state.hvbp), from: cmsDecimal(a.hvbp, 4) }));
   return out;
 }
 const join = (list) => (list.length < 2 ? list.join('') : fill('wiAnd', { list: list.slice(0, -1).join(', '), last: list[list.length - 1] }));
