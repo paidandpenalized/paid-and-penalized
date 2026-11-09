@@ -78,7 +78,7 @@ function placeCard(place, { pd, places, fy, md }) {
   const allSix = pd.rows.filter((r) => r.ids.length === MEASURE_IDS.length).length / pd.rows.length;
   const kinds = place.kind === 'metro' ? fill('kpiKindsMetro', { few: count(FEW_DECIDED) }) : t(KINDS_WORDS[place.kind]);
   const fields = [
-    { label: t('kpiCut'), value: count(c.yes), size: 'big', note: fill('kpiCutNote', { decided: count(c.decided) }) },
+    { label: t('kpiCut'), value: count(c.yes), size: 'big', note: c.decided ? fill('kpiCutNote', { decided: count(c.decided) }) : t('kpiCutNoteNone') },
     share !== null && { label: t('kpiShare'), value: pct(share, 1), size: 'big', note: fill('kpiShareNote', { diff: points(share - nation), nation: pct(nation, 1) }) },
     rank && { label: t('kpiRank'), value: fill('kpiRankValue', { rank: ordinal(rank.rank), of: count(rank.of) }), note: fill('kpiRankNote', { kinds }) },
     c.median !== null && { label: t('kpiMedian'), value: cmsText(decimal(c.median, DP)), note: fill('kpiMedianNote', { nation: cmsText(decimal(pd.medianScore, DP)) }) },

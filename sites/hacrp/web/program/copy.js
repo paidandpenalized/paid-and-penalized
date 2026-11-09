@@ -236,6 +236,7 @@ export const COPY = {
   placeCardVs: { text: 'Compared with the nation', claim: null },
   kpiCut: { text: 'Hospitals cut', claim: null },
   kpiCutNote: { text: 'Of {decided} with a payment decision', claim: null },
+  kpiCutNoteNone: { text: 'No hospital with a payment decision', claim: null },
   kpiShare: { text: 'Share cut', claim: null },
   kpiShareNote: { text: '{diff} vs the nation ({nation})', claim: null },
   kpiRank: { text: 'Rank', claim: null },
@@ -260,6 +261,7 @@ export const COPY = {
   placeMapText: { text: 'Each dot is a hospital in CMS\'s file: red, cut; ringed, not cut; gray, no decision. Pick one to open its page.', claim: null },
   placeMapAlt: { text: 'A map of {name} with a dot for each hospital in CMS\'s file.', claim: null },
   placeMapTakeaway: { text: '{name}: {yes} cut of {decided} with a payment decision.', claim: null },
+  placeMapTakeawayNone: { text: '{name}: no hospital with a payment decision.', claim: null },
   placeMapTip: { text: '{name}, {city}: {score} · {decision}', claim: null },
   placeMapColHospital: { text: 'Hospital', claim: null },
 

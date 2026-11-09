@@ -574,7 +574,7 @@ ${dotKey({ rings: !dense })}`;
   const states = dense ? codes.map((code) => places.places.get(`state:${code.toLowerCase()}`)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'en')) : null;
   return figure({
     n: next(), chart, source, csvName: `hacrp-${place.kind}-${place.key}-map`,
-    takeaway: fill('placeMapTakeaway', { name: nameInText(place, { start: true }), yes: count(c.yes), decided: count(c.decided) }),
+    takeaway: c.decided ? fill('placeMapTakeaway', { name: nameInText(place, { start: true }), yes: count(c.yes), decided: count(c.decided) }) : fill('placeMapTakeawayNone', { name: nameInText(place, { start: true }) }),
     table: dense ? {
       columns: [{ name: t('placeColPlace') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }],
       rows: states.map((p) => [p.name, num(count(p.counts.decided), p.counts.decided), num(count(p.counts.yes), p.counts.yes)]),
