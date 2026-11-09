@@ -61,7 +61,8 @@ export const nameText = (name) => name.replace(/\b[A-Z][a-z]+\b/g, (word) => (IN
 
 // A hospital's record as every site reads it, from the hospital master or a site's file that copies the master's names
 // and places: its name (and alias, if any) as the pages print them (nameText), and a city no CMS file gives (the master's
-// null) as empty text, so no page, table, search or data file prints "null" and no reader needs a guard of its own.
+// null) as empty text, so no page, table, search or data file prints "null" and no reader needs a null guard of its own.
+// A reader that joins a city to its state should go through placeText, which drops an empty city.
 export const hospitalRecord = (r) => ({ ...r, name: nameText(r.name), ...(r.alias ? { alias: nameText(r.alias) } : {}), city: r.city ?? '' });
 
 // Items joined by middle dots, each dot held to the item before it by a no-break space, so a line that wraps ends on a dot

@@ -1,6 +1,7 @@
 // The note on a hub or HACRP hospital page for a hospital whose Medicare agreement CMS lists as ended (the hospital
-// master's `inactive`, from CMS's Provider of Services file) by the end of the fiscal year its dollars are for, as the
-// Readmissions pages say it of theirs. The hospital stays in every total; the note says what its dollars likely were.
+// master's `inactive`, from CMS's Provider of Services file) by the end of the fiscal year its dollars are for: the kind of
+// note the Readmissions pages carry (sites/hrrp/web/wording.js inactiveSentence, which speaks of a coming year), said of a
+// year that has passed. The hospital stays in every total; the note says what its dollars likely were.
 import { COPY } from '../copy.js';
 import { fillCopy } from './components.js';
 import { isoDate } from './format.js';

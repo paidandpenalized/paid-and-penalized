@@ -30,11 +30,14 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
   return record;
 }
 
+// The back-test's bands a net's likely range can take (netRangeOf): the net's, and each program's for a net it makes alone.
+const NET_BANDS = ['net', 'hrrp', 'hvbp', 'hac'];
+
 // An estimated row's likely range of its net (netRangeOf: the band of the one program that makes the net, else the
-// back-test's net band for its group, as the HACRP pages give it). bands: the dollar file's, which must hold the net's
-// bands; a file without them stops the build with a message that says so.
+// back-test's net band for its group, as the HACRP pages give it). bands: the dollar file's, which must hold all of
+// NET_BANDS; a file without one stops the build with a message that says which.
 function netRange(bands, row) {
-  if (!Array.isArray(bands?.measures?.net?.strata)) throw new RangeError('hub: the dollar estimates have no back-test net band (bands.measures.net), which the hospital pages\' likely ranges need');
+  for (const m of NET_BANDS) if (!Array.isArray(bands?.measures?.[m]?.strata)) throw new RangeError(`hub: the dollar estimates have no back-test ${m} band (bands.measures.${m}), which the hospital pages' likely ranges need`);
   return netRangeOf(bands, row);
 }
 
