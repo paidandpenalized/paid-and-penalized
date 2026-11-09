@@ -21,6 +21,26 @@ const SLACK = { x: 0.5, y: 3 };
 
 const shared = useBrowser();
 
+// In the page: the shown payment-cut drawing (Figure 3's cliff), the pairs of its words whose boxes overlap, named by
+// class and first characters, in the drawing's units (window.svgBox: lib.js).
+function cliffWords(slack) {
+  const svg = [...document.querySelectorAll('svg.chart--cliff')].find((el) => el.checkVisibility());
+  if (!svg) return null;
+  const toSvg = svg.getScreenCTM().inverse();
+  const words = [...svg.querySelectorAll('text')].map((el) => {
+    const b = window.svgBox(el);
+    const [p, q] = [new DOMPoint(b.left, b.top).matrixTransform(toSvg), new DOMPoint(b.right, b.bottom).matrixTransform(toSvg)];
+    return { name: `${el.getAttribute('class')} "${el.textContent.trim().slice(0, 12)}…"`, x0: Math.min(p.x, q.x), x1: Math.max(p.x, q.x), y0: Math.min(p.y, q.y), y1: Math.max(p.y, q.y) };
+  }).filter((w) => w.x1 > w.x0);
+  const overlaps = [];
+  for (const [i, a] of words.entries()) {
+    for (const c of words.slice(i + 1)) {
+      if (Math.min(a.x1, c.x1) - Math.max(a.x0, c.x0) > slack.x && Math.min(a.y1, c.y1) - Math.max(a.y0, c.y0) > slack.y) overlaps.push(`${a.name} and ${c.name}`);
+    }
+  }
+  return { fit: svg.dataset.fit, overlaps };
+}
+
 // In the page: the shown drawing of the peer chart (the phone's or the wide one), its words' boxes in the drawing's
 // own units (through the axis group's transform), and what is wrong with them: words that overlap, words past the
 // drawing, and (wide) a row's words running onto its plot. Words are named by class and their first few characters.
@@ -84,6 +104,15 @@ for (const width of WIDTHS) {
         assert.deepEqual(got.overlaps, [], `${name} (${got.fit} drawing): words that overlap`);
         assert.deepEqual(got.outside, [], `${name} (${got.fit} drawing): words past the drawing`);
         assert.deepEqual(got.onPlot, [], `${name} (${got.fit} drawing): a row's words on its plot`);
+        await assertQuiet(seen, name);
+      }));
+    }
+    // The payment-cut chart's words, on the sample hospitals (the one with no cut has its label to the right of the dot on a phone).
+    for (const { name, path } of SAMPLES) {
+      it(`${name}: the payment-cut chart's words do not overlap`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+        const got = await page.evaluate(cliffWords, SLACK);
+        assert.ok(got, `${name}: a payment-cut chart is shown`);
+        assert.deepEqual(got.overlaps, [], `${name} (${got.fit} drawing): words that overlap`);
         await assertQuiet(seen, name);
       }));
     }

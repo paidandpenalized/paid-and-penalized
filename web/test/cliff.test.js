@@ -61,3 +61,21 @@ test('the strip of every score is two paths in the distribution\'s inks, one per
   // Without a strip, no path.
   assert.doesNotMatch(draw(true), /chart-dist/);
 });
+
+test('on a phone\'s drawing this hospital\'s label never lands on the cut level\'s label, at any score under the line', () => {
+  const long = { ...LABELS, actual: 'This hospital', actualValue: '0.3200', cut: '$1.2M', cutWords: 'at any score from 0.31' };
+  // Each text's box in the drawing's units: its start, its baseline and the line's height; widths are the drawing's own
+  // estimates (a dollar amount about 0.62 em a character at 18 units, words about 6.4 units a character).
+  const boxes = (svg) => [...svg.matchAll(/<text class="([^"]*)" x="([\d.]+)" y="([\d.]+)" text-anchor="(\w+)">(.*?)<\/text>/g)]
+    .filter(([, cls]) => cls.includes('chart-label')).map(([, cls, x, y, anchor, body]) => {
+      const plain = body.replace(/<[^>]+>/g, '');
+      const w = cls.includes('--pen') ? 0.62 * 18 * long.cut.length + 6 + 6.4 * long.cutWords.length : 6.4 * plain.length;
+      return { cls, y: Number(y), x0: anchor === 'end' ? Number(x) - w : Number(x), x1: anchor === 'end' ? Number(x) : Number(x) + w };
+    });
+  for (let actual = -1; actual < 0.3; actual += 0.05) {
+    const svg = String(cliff({ domain: [-1, 2], band: [0.3, 0.31], actual, labels: long, cut: -500_000 }));
+    const [mine, cut] = [boxes(svg).find((b) => b.cls.includes('halo')), boxes(svg).find((b) => b.cls.includes('--pen'))];
+    const across = Math.min(mine.x1, cut.x1) - Math.max(mine.x0, cut.x0) > 0;
+    assert.ok(!across || Math.abs(mine.y - cut.y) > 18, `score ${actual.toFixed(2)}: the labels share ${Math.abs(mine.y - cut.y)} units of height across`);
+  }
+});
