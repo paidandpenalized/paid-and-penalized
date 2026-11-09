@@ -42,6 +42,8 @@ for (const form of forms) {
       failed: fill('searchFailed'),
       more: inTable ? (n) => fill('searchMore', { n: count(n) }) : null,
     },
-    onMore: inTable ? (query) => document.dispatchEvent(new CustomEvent('hacrp:show-in-table', { detail: query })) : null,
+    // The option counts and hands on the hospitals the matcher finds, the very ones the table then lists.
+    moreTypes: inTable ? ['hospital'] : null,
+    onMore: inTable ? (query, matches) => document.dispatchEvent(new CustomEvent('hacrp:show-in-table', { detail: { query, ccns: matches.map((m) => m.key) } })) : null,
   });
 }

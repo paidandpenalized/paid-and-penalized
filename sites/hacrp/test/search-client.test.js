@@ -144,7 +144,7 @@ test('a failed fetch is let go, so the next ask fetches again', async (t) => {
 });
 
 // The page the table script finds: the filter box, the state menu (the program page's only), the section.
-async function showIn(t, { menu, hash }) {
+async function showIn(t, { menu, hash }, ccns = null) {
   const ORIGINAL = { document: globalThis.document, window: globalThis.window };
   const filter = { value: '', events: [], dispatchEvent: (e) => filter.events.push(e.type) };
   const states = menu ? { value: menu, events: [], dispatchEvent: (e) => states.events.push(e.type) } : null;
@@ -159,7 +159,7 @@ async function showIn(t, { menu, hash }) {
     }
   });
   const { showInTable } = await import(`../client/table.js?run=${Math.random()}`);
-  showInTable('Exampleton');
+  showInTable('Exampleton', ccns);
   return { filter, states, section, urls };
 }
 
@@ -171,6 +171,12 @@ test('showInTable: the query goes to the table filter, the state filter and the 
   assert.equal(filter.value, 'Exampleton');
   assert.deepEqual(filter.events, ['input']);
   assert.ok(section.scrolled);
+});
+
+test('showInTable with a set of CCNs: the filter shows the query text, and the table is handed the set (table.js keeps it for a later mount)', async (t) => {
+  const { filter } = await showIn(t, { menu: null, hash: '' }, ['990001']);
+  assert.equal(filter.value, 'Exampleton');
+  assert.deepEqual(filter.events, ['input']);
 });
 
 test('showInTable on a place page (no state menu): the query goes to the filter and the table into view; the URL is left alone', async (t) => {
