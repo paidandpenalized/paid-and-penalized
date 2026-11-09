@@ -152,5 +152,8 @@ export const COPY = typesetCopy({
 
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',
+  // Who has no hospital page anywhere on the family's sites (the program sites' rows: HACRP-18 subsection (d) hospitals,
+  // HRRP-12 and HRRP-13 the hospitals paid outside the inpatient system).
+  notFoundHospitals: { text: 'Hospital pages here are for the hospitals in CMS’s program files; critical access hospitals and the hospitals Medicare pays outside its inpatient payment system have none.', claim: ['HACRP-18', 'HRRP-12', 'HRRP-13'] },
   notFoundHome: 'Go to the home page',
 });

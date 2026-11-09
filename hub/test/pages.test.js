@@ -76,7 +76,8 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
-    assert.ok(notFound.includes(fillCopy(SHARED, 'notInHrrp')), 'the line on who is not in the Readmissions program');
+    assert.ok(notFound.includes(escapeHtml(fillCopy(COPY, 'notFoundHospitals'))), 'the line on which hospitals have pages here');
+    assert.ok(!notFound.includes(escapeHtml(fillCopy(SHARED, 'notInHrrp'))), 'not the Readmissions-only line');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));

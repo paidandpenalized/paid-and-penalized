@@ -139,7 +139,7 @@ function notFound(assets, robots) {
 <header class="page__head">
 <h1>${COPY.notFoundTitle}</h1>
 <p class="dek">${COPY.notFoundBody}</p>
-<p class="note">${fillCopy(SHARED, 'notInHrrp')}</p>
+<p class="note">${fillCopy(COPY, 'notFoundHospitals')}</p>
 </header>
 <ul class="links" role="list">
 <li><a href="/">${COPY.notFoundHome}</a></li>

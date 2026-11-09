@@ -16,17 +16,6 @@ export const COPY = {
   kicker: { text: 'Methods & sources', claim: null },
   heading: { text: 'How this was made', claim: null },
 
-  aboutHeading: { text: 'About', claim: null },
-  aboutIntro: {
-    text: 'This site explains Medicare’s Hospital Readmissions Reduction Program and shows the {edition} penalty for every hospital in it. It is built entirely from public federal files and is meant for anyone: patients and families, reporters, and the hospital teams who work with these numbers every day.',
-    claim: null,
-  },
-  aboutBy: {
-    text: 'Built by Dalton Haslam, MD, MBA, a physician advisor, with Claude Code. It is an independent project, not affiliated with or endorsed by the Centers for Medicare & Medicaid Services. To report an error or suggest a change, use the {feedback}.',
-    claim: null,
-  },
-  feedbackLink: { text: 'feedback form', claim: null },
-
   formulaHeading: { text: 'The formula', claim: null },
   formulaIntro: {
     text: 'For each of the {conditions} conditions with at least {minCases} cases, CMS compares the hospital’s excess readmission ratio with its peer group’s median. Each condition above the median contributes:',
