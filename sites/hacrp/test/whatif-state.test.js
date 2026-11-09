@@ -10,7 +10,7 @@ import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { loadHacrp } from '../../../engine/js/test/hacrp/helpers.js';
 import { SYNTH_PERIODS, SYNTH_VALUES, modelHospital } from '../../../engine/js/test/hacrp/synthetic.js';
 import { MAX_FACTOR, decode, encode } from '../../../web/whatif/fragment.js';
-import { changesOf, initialState, reduce, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
+import { MAX_PREDICTED_COUNT, changesOf, initialState, reduce, solverOf, viewModel, whatIfRules } from '../web/whatif-state.js';
 
 const { hospitals, model } = loadHacrp();
 const { params } = model;
@@ -118,7 +118,8 @@ test('predicted counts: SIRs only, finite and not negative; null clears; deltas 
   s = reduce(s, { type: 'predicted', id: 'CLABSI', count: 5 });
   s = reduce(s, { type: 'predicted', id: 'MRSA', count: 2 });
   s = reduce(s, { type: 'predicted', id: 'CDI', count: 10 });
-  for (const bad of [-1, NaN, Infinity, '3', undefined]) assert.equal(reduce(s, { type: 'predicted', id: 'CDI', count: bad }), s);
+  for (const bad of [-1, NaN, Infinity, '3', undefined, MAX_PREDICTED_COUNT * 2, 1e300]) assert.equal(reduce(s, { type: 'predicted', id: 'CDI', count: bad }), s);
+  assert.notEqual(reduce(s, { type: 'predicted', id: 'CDI', count: MAX_PREDICTED_COUNT }), s, 'the bound itself is allowed');
   assert.equal(reduce(s, { type: 'predicted', id: 'PSI90', count: 3 }), s);
   assert.equal(reduce(s, { type: 'predicted', id: 'NOPE', count: 3 }), s);
   const { counts } = viewModel(s, NO, model, ESTIMATE);

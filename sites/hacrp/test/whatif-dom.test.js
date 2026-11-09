@@ -572,6 +572,15 @@ test('a refused NHSN count shows its error line, named by the field, and hides t
   assert.equal(count.hidden, true);
 });
 
+test('an absurd NHSN count (1e300) is refused like any out-of-range entry: error line up, count line empty', () => {
+  const root = mount(true, windowStub());
+  const p = field(root, 'CLABSI', 'predicted');
+  type(p, '1e300');
+  assert.equal(field(root, 'CLABSI', 'predicted-error').hidden, false);
+  assert.equal(field(root, 'CLABSI', 'count').hidden, true);
+  assert.ok(!field(root, 'CLABSI', 'count').textContent.includes('0000'));
+});
+
 test('reset and a new scenario link clear every field\'s error state', () => {
   for (const clear of [(root) => q(root, 'reset').fire('click'), (root, stub) => stub.navigate('#whatif&MRSA=1.4')]) {
     const stub = windowStub();

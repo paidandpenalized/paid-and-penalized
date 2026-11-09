@@ -184,6 +184,7 @@
 .wi-predicted summary { min-height: 24px; font-weight: 600; cursor: pointer; }
 .wi-predicted__row { display: grid; gap: 4px; }
 .wi-predicted .wi-number { max-width: 10rem; }
+.wi-predicted__row [data-wi="count"] { overflow-wrap: anywhere; }
 
 /* ---------- each measure's part of the score ---------- */
 /* Held to a readable width, so a row reads across: name, bar, value. The rows share one set of columns (subgrid), so
