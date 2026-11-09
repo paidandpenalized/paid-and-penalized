@@ -581,6 +581,8 @@
 /* A phone: the result's three fields, three across, held at the bottom of the screen while the what-if is in view (its block
    lets the fields take the what-if as their frame), so the result shows while a slider moves. */
 @media (max-width: 559px) {
+  /* --wi-out-h is the box's height, set by client/whatif.js: a focused control is scrolled clear above it. */
+  html:has(.wi__out) { scroll-padding-bottom: var(--wi-out-h, 0px); }
   .wi__result { display: contents; }
   .wi__out { position: sticky; bottom: 0; z-index: 2; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--paper); box-shadow: 0 calc(-1 * var(--rule)) 0 var(--pen); }
   .wi__out .field { padding: 4px 6px 5px; }

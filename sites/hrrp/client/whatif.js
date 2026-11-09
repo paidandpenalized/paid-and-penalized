@@ -11,6 +11,21 @@ import { ratio } from '../web/numbers.js';
 
 const hook = (root, name) => root.querySelector(`[data-wi="${name}"]`);
 
+// On a phone the result box is held at the window's foot (styles.css .wi__out), over whatever scrolls under it. Its height
+// goes on the page's root as --wi-out-h (0 when it isn't held), which the stylesheet reads as the root's scroll-padding-bottom,
+// so a keyboard-focused slider or button is left clear above the box, as the sticky peer row's --peers-h does at the top.
+function trackResultBox(root) {
+  const box = root.querySelector('.wi__out');
+  if (!box) return;
+  const set = () => {
+    const held = getComputedStyle(box).position === 'sticky';
+    document.documentElement.style.setProperty('--wi-out-h', `${held ? Math.ceil(box.getBoundingClientRect().height) : 0}px`);
+  };
+  set();
+  if ('ResizeObserver' in window) new ResizeObserver(set).observe(box);
+  window.addEventListener('resize', set, { passive: true });
+}
+
 export function mountWhatIf() {
   const root = document.querySelector('[data-hosp-whatif]');
   const script = document.getElementById(WHATIF_DATA_ID);
@@ -18,6 +33,7 @@ export function mountWhatIf() {
   const data = JSON.parse(script.textContent);
   const { h, meta } = clientHospital(data);
   const fig = root.closest('figure[data-figure]');
+  trackResultBox(root);
   const parts = hook(root, 'parts');
   const rows = [...root.querySelectorAll('li[data-cond]')].map((li) => {
     const { cond } = li.dataset;
