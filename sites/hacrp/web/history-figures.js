@@ -149,7 +149,7 @@ export function chanceFigure(hd, { n, source }) {
   // Over the panel, no hospital can be cut more often than there were years with cuts.
   const observed = allObserved.slice(0, years + 1);
   const chance = allChance.slice(0, years + 1);
-  const ks = observed.map((o, k) => ({ k, observed: o, chance: chance[k], tip: fill('chanceTip', { k: String(k), observed: count(o), chance: chanceText(chance[k]) }) }));
+  const ks = observed.map((o, k) => ({ k, observed: o, chance: chance[k], tip: fill(oneKey('chanceTip', k), { k: String(k), observed: count(o), chance: chanceText(chance[k]) }) }));
   return figure({
     n, source, csvName: 'hacrp-times-cut', alt: t('chanceAlt'), claimLevel: 'recomputed', note: t('chanceKey'),
     takeaway: fill('chanceTakeaway', { hospitals: count(hospitals), years: String(years), never: count(observed[0]), chanceNever: count(Math.round(chance[0])), all: count(observed[years]), chanceAll: chanceText(chance[years]) }),
@@ -160,6 +160,8 @@ export function chanceFigure(hd, { n, source }) {
     },
   });
 }
+// A copy key's singular form (its key plus One) for a count of exactly one: "1 year", not "1 years".
+const oneKey = (key, n) => (n === 1 ? `${key}One` : key);
 // A chance count as words a reader can hold: a whole number from one up, else "1 in N".
 function chanceText(x) {
   if (x >= 0.995) return count(Math.round(x));
@@ -175,7 +177,7 @@ export function gapFigure(hd, { n, source }) {
   const fresh = (g) => share(g.cutNew, g.notBefore);
   const xs = gaps.map((g) => g.k);
   const pt = (g, y, key) => ({ x: g.k, y, tip: fill(key, { k: String(g.k), share: pct0(y) }) });
-  const panels = [{ label: t('gapAgain'), points: gaps.map((g) => pt(g, again(g), 'gapTipAgain')), under: gaps.map((g) => ({ x: g.k, y: fresh(g) })), underSolid: true, underLabel: t('gapFresh'), change: '', labelAt: [0, 1, gaps.length - 1] }];
+  const panels = [{ label: t('gapAgain'), points: gaps.map((g) => pt(g, again(g), oneKey('gapTipAgain', g.k))), under: gaps.map((g) => ({ x: g.k, y: fresh(g) })), underSolid: true, underLabel: t('gapFresh'), change: '', labelAt: [0, 1, gaps.length - 1] }];
   const yMax = ceilToUnit(Math.max(...gaps.map(again)), 1);
   const one = gaps[0];
   const two = gaps[1];
@@ -330,7 +332,7 @@ export function recordStrip(rec, fys) {
   if (!rec) return '';
   const first = fys[0];
   const last = fys[fys.length - 1];
-  const summary = rec.cut ? fill('recordSummary', { cut: String(rec.cut), decided: String(rec.decided) }) : fill('recordSummaryNone', { decided: String(rec.decided) });
+  const summary = rec.cut ? fill('recordSummary', { cut: String(rec.cut), decided: String(rec.decided) }) : fill(oneKey('recordSummaryNone', rec.decided), { decided: String(rec.decided) });
   // A decision CMS gave without a score is marked (a dashed box) and said under the row.
   return html`<div class="hrec">
 <p class="hrec__head"><span class="cap">${fill('recordHeading', { first: String(first), last: String(last) })}</span> <span class="hrec__sum">${summary}</span></p>

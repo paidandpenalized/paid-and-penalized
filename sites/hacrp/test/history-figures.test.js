@@ -770,3 +770,18 @@ test('a hospital\'s own record counts a decision CMS gave without a score, marks
   // A hospital with no decision in any year has no record; one with only unscored decisions has one.
   assert.equal(HD.recordOf('999999'), null);
 });
+
+test('one year reads "1 year", never "1 years": the record summary, the gap tip and the chance tip', () => {
+  const rec = S.recordOf('990104');
+  const never = String(recordStrip({ ...rec, cut: 0, decided: 1 }, S.fys));
+  assert.match(never, /Never cut in 1 year</);
+  assert.doesNotMatch(never, /1 years/);
+  assert.match(String(recordStrip({ ...rec, cut: 0, decided: 2 }, S.fys)), /Never cut in 2 years</);
+  const gap = String(gapFigure(S, { n: 8, source: SRC }));
+  assert.match(gap, /1 year apart: /);
+  assert.doesNotMatch(gap, /1 years apart/);
+  assert.match(gap, /2 years apart: /);
+  const chance = String(chanceFigure(S, { n: 6, source: SRC }));
+  assert.match(chance, /Cut in 1 year: /);
+  assert.doesNotMatch(chance, /1 years/);
+});
