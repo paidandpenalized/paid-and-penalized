@@ -6,7 +6,7 @@
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { cliff } from '../../../web/charts/cliff.js';
 import { PAGE, drawn, figure, num } from '../../../web/charts/figure.js';
-import { cmsText, count, decimal, dollars, isoDate, listText, money, moneyRange, pct, roundedDollars } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, factorText, isoDate, listText, money, moneyRange, pct, roundedDollars } from '../../../web/render/format.js';
 import { estTag as estTagShell, shareBlock as shareShell, wsOp, wsTerm } from '../../../web/render/components.js';
 import { html } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
@@ -15,16 +15,9 @@ import { BACKTEST_HREF, DOLLARS_HREF } from './links.js';
 import { BASE_PARTS, OTHER_PARTS, cutCounts, hasMaTeaching, maKey, rangeBar } from './money.js';
 import { fill, fillKeep, t } from './money/copy.js';
 
+// Readmissions' factor as CMS publishes it, to four places; value-based purchasing's prints with every place it has
+// (format.js factorText), so base times the factor less one gives the printed dollars.
 const FACTOR_DP = 4;
-
-// A payment factor to as many places as the value needs, from four (what CMS publishes for Readmissions) to ten (what its
-// Value-Based Purchasing table gives), so base times the factor less one gives the printed dollars. Same as web/render/format.js factorText.
-const MAX_FACTOR_DP = 10;
-function factorText(f) {
-  let places = FACTOR_DP;
-  while (places < MAX_FACTOR_DP && Math.abs(Number(f.toFixed(places)) - f) > 1e-12) places += 1;
-  return decimal(f, places);
-}
 
 // The source line every dollar figure carries: this site's arithmetic on CMS's payment files and the HACRP file, its
 // release date kept on one line. source: the HACRP dataset's manifest entry ({ id, pdcReleased }).
