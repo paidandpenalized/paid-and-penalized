@@ -244,7 +244,7 @@ function placeCrumbs(place) {
 const stateRank = (place, S, ctx) => {
   if (place.kind !== 'state') return null;
   const rank = ctx.stateMeans.findIndex((v) => v <= S.meanRed + 1e-12) + 1;
-  return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0) };
+  return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0), last: rank === ctx.stateMeans.length && rank > 1 };
 };
 
 // The places inside this one, each with its summary (summarize's result over the hospitals of it that are in this place: a metro
@@ -278,7 +278,7 @@ export function placeView(place, ctx) {
   const rank = stateRank(place, S, ctx);
   const dc = rank && ctx.hasDc ? placeT('deckAndDc') : '';
   const avg = S.n === 1 ? placeFill('deckAvgOne', { pct: fmtPct(S.meanRed) }) : placeFill('deckAvgMany', { hospitals: hospitals(S.n), pct: fmtPct(S.meanRed) });
-  const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
+  const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : rank.last ? 'deckRankLast' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 || rank.last ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
   const lead = deckLead(S, edition.label);
   const kind = placeT(KIND_KEY[place.kind]);
   const spans = place.kind === 'metro' && place.states.length > 1;

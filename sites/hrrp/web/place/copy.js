@@ -20,6 +20,7 @@ export const COPY = {
   deckAvgOne: { text: 'The average cut, counting its one hospital, is {pct}', claim: null },
   deckAvgMany: { text: 'The average cut, counting all {hospitals}, is {pct}', claim: null },
   deckRankFirst: { text: ', the largest among the {n} states{dc} in the program. ', claim: null },
+  deckRankLast: { text: ', the smallest among the {n} states{dc} in the program. ', claim: null },
   deckRankNth: { text: ', the {nth}-largest among the {n} states{dc} in the program. ', claim: null },
   deckNoRank: { text: '. ', claim: null },
   deckAndDc: { text: ' and DC', claim: null },
