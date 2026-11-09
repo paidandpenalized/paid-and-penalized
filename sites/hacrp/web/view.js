@@ -91,7 +91,7 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
   return {
     ccn: h.ccn,
     name: master.name,
-    city: master.city,
+    city: master.city ?? '',
     state: master.state,
     zip: master.zip ?? '',
     county: master.county ?? null,

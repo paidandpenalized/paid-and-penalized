@@ -56,8 +56,7 @@ export function a1Summary({ ok, a, b, info }) {
 // whole dollars (money.js cutDollars). Rows are in the hospital table's default order (state, then name;
 // hospital-table.js); the search ranks its own matches.
 export function hospitalRows(views, places = null, dollars = null) {
-  // A missing city is an empty cell, so every reader of the asset (table sorts, labels, search) sees text.
-  const rows = views.map((v) => [v.ccn, v.name, v.city ?? '', v.state, v.score.raw, v.decision.text, v.zip, ...(dollars ? [cutDollars(dollars.get(v.ccn))] : [])]).sort(compareDefault);
+  const rows = views.map((v) => [v.ccn, v.name, v.city, v.state, v.score.raw, v.decision.text, v.zip, ...(dollars ? [cutDollars(dollars.get(v.ccn))] : [])]).sort(compareDefault);
   return { hospitalPath: HOSPITALS_PATH, rows, ...(places ? { places: placeEntries(places) } : {}) };
 }
 

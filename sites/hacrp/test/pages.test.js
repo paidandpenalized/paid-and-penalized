@@ -786,10 +786,3 @@ test('the HACRP manifest bundles one script per kind of page (program, place, ho
     assert.ok(loads(text).includes('hacrp-search'), `${script}: every page has the search`);
   }
 });
-
-test('hospitalRows writes a missing city as an empty cell, so no reader of the asset sees "null"', () => {
-  const view = { ccn: '99000Z', name: 'Example Rural Hospital', city: null, state: 'UT', score: { raw: '0.1000' }, decision: { text: 'No' }, zip: '84000' };
-  const [row] = hospitalRows([view]).rows;
-  assert.equal(row[2], '');
-  assert.doesNotMatch(JSON.stringify(row), /null/);
-});

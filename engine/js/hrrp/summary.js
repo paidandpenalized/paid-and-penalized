@@ -46,11 +46,10 @@ export function percentileRank(sorted, v) {
   return (100 * lo) / sorted.length;
 }
 
-// "Larger cut than N% of hospitals": floored and never 100 (a hospital is never above itself). rankPctOf takes the
-// percentile percentileRank gives, for a caller that also needs to know whether it is above none at all.
-export const rankPctOf = (p) => Math.min(99, Math.floor(p));
-export function rankPct(sorted, v) {
-  return rankPctOf(percentileRank(sorted, v));
+// "Larger cut than N% of hospitals": floored and never 100 (a hospital is never above itself). p: percentileRank(sorted, v),
+// for a caller that has it already.
+export function rankPct(sorted, v, p = percentileRank(sorted, v)) {
+  return Math.min(99, Math.floor(p));
 }
 
 // {peer: {cond: [p10, p90]}} of ERRs among hospitals with >= 25 cases.

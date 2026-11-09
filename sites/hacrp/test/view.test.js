@@ -193,4 +193,6 @@ test("the view carries the master's place, point and profile, and Care Compare's
   assert.deepEqual(v.profile, { teach: 'minor', beds: 120, own: 'Nonprofit', urban: false, types: ['SCH'] });
   assert.deepEqual(v.careCompare, { rating: '4', footnotes: [] });
   assert.equal(view('no', { master: master('990002', { lat: null, lon: -86.2 }) }).point, null, 'half a point is none');
+  // A master record with no city gives the view empty text, as a missing ZIP does, so no page or asset prints "null".
+  assert.equal(view('no', { master: master('990002', { city: null }) }).city, '');
 });

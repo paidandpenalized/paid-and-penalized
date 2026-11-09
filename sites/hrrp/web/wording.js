@@ -3,7 +3,7 @@
 // Typesetting (copy.js text goes through fillCopy) turns a straight apostrophe into a curly one, so sentences that
 // hold one differ from the source's by that character alone.
 import { CONDS, MIN_DISCHARGES, verdict } from '../../../engine/js/hrrp/formula.js';
-import { noEstimate, percentileRank, rankPctOf } from '../../../engine/js/hrrp/summary.js';
+import { noEstimate, percentileRank, rankPct } from '../../../engine/js/hrrp/summary.js';
 import { capitalize, spelled } from '../../../web/render/format.js';
 import { fill, t } from './copy.js';
 import { conditionShort } from './derive.js';
@@ -70,7 +70,7 @@ export function rankLine(h, ctx) {
   // the 6"; a share above none keeps its floored percent, as the page's history table prints it.
   const clause = (key, sorted, extra) => {
     const p = percentileRank(sorted, h.red);
-    return p === 0 ? fill(`${key}None`, extra) : fill(key, { pct: String(rankPctOf(p)), ...extra });
+    return p === 0 ? fill(`${key}None`, extra) : fill(key, { pct: String(rankPct(sorted, h.red, p)), ...extra });
   };
   return fill('rankLine', {
     nation: clause('rankNation', ctx.sortedRed, {}),
