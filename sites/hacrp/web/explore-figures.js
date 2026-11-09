@@ -3,7 +3,7 @@
 // a pair of measures. The build draws the first measure's panels and the default states into the page; the page script
 // draws the rest from the explore asset, with these same functions. Kept apart from program-figures.js so the page
 // scripts never carry the build's map code.
-import { cmsText, count, decimal } from '../../../web/render/format.js';
+import { articleFor, cmsText, count, decimal } from '../../../web/render/format.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { drawn } from '../../../web/charts/figure.js';
 import { pullIn, stackedDots } from '../../../web/charts/measureDots.js';
@@ -56,7 +56,7 @@ export function stackPanel(id, m, { rows }) {
   return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig2Alt', { short: SHORT_NAMES[id] }), take: stackTake(id, m) };
 }
 export const stackTake = (id, m) => (isSir(id)
-  ? fill('fig2TakeSir', { zero: count(m.zero), n: count(m.n), short: SHORT_NAMES[id], median: decimal(m.median, m.params.decimals) })
+  ? fill('fig2TakeSir', { zero: count(m.zero), n: count(m.n), aShort: `${articleFor(SHORT_NAMES[id])} ${SHORT_NAMES[id]}`, median: decimal(m.median, m.params.decimals) })
   : fill('fig2TakePsi', { short: SHORT_NAMES[id], one: SIR_EXPECTED_TEXT, median: decimal(m.median, m.params.decimals), above: count(m.values.filter((v) => v > SIR_EXPECTED).length), n: count(m.n) }));
 
 // One measure as reported and as scored: its panel. m: measureSummary().

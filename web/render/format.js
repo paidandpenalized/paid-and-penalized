@@ -43,6 +43,9 @@ export function fractionWord(share, determiner = 'a') {
 }
 
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
+// "a" or "an" before an initialism read letter by letter: "an SSI", "an MRSA", "a CDI". The letters whose names start
+// with a vowel sound are A, E, F, H, I, L, M, N, O, R, S and X.
+export const articleFor = (initialism) => (/^[AEFHILMNORSX]/.test(initialism) ? 'an' : 'a');
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).

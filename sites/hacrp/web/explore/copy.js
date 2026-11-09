@@ -22,7 +22,7 @@ export const COPY = {
   rollStateAlt: { text: 'The grid for {state}: each of its {hospitals} hospitals with a payment decision in any year as a column, one row per fiscal year, red where CMS cut it.', claim: null },
   rollStateLink: { text: 'Open the {state} page', claim: null },
   setJoin: { text: '{a} + {b}', claim: null },
-  fig2TakeSir: { text: '{zero} of the {n} hospitals with a {short} value reported zero infections; the middle hospital sits at {median}.', claim: null },
+  fig2TakeSir: { text: '{zero} of the {n} hospitals with {aShort} value reported zero infections; the middle hospital sits at {median}.', claim: null },
   fig2TakePsi: { text: '{short} values bunch near {one}; the middle hospital sits at {median}, and {above} of {n} are above {one}.', claim: null },
   fig2OneSir: { text: "{one} = as predicted", claim: 'HACRP-14' },
   fig2OnePsi: { text: "{one} = national composite value", claim: 'HACRP-31' },

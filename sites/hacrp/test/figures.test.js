@@ -22,7 +22,7 @@ import { buildPlaces } from '../web/places.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
-import { stackPanel } from '../web/explore-figures.js';
+import { stackPanel, stackTake } from '../web/explore-figures.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
@@ -413,4 +413,18 @@ test('the stacked-dots tooltip reads "1 hospital" for a column of one, "2 hospit
   assert.match(all, /: 1 hospital[^s]/);
   assert.match(all, /: 2 hospitals/);
   assert.doesNotMatch(all, /: 1 hospitals/);
+});
+
+test('the dot plot takeaway puts the right article before each infection measure: an SSI, an MRSA, a CDI', () => {
+  const sir = MEASURE_IDS.filter((k) => isSir(k));
+  assert.ok(sir.length >= 5);
+  for (const id of sir) {
+    const take = stackTake(id, PD.measures[id]);
+    const short = SHORT_NAMES[id];
+    const article = /^[AEFHILMNORSX]/.test(short) ? 'an' : 'a';
+    assert.ok(take.includes(`with ${article} ${short} value`), take);
+  }
+  assert.ok(stackTake('SSI', PD.measures.SSI).includes('with an SSI value'));
+  assert.ok(stackTake('MRSA', PD.measures.MRSA).includes('with an MRSA value'));
+  assert.ok(stackTake('CDI', PD.measures.CDI).includes('with a CDI value'));
 });
