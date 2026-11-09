@@ -140,6 +140,7 @@ export const COPY = {
   statesHText: { text: 'Each small map is one fiscal year, each square a state, shaded by the share of its hospitals CMS cut (key above the maps). Some states keep their shade year after year.', claim: null },
   keyUp: { text: '{from} and up', claim: null },
   keyNone: { text: 'None cut', claim: null },
+  keyFew: { text: 'Fewer than {n} hospitals with a payment decision', claim: null },
   keyNoDecision: { text: 'No decision', claim: null },
   keyRing: { text: 'Outlined: {a} and {b}', claim: null },
   statesHTakeaway: { text: 'Among states with at least {few} hospitals every year, {state} was cut above the nation’s share in {k} of the {n} years CMS cut anyone; {low}, below it in {lowK}.', claim: null },

@@ -463,7 +463,7 @@ test('statesYearsFigure: one small map a year, a state\'s column of shares in th
   const edges = [0, ...MAP_STEPS_PCT];
   assert.deepEqual(items, [
     ...edges.map((e, i) => [String(i + 1), i === edges.length - 1 ? `${e}% and up` : `${e}% to ${edges[i + 1]}%`]),
-    ['zero', 'None cut'], ['empty', 'No decision'], ['ring', `Outlined: ${STATE_NAMES.AL} and ${STATE_NAMES.GA}`],
+    ['zero', 'None cut'], ['few', `Fewer than ${FEW_DECIDED} hospitals with a payment decision`], ['empty', 'No decision'], ['ring', `Outlined: ${STATE_NAMES.AL} and ${STATE_NAMES.GA}`],
   ]);
   // Each small map outlines those two states (when they have a decision that year) and no other.
   const maps = String(fig).split('<div class="smallmaps__m">').slice(1);

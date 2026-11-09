@@ -300,7 +300,9 @@ export function statesYearsFigure(hd, { n, source }) {
   // One key for every map: the steps of the share cut, none cut, no decision, and the two states the takeaway names.
   const edges = [0, ...MAP_STEPS_PCT];
   const step = (i) => (i === edges.length - 1 ? fill('keyUp', { from: `${edges[i]}%` }) : fill('valueRange', { from: `${edges[i]}%`, to: `${edges[i + 1]}%` }));
-  const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li><li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
+  // The dashed outline's entry, as the program page's state map (Figure 18) has it, when any state in any year carries one.
+  const fewKey = [...hd.byState.values()].some((v) => v.years.some((y) => y.decided && y.decided < FEW_DECIDED));
+  const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li>${fewKey ? html`<li><span class="smallmaps__sw smallmaps__sw--few"></span>${fill('keyFew', { n: count(FEW_DECIDED) })}</li>` : ''}<li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
   const chart = html`${key}<div class="smallmaps">${maps}</div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-cut-by-state-year',
