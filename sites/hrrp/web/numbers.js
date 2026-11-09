@@ -47,10 +47,16 @@ export const pagesOf = (list, size) => Array.from({ length: Math.ceil(list.lengt
 export const byId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 // A payment adjustment factor to four decimals, as CMS publishes it: 0.9988, 1.0000.
-export const factor4 = (x) => (missing(x) ? DASH : decimal(x, 4));
+export const factor4 = (x) => ratio(x, 4);
 
 // An excess readmission ratio (or a peer median) to dp decimals; four as CMS publishes it, three on a slider.
-export const ratio = (x, dp = 4) => (missing(x) ? DASH : decimal(x, dp));
+// Rounded as JavaScript's toFixed does, not Intl: the engine stores each CMS value so that toFixed(4) prints CMS's own text
+// (1.00505 is "1.0050"), and Intl would split some ties the other way.
+export const ratio = (x, dp = 4) => {
+  if (missing(x)) return DASH;
+  const body = Math.abs(x).toFixed(dp);
+  return x < 0 && Number(body) !== 0 ? `−${body}` : body;
+};
 
 // A condition's share of the cut, a fraction, in percentage points to dp decimals and without the unit: 0.00342 is "0.342".
 export const points = (x, dp = 3) => (missing(x) ? DASH : decimal(x * 100, dp));

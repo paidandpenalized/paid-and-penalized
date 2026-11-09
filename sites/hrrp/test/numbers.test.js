@@ -64,3 +64,13 @@ test('fmtShare: a fraction as a percentage, an exact half at the last place show
   assert.equal(fmtShare(0.12345, 1), '12.3%');
   assert.equal(fmtShare(null), '—');
 });
+
+test('ratio and factor4 round as toFixed does, which is how the engine stores the four-decimal text CMS publishes', () => {
+  assert.equal(ratio(1.00505), '1.0050');
+  assert.equal(ratio(0.01265), '0.0126');
+  assert.equal(factor4(1.00505), '1.0050');
+  assert.equal(ratio(-0.01265), '−0.0126');
+  assert.equal(ratio(-0.00001), '0.0000', 'no sign on a value that rounds to zero');
+  assert.equal(ratio(0), '0.0000');
+  assert.equal(ratio(1.2345, 2), '1.23');
+});
