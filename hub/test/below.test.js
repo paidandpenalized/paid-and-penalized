@@ -355,5 +355,5 @@ test('a histogram whose labels would count hospitals its bars do not draw stops 
 });
 
 test('the words below the story carry no digit: every number arrives through a placeholder', () => {
-  for (const [key, text] of Object.entries(COPY)) assert.doesNotMatch(text, /\d/, key);
+  for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(typeof entry === 'string' ? entry : entry.text, /\d/, key);
 });

@@ -10,18 +10,18 @@ export const COPY = Object.freeze({
   gateHrrp: 'Readmissions (HRRP)',
   gateHrrpShort: 'Readmissions',
   // The cap is a share of base payments, not of the inpatient pay the axis measures, so the rule says so.
-  ruleHrrp: 'cut, up to {cap} of base',
-  ruleHrrpShort: 'cut, up to {cap} of base',
+  ruleHrrp: { text: 'cut, up to {cap} of base', claim: ['HRRP-09', 'HRRP-06'] },
+  ruleHrrpShort: { text: 'cut, up to {cap} of base', claim: ['HRRP-09', 'HRRP-06'] },
   gateHac: 'Hospital-acquired conditions (HACRP)',
   gateHacShort: 'Hospital-acquired cond.',
   // "Highest scores", as step 3 says it (a higher HAC score is worse; never "top", which reads as the best hospitals). Short
   // enough that the gate's name and rule fit side by side on the narrowest wide stage (520px).
-  ruleHac: 'highest scores: flat {cut} cut',
-  ruleHacShort: 'flat {cut} cut',
+  ruleHac: { text: 'highest scores: flat {cut} cut', claim: ['HACRP-01', 'HACRP-02'] },
+  ruleHacShort: { text: 'flat {cut} cut', claim: 'HACRP-01' },
   gateVbp: 'Value-based purchasing (HVBP)',
   gateVbpShort: 'Value-based purchasing',
-  ruleVbp: 'budget-neutral: bonus or cut',
-  ruleVbpShort: 'bonus or cut',
+  ruleVbp: { text: 'budget-neutral: bonus or cut', claim: ['HUB-02', 'HACRP-87'] },
+  ruleVbpShort: { text: 'bonus or cut', claim: 'HACRP-87' },
   pastCut: '{amount} est.',
   pastMoved: '{amount} moved, est.',
 
@@ -38,7 +38,7 @@ export const COPY = Object.freeze({
   // At Readmissions' gate, the hospitals the program does not list ({n}): beside the $0 pile, and in the key.
   outHrrp: '{n} not in HRRP',
   keyOutHrrp: 'not in HRRP',
-  hacOnly: '{n} with only the {cut} HAC cut',
+  hacOnly: { text: '{n} with only the {cut} HAC cut', claim: 'HACRP-01' },
   // What each ink means after a gate.
   keyCut: 'cut',
   keyNone: 'no change',

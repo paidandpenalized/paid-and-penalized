@@ -179,6 +179,9 @@ test('each policy page has one h1, the brief as a record card, an index of its s
     }
   }));
 
+// A copy entry's words: the string, or a sourced entry's text.
+const copyText = (key) => (typeof COPY[key] === 'string' ? COPY[key] : COPY[key].text);
+
 test('every word of the five pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
   withHub((read) => {
     for (const { path, stem } of POLICY) {
@@ -186,15 +189,15 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
       const words = textOf(text);
       const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
       for (const key of keys) {
-        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(COPY[key])), `${path}: ${key}`); continue; }
+        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(copyText(key))), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.
-        const stretch = COPY[key].split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
+        const stretch = copyText(key).split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
         assert.ok(words.includes(stretch), `${path}: ${key} is not on the page`);
       }
       assert.doesNotMatch(words, /\{\w+\}/, `${path}: a placeholder left unfilled`);
       // Where its words call for the form (not privacy's, which describes the footer's link), the link is the prefilled one.
       const href = feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path });
-      if (keys.some((k) => COPY[k].includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
+      if (keys.some((k) => copyText(k).includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
     }
   }));
 

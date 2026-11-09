@@ -145,7 +145,7 @@ const TAKEAWAYS = {
   },
   hvbp(members, { bins }) {
     holds(bins.some((b) => b.lo < 0) && bins.some((b) => b.lo >= 0), COPY.takeVbp);
-    return COPY.takeVbp;
+    return fill('takeVbp');
   },
 };
 
@@ -237,7 +237,7 @@ function worksheet(h, { fy, src }) {
 <p class="form__title"><span>${fill('wsTitle', { fy })}<span data-ws-ex> · ${COPY.wsExample}</span></span><span>${sentence('wsCcn', { ccn: html`<span data-ws="ccn">${t.ccn}</span>` })}</span></p>
 <table class="wst" role="table"><caption class="vh">${fill('wsLabel', { fy })}</caption><tbody role="rowgroup">
 ${row(LINE.pay, sentence('wsPay', { name: html`<b data-ws="name">${t.name}</b>`, place: html`<span data-ws="place">${t.place}</span>` }), 'total')}
-${row(LINE.base, html`${COPY.wsBase}${note(COPY.wsBaseNote)}`, 'base')}
+${row(LINE.base, html`${fill('wsBase')}${note(fill('wsBaseNote'))}`, 'base')}
 ${row(LINE.hrrp, html`${COPY.wsHrrp}${note(factor('hrrpF'), 'hrrp')}`, 'hrrp')}
 ${row(LINE.hac, html`${COPY.wsHac}${note(fill('wsCut', { cut, pay: count(LINE.pay), hrrp: count(LINE.hrrp), vbp: count(LINE.vbp) }), 'cut')}${note(fill('wsNoCut', { cut }), 'nocut')}`, 'hac')}
 ${row(LINE.vbp, html`${COPY.wsVbp}${note(factor('vbpF'), 'vbp')}`, 'hvbp')}

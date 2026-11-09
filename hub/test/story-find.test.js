@@ -119,7 +119,7 @@ test('statusModel: a hospital without an estimate gets the card the hospital pag
   const md = statusModel(maryland, fy);
   assert.deepEqual(
     { ccn: md.ccn, name: md.name, status: md.status, why: md.why, href: md.href },
-    { ccn: maryland.ccn, name: maryland.name, status: HOSPITAL_COPY.statusMaryland, why: HOSPITAL_COPY.statusMarylandText, href: hospitalPathOf('hub', maryland.ccn) },
+    { ccn: maryland.ccn, name: maryland.name, status: fillCopy(HOSPITAL_COPY, 'statusMaryland'), why: fillCopy(HOSPITAL_COPY, 'statusMarylandText'), href: hospitalPathOf('hub', maryland.ccn) },
   );
   assert.match(md.place, new RegExp(`^${maryland.city}, MD\\. `));
   const no = statusModel(none, fy);

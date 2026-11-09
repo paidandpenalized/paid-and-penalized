@@ -107,7 +107,7 @@ test('the deks say the rules\' numbers in the words they read in (the copy holds
   const NUMBER_WORD = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|ninety|hundred|half|third|thirds|quarter|quarters|three-quarters)\b/i;
   for (const id of IDS) {
     const key = `dek${id.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
-    assert.doesNotMatch(COPY[key], NUMBER_WORD, key);
+    assert.doesNotMatch(COPY[key].text, NUMBER_WORD, key);
   }
   assert.equal(programDek('hrrp'), 'Cuts base payments by up to 3% when a hospital\u2019s risk-adjusted readmissions in the thirty days after discharge run above its peer group\u2019s median.');
   assert.equal(programDek('hacrp'), 'Cuts pay by a flat 1% for the quarter of hospitals with the highest infection and patient-safety scores.');
@@ -119,8 +119,11 @@ test('the deks say the rules\' numbers in the words they read in (the copy holds
 test('each dek is copy with no digit, and fills with the rule\'s percent and nothing left over', () => {
   for (const id of IDS) {
     const key = `dek${id.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
-    assert.equal(typeof COPY[key], 'string', `COPY.${key}`);
-    assert.doesNotMatch(COPY[key], /\d/, key);
+    // A dek states the program's rule, so it is a sourced entry ({ text, claim }: the claim ids in hub/CLAIMS.md or a
+    // program site's register; the copy gate checks them).
+    assert.equal(typeof COPY[key].text, 'string', `COPY.${key}`);
+    assert.ok(COPY[key].claim, `COPY.${key}: its claim ids`);
+    assert.doesNotMatch(COPY[key].text, /\d/, key);
     const dek = programDek(id);
     assert.ok(dek.length > 40, id);
     assert.doesNotMatch(dek, /[{}]/, `${id}: every placeholder filled`);

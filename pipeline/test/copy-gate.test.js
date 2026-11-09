@@ -1,7 +1,8 @@
 // The copy gate: no copy file holds a digit (every number arrives through a placeholder), every claim id is well
-// formed, and every id used resolves to a checked row of its site's claims register (sites/<id>/CLAIMS.md), and every
-// row is used by its own site. A sentence that states two sourced facts names both: `claim` is null, one id, or a list.
-// A copy file under sites/<id>/ may cite only that site's ids; shared copy (web/, hub/) may cite any site's.
+// formed, and every id used resolves to a checked row of its register (a program site's sites/<id>/CLAIMS.md, or the
+// family's hub/CLAIMS.md, for the hub's pages and the copy every page shares), and every row is used. A sentence that
+// states two sourced facts names both: `claim` is null, one id, or a list. A copy file under sites/<id>/ may cite only
+// that site's ids; shared copy (web/, hub/) may cite any register's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -11,12 +12,18 @@ import { PROGRAM_SITES } from '../../tools/ci/page-types.js';
 import { copyFiles } from './helpers.js';
 
 const importRepo = (path) => import(pathToFileURL(REPO_ROOT + path));
-const constantsOf = (site) => importRepo(`sites/${site}/web/constants.js`);
 
-// Each program site (tools/ci/page-types.js PROGRAM_SITES) names, in its web/constants.js, its claim-id prefix (CLAIM_PREFIX)
-// and the method constants the gate checks (METHOD_CONSTANTS: name and type), each with a claim id in that file's CLAIMS.
-const SITES = PROGRAM_SITES.map((site) => site.id);
-const CONSTANTS = Object.fromEntries(await Promise.all(SITES.map(async (site) => [site, await constantsOf(site)])));
+// The registers: each program site's (tools/ci/page-types.js PROGRAM_SITES), whose web/constants.js names its claim-id
+// prefix (CLAIM_PREFIX) and the method constants the gate checks (METHOD_CONSTANTS: name and type), each with a claim id
+// in that file's CLAIMS; and the family's, whose hub/claims.js does the same for the rule constants every page prints and
+// the programs' names. The family's is shared: its CLAIMS, like shared copy, may cite any register's ids.
+const REGISTERS = [
+  ...PROGRAM_SITES.map(({ id }) => ({ id, register: `sites/${id}/CLAIMS.md`, constants: `sites/${id}/web/constants.js`, shared: false })),
+  { id: 'hub', register: 'hub/CLAIMS.md', constants: 'hub/claims.js', shared: true },
+];
+const SITES = REGISTERS.map((r) => r.id);
+const REGISTER = Object.fromEntries(REGISTERS.map((r) => [r.id, r]));
+const CONSTANTS = Object.fromEntries(await Promise.all(REGISTERS.map(async (r) => [r.id, await importRepo(r.constants)])));
 const CLAIM_PREFIX = Object.fromEntries(SITES.map((site) => [site, CONSTANTS[site].CLAIM_PREFIX]));
 const siteOfPrefix = (id) => SITES.find((site) => id.startsWith(`${CLAIM_PREFIX[site]}-`));
 const CLAIM = new RegExp(`^(${Object.values(CLAIM_PREFIX).join('|')})-\\d{2}$`);
@@ -39,7 +46,8 @@ const idsOf = (claim) => (claim === null ? [] : [claim].flat());
 test('the gate finds the shared copy and each site\'s copy', () => {
   const files = copyFiles();
   assert.ok(files.includes('web/copy.js'));
-  for (const site of SITES) assert.ok(files.includes(`sites/${site}/web/copy.js`), site);
+  assert.ok(files.includes('hub/copy.js'));
+  for (const { id } of PROGRAM_SITES) assert.ok(files.includes(`sites/${id}/web/copy.js`), id);
 });
 
 test('a copy file cites only its own site\'s claims; shared copy cites any', () => {
@@ -49,6 +57,8 @@ test('a copy file cites only its own site\'s claims; shared copy cites any', () 
   assert.match(citeError('sites/hrrp/pages/hospital/copy.js', 'HACRP-01'), /not a HRRP claim/);
   assert.equal(citeError('web/copy.js', 'HRRP-01'), null);
   assert.equal(citeError('hub/copy.js', 'HACRP-01'), null);
+  assert.equal(citeError('web/copy.js', 'HUB-01'), null);
+  assert.match(citeError('sites/hacrp/web/copy.js', 'HUB-01'), /not a HACRP claim/);
 });
 
 test('a register row no copy or constant uses is found', () => {
@@ -75,16 +85,17 @@ for (const file of copyFiles()) {
 }
 
 // The register's rows: table lines whose first cell is a claim id. Cells are id, claim, source, quote, checked.
-const registerText = (site) => readFileSync(new URL(`../../sites/${site}/CLAIMS.md`, import.meta.url), 'utf8');
+const registerText = (site) => readFileSync(REPO_ROOT + REGISTER[site].register, 'utf8');
 const registerRows = (site) => registerText(site)
   .split('\n')
   .filter((line) => new RegExp(`^\\|\\s*${CLAIM_PREFIX[site]}-`).test(line))
   .map((line) => line.split('|').slice(1, -1).map((cell) => cell.trim()));
 
-// Every claim id a site uses: copy entries in its own copy files and in the shared ones, and its method constants.
+// Every claim id of a register's that is used: by copy entries (its own site's copy files and the shared ones) and by
+// any register's constants (a program site's cite only its own; the family's may cite any).
 async function usedClaims(site) {
-  const { CLAIMS } = CONSTANTS[site];
-  const used = new Set(Object.values(CLAIMS));
+  const used = new Set();
+  for (const { CLAIMS } of Object.values(CONSTANTS)) for (const id of Object.values(CLAIMS)) if (siteOfPrefix(id) === site) used.add(id);
   for (const file of copyFiles()) {
     const { COPY } = await importRepo(file);
     for (const [, { claim }] of entries(COPY)) for (const id of idsOf(claim)) if (siteOfPrefix(id) === site) used.add(id);
@@ -105,11 +116,11 @@ for (const site of SITES) {
     }
     for (const [name, claim] of Object.entries(constants.CLAIMS)) {
       assert.match(claim, CLAIM, name);
-      assert.equal(siteOfPrefix(claim), site, `${name}: ${claim} is not a ${prefix} claim`);
+      if (!REGISTER[site].shared) assert.equal(siteOfPrefix(claim), site, `${name}: ${claim} is not a ${prefix} claim`);
     }
   });
 
-  test(`${site} CLAIMS.md: every row is well formed, sourced, quoted in at most 25 words and dated`, () => {
+  test(`${REGISTER[site].register}: every row is well formed, sourced, quoted in at most 25 words and dated`, () => {
     const rows = registerRows(site);
     assert.ok(rows.length > 0, 'the register has rows');
     const ids = new Set();
@@ -128,7 +139,7 @@ for (const site of SITES) {
   });
 
   // The register's link check: each source URL a row cites is a row of the "Link check" table, with its status.
-  test(`${site} CLAIMS.md: every source URL a row cites is in the Link check table`, () => {
+  test(`${REGISTER[site].register}: every source URL a row cites is in the Link check table`, () => {
     const text = registerText(site);
     const table = text.slice(text.indexOf('## Link check'));
     assert.ok(table.length < text.length, 'the register has a Link check section');
@@ -142,10 +153,16 @@ for (const site of SITES) {
     assert.ok(used.size > 0);
     for (const id of used) {
       const row = rows.get(id);
-      assert.ok(row, `${id}: no row in sites/${site}/CLAIMS.md`);
+      assert.ok(row, `${id}: no row in ${REGISTER[site].register}`);
       assert.doesNotMatch(row[4], /unverified/, `${id}: unverified`);
       assert.match(row[2], /^https:\/\//, `${id}: source`);
     }
     assert.deepEqual(unusedRows(rows.keys(), used), [], 'a row no copy or constant uses');
   });
 }
+
+// The family register gives each program's name as CMS does: every program in the registry (web/site.js) has a row.
+test('hub/claims.js names a claim for every program\'s name in the registry, and for no other', async () => {
+  const { SITE } = await importRepo('web/site.js');
+  assert.deepEqual(Object.keys(CONSTANTS.hub.PROGRAM_NAME_CLAIMS).sort(), SITE.programs.map((p) => p.id).sort());
+});

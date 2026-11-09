@@ -9,7 +9,7 @@ export const COPY = typesetCopy({
   // the peers the page compares it with.
   title: '{name}, {city}, {state}: Medicare payment programs, FY{fy}',
   description: "Estimated FY{fy} dollars for {name} in {city}, {state}, in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs, the net of the three, and how it compares with {n} {group}.",
-  descriptionMaryland: "{name} in {city}, {state} is paid under Maryland's all-payer model, so Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs don't adjust its pay.",
+  descriptionMaryland: { text: "{name} in {city}, {state} is paid under Maryland's all-payer model, so Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs don't adjust its pay.", claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
   descriptionNoInputs: "{name} in {city}, {state}: CMS's FY{fy} payment file has no usable row for this hospital, so this site has no estimate of its dollars in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs.",
 
   // The sticky peer row: its label, the toggle (shown by the page's script) and the group it names. A toggle a hospital
@@ -43,7 +43,7 @@ export const COPY = typesetCopy({
   stampCut: 'Net cut',
   stampBonus: 'Net bonus',
   stampZero: 'No net change',
-  fyNote: "All three programs' FY{fy} figures, the latest year they share. A program's own pages may show a newer year.",
+  fyNote: { text: "All three programs' FY{fy} figures, the latest year they share. A program's own pages may show a newer year.", claim: 'HACRP-12' },
   // The net's likely range under it (its key links to the back-test that made it); bandRange: its two ends in whole
   // dollars, where rounding would print them alike.
   bandLikely: 'Likely range',
@@ -100,26 +100,26 @@ export const COPY = typesetCopy({
   rowValue: 'Estimated FY{fy}:',
   whyFactor: 'FY{fy} payment factor {factor}.',
   // A hospital with a Readmissions page here (sites/hrrp/), which shows CMS's newer file: why the factor there differs.
-  whyHrrpYear: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.",
+  whyHrrpYear: { text: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.", claim: 'HACRP-12' },
   // The same for a hospital FY{fy}'s file did not list.
-  whyHrrpYearOut: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}, the latest year all three programs share, whose file did not list it.",
+  whyHrrpYearOut: { text: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}, the latest year all three programs share, whose file did not list it.", claim: 'HACRP-12' },
   // The same for a hospital FY{fy}'s file lists but the newer one doesn't, which so has no Readmissions page here.
   whyHrrpYearGone: "CMS's FY{next} Readmissions file doesn't list it, so it has no Readmissions page here.",
   whyHrrpOut: "Not in CMS's FY{fy} Readmissions file.",
   whyVbpOut: "Not in CMS's FY{fy} value-based purchasing file.",
-  whyHacCut: "CMS's FY{fy} decision: the flat {rate} cut.",
+  whyHacCut: { text: "CMS's FY{fy} decision: the flat {rate} cut.", claim: 'HACRP-01' },
   whyHacNone: "CMS's FY{fy} decision: no cut.",
   // The peers' counts: "Of the 74 Alabama hospitals: 59 with a cut, 12 with no cut, 3 not in the program." Each part is
   // a count and its words; a count of none drops the parts after the first two.
   whyPeers: 'Of the {n} {group}: {parts}.',
   partCut: '{n} with a cut',
-  partHacCut: '{n} with the {rate} cut',
+  partHacCut: { text: '{n} with the {rate} cut', claim: 'HACRP-01' },
   partBonus: '{n} with a bonus',
   partNoCut: '{n} with no cut',
   // Hospital-acquired conditions' peers CMS gave no Total HAC Score (and so no cut), which the HACRP pages leave out of
   // their counts.
   partUnscored: "{n} that CMS didn't score",
-  partUnscoredCut: '{n} with the {rate} cut but no score',
+  partUnscoredCut: { text: '{n} with the {rate} cut but no score', claim: 'HACRP-01' },
   partNoChange: '{n} with no change',
   partOut: '{n} not in the program',
   whyMedian: 'Peer median, among those in the program: {median} of pay.',
@@ -133,7 +133,7 @@ export const COPY = typesetCopy({
   resultCut: 'That is a {share} net cut of Medicare inpatient pay; the median of the {n} {group} is {median}.',
   resultBonus: 'That is a {share} net bonus of Medicare inpatient pay; the median of the {n} {group} is {median}.',
   resultZero: 'That is no net change in Medicare inpatient pay; the median of the {n} {group} is {median}.',
-  whatifStanding: "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals. This one moves each program's payment factor; each program's own pages have the measure-level what-if.",
+  whatifStanding: { text: "A what-if shows the formula's arithmetic, not what a hospital could realistically change or how. CMS's real result also depends on other hospitals. This one moves each program's payment factor; each program's own pages have the measure-level what-if.", claim: ['HRRP-04', 'HACRP-02', 'HUB-02'] },
   matchAll: 'Match the peer median on all three',
   reset: 'Reset to actual',
 
@@ -170,7 +170,7 @@ export const COPY = typesetCopy({
   wiIf: 'If {changes}, its estimated FY{fy} net would be {net} ({share} of Medicare inpatient pay) instead of {actual}. The group median is {median}.',
   wiIfHrrp: 'its readmissions factor were {to} instead of {from}',
   wiIfHvbp: 'its value-based purchasing factor were {to} instead of {from}',
-  wiIfHacOn: 'it had the {rate} hospital-acquired conditions cut',
+  wiIfHacOn: { text: 'it had the {rate} hospital-acquired conditions cut', claim: 'HACRP-01' },
   wiIfHacOff: 'it had no hospital-acquired conditions cut',
   wiAnd: '{list} and {last}',
   // A page opened from a shared link with a changed scenario.
@@ -197,12 +197,12 @@ export const COPY = typesetCopy({
   fairness: "A cut is a program's formula at work, not a verdict on a hospital's care.",
 
   // A hospital without an estimate: its status and why, and the program pages it has.
-  statusMaryland: 'Not adjusted',
-  statusMarylandText: "Maryland's hospitals are paid under the state's all-payer model, so these three programs don't adjust their pay. The hospital-acquired conditions program still scores them.",
+  statusMaryland: { text: 'Not adjusted', claim: ['HUB-05', 'HACRP-26', 'HACRP-91'] },
+  statusMarylandText: { text: "Maryland's hospitals are paid under the state's all-payer model, so these three programs don't adjust their pay. The hospital-acquired conditions program still scores them.", claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91', 'HACRP-13'] },
   statusNoInputs: 'No estimate',
   statusNoInputsText: "CMS's FY{fy} payment file has no usable row for this hospital, so this site can't price it.",
   // What CMS decided for it all the same, in the hospital-acquired conditions program (every hospital here is in its file).
-  statusHacCut: "CMS's FY{fy} hospital-acquired conditions decision: the flat {rate} cut. This site has no dollar estimate of it.",
+  statusHacCut: { text: "CMS's FY{fy} hospital-acquired conditions decision: the flat {rate} cut. This site has no dollar estimate of it.", claim: 'HACRP-01' },
   statusHacNone: "CMS's FY{fy} hospital-acquired conditions decision: no cut.",
   pagesHeading: "This hospital's program pages",
 });

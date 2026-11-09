@@ -6,9 +6,9 @@
 // three", "one hospital in five"); further off, they give the share.
 const FRACTION_NEAR = 0.02;
 
-// A claim the words make: ok, or the build stops, naming the words.
+// A claim the words make: ok, or the build stops, naming the words (a copy entry: a string, or { text, claim }).
 export function holds(ok, words) {
-  if (!ok) throw new RangeError(`hub home: the data no longer bear out "${words}"`);
+  if (!ok) throw new RangeError(`hub home: the data no longer bear out "${typeof words === 'string' ? words : words.text}"`);
 }
 
 // The simple fraction nearest x, as { part, whole }, within FRACTION_NEAR; null when none is that near.
