@@ -131,7 +131,7 @@ test('statusModel: a hospital without an estimate gets the card the hospital pag
   }
 });
 
-test('the states\' readout: each state\'s line as its title on the map (a normal state, and Maryland outside these programs)', () => {
+test('the states\' readout: each state\'s line as its title on the map (a normal state, and Maryland, which these programs do not adjust)', () => {
   const states = stateTotals(server);
   const map = statesMap({ shapes: hub.shapes, states });
   const titleOf = (code) => new RegExp(`<path class="st[^"]*" data-st="${code}"[^>]*><title id="smap-name-${code}">([^<]*)</title>`).exec(map)?.[1];
@@ -141,7 +141,7 @@ test('the states\' readout: each state\'s line as its title on the map (a normal
   const button = (label) => ({ querySelector: () => null, getAttribute: (k) => (k === 'aria-label' ? label : null) });
   assert.equal(lineOf(path(normal)), stateLine(normal, states.get(normal)));
   assert.match(lineOf(path(normal)), new RegExp(`^${STATE_NAMES[normal]}: [\\d,]+ hospitals, net [−+]?\\d\\.\\d\\d% of pay, \\d+% take a net cut$`));
-  assert.match(lineOf(path('MD')), /^Maryland: not in these programs\. Its [\d,]+ hospitals are paid under the state’s all-payer model\.$/);
+  assert.match(lineOf(path('MD')), /^Maryland: not adjusted by these programs\. Its [\d,]+ hospitals are paid under the state’s all-payer model\.$/);
   assert.equal(lineOf(button('Delaware: 6 hospitals')), 'Delaware: 6 hospitals');
   assert.equal(lineOf({ querySelector: () => null, getAttribute: () => null }), null);
 });

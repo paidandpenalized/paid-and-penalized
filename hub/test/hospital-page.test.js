@@ -278,7 +278,7 @@ test('a toggle the hospital has no group for is disabled, with the reason', () =
 });
 
 test('Maryland\'s and a no-inputs hospital\'s pages are the variant: record, status and why, program pages; no swarm, no what-if', () => {
-  for (const [h, status, text] of [[MARYLAND, 'Not in these programs', 'Maryland’s hospitals are paid under the state’s all-payer model, outside these three programs.'], [NO_INPUTS, 'No estimate', `CMS’s FY${FY} payment file has no usable row for this hospital, so this site can’t price it.`]]) {
+  for (const [h, status, text] of [[MARYLAND, 'Not adjusted', 'Maryland’s hospitals are paid under the state’s all-payer model, so these three programs don’t adjust their pay. The hospital-acquired conditions program still scores them.'], [NO_INPUTS, 'No estimate', `CMS’s FY${FY} payment file has no usable row for this hospital, so this site can’t price it.`]]) {
     const page = render(h, 'noindex');
     const main = mainOf(page);
     assert.ok(main.includes(`<article class="hh hh--none" data-ccn="${h.ccn}">`), `${status}: the variant's root`);

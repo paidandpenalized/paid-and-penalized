@@ -67,7 +67,7 @@ export const COPY = typesetCopy({
   // "add" when the highest state comes out ahead, "less" when every state takes a cut.
   statesHead: 'The programs take {lowShare} of hospital pay in {low} and add {highShare} in {high}.',
   statesHeadLess: 'The programs take {lowShare} of hospital pay in {low} and {highShare} in {high}.',
-  statesText: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model, outside these programs.',
+  statesText: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model, so these programs don’t adjust its hospitals’ pay.',
   // Which states come out ahead ({states}: their names, as a list).
   aheadMany: 'Only {states} come out ahead.',
   aheadOne: 'Only {states} comes out ahead.',
@@ -96,7 +96,7 @@ export const COPY = typesetCopy({
   mapLabel: 'States, shaded by their hospitals’ combined net change. Each state’s numbers are its title.',
   stateLine: '{name}: {hospitals}, net {share} of pay, {cutShare} take a net cut',
   stateNone: '{name}: no hospital with an estimate',
-  stateMaryland: '{name}: not in these programs. Its {hospitals} are paid under the state’s all-payer model.',
+  stateMaryland: '{name}: not adjusted by these programs. Its {hospitals} are paid under the state’s all-payer model.',
   hospital: 'hospital',
   hospitals: 'hospitals',
   readout: 'Point at, tap or tab to a state for its numbers.',
@@ -105,7 +105,7 @@ export const COPY = typesetCopy({
   keyTitleShort: 'Net change, est. FY{fy}, % of pay',
   keyCut: '{end} cut',
   keyBonus: '{end} bonus',
-  keyMaryland: 'Maryland: not in these programs',
+  keyMaryland: 'Maryland: not adjusted',
   smallStates: 'Small states',
 
   // The example card's own words: its lead (the hint shows with the search), the label of its programs' rows, the

@@ -9,7 +9,7 @@ export const COPY = typesetCopy({
   // the peers the page compares it with.
   title: '{name}, {city}, {state}: Medicare payment programs, FY{fy}',
   description: "Estimated FY{fy} dollars for {name} in {city}, {state}, in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs, the net of the three, and how it compares with {n} {group}.",
-  descriptionMaryland: "{name} in {city}, {state} is paid under Maryland's all-payer model, outside Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs.",
+  descriptionMaryland: "{name} in {city}, {state} is paid under Maryland's all-payer model, so Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs don't adjust its pay.",
   descriptionNoInputs: "{name} in {city}, {state}: CMS's FY{fy} payment file has no usable row for this hospital, so this site has no estimate of its dollars in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs.",
 
   // The sticky peer row: its label, the toggle (shown by the page's script) and the group it names. A toggle a hospital
@@ -195,8 +195,8 @@ export const COPY = typesetCopy({
   fairness: "A cut is a program's formula at work, not a verdict on a hospital's care.",
 
   // A hospital without an estimate: its status and why, and the program pages it has.
-  statusMaryland: 'Not in these programs',
-  statusMarylandText: "Maryland's hospitals are paid under the state's all-payer model, outside these three programs.",
+  statusMaryland: 'Not adjusted',
+  statusMarylandText: "Maryland's hospitals are paid under the state's all-payer model, so these three programs don't adjust their pay. The hospital-acquired conditions program still scores them.",
   statusNoInputs: 'No estimate',
   statusNoInputsText: "CMS's FY{fy} payment file has no usable row for this hospital, so this site can't price it.",
   // What CMS decided for it all the same, in the hospital-acquired conditions program (every hospital here is in its file).
