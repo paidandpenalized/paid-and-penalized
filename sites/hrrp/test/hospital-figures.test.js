@@ -54,6 +54,13 @@ test('rulers: a condition under 25 cases is not counted: no triangle, no gap, no
   assert.ok(fig.includes('No cases: not counted'), 'a condition with no row at all');
 });
 
+test('rulers: a condition with exactly one case reads "1 case", never "1 cases"', () => {
+  const h = hospital({ id: '990022', c: { HF: { n: 40, err: 1.1, flag: 1, ratio: 0.1 }, AMI: { n: 1, err: 1.4, flag: 0, ratio: 0.1 } } });
+  const fig = figureOf(pageOf(h, ctx), 1);
+  assert.ok(fig.includes(`1 case, under ${MIN_DISCHARGES}: not counted`));
+  assert.ok(!fig.includes('1 cases'));
+});
+
 test('rulers: the cap note only when the parts pass 3.00 points; at the cap another 0.01 is worth $0', () => {
   const over = hospital({ id: '990021', paf: 0.97, red: 3, pen: 300000, c: { HF: { n: 40, err: 1.5, flag: 1, ratio: 0.1 }, AMI: { n: 30, err: 0.9, flag: 0, ratio: 0.1 } } });
   const d = hospitalView(over, ctx).figures.rulers;

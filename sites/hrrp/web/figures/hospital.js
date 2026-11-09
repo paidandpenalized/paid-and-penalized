@@ -46,8 +46,9 @@ const gapCell = (row) => {
 
 function rowWords(row) {
   if (!row.n) return { cases: t('rowNoCases'), note: t('rulerNoCases') };
-  const cases = fill('rowCases', { n: fmtInt(row.n) });
-  return { cases, note: row.measured ? null : fill('rulerFew', { n: fmtInt(row.n), min: String(MIN_DISCHARGES) }) };
+  const one = row.n === 1 ? 'One' : '';
+  const cases = fill(`rowCases${one}`, { n: fmtInt(row.n) });
+  return { cases, note: row.measured ? null : fill(`rulerFew${one}`, { n: fmtInt(row.n), min: String(MIN_DISCHARGES) }) };
 }
 
 // The text of the "worth per" cell: dollars, "payment weight not published" for a counted condition with none, a dash otherwise.
