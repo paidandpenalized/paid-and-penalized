@@ -1,5 +1,5 @@
-// The program page's hospital search entries (client/search.js): a hospital with no city reads "ST", not "null, ST", and
-// the word "null" finds nothing. Synthetic rows only.
+// The program page's hospital search entries (client/search.js): a hospital with no city (empty text, as the reader gives
+// it: web/render/format.js hospitalRecord) reads "ST", not ", ST", and the word "null" finds nothing. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildIndex, search } from '../../../web/client/search.js';
@@ -9,7 +9,7 @@ const ASSET = {
   hospitalPath: '/hrrp/hospital/',
   hospitals: [
     { id: '990001', name: 'Example General Hospital', city: 'Exampleton', st: 'AL', zip: '35000' },
-    { id: '990002', name: 'Sample Medical Center', city: null, st: 'MD', zip: '' },
+    { id: '990002', name: 'Sample Medical Center', city: '', st: 'MD', zip: '' },
   ],
 };
 

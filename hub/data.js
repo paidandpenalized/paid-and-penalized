@@ -5,7 +5,7 @@ import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
-import { nameText } from '../web/render/format.js';
+import { masterByCcn } from '../pipeline/master.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
 
 // The inputs must agree before any page is built from them: the dollar estimates are for the year the master calls its
@@ -48,7 +48,7 @@ let loaded = null;
 // Everything the hub's pages are built from, read once per build:
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
-//   master        the hospital master's records by CCN, each name as the pages print it (nameText)
+//   master        the hospital master's records by CCN, as every site reads them (pipeline/master.js masterByCcn)
 //   decided       the CCNs of the hospitals CMS scored and gave a Yes or No in the dollar estimates' year (a Set), from
 //                 the HACRP site's emitted file: the HACRP pages count only these, so the hub's words can too
 //   hrrp          { fy, hospitals: Map<ccn, record> } from the Readmissions site's newest emitted file: a hospital in it has a
@@ -68,7 +68,7 @@ export function loadHub() {
     fy: dollars.fy,
     builtAt: dollars.built_at,
     dollars,
-    master: new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }])),
+    master: masterByCcn(masterFile),
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])) },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),

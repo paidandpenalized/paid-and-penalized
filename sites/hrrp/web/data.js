@@ -5,7 +5,8 @@ import { parseCsv } from '../../../engine/js/csv.js';
 import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
-import { nameText } from '../../../web/render/format.js';
+import { masterByCcn } from '../../../pipeline/master.js';
+import { hospitalRecord } from '../../../web/render/format.js';
 import { scopeYears } from './figures/history-data.js';
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
@@ -67,8 +68,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   builtFiles.push([dollarsRel, dollarsFile]);
   const masterRel = masterPath(newest('data/emitted/hospital'));
   const masterFile = readJson(REPO_ROOT + masterRel);
-  // Each name as the pages print it (nameText: an initialism in capitals), as the hub and the HACRP site do.
-  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }]));
+  // The records as every site reads them (masterByCcn: names as the pages print them, a missing city as empty text).
+  const master = masterByCcn(masterFile);
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
   const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), HISTORY_PIN_ID, ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
   const atlas = JSON.parse(readPinned(ATLAS_ID));
@@ -78,8 +79,9 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     fy,
     meta: data.meta,
     conditions: data.conditions,
-    // Names and their aliases as the other sites print them (nameText: initialisms in capitals).
-    hospitals: data.hospitals.map((h) => ({ ...h, name: nameText(h.name), ...(h.alias ? { alias: nameText(h.alias) } : {}) })),
+    // Each as the other sites read the master's records (hospitalRecord: names and aliases as the pages print them, a
+    // missing city as empty text).
+    hospitals: data.hospitals.map(hospitalRecord),
     history: data.history,
     // The fiscal years whose file lists each group the history leaves out (history-data.js scopeYears), for Methods.
     historyScope: scopeYears(parseCsv(readPinned(HISTORY_PIN_ID))),
