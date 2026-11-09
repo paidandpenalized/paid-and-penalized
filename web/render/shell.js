@@ -97,8 +97,8 @@ const figureOf = ({ dollars, moved }) => (moved === undefined ? money(dollars) :
 const footField = (no, label, body, cls) => html`<div class="field ft__f ${cls}"><h2 class="field__label"><span class="field__no">${String(no)}</span>${label}</h2>${body}</div>`;
 
 // The footer, the back of the form: one numbered form row, then the signature lines. 1, the programs with their figures
-// and, on a line of their own, the ones under consideration; 2, the family's pages; 3, the data's fiscal year, the
-// hospitals with an estimate and the day the estimates last changed, with the corrections page (which keeps each site's
+// and, on a line of their own, the ones under consideration; 2, the family's pages; 3, the family's estimates and their
+// fiscal year (a program's own pages may show a newer one), the hospitals with an estimate and the day the estimates last changed, with the corrections page (which keeps each site's
 // dates); 4, the feedback form. Then the byline and credit, what the data is and is not, the Terms line, the license, the
 // form's number and, on a phone, the theme toggle. feedback: the form's address, prefilled for the page (layout.js
 // feedbackFor); shell: the build's facts.
@@ -118,7 +118,7 @@ export function familyFooter({ feedback, shell }) {
   const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v"><span class="vh">${estimated} </span>${figureOf(programs[p.id])}</span></li>`)}</ul>
 <p class="ft__soon">${COPY.footConsidered} ${considered}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
-  const asOf = html`<p>${fillAround((marks) => fill('footEstimates', { ...marks, n: count(hospitals) }), { fy: html`<span class="ft__fy">${fill('footFy', { fy: fyText })}</span>` })}</p>
+  const asOf = html`<p>${fillAround((marks) => fill('footEstimates', marks), { hospitals: html`<span class="ft__lead">${fill('footHospitals', { n: count(hospitals) })}</span>` })}</p>
 <p class="ft__note">${fillCopyKeep(COPY, 'footChanged', { date: isoDate(changed) }, ['date'])}<br><a href="${SITE.pages.corrections}">${COPY.footDates}</a></p>
 <span class="stamp stamp--ink ft__stamp" aria-hidden="true">${COPY.footStamp}</span>`;
   const fb = html`${externalLink(feedback, html`${COPY.feedback}${icon('arrow')}`)}<p class="ft__note">${COPY.footFeedbackNote}</p>`;
@@ -127,7 +127,7 @@ export function familyFooter({ feedback, shell }) {
 <div class="form ft">
 ${footField(1, COPY.programs, listed, 'ft__progs')}
 ${footField(2, COPY.footSite, site, 'ft__site')}
-${footField(3, COPY.footAsOf, asOf, 'ft__asof')}
+${footField(3, fill('footAsOf', { fy: fyText }), asOf, 'ft__asof')}
 ${footField(4, COPY.footFeedback, fb, 'ft__fb')}
 </div>
 <div class="ft__base">

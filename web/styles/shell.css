@@ -119,7 +119,7 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .ft__links li { max-width: none; }
 /* The listed links are each a 24px target (WCAG 2.2's minimum), not a 20px line. */
 .ft__links a, .ft__list a { display: inline-block; min-height: var(--target-min); padding-block: 2px; }
-.ft__fy { color: var(--ink); font: 700 1em var(--font-type); }
+.ft__lead { color: var(--ink); font: 700 1em var(--font-type); }
 .ft__note { margin-top: 6px; color: var(--ink-2); font: 400 0.75rem/1.5 var(--font-type); }
 .ft__asof .ft__note { padding-right: 64px; }
 .ft__base a { white-space: nowrap; }

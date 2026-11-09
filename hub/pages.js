@@ -35,10 +35,10 @@ const SITE_IDS = Object.keys(SITE.sites);
 // address and the #dollars section to the pages built).
 const programMethods = (id) => `${SITE.sites[id].path}methods/`;
 
-// The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
-// hubModel).
-function home({ hospitals, facts, shapes, bands, assets, robots }) {
-  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, bands, assets, robots });
+// The front page (hub/home/page.js), from every hub hospital, their story's facts, the atlas's state shapes and the
+// Readmissions site's year (data.js hubModel).
+function home({ hospitals, facts, shapes, bands, hrrpFy, assets, robots }) {
+  return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, bands, hrrpFy, assets, robots });
 }
 
 // The family Methods page: what an estimate is, how the hospital-acquired conditions counts differ from page to page
@@ -179,7 +179,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released });
   const { hub, hospitals: all, facts } = hubModel();
-  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, assets, robots }) });
+  ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, hrrpFy: hub.hrrp.fy, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {

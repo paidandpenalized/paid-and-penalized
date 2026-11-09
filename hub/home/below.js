@@ -157,9 +157,13 @@ const FIGURES = {
 };
 
 
-// A program's card: its name and abbreviation, dek, takeaway and histogram, national figure (an estimate, for the year)
-// and the way to its page.
-function card(p, { hospitals, facts, fy, domain }) {
+// The line under the Readmissions card's figure while its pages show a newer CMS file (next) than the estimates' year (fy):
+// '' once they agree.
+const yearSplit = (next, fy) => (next === fy ? '' : html`<p class="pc__yr">${fillCopy(SHARED, 'yearSplitCard', { next, fy })}</p>`);
+
+// A program's card: its name and abbreviation, dek, takeaway and histogram, national figure (an estimate, for the year),
+// the year line (the Readmissions card's, yearSplit) and the way to its page.
+function card(p, { hospitals, facts, fy, hrrpFy, domain }) {
   if (!TAKEAWAYS[p.id] || !FIGURES[p.id]) throw new RangeError(`hub home: the directory has no figure for the program "${p.id}"`);
   const bins = programBins(hospitals, p.id);
   const members = hospitals.filter((h) => h.est && inProgram(h.est, p.id));
@@ -179,6 +183,7 @@ function card(p, { hospitals, facts, fy, domain }) {
 <figure><figcaption>${TAKEAWAYS[p.id](members, bins)}</figcaption>${histogram(bins, { domain, label })}</figure>
 <p class="pc__big">${big}${estimateTag()}</p>
 <p class="pc__sub">${sub}</p>
+${p.id === 'hrrp' ? yearSplit(hrrpFy, fy) : ''}
 <a class="go" href="${p.path}" aria-label="${fill(`${link}Label`, { ab: p.ab, name: p.name })}">${fill(link, { ab: p.ab })}${arrow}</a>
 </article>`;
 }
@@ -187,11 +192,12 @@ function card(p, { hospitals, facts, fy, domain }) {
 // placeholder page (hub/coming.js).
 const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title="${p.long}">${p.ab}</abbr><b>${p.name}</b><span>${programDek(p.id)}</span><span class="hh__nextbox slip__none"><span>${COPY.soonNone}</span></span></a>`;
 
-// The directory. programs: the registry (SITE.programs); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year.
+// The directory. programs: the registry (SITE.programs); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year;
+// hrrpFy: the year the Readmissions site's pages show.
 // A card per program the dollar estimates hold (one of them with no page here, stage soon, is under construction: its
 // card's link says so), then the rest by group. The heading counts the programs with pages here (live), those under
 // construction, and those under consideration.
-export function directory({ programs, facts, hospitals, fy }) {
+export function directory({ programs, facts, hospitals, fy, hrrpFy = fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
   const soon = programs.filter((p) => !p.inData);
@@ -205,7 +211,7 @@ export function directory({ programs, facts, hospitals, fy }) {
 <div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(live.length - building)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
-<div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, domain }))}</div>
+<div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, hrrpFy: String(hrrpFy), domain }))}</div>
 <div class="soon">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
 </section>`;
 }

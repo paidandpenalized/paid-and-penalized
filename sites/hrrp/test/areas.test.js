@@ -229,3 +229,10 @@ test('"spans" lists the state with the most hospitals first; DC is counted from 
   assert.equal(ctx.hasDc, false);
   assert.equal(areaOf([cut('990092', 'DC')]).hasDc, true);
 });
+
+test('the program page says which year its pages show while it differs from the family estimates\', and nothing once they agree', () => {
+  const view = programView(area);
+  const line = (fy) => /<p class="prog__yr">([^<]*)<\/p>/.exec(programPage({ view, robots: null, assets: { ...ASSETS, shell: { ...ASSETS.shell, fy } } }))?.[1] ?? null;
+  assert.equal(line(view.fy - 1), `These pages show CMS’s FY${view.fy} file. The family’s estimates across the three programs, on the front page and in the footer, use FY${view.fy - 1}, the latest year all three share.`);
+  assert.equal(line(view.fy), null);
+});

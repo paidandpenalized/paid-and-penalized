@@ -146,9 +146,9 @@ const PEER_WHY = { size: 'peerNoSize', teach: 'peerNoTeach' };
 const peerToggle = () => html`<div class="peers" hidden><p class="peers__lbl" id="peers-l">${HOSPITAL_COPY.peersLabel}</p><div class="seg" role="group" aria-labelledby="peers-l">${PEER_MODES.map((mode, i) => html`<button type="button" data-peer="${mode}" aria-pressed="${i === 0 ? 'true' : 'false'}">${HOSPITAL_COPY[PEER_WORDS[mode]]}</button>`)}</div>${Object.entries(PEER_WHY).map(([mode, key]) => html`<p class="peers__why" id="peers-no-${mode}" data-why="${mode}" hidden>${HOSPITAL_COPY[key]}</p>`)}</div>`;
 
 // The page. hospitals: hubHospitals; facts: storyFacts of them; states: stateTotals of them; shapes: the atlas's state
-// shapes (loadHub); assets: the build's (assets.shell holds the fiscal year and the hub asset's address); robots: the
-// page's robots value.
-export function homePage({ hospitals, facts, states, shapes, bands, assets, robots }) {
+// shapes (loadHub); hrrpFy: the year the Readmissions site's pages show (loadHub().hrrp.fy; the dollars' year when left
+// out); assets: the build's (assets.shell holds the fiscal year and the hub asset's address); robots: the page's robots value.
+export function homePage({ hospitals, facts, states, shapes, bands, hrrpFy = null, assets, robots }) {
   const { fy, hubUrl } = assets.shell;
   // The last step's search: a family search box (hub/client/search.js mounts it) over the hospitals only, whose pick the
   // story's script takes and follows in place.
@@ -184,7 +184,7 @@ ${peerToggle()}
 </div>
 </div>
 <div class="wrap below">
-${directory({ programs: SITE.programs, facts, hospitals, fy })}
+${directory({ programs: SITE.programs, facts, hospitals, fy, hrrpFy: hrrpFy ?? fy })}
 ${methodsBrief({ h: example, fy, src: hubUrl, bands })}
 ${yourTurn({ feedback: feedbackFor({ path: '/' }) })}
 </div>`;
