@@ -186,6 +186,14 @@ test('scoreSwarm: defaults draw as before: no title, no zone, no mark, the caps 
 
 const rowsOf = (extra, hospitalFields = {}) => worksheetRows(withDerived(hospital({ peer: 2, ...hospitalFields, c: extra }), META), META);
 
+test('Step 5: a condition with exactly one case reads "1 case", never "1 cases"', () => {
+  const rows = rowsOf({ HF: m(40, 1.1, 1), COPD: m(1, 1.5) });
+  const figure = waterfallFigure({ rows, conditions: CONDITIONS, n: 4, edition: 'FY2027' }).text;
+  assert.match(figure, /1 case, under 25: not counted/);
+  assert.match(figure, /1 case \(under 25\)/);
+  assert.doesNotMatch(figure, /1 cases/);
+});
+
 test('Step 5: each zero row gives its reason: none measured, under 25 cases, at or under the median', () => {
   const rows = rowsOf({ HF: m(40, 1.1, 1), AMI: m(30, 0.9), COPD: m(10, 1.5), PN: m(40, 1.2, 1) });
   const wf = waterfallData(rows, CONDITIONS);
