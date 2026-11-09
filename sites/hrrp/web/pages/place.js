@@ -32,7 +32,7 @@ function figuresOf(view, shared) {
   // The top row's layout, chosen once: the map beside the size and peer figures stacked in the narrow column, or those two as a pair.
   const top = map ? { cls: 'place__pair', wide: RAIL } : { cls: 'place__pair place__pair--even', wide: HALF };
   const { wide } = top;
-  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, n, wide }));
+  const size = titled('size', t('figSizeTitle'), sizeFigure(f.size, { name: view.name, id: f.id, edition, posted: view.posted, n, wide }));
   const peers = titled('peer', t('figPeerTitle'), peersFigure(f.peers, { id: f.id, edition, total: f.size.n, n, wide }));
   const conditions = f.conditions.measuredAny
     ? titled('cond', t('figCondTitle'), conditionsFigure(f.conditions, { conditions: f.conditionList, id: f.id, edition, n }))

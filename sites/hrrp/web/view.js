@@ -288,6 +288,7 @@ export function placeView(place, ctx) {
     path: place.path,
     fy: ctx.meta.fy,
     edition: edition.label,
+    posted: fmtDate(ctx.meta.fileDate, 'long'),
     heading: placeFill('pageTitle', { name: place.name, edition: edition.label }),
     description: placeFill('pageDescription', { name: place.name, lead }),
     crumbs: placeCrumbs(place),
@@ -448,7 +449,6 @@ export function methodsView(ctx) {
     edition: edition.label,
     heading: methodsFill('pageTitle', { edition: edition.label }),
     description: methodsT('pageDescription'),
-    about: { intro: methodsFill('aboutIntro', { edition: edition.label }) },
     formula: {
       intro: methodsFill('formulaIntro', { conditions: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) }),
       cap: methodsFill('formulaCap', { cap: String(CAP_PCT), nm: meta.nm.toFixed(4), pay: edition.payLong }),

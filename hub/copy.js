@@ -8,7 +8,7 @@ export const COPY = typesetCopy({
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
-  estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
+  estimateHow: "The result is close to CMS's but not exact, and the page says how close: for a value CMS publishes, the largest difference this site found from it; for dollars, which CMS doesn't publish hospital by hospital, a likely range from a test against hospitals' own cost reports.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
   // Where the method itself is: the family's dollar estimates on the hospital-acquired conditions Methods page (its
   // dollars section, {dollars}), and each program's own figures on its Methods page ({hacrp}, {hrrp}: links).
@@ -57,7 +57,7 @@ export const COPY = typesetCopy({
   termsAdviceHeading: 'What the numbers are not',
   termsAdvice: "Nothing here is medical, legal, financial or investment advice. A hospital's result in a CMS program comes from CMS's formula applied to the data hospitals report to CMS. It is not a quality grade, and it says nothing about any one patient's care. Don't use these pages on their own to choose a hospital or a treatment.",
   termsAsOfHeading: 'How current it is',
-  termsAsOf: "Every page built from CMS data names the CMS file it uses and when CMS released it. CMS revises and replaces its files. This site can lag behind a new release; when it is updated, its corrections log says so. Before relying on a number for a decision, check it against CMS's own release.",
+  termsAsOf: "Each program's pages name the CMS file they use and when CMS released it. CMS revises and replaces its files. This site can lag behind a new release; when it is updated, its corrections log says so. Before relying on a number for a decision, check it against CMS's own release.",
   termsReuseHeading: 'Reusing this work',
   termsReuse: { text: "This site's text, charts and derived data are licensed under {contentLicense}: reuse them, commercially or not, with credit to Paid & Penalized and a link to the page. The code is under the {codeLicense} license. CMS's data are works of the U.S. government. The typefaces are under the SIL Open Font License.", claim: 'HUB-15' },
   termsWarrantyHeading: 'No warranty',
@@ -100,7 +100,7 @@ export const COPY = typesetCopy({
   correctionsProcessHeading: 'What happens to a report',
   correctionsProcess: 'Each report is checked against the CMS source. If the site is wrong, the page is fixed and an entry goes in the log below: what changed, when, and which pages and numbers it affects. Numbers are not changed quietly, and a mistake in an entry is fixed with a new entry.',
   correctionsCmsHeading: 'When CMS revises its data',
-  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each of the site's pages still names the CMS file it was built from and when CMS released it.",
+  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each program's pages still name the CMS file they were built from and when CMS released it.",
   correctionsSitesHeading: "Each site's data",
   correctionsSite: "{site}: CMS's file released {cms}; this site's numbers last changed {changed}.",
   correctionsLogHeading: 'The log',
