@@ -121,8 +121,9 @@ export const cmsDecimal = (x, dp) => {
   return x < 0 && Number(body) !== 0 ? `${MINUS}${body}` : body;
 };
 
-// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000". CMS's factors
-// are exact at four places, so no rounding rule enters; a what-if's own factors round as the page's other numbers do.
+// A payment factor to four decimals: factor(0.9988) is "0.9988", factor(1) "1.0000". Readmissions' factors are exact at
+// four places, as CMS publishes them; value-based purchasing's run to ten (factorText prints those in full where CMS's
+// value is quoted), and this rounds them, and a what-if's own factors, as the page's other numbers round.
 export const factor = (x) => decimal(x, 4);
 
 // A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
