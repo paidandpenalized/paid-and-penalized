@@ -152,12 +152,15 @@ export function money(x, { sign = false } = {}) {
 }
 
 // A range of dollars, low to high, as money() writes each end: "$850K–$1.2M"; the unit said once when both ends share
-// it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K").
+// it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K"). A range under
+// $10,000 whose ends money() would write in two units ("$764–$1K") gives both in whole dollars ("$764–$1,000").
+const WHOLE_RANGE_BELOW = 10_000;
 export function moneyRange(lo, hi) {
   if (!(lo <= hi)) throw new RangeError(`moneyRange: low ${lo} is above high ${hi}`);
-  const [a, b] = [money(lo), money(hi)];
-  if (lo < 0 || hi < 0) return `${a} to ${b}`;
   const unit = (s) => /[KMB]$/.exec(s)?.[0] ?? '';
+  let [a, b] = [money(lo), money(hi)];
+  if (unit(a) !== unit(b) && Math.max(Math.abs(lo), Math.abs(hi)) < WHOLE_RANGE_BELOW) [a, b] = [roundedDollars(lo), roundedDollars(hi)];
+  if (lo < 0 || hi < 0) return `${a} to ${b}`;
   return unit(a) && unit(a) === unit(b) ? `${a.slice(0, -1)}–${b.slice(1)}` : `${a}–${b}`;
 }
 

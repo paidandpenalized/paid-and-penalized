@@ -47,6 +47,11 @@ test('moneyRange says a shared unit once and never uses a dash beside a minus', 
   assert.equal(moneyRange(1_000_000, 1_400_000), '$1.0–1.4M');
   assert.equal(moneyRange(850_000, 1_200_000), '$850K–$1.2M');
   assert.equal(moneyRange(400, 900), '$400–$900');
+  // Ends that money() would write in two units, under $10,000: both in whole dollars.
+  assert.equal(moneyRange(764, 999.6), '$764–$1,000');
+  assert.equal(moneyRange(640, 1_090), '$640–$1,090');
+  assert.equal(moneyRange(-1_090, -640), '−$1,090 to −$640');
+  assert.equal(moneyRange(900, 12_000), '$900–$12K', 'past $10,000 the units stay');
   assert.equal(moneyRange(12_000, 12_400), '$12–12K');
   assert.equal(moneyRange(-12_000, 40_000), '−$12K to $40K');
   assert.equal(moneyRange(-1_400_000, -1_000_000), '−$1.4M to −$1.0M');
