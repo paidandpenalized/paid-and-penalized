@@ -120,8 +120,9 @@ export const cmsDecimal = (x, dp) => {
   return x < 0 && Number(body) !== 0 ? `${MINUS}${body}` : body;
 };
 
-// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
-export const factor = (x) => cmsDecimal(x, 4);
+// A payment factor to four decimals, as the page's other numbers round (a what-if's own factors included): factor(0.9988)
+// is "0.9988", factor(1) "1.0000". A factor quoted from CMS's file goes through cmsDecimal.
+export const factor = (x) => decimal(x, 4);
 
 // A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
 // gives it), never fewer than the four Readmissions' file gives: factorText(0.995) is "0.9950", factorText(1.0014638299)

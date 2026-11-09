@@ -28,6 +28,8 @@ export const COPY = {
   rankStateNone: { text: 'none of the {stateCount} in {stateName}', claim: 'HRRP-05' },
   rankPeer: { text: '{pct}% in peer group {group}', claim: 'HRRP-05' },
   rankPeerNone: { text: 'none in peer group {group}', claim: 'HRRP-05' },
+  // A share above none but under one percent, where the percent would round down to 0 ({n}: one).
+  rankUnder: { text: 'less than {n}', claim: null },
 
   // Hospital page: the verdict sentence.
   sumNoneMeasured: {

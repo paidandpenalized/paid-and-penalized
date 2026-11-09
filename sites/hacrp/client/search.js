@@ -23,7 +23,7 @@ export function placeEntries({ places = [] }) {
 // The asset's rows as search entries: [ccn, name, city, state, total, decision, zip].
 export function hospitalEntries({ hospitalPath, rows }) {
   return rows.map(([ccn, name, city, state, , , zip = '']) => ({
-    type: 'hospital', key: ccn, label: name, sub: [placeText({ city, state }), zip].filter(Boolean).join(' '), extra: `${city ?? ''} ${state} ${zip}`, href: hospitalHref(hospitalPath, ccn),
+    type: 'hospital', key: ccn, label: name, sub: [placeText({ city, state }), zip].filter(Boolean).join(' '), extra: [city, state, zip].filter(Boolean).join(' '), href: hospitalHref(hospitalPath, ccn),
   }));
 }
 

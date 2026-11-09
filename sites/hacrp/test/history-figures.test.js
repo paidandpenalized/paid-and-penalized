@@ -791,7 +791,9 @@ test('one year reads "1 year", never "1 years": the record summary, the gap tip 
   const chance = String(chanceFigure(S, { n: 6, source: SRC }));
   assert.match(chance, /Cut in 1 year: /);
   assert.doesNotMatch(chance, /1 years/);
-  // The tip's hospital count is singular for one, too.
-  assert.doesNotMatch(chance, /: 1 hospitals;/);
-  assert.match(chance, /: [\d,]+ hospitals?; chance/);
+  // The tip's hospital count is singular for one, too: a panel where one k was observed at exactly one hospital.
+  const one = { ...S, panelChance: { ...S.panelChance, observed: S.panelChance.observed.map((o, k) => (k === 2 ? 1 : o)) } };
+  const tipped = String(chanceFigure(one, { n: 6, source: SRC }));
+  assert.match(tipped, /Cut in 2 years: 1 hospital; chance/);
+  assert.doesNotMatch(tipped, /: 1 hospitals;/);
 });
