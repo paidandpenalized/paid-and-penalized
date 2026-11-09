@@ -341,3 +341,12 @@ test('Step 2: with an asset address the page holds heart failure only; the other
   }
   assert.ok(lean.includes('Hip/knee replacement') && /<th scope="row">Pneumonia/.test(lean), 'the switch and the table still name every condition');
 });
+
+test('Figure 2: a one-point share with exactly one hospital reads "1 hospital" in its tooltip', () => {
+  const { how } = data();
+  const bins = [{ x0: 10, x1: 11, n: 1 }, { x0: 11, x1: 12, n: 2 }];
+  const text = howPart({ ...how, dual: { ...how.dual, bins } }, { figure: counter(), edition: 'FY2027', estimateTag: '', hospitalsUrl: '/data/hospitals.json', worksheetUrl: '/data/worksheet.json' }).text;
+  assert.ok(text.includes('10% to 11% dual-eligible: 1 hospital<') || text.includes('10% to 11% dual-eligible: 1 hospital"'), 'one hospital');
+  assert.ok(text.includes('11% to 12% dual-eligible: 2 hospitals'));
+  assert.ok(!text.includes(': 1 hospitals'));
+});

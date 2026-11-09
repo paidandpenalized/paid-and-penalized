@@ -31,6 +31,7 @@ export const COPY = {
   fig2Zero: { text: '{zero} at zero', claim: null },
   fig2Over: { text: '{over} above {hi}', claim: null },
   fig2Tip: { text: '{from} to {to}: {count} hospitals', claim: null },
+  fig2TipOne: { text: '{from} to {to}: {count} hospital', claim: null },
   fig2Alt: { text: "Stacked dots of every hospital's {short} value, with the value that means as expected and the national median marked.", claim: null },
   fig3TakeCap: { text: '{cap} hospitals at or above {capValue} on {short} all count as {capValue}.', claim: null },
   fig3TakeBoth: { text: '{cap} hospitals at or above {capValue} on {short} all count as {capValue}, and {floor} at or below {floorValue} count as {floorValue}.', claim: null },

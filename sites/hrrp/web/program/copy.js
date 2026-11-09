@@ -148,6 +148,7 @@ export const COPY = {
   fig2Source: { text: 'CMS {edition} Hospital Readmissions Reduction Program supplemental data file (dual proportion and peer group).', claim: null },
   fig2Note: { text: "The marks on the axis are CMS's cutoffs between the groups: {cutoffs}.", claim: null },
   fig2Tip: { text: '{from} to {to} dual-eligible: {n} hospitals', claim: null },
+  fig2TipOne: { text: '{from} to {to} dual-eligible: {n} hospital', claim: null },
   fig2ColShare: { text: 'Dual-eligible share of stays', claim: null },
   fig2ColN: { text: 'Hospitals', claim: null },
   dualRange: { text: '{from} to {to}', claim: null },

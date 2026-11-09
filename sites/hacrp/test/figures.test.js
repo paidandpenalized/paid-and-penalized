@@ -22,6 +22,7 @@ import { buildPlaces } from '../web/places.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
+import { stackPanel } from '../web/explore-figures.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
@@ -402,3 +403,14 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
   }
 });
 
+
+test('the stacked-dots tooltip reads "1 hospital" for a column of one, "2 hospitals" for two', () => {
+  const id = MEASURE_IDS.find((k) => isSir(k));
+  const m = PD.measures[id];
+  const lone = { ...m, values: [0.31, 0.62, 0.62].sort((a, b) => a - b) };
+  const panel = stackPanel(id, lone, { rows: 12 });
+  const all = JSON.stringify(panel);
+  assert.match(all, /: 1 hospital[^s]/);
+  assert.match(all, /: 2 hospitals/);
+  assert.doesNotMatch(all, /: 1 hospitals/);
+});
