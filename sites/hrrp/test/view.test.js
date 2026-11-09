@@ -53,7 +53,8 @@ test('on the data: every hospital\'s rank line equals the direct computation', (
     }
     const inState = asc(all.filter((y) => y.st === h.st));
     const inPeer = asc(all.filter((y) => y.peer === h.peer));
-    assert.equal(got, `Larger cut than ${rankPct(sortedRed, h.red)}% of hospitals nationally, ${rankPct(inState, h.red)}% of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}, and ${rankPct(inPeer, h.red)}% in peer group ${h.peer}.`, h.id);
+    const share = (pct, whole, none) => (pct ? whole(pct) : none);
+    assert.equal(got, `Larger cut than ${share(rankPct(sortedRed, h.red), (p) => `${p}% of hospitals nationally`, 'no hospital nationally')}, ${share(rankPct(inState, h.red), (p) => `${p}% of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`, `none of the ${inState.length.toLocaleString('en-US')} in ${data.meta.states[h.st]}`)}, and ${share(rankPct(inPeer, h.red), (p) => `${p}% in peer group ${h.peer}`, `none in peer group ${h.peer}`)}.`, h.id);
   }
 });
 
