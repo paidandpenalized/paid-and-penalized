@@ -14,7 +14,7 @@ import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest,
 import { masterByCcn } from '../../../pipeline/master.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
-import { rangeOf, rangeShare } from './money.js';
+import { netRangeOf, rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -87,7 +87,8 @@ export function checkDollarsYear(dollars, fy) {
 
 // What the pages read of the dollar estimates (data/emitted/dollars): each hospital's row by CCN, every one of them in
 // the HACRP file, and the file's aggregates. Every dollar figure carries its likely range, from the back-test (the file's
-// `bands`): each estimated row carries its two (`ranges`: the dollars at stake and the net, money.js rangeOf), and
+// `bands`): each estimated row carries its two (`ranges`: the dollars at stake, money.js rangeOf, and the net, netRangeOf,
+// which takes the HAC range where the HAC cut is the whole net), and
 // `backtest` what a range means (the `share` of the back-test's misses a range spans, and the `fy` it was run on). A file
 // without `bands` can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
 // the slice it draws.
@@ -101,7 +102,7 @@ export function dollarsData(dollars, hospitals) {
   // A row with another status stops the build rather than get another reason's words.
   for (const r of rows.values()) if (!SHOWN_STATUSES.includes(r.status)) throw new RangeError(`HACRP: ${r.ccn} has the dollar status "${r.status}", which no page has words for`);
   const ranged = (r) => (r.status === 'estimated'
-    ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: rangeOf(bands, 'net', r.stratum, r.net) } } : r);
+    ? { ...r, ranges: { hac: rangeOf(bands, 'hac', r.stratum, r.atStake), net: netRangeOf(bands, r) } } : r);
   const byCcn = new Map([...rows].map(([ccn, r]) => [ccn, ranged(r)]));
   // The headline's `yes` (CMS's cut count) also goes by the name every group's rollup gives it (money-data.js), so one
   // formatter says "n of m" for the nation and for a state alike.

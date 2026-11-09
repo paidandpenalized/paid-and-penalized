@@ -14,7 +14,8 @@ function scaled(estimate, a, b) {
 // back-test's band, each measure's `overall`.
 export const ALL_STRATUM = 'all';
 
-// A hospital's likely range for one measure ('hac' for its dollars at stake, 'net' for the net of the three programs):
+// A hospital's likely range for one measure ('hac' for its dollars at stake, 'net' for the net of the three programs, 'hrrp'
+// or 'hvbp' for one program's dollars; a page's net takes netRangeOf):
 // its estimate times its stratum's two multipliers for that measure, from the back-test (each stratum's `low` and
 // `high`, exp(-p90) and exp(-p10): the range spans the middle of the misses its group's estimates made against their
 // cost reports, the group's own or a wider group's where it had too few; ALL_STRATUM takes every hospital's). bands:
@@ -24,6 +25,28 @@ export function rangeOf(bands, measure, stratum, estimate) {
   const band = stratum === ALL_STRATUM ? m?.overall : m?.strata.find((s) => s.stratum === stratum);
   if (!band) throw new RangeError(`rangeOf: no ${measure} band for stratum ${stratum}`);
   return scaled(estimate, band.low, band.high);
+}
+
+// The programs whose dollars make a dollar row's net, each named as the row's field and as the back-test's band
+// (bands.measures).
+const NET_PARTS = ['hrrp', 'hvbp', 'hac'];
+
+// The one program that makes a dollar row's whole net (the other two move nothing), or null when none does or more than
+// one does.
+export function soleProgram(row) {
+  const moving = NET_PARTS.filter((id) => row[id] !== 0);
+  return moving.length === 1 ? moving[0] : null;
+}
+
+// A dollar row's likely range for its net, so one dollar figure has one range on every page: when one program makes the
+// whole net, that program's band over the program's own dollars (as its pages give it: the HACRP pages' range of the
+// dollars at stake, for a net that is the HAC cut alone), its ends signed as the net; otherwise the net's band. row: the
+// dollar file's (net, stratum and each program's dollars); null for a net of $0.
+export function netRangeOf(bands, row) {
+  const only = soleProgram(row);
+  if (only === null) return rangeOf(bands, 'net', row.stratum, row.net);
+  const range = rangeOf(bands, only, row.stratum, Math.abs(row.net));
+  return range && row.net < 0 ? [-range[1], -range[0]] : range;
 }
 
 // The national range: a national sum of the cut times the back-test's resampled ratio of what cost reports recorded

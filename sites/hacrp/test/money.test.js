@@ -12,13 +12,16 @@ import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from '../web/constants.js';
 import { fill as siteFill } from '../web/copy.js';
 import { checkDollarsYear, dollarsData } from '../web/data.js';
-import { ALL_STRATUM, BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, rangeOf, rangeShare, sumRanges } from '../web/money.js';
+import { ALL_STRATUM, BASE_PARTS, OTHER_PARTS, cutDollars, cutText, hasMaTeaching, hospitalMoney, maKey, nationalRange, netRangeOf, rangeOf, rangeShare, sumRanges } from '../web/money.js';
 import { cliffFigure, moneyField, moneyVerdict, moneyWorksheet, shareSentence, statementLines } from '../web/money-figures.js';
 import { COPY as MONEY_COPY, fill as mfill, t as mt } from '../web/money/copy.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, esc, markupText as text } from './fixtures.js';
 import { DATA, NAT, PAGE_CTX, RANGE } from './pinned.js';
+import { soleProgram } from '../../../engine/js/dollars/ranges.js';
+import { loadHub } from '../../../hub/data.js';
+import { hubHospitals } from '../../../hub/model.js';
 
 const { model, estimate } = DATA;
 const rows = [...DATA.dollars.byCcn.values()];
@@ -148,6 +151,35 @@ test('the likely ranges: by stratum and measure, low first whatever the sign; no
   assert.equal(sumRanges([null]), null);
   // Each stratum's multipliers bracket a range that sits around the estimate: below it at the low end, above at the high.
   for (const s of BANDS.measures.hac.strata) assert.ok(s.low < 1 && s.high > 1, s.stratum);
+});
+
+test('one dollar figure, one likely range: a net one program makes alone takes that program\'s band, signed as the net; any other net the net\'s band', () => {
+  const stratum = BANDS.measures.net.strata[0].stratum;
+  const row = (hrrp, hvbp, hac) => ({ stratum, hrrp, hvbp, hac, net: hrrp + hvbp + hac });
+  assert.equal(soleProgram(row(0, 0, -1000)), 'hac');
+  assert.equal(soleProgram(row(-1000, 0, 0)), 'hrrp');
+  assert.equal(soleProgram(row(0, 500, 0)), 'hvbp');
+  assert.equal(soleProgram(row(-1000, 500, 0)), null);
+  assert.equal(soleProgram(row(0, 0, 0)), null);
+  // The HAC cut alone: the HAC range of the dollars at stake, its ends negated and in order.
+  const [lo, hi] = rangeOf(BANDS, 'hac', stratum, 1000);
+  assert.deepEqual(netRangeOf(BANDS, row(0, 0, -1000)), [-hi, -lo]);
+  assert.deepEqual(netRangeOf(BANDS, row(0, 1000, 0)), rangeOf(BANDS, 'hvbp', stratum, 1000));
+  assert.deepEqual(netRangeOf(BANDS, row(-1000, 0, 0)), rangeOf(BANDS, 'hrrp', stratum, 1000).map((x) => -x).reverse());
+  assert.deepEqual(netRangeOf(BANDS, row(-1000, 500, -200)), rangeOf(BANDS, 'net', stratum, -700));
+  assert.equal(netRangeOf(BANDS, row(0, 0, 0)), null);
+});
+
+test('every estimated hospital whose net is its HAC cut alone shows one range for it: the statement\'s HAC line, its net line and the hub\'s', () => {
+  const hub = new Map(hubHospitals(loadHub()).map((h) => [h.ccn, h.netRange]));
+  const alone = [...DATA.dollars.byCcn.values()].filter((r) => r.status === 'estimated' && soleProgram(r) === 'hac');
+  assert.ok(alone.length > 0, 'a hospital whose net is its HAC cut alone');
+  for (const r of alone) {
+    const [lo, hi] = r.ranges.hac;
+    assert.deepEqual(r.ranges.net, [-hi, -lo], r.ccn);
+    assert.deepEqual(hub.get(r.ccn), r.ranges.net, r.ccn);
+  }
+  for (const r of DATA.dollars.byCcn.values()) if (r.status === 'estimated') assert.deepEqual(hub.get(r.ccn), r.ranges.net, `${r.ccn}: the hub's net range is the HACRP page's`);
 });
 
 test('the statement adds up, in the payment\'s order: the parts make the total, the two programs adjust the base, the HAC cut takes 1% of everything after them', () => {

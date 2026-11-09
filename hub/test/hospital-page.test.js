@@ -349,3 +349,10 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
     assert.equal(indexed, HOSPITALS.filter((h) => h.est).length, 'hospital pages with an estimate indexable');
   }));
+
+test('a net one program makes alone shows that program\'s likely range: the HAC cut alone shows the HAC range the HACRP page shows', () => {
+  const alone = pick((h) => h.est && h.est.hac < 0 && h.est.hrrp === 0 && h.est.hvbp === 0, 'an estimated hospital whose net is its HAC cut alone');
+  const [lo, hi] = alone.netRange;
+  assert.ok(lo < alone.est.net && alone.est.net < hi && hi < 0);
+  assert.ok(mainOf(render(alone)).includes(`<span class="hh__rng-v">${moneyRange(lo, hi)}</span>`));
+});
