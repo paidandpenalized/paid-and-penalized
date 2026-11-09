@@ -10,6 +10,11 @@ export const COPY = typesetCopy({
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
   estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
+  // Where the method itself is: the family's dollar estimates on the hospital-acquired conditions Methods page (its
+  // dollars section, {dollars}), and each program's own figures on its Methods page ({hacrp}, {hrrp}: links).
+  methodsDollars: "The front page's and the hospital pages' dollar estimates are worked out step by step, and tested against hospitals' own cost reports, on the {dollars}.",
+  dollarsLink: 'hospital-acquired conditions Methods page',
+  methodsPrograms: "Each program's own figures, and how this site recomputes CMS's, are on its Methods page: {hacrp} and {hrrp}.",
   // How the hospital-acquired conditions counts differ from page to page (hub/pages.js hacCounts fills them).
   countsHeading: 'How the counts differ',
   countsCms: "In FY{fy}, CMS cut {yes} hospitals under the hospital-acquired conditions program. CMS gave {decidedYes} of them a Total HAC Score, and the program's own pages here count those, among the {decided} scored hospitals with a payment decision.",

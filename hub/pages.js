@@ -31,6 +31,9 @@ function siteLink(id) {
   return html`<a href="${path}">${title} <span class="short">(${subtitle})</span></a>`;
 }
 const SITE_IDS = Object.keys(SITE.sites);
+// A family site's Methods page (each site keeps it at methods/ under its folder; the build's link check holds the
+// address and the #dollars section to the pages built).
+const programMethods = (id) => `${SITE.sites[id].path}methods/`;
 
 // The front page (hub/home/page.js), from every hub hospital, their story's facts and the atlas's state shapes (data.js
 // hubModel).
@@ -54,7 +57,7 @@ function methods({ hospitals, fy, assets, robots }) {
 <p>${COPY.estimateWhat}</p>
 <p>${COPY.estimateHow}</p>
 <p>${COPY.estimateNot}</p>
-</section>
+${para('methodsDollars', { dollars: html`<a href="${programMethods('hacrp')}#dollars">${COPY.dollarsLink}</a>` })}${para('methodsPrograms', { hacrp: html`<a href="${programMethods('hacrp')}">${SITE.sites.hacrp.title}</a>`, hrrp: html`<a href="${programMethods('hrrp')}">${SITE.sites.hrrp.title}</a>` })}</section>
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
 ${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}</section>

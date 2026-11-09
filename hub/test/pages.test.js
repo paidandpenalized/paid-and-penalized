@@ -53,6 +53,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.doesNotMatch(methods, /id="ai"/);
     assert.doesNotMatch(methods, /deterministic code/);
     assert.match(methods, /href="\/about\/#ai"/);
+    // Where the methods themselves are: the dollar estimates' section of the HACRP Methods page, and both programs' pages.
+    assert.ok(methods.includes('<a href="/hacrp/methods/#dollars">hospital-acquired conditions Methods page</a>'), 'the dollars section');
+    assert.ok(methods.includes('<a href="/hacrp/methods/">Hospital-Acquired Conditions</a> and <a href="/hrrp/methods/">Readmissions</a>'), 'each program\'s Methods page');
     // Its description says what the page covers now that the AI paragraph is on /about/.
     assert.ok(methods.includes(`<meta name="description" content="${escapeHtml(COPY.methodsDescription)}">`));
     // How the hospital-acquired conditions counts differ from page to page, each count the dollar file's own, and the CCN
