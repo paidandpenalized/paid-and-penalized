@@ -9,8 +9,9 @@ export const COPY = Object.freeze({
   // ({amount}: the estimated dollars).
   gateHrrp: 'Readmissions (HRRP)',
   gateHrrpShort: 'Readmissions',
-  ruleHrrp: 'cut, up to {cap}',
-  ruleHrrpShort: 'cut, up to {cap}',
+  // The cap is a share of base payments, not of the inpatient pay the axis measures, so the rule says so.
+  ruleHrrp: 'cut, up to {cap} of base',
+  ruleHrrpShort: 'cut, up to {cap} of base',
   gateHac: 'Hospital-acquired conditions (HACRP)',
   gateHacShort: 'Hospital-acquired cond.',
   // "Highest scores", as step 3 says it (a higher HAC score is worse; never "top", which reads as the best hospitals). Short

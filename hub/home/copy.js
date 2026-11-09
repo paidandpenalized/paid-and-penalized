@@ -34,22 +34,23 @@ export const COPY = typesetCopy({
   // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} it does not list (never counted at $0),
   // when there are any.
   hrrpHead: 'Readmissions: most hospitals take a small cut.',
-  hrrpText: 'The readmissions program (HRRP) cuts pay, by up to {cap}, when a hospital’s readmissions run above expected. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.',
+  hrrpText: 'The readmissions program (HRRP) cuts a hospital’s base payments, by up to {cap}, when its risk-adjusted readmissions run above its peer group’s median. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.',
   hrrpZero: '{zeroN} pass through at {zero}.',
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut; CMS cut {cmsN} scored hospitals (the HACRP pages' count),
   // {estN} of them with an estimate here; {more}: hacMore when the chart also holds hospitals with an estimate CMS cut
-  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart cut by it alone. Short enough to fit above
-  // the chart on a phone.
+  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart with no Readmissions cut (value-based
+  // purchasing, the next step, still cuts some of them, so not "whose only cut"). Short enough to fit above the chart on
+  // a phone.
   hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
+  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} with no Readmissions cut.',
   hacMore: '; it also cut {n} it didn’t score',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.
   vbpHead: 'Value-based purchasing: some move right.',
-  vbpText: 'HVBP withholds {withhold} of each participant’s pay and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them in FY{fy}, estimated.',
+  vbpText: 'HVBP withholds {withhold} of each participant’s base payments and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them in FY{fy}, estimated.',
 
   // Step 5: the net. {part} and {whole}: the simple fraction nearest the share of hospitals with a net cut, in words
   // ("Two of every three").

@@ -67,20 +67,24 @@ export const COPY = typesetCopy({
   claimHypothetical: 'Hypothetical',
   // Each program's one-sentence dek (web/programs.js fills the placeholders from the programs' rules, in digits or in
   // words): on the placeholder pages of the programs without a page of their own (hub/coming.js), the
-  // Readmissions program page and the home page's directory. dekHrrp says "in the {days} days after leaving" where CMS says
-  // "within", since the house-words test reads "within" as a promised time.
-  dekHrrp: 'Cuts pay by up to {cap} when more patients than expected return to the hospital in the {days} days after leaving.',
+  // Readmissions program page and the home page's directory. dekHrrp says "in the {days} days after discharge" where CMS
+  // says "within", since the house-words test reads "within" as a promised time. Readmissions' cap and value-based
+  // purchasing's withhold are shares of base payments (the base operating DRG payment), not of all inpatient pay; the
+  // hospital-acquired conditions cut is a share of the whole payment, so its dek says "pay".
+  dekHrrp: "Cuts base payments by up to {cap} when a hospital's risk-adjusted readmissions in the {days} days after discharge run above its peer group's median.",
   dekHacrp: 'Cuts pay by a flat {cut} for {top} of hospitals with the highest infection and patient-safety scores.',
-  dekHvbp: 'Holds back {withhold} of pay and returns it by quality score, as a bonus or a net cut. Budget-neutral by design.',
+  dekHvbp: 'Holds back {withhold} of base payments and returns it by quality score, as a bonus or a net cut. Budget-neutral by design.',
   dekWageIndex: 'Raises or lowers the labor share of each payment to match local wages.',
   dekDsh: 'Adds payments for hospitals that serve many low-income patients, plus a share of an uncompensated-care pool.',
   dekIme: 'Adds payments for hospitals that train medical residents.',
-  dekIqr: "Hospitals that don't report required quality data lose {share} of their yearly payment increase.",
-  dekPi: 'Hospitals that miss electronic health record requirements lose {share} of their yearly increase.',
+  // The quality-reporting and electronic-records cuts are shares of the market-basket increase (before the productivity
+  // adjustment), which is more than the yearly update a hospital ends up with.
+  dekIqr: "Hospitals that don't report required quality data have {share} of the market-basket increase taken off their yearly payment update.",
+  dekPi: 'Hospitals that miss electronic health record requirements have {share} of the market-basket increase taken off their yearly update.',
   // Who is not in the Readmissions program: its Methods page and the hub's not-found page both say it (claim HRRP-11).
   notInHrrp: {
-    text: "The Readmissions program covers the hospitals Medicare pays under its inpatient payment system, so critical access hospitals and the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) are not in it and have no page here.",
-    claim: ['HRRP-11', 'HRRP-12', 'HRRP-13'],
+    text: "The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico's hospitals are not in it and have no page here.",
+    claim: ['HRRP-11', 'HRRP-12', 'HRRP-13', 'HRRP-16'],
   },
   dekTeam: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.',
 });
