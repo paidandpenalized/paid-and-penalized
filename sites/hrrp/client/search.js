@@ -19,7 +19,7 @@ const placeEntries = ({ places }) => places.map(([kind, key, name, path, n]) => 
 
 // The asset's hospitals as search entries; href: where a pick goes (the hospital's page).
 export const hospitalEntries = ({ hospitalPath, hospitals }) => hospitals.map((h) => ({
-  type: 'hospital', key: h.id, label: h.name, sub: [placeText({ city: h.city, state: h.st }), h.zip].filter(Boolean).join(' '), extra: `${h.city ?? ''} ${h.st} ${h.zip}`, href: `${hospitalPath}${h.id.toLowerCase()}/`,
+  type: 'hospital', key: h.id, label: h.name, sub: [placeText({ city: h.city, state: h.st }), h.zip].filter(Boolean).join(' '), extra: `${h.city} ${h.st} ${h.zip}`, href: `${hospitalPath}${h.id.toLowerCase()}/`,
 }));
 
 // The words an omnibox shows (what the site's boxes say for kinds, counts and failure).

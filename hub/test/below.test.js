@@ -357,3 +357,12 @@ test('a histogram whose labels would count hospitals its bars do not draw stops 
 test('the words below the story carry no digit: every number arrives through a placeholder', () => {
   for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(copyText(entry), /\d/, key);
 });
+
+test('the Readmissions card says which year its pages show while it differs from the estimates\', and nothing once they agree', () => {
+  const card = (out) => /<article class="pc">[\s\S]*?<\/article>/.exec(out)[0];
+  const later = String(directory({ programs: SITE.programs, facts, fy, hospitals, hrrpFy: fy + 1 }));
+  assert.ok(card(later).includes(`<p class="pc__yr">Its pages show CMS’s FY${fy + 1} file. This card uses FY${fy}, the latest year all three programs share.</p>`));
+  assert.equal(later.split('class="pc__yr"').length - 1, 1, 'under the Readmissions card only');
+  assert.doesNotMatch(String(directory({ programs: SITE.programs, facts, fy, hospitals, hrrpFy: fy })), /pc__yr/);
+  assert.doesNotMatch(String(directory({ programs: SITE.programs, facts, fy, hospitals })), /pc__yr/, 'no year given: the estimates\'');
+});

@@ -191,6 +191,8 @@ export function programView(ctx) {
   const link = (p) => ({ name: p.name, path: p.path });
   return {
     edition: edition.label,
+    // The edition's fiscal year, which the year line beside the family's (pages/program.js yearSplit) compares.
+    fy: edition.fy,
     heading: programFill('pageTitle', { edition: edition.label }),
     description: programFill('pageDescription', { edition: edition.label }),
     kicker: programFill('kicker', { edition: edition.label, n: String(edition.nYears) }),

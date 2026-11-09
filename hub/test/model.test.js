@@ -242,3 +242,11 @@ test('shellFacts: numbers for the footer and the tabs, and the day the estimates
     assert.throws(() => shellFacts({ facts, builtAt: bad, fy: 2026 }), RangeError, String(bad));
   }
 });
+
+test('a dollar file without one of the bands a net\'s likely range can take stops the build, naming it', () => {
+  for (const m of ['net', 'hrrp', 'hvbp', 'hac']) {
+    const { [m]: _, ...rest } = hub.dollars.bands.measures;
+    const dollars = { ...hub.dollars, bands: { ...hub.dollars.bands, measures: rest } };
+    assert.throws(() => hubHospitals({ ...hub, dollars }), new RegExp(`no back-test ${m} band \\(bands\\.measures\\.${m}\\)`), m);
+  }
+});

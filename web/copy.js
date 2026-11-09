@@ -27,18 +27,35 @@ export const COPY = typesetCopy({
   navLabel: 'Sections',
   // The footer, the back of the form: its four fields, their words, then the signature lines.
   footSite: 'The site',
-  footAsOf: 'Data as of',
+  // Field 3's label: the family's estimates (every program's, the front page's and the hospital pages') and their year,
+  // which a program's own pages may pass (yearSplitHrrp).
+  footAsOf: 'Family estimates, FY{fy}',
   footFeedback: 'Feedback',
   footEstimated: 'Estimated FY{fy}:',
   footMoved: '{amount} moved',
   footConsidered: 'Under consideration:',
-  footFy: 'FY{fy}',
-  footEstimates: '{fy} estimates from public CMS files, {n} hospitals.',
+  footHospitals: '{n} hospitals',
+  footEstimates: '{hospitals}, estimated from public CMS files.',
   footChanged: 'Estimates last changed {date}.',
   footDates: 'Dates and corrections',
   footStamp: 'Est.',
   footFeedbackNote: 'Opens a Google Form.',
   footForm: 'Form P&P-{yy} · FY{fy}',
+  // While the Readmissions pages show a newer CMS file than the family's estimates ({next} and {fy}): the line on the
+  // Readmissions program page (sites/hrrp/web/pages/program.js) and the one under the front page's Readmissions card
+  // (hub/home/below.js), each shown only while the two years differ.
+  yearSplitHrrp: { text: "These pages show CMS's FY{next} file. The family's estimates across the three programs, on the front page and in the footer, use FY{fy}, the latest year all three share.", claim: 'HACRP-12' },
+  // A hub or HACRP hospital page's note on a hospital whose Medicare agreement CMS lists as ended by the end of the
+  // dollars' fiscal year (render/closed.js): before the year began, or during it; its tail says what that means for the
+  // page's estimated dollars (none for $0); a date CMS doesn't list leaves the timing out.
+  closedBefore: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), before FY{fy} began. It was not paid under this ID in FY{fy}{tail}. This site keeps it in its totals.",
+  closedDuring: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), during FY{fy}. It was not paid under this ID after that{tail}. This site keeps it in its totals.",
+  closedUndated: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended ({reason}). This site keeps it in its totals.",
+  closedTailBeforeCut: ', so its estimated cut is unlikely to have been collected',
+  closedTailBeforeBonus: ', so its estimated bonus is unlikely to have been paid',
+  closedTailDuringCut: ', so only part of its estimated cut is likely to have been collected',
+  closedTailDuringBonus: ', so only part of its estimated bonus is likely to have been paid',
+  yearSplitCard: { text: "Its pages show CMS's FY{next} file. This card uses FY{fy}, the latest year all three programs share.", claim: 'HACRP-12' },
   bylineLead: 'Built by',
   bylineName: 'Dalton Haslam, MD, MBA',
   newTab: ' (opens in a new tab)',

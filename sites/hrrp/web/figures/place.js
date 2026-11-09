@@ -99,7 +99,7 @@ export function mapFigure(place, md, ctx, nextFigure) {
   } : {
     columns: [{ name: placeT('mapColHospital') }, { name: placeT('mapColCity') }, { name: placeT('mapColCut'), numeric: true }, { name: placeT('mapColBase'), numeric: true }],
     rows: [...place.hospitals].sort((a, b) => b.red - a.red || a.name.localeCompare(b.name, 'en')).map((h) => [
-      h.name, h.city ?? '\u2014', num(fmtPct(h.red), h.red), h.base > 0 ? num(fmtMoney(h.base), h.base) : num('—', null),
+      h.name, h.city || '\u2014', num(fmtPct(h.red), h.red), h.base > 0 ? num(fmtMoney(h.base), h.base) : num('—', null),
     ]),
   };
   return figure({

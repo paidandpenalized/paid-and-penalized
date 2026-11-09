@@ -1,9 +1,10 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/home.js at 33d1959), after HACRP's program page. The Readmissions
-// program page so far: the top (the kicker, the name, the deck with this year's count, the places to try) beside the
+// program page so far: the top (the kicker, the name, the deck with this year's count, the places to try, the year line) beside the
 // At-a-glance record card under its stamp, then the six Parts the section menu opens, each a numbered heading until its
 // figures are drawn. The search box under the deck (hidden until client/program.js mounts it) reads the hospitals
 // asset; the suggestions below it work without the script.
-import { fillAround, stamp } from '../../../../web/render/components.js';
+import { COPY as SHARED } from '../../../../web/copy.js';
+import { fillAround, fillCopy, stamp } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { searchForm } from '../../../../web/render/shell.js';
@@ -20,7 +21,11 @@ import { fill, t } from '../program/copy.js';
 import { estimateTag } from '../estimate-tag.js';
 import { SECTIONS, labelOf, recordCard, shellOf } from './parts.js';
 
-function top(view, { hospitalsUrl }) {
+// The line under the hints while these pages show a newer CMS file (next) than the family's estimates in the footer and on
+// the front page (fy, the shell's), both numbers: '' once they agree.
+const yearSplit = (next, fy) => (next === fy ? '' : html`<p class="prog__yr">${fillCopy(SHARED, 'yearSplitHrrp', { next: String(next), fy: String(fy) })}</p>`);
+
+function top(view, { hospitalsUrl, familyFy }) {
   const { deck, card } = view;
   const { metro } = view.try;
   const hints = fillAround((marks) => fill(metro ? 'heroTry' : 'heroTryNoMetro', marks), {
@@ -37,6 +42,7 @@ function top(view, { hospitalsUrl }) {
 <div class="prog__find stack">
 ${hospitalsUrl && searchForm({ id: 'hero', hero: true, src: hospitalsUrl, label: t('searchHeading'), find: t('searchFind'), findRest: t('heroFindRest'), placeholder: t('heroPlaceholder') })}
 <p class="prog__try">${hints}</p>
+${yearSplit(view.fy, familyFy)}
 </div>
 </div>
 <div class="prog__card stack">
@@ -69,7 +75,7 @@ export function programPage({ view, robots, assets, hospitalsUrl = null, workshe
     research: researchPart(view.research),
   };
   const body = html`<article class="wrap page page--prog prog">
-${top(view, { hospitalsUrl })}
+${top(view, { hospitalsUrl, familyFy: assets.shell.fy })}
 ${SECTIONS.map((id, i) => part(id, i + 1, labelOf(id, view.edition), bodies[id]))}
 </article>`;
   return page({

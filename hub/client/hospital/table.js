@@ -31,7 +31,7 @@ export function fillPeerTable(details, { peers, h, fill, fy, group }) {
     const th = node('th', { scope: 'row' }, me
       ? [cell('b', x.name), ' ', cell('span', fill('tableThis'), 'hh__metag')]
       : [node('a', { href: hospitalPathOf('hub', x.ccn) }, [x.name])]);
-    const tr = node('tr', { class: me ? 'hh__me' : null }, [th, cell('td', x.city ?? ''), cell('td', x.state ?? '')]);
+    const tr = node('tr', { class: me ? 'hh__me' : null }, [th, cell('td', x.city), cell('td', x.state ?? '')]);
     for (const col of COLS.slice(3, 7)) {
       tr.append(inProgram(x.est, col.id) ? cell('td', signedMoney(x.est[ROW_KEY[col.id]]), 'num') : cell('td', fill('notInProgram'), 'num hh__na'));
     }

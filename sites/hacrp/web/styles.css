@@ -63,6 +63,8 @@
 .hosp__decision { font-weight: 700; }
 .hosp__decision--pen { color: var(--pen-ink); }
 .hosp__why { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.55; }
+/* A hospital whose Medicare agreement has ended (pages/hospital.js closed), as the Readmissions pages set theirs. */
+.hosp__closed { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
 .hosp__lineblock { display: grid; gap: 6px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
 .hosp__line { font: 700 var(--fs-md)/1.35 var(--font-body); }
 .hosp__how { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }

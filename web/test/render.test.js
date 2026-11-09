@@ -275,12 +275,12 @@ test('shell: two theme toggles, one in the bar and one in the footer (the CSS sh
   assert.equal(footerOf(out).match(/class="theme-toggle"/g).length, 1);
 });
 
-test('shell: the footer is one numbered form row (programs, the site, data as of, feedback), then the signature lines', () => {
+test('shell: the footer is one numbered form row (programs, the site, the family estimates and their year, feedback), then the signature lines', () => {
   const foot = footerOf(page(PAGE));
   assert.match(foot, /^<footer class="foot">/);
   assert.ok(foot.includes('<div class="form ft">'));
   const labels = [...foot.matchAll(/<span class="field__no">(\d)<\/span>([^<]+)</g)].map((m) => [m[1], m[2]]);
-  assert.deepEqual(labels, [['1', 'Programs'], ['2', 'The site'], ['3', 'Data as of'], ['4', 'Feedback']]);
+  assert.deepEqual(labels, [['1', 'Programs'], ['2', 'The site'], ['3', 'Family estimates, FY2026'], ['4', 'Feedback']]);
   // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the ones under
   // consideration, linked to their placeholder pages.
   for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
@@ -297,9 +297,10 @@ test('shell: the footer is one numbered form row (programs, the site, data as of
   // 2: the family's pages, Methods first, Terms last.
   const site = [...foot.matchAll(/<li><a href="(\/[a-z]+\/)">([^<]+)<\/a><\/li>/g)].map((m) => m[1]);
   assert.deepEqual(site, ['/methods/', '/about/', '/corrections/', '/accessibility/', '/privacy/', '/terms/']);
-  // 3: the fiscal year, the hospitals with an estimate, and the day the estimates last changed, with the corrections page.
+  // 3: the hospitals with an estimate (the year is in the label), and the day the estimates last changed, with the
+  // corrections page.
   const words = textOf(foot);
-  assert.ok(words.includes('FY2026 estimates from public CMS files, 3 hospitals.'));
+  assert.ok(foot.includes('<p><span class="ft__lead">3 hospitals</span>, estimated from public CMS files.</p>'));
   assert.ok(words.includes('Estimates last changed October 22, 2026'));
   assert.match(foot, /<a href="\/corrections\/">Dates and corrections<\/a>/);
   // 4: the one feedback link, prefilled with the page, and what it opens.

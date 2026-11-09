@@ -24,6 +24,10 @@ const CUT = samplePages().find((p) => p.type === 'hub-hospital-cut');
 const ESTIMATED = hubHospitals(loadHub()).filter((h) => h.est);
 // A hospital with an estimate and no teaching status on record, picked by property.
 const NO_TEACH = ESTIMATED.find((h) => h.teach === null);
+// An estimated hospital whose Medicare agreement ended before the year began, with a net that moves (hospital pages'
+// closed note: web/render/closed.js).
+const HUB = loadHub();
+const CLOSED = ESTIMATED.find((h) => h.est.net < 0 && (HUB.master.get(h.ccn).inactive?.date ?? '9999') < `${HUB.fy - 1}-10-01`);
 // By property, for the what-if's edges: the hospital with the highest value-based purchasing factor in the data (its own
 // factor sits past the range's four-decimal end), and the one in both factor programs whose base is the largest share of
 // its pay (its hypothetical figures reach furthest past every actual one on the share axis).
@@ -40,6 +44,7 @@ const hypo = (page) => page.evaluate(() => ({
   struck: document.querySelectorAll('.hh__was').length,
   ghosts: document.querySelectorAll('.st__me--ghost').length,
   band: document.querySelector('[data-band] .hh__rng')?.checkVisibility() ?? false,
+  closed: document.querySelector('.hh__closed')?.checkVisibility() ?? null,
   hash: location.hash,
   result: document.querySelector('[data-result] .hh__rs').textContent,
   head: document.querySelector('[data-headline]').textContent,
@@ -148,6 +153,22 @@ for (const width of [390, 1280]) {
       assert.equal(teach.disabled, true);
       assert.match(teach.note ?? '', /no teaching status/);
       await assertQuiet(seen, 'the hospital page without a teaching status');
+    }));
+
+    it('a hospital whose Medicare agreement ended: the note on its net shows, hides under a scenario as the likely range does, and returns', () => withPage(tabs, { path: hospitalPathOf('hub', CLOSED.ccn), watched: true }, async (page, { seen }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForSelector('.st__h');
+      assert.equal((await hypo(page)).closed, true, 'the note shows');
+      const handle = page.locator('.st__h').first();
+      await handle.focus();
+      await stepAway(page, handle, ['Shift+ArrowRight', 'Shift+ArrowLeft']);
+      await page.waitForTimeout(SETTLED_MS);
+      const on = await hypo(page);
+      assert.deepEqual([on.banner, on.band, on.closed], [true, false, false], 'hidden with the likely range under a scenario');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(SETTLED_MS);
+      assert.equal((await hypo(page)).closed, true, 'back after Escape');
+      await assertQuiet(seen, 'the closed hospital\'s page');
     }));
 
     it('the what-if: a stepped or dragged handle marks the page hypothetical, and Escape or Reset puts it back', () => withPage(tabs, { path: CUT.path, watched: true }, async (page, { seen }) => {

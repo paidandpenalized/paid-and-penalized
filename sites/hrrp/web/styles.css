@@ -63,6 +63,7 @@
 .prog__deck strong { font-weight: 700; text-decoration: underline 2px var(--pen); text-underline-offset: 4px; text-decoration-skip-ink: none; }
 .prog__try { color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-type); }
 .prog__try a { color: var(--ink); text-decoration-color: var(--pen); }
+.prog__yr { max-width: 60ch; color: var(--ink-2); font: 400 var(--fs-sm)/1.55 var(--font-body); }
 .prog__card, .place__card { display: grid; gap: 16px; align-content: start; container-type: inline-size; }
 .prog__summary { display: flex; flex-wrap: wrap; }
 .prog__summary > .field { flex: 1 1 210px; }

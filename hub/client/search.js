@@ -20,7 +20,7 @@ export function hubEntries(hospitals) {
   const inState = new Map();
   const found = hospitals.map(({ ccn, name, city, state }) => {
     inState.set(state, (inState.get(state) ?? 0) + 1);
-    return { type: 'hospital', key: ccn, label: name, sub: placeText({ city, state }), extra: `${city ?? ''} ${state ?? ''}`.trim(), href: hospitalPathOf('hub', ccn) };
+    return { type: 'hospital', key: ccn, label: name, sub: placeText({ city, state }), extra: `${city} ${state ?? ''}`.trim(), href: hospitalPathOf('hub', ccn) };
   });
   const kind = fill('searchKindState');
   const states = US_STATES.map(([code, , name]) => {

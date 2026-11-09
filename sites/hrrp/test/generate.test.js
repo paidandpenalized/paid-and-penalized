@@ -45,6 +45,18 @@ test('released in production, the pages are indexable', () =>
     assert.equal(ctx.indexable.length, ctx.pages);
   }));
 
+test('released in production, a hospital no CMS file names keeps its page, unindexed, and the rest stay indexable', () =>
+  withTemp('pp-hrrp-', async (dir) => {
+    const unnamed = SLICE.hospitals[1];
+    const hospitals = SLICE.hospitals.map((h) => (h === unnamed ? { ...h, name: `Hospital ${h.id} (name not in CMS files)` } : h));
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    generateHrrp(ctx, { data: { ...SLICE, hospitals }, released: true, ...quiet });
+    const path = hospitalPath(unnamed.id);
+    assert.match(readFileSync(join(dir, path, 'index.html'), 'utf8'), /<meta name="robots" content="noindex">/);
+    assert.ok(!ctx.indexable.includes(path), 'not in the sitemap');
+    assert.equal(ctx.indexable.length, ctx.pages - 1);
+  }));
+
 test('a factor the formula does not reproduce stops the build and names the first such hospital, before any page', () =>
   withTemp('pp-hrrp-', async (dir) => {
     const moved = SLICE.hospitals.map((h, i) => (i === 2 ? { ...h, paf: h.paf === 1 ? 0.99 : 1 } : h));

@@ -4,6 +4,7 @@
 // for every hospital.
 import { MIN_DISCHARGES, contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
+import { cmsNamed } from '../../../pipeline/master.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { PAGE_SIZE } from './constants.js';
@@ -68,8 +69,11 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   for (const group of shared.areas.values()) {
     ctx.emit({ path: csvPath(fy, group.csvName), noindex: robots !== null, text: hospitalCsv(group.rows.map((r) => r.h)) });
   }
+  // A hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed) keeps its page, unindexed
+  // until a file names it.
   for (const hospital of hospitals) {
-    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, hospitalsUrl }) });
+    const own = robotsFor({ env: ctx.env, released, eligible: cmsNamed(hospital.name, hospital.id) });
+    ctx.emit({ path: hospitalPath(hospital.id), robots: own, text: hospitalPage({ view: hospitalView(hospital, shared), robots: own, assets, hospitalsUrl }) });
   }
   for (const place of places.list) {
     const view = placeView(place, area);

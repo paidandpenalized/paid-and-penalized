@@ -349,3 +349,26 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
     assert.equal(indexed, HOSPITALS.filter((h) => h.est).length, 'hospital pages with an estimate indexable');
   }));
+
+test('a hospital whose Medicare agreement ended before or during the year carries the note on its net (no estimate: under its status); one still in Medicare carries none', () => {
+  const fy = Number(FY);
+  const ended = (h, from, to) => { const d = HUB.master.get(h.ccn).inactive?.date; return d != null && d >= from && d <= to; };
+  const before = pick((h) => h.est && h.est.net < 0 && ended(h, '0000-01-01', `${fy - 1}-09-30`), 'an estimated net cut whose agreement ended before the year');
+  const during = pick((h) => h.est && h.est.net !== 0 && ended(h, `${fy - 1}-10-01`, `${fy}-09-30`), 'an estimated hospital whose agreement ended during the year');
+  const none = pick((h) => !h.est && ended(h, '0000-01-01', `${fy}-09-30`), 'a hospital with no estimate whose agreement ended');
+  const closed = (page) => /<p class="hh__closed">([^<]*)<\/p>/.exec(mainOf(page))?.[1] ?? null;
+  assert.match(closed(render(before)), new RegExp(`under CCN ${before.ccn} as ended on .*, before FY${FY} began\\. .*cut is unlikely to have been collected\\. This site keeps it in its totals\\.$`));
+  assert.match(closed(render(during)), new RegExp(`, during FY${FY}\\. It was not paid under this ID after that, so only part of its estimated (cut|bonus) is likely`));
+  const page = render(none);
+  assert.ok(page.indexOf('class="hh__closed"') > page.indexOf('class="hh__status"'), 'under its status');
+  assert.doesNotMatch(closed(page), /estimated/, 'no estimate to qualify');
+  assert.ok(HOSPITALS.filter((h) => ended(h, '0000-01-01', `${fy}-09-30`)).every((h) => closed(render(h)) !== null), 'every such hospital');
+  assert.equal(closed(render(pick((h) => h.est && !HUB.master.get(h.ccn).inactive, 'an estimated hospital still in Medicare'))), null, 'and no other');
+});
+
+test('a net one program makes alone shows that program\'s likely range: the HAC cut alone shows the HAC range the HACRP page shows', () => {
+  const alone = pick((h) => h.est && h.est.hac < 0 && h.est.hrrp === 0 && h.est.hvbp === 0, 'an estimated hospital whose net is its HAC cut alone');
+  const [lo, hi] = alone.netRange;
+  assert.ok(lo < alone.est.net && alone.est.net < hi && hi < 0);
+  assert.ok(mainOf(render(alone)).includes(`<span class="hh__rng-v">${moneyRange(lo, hi)}</span>`));
+});
