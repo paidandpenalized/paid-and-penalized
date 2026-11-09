@@ -74,7 +74,7 @@ export const COPY = typesetCopy({
   privacySearchHeading: 'Searching and sharing',
   privacySearch: "The hospital search downloads a list of hospitals and searches it in your browser. What you type isn't sent anywhere. A what-if you share is stored in the link after its # sign, a part of the address browsers don't send to servers.",
   privacyFeedbackHeading: 'Sending feedback',
-  privacyFeedback: "The feedback link opens a Google Form owned by the project's Google account. Google receives what you submit, along with your IP address, under {googlePolicy}. The form doesn't collect email addresses and doesn't ask you to sign in.",
+  privacyFeedback: "The feedback link opens a Google Form owned by the project's Google account. Google receives what you submit, along with your IP address, under {googlePolicy}. The form doesn't collect email addresses and doesn't require you to sign in.",
   privacyFeedback2: "The site and page you came from are filled in for you; you can change or clear them. One optional question asks how to reach you, if you'd like a reply, and another asks which role best describes you. Answers go to a private spreadsheet.",
   privacyPhiHeading: 'Leave out patient information',
   privacyPhi: "Don't include any patient information in feedback: no names, dates of birth, record numbers or details about anyone's care.",
