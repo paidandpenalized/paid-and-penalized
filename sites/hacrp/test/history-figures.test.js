@@ -780,6 +780,10 @@ test('one year reads "1 year", never "1 years": the record summary, the gap tip 
   assert.match(never, /Never cut in 1 year</);
   assert.doesNotMatch(never, /1 years/);
   assert.match(String(recordStrip({ ...rec, cut: 0, decided: 2 }, S.fys)), /Never cut in 2 years</);
+  // Cut in its one decided year: "Cut in 1 of 1 year".
+  const once = String(recordStrip({ ...rec, cut: 1, decided: 1 }, S.fys));
+  assert.match(once, /Cut in 1 of 1 year</);
+  assert.doesNotMatch(once, /1 years/);
   const gap = String(gapFigure(S, { n: 8, source: SRC }));
   assert.match(gap, /1 year apart: /);
   assert.doesNotMatch(gap, /1 years apart/);
@@ -787,4 +791,7 @@ test('one year reads "1 year", never "1 years": the record summary, the gap tip 
   const chance = String(chanceFigure(S, { n: 6, source: SRC }));
   assert.match(chance, /Cut in 1 year: /);
   assert.doesNotMatch(chance, /1 years/);
+  // The tip's hospital count is singular for one, too.
+  assert.doesNotMatch(chance, /: 1 hospitals;/);
+  assert.match(chance, /: [\d,]+ hospitals?; chance/);
 });

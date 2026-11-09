@@ -100,6 +100,9 @@ test('rankLine: the share of hospitals with a smaller cut, nationally, in the st
   const small = Array.from({ length: 6 }, (_, i) => hosp({ id: String(990001 + i), red: i === 0 ? 0.1 : 0.5 + i / 10, peer: 1, st: i < 3 ? 'ZZ' : 'YY' }));
   assert.equal(rankLine(small[3], rankContext(small, states)), 'Larger cut than 50% of hospitals nationally, none of the 3 in Yonderland, and 50% in peer group 1.');
   assert.doesNotMatch(rankLine(small[3], rankContext(small, states)), /\b0%/);
+  // A cut larger than one of 150 is under 1% but not none: the percent stays (it rounds to 0%), "none" is never said.
+  const many = Array.from({ length: 150 }, (_, i) => hosp({ id: String(990001 + i), red: (i + 1) / 1000 }));
+  assert.match(rankLine(many[1], rankContext(many, states)), /^Larger cut than 0% of hospitals nationally, 0% of the 150 in Zedland, and 0% in peer group 1\.$/);
   // The source printed "1 other hospitals"; one reads singular here.
   const zeros2 = withZeros(2);
   assert.equal(rankLine(zeros2[0], rankContext(zeros2, states)), 'No reduction, like 1 other hospital.');

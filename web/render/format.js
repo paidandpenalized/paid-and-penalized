@@ -42,10 +42,11 @@ export function fractionWord(share, determiner = 'a') {
   return word.includes('-') ? word : `${determiner} ${word}`;
 }
 
-// The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 // "a" or "an" before an initialism read letter by letter: "an SSI", "an MRSA", "a CDI". The letters whose names start
 // with a vowel sound are A, E, F, H, I, L, M, N, O, R, S and X.
 export const articleFor = (initialism) => (/^[AEFHILMNORSX]/.test(initialism) ? 'an' : 'a');
+
+// The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
 // A place as the pages print it: "City, ST", or as much of it as there is ('' for neither).
@@ -111,8 +112,16 @@ function withSign(x, dp, plus) {
 // A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
 export const decimal = (x, dp) => withSign(x, dp, '');
 
+// A CMS value to dp decimals, rounded as JavaScript's toFixed rounds (the stored double's own value), not as Intl does:
+// the engines store each value CMS publishes so that toFixed prints CMS's own text (1.00505 is "1.0050"), and Intl would
+// split some ties the other way. A true minus for negatives; no sign on a value that rounds to zero.
+export const cmsDecimal = (x, dp) => {
+  const body = Math.abs(x).toFixed(dp);
+  return x < 0 && Number(body) !== 0 ? `${MINUS}${body}` : body;
+};
+
 // A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
-export const factor = (x) => decimal(x, 4);
+export const factor = (x) => cmsDecimal(x, 4);
 
 // A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
 // gives it), never fewer than the four Readmissions' file gives: factorText(0.995) is "0.9950", factorText(1.0014638299)

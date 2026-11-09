@@ -78,7 +78,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     fy,
     meta: data.meta,
     conditions: data.conditions,
-    hospitals: data.hospitals.map((h) => ({ ...h, name: nameText(h.name) })),
+    // Names and their aliases as the other sites print them (nameText: initialisms in capitals).
+    hospitals: data.hospitals.map((h) => ({ ...h, name: nameText(h.name), ...(h.alias ? { alias: nameText(h.alias) } : {}) })),
     history: data.history,
     // The fiscal years whose file lists each group the history leaves out (history-data.js scopeYears), for Methods.
     historyScope: scopeYears(parseCsv(readPinned(HISTORY_PIN_ID))),

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
+import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -140,4 +140,14 @@ test('pctFloor rounds a share down, never across a step: higher-than sentences s
   assert.equal(pctFloor(0.12345, 1), '12.3%');
   assert.equal(pctFloor(0), '0%');
   assert.equal(pctFloor(1), '100%');
+});
+
+test('cmsDecimal and factor round as the engines store CMS values (toFixed), not as Intl does', () => {
+  // 1.00505 and 0.01265 are stored so that toFixed(4) prints CMS's text; Intl reads them as ties and rounds up.
+  assert.equal(cmsDecimal(1.00505, 4), '1.0050');
+  assert.equal(cmsDecimal(0.01265, 4), '0.0126');
+  assert.equal(factor(1.00505), '1.0050');
+  assert.equal(factor(1), '1.0000');
+  assert.equal(cmsDecimal(-0.0173, 4), '−0.0173');
+  assert.equal(cmsDecimal(-0.00004, 4), '0.0000', 'no sign on a value that rounds to zero');
 });

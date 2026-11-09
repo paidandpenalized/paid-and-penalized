@@ -125,8 +125,11 @@ export const COPY = {
   chanceText: { text: 'Take the hospitals CMS made a decision on every year it cut anyone. If each year’s cut fell on them at random, at that year’s share, most would have been cut a few times and almost none every year: the hollow dots. The solid dots are what happened.', claim: null },
   chanceText2: { text: "Chance makes a hill in the middle; the record starts high at none and falls away. More hospitals than chance were never cut, and far more were cut nearly every year. Hospitals cut a few times are fewer than chance would give.", claim: null },
   chanceTakeaway: { text: 'Of the {hospitals} hospitals with a decision in all {years} years CMS cut anyone, {never} were never cut (chance: about {chanceNever}) and {all} were cut every one of those years (chance: {chanceAll}).', claim: null },
-  chanceTip: { text: 'Cut in {k} years: {observed} hospitals; chance: {chance}', claim: null },
-  chanceTipOne: { text: 'Cut in {k} year: {observed} hospitals; chance: {chance}', claim: null },
+  chanceTip: { text: 'Cut in {k} years: {hospitals}; chance: {chance}', claim: null },
+  chanceTipOne: { text: 'Cut in {k} year: {hospitals}; chance: {chance}', claim: null },
+  // The tip's count of hospitals ({n}), one or many.
+  chanceHospitals: { text: '{n} hospitals', claim: null },
+  chanceHospitalsOne: { text: '{n} hospital', claim: null },
   chanceKey: { text: '● What happened   ○ If each year’s cut fell at random. Up the side: hospitals.', claim: null },
   chanceOneIn: { text: 'one in {n}', claim: null },
   chanceAlt: { text: 'For each number of years cut, the hospitals that were cut that many times, beside the number chance alone would give.', claim: null },
@@ -155,6 +158,7 @@ export const COPY = {
   // ---------- the hospital page ----------
   recordHeading: { text: 'Its record, fiscal years {first} to {last}', claim: null },
   recordSummary: { text: 'Cut in {cut} of {decided} years', claim: null },
+  recordSummaryOne: { text: 'Cut in {cut} of {decided} year', claim: null },
   recordSummaryNone: { text: 'Never cut in {decided} years', claim: null },
   recordSummaryNoneOne: { text: 'Never cut in {decided} year', claim: null },
   recordCut: { text: 'Cut', claim: null },

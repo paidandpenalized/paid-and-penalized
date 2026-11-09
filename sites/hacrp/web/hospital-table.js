@@ -65,7 +65,7 @@ export function withState(hash, code) {
 }
 
 // A hospital as the search lists it: "Name, City, ST".
-export const hospitalLabel = (cells) => `${cellOf(cells, 'name')}, ${cellOf(cells, 'city')}, ${cellOf(cells, 'state')}`;
+export const hospitalLabel = (cells) => [cellOf(cells, 'name'), cellOf(cells, 'city'), cellOf(cells, 'state')].filter(Boolean).join(', ');
 // What a query is matched against, in lowercase: the label and the CCN, so a name, a city or a CCN finds the
 // hospital. The search box and the table's filter share it, so both find the same hospitals.
 export const searchKey = (cells) => `${hospitalLabel(cells)} ${cellOf(cells, 'ccn')}`.toLowerCase();

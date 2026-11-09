@@ -90,5 +90,7 @@ test('hospital names are printed as nameText has them, initialisms in capitals, 
   assert.ok(changed.length > 0, 'some names carry an initialism');
   const byId = new Map(emitted.hospitals.map((h) => [h.id, h]));
   for (const h of raw.hospitals) assert.equal(byId.get(h.id).name, nameText(h.name), h.id);
+  // An alias, printed beside the name, is cased the same way.
+  for (const h of raw.hospitals) if (h.alias) assert.equal(byId.get(h.id).alias, nameText(h.alias), `${h.id} alias`);
   for (const r of emitted.master.values()) assert.equal(r.name, nameText(r.name), r.ccn);
 });
