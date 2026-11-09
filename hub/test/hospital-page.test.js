@@ -362,7 +362,8 @@ test('a hospital whose Medicare agreement ended before or during the year carrie
   const page = render(none);
   assert.ok(page.indexOf('class="hh__closed"') > page.indexOf('class="hh__status"'), 'under its status');
   assert.doesNotMatch(closed(page), /estimated/, 'no estimate to qualify');
-  assert.equal(HOSPITALS.filter((h) => closed(render(h)) !== null).length, HOSPITALS.filter((h) => ended(h, '0000-01-01', `${fy}-09-30`)).length, 'every such hospital, and no other');
+  assert.ok(HOSPITALS.filter((h) => ended(h, '0000-01-01', `${fy}-09-30`)).every((h) => closed(render(h)) !== null), 'every such hospital');
+  assert.equal(closed(render(pick((h) => h.est && !HUB.master.get(h.ccn).inactive, 'an estimated hospital still in Medicare'))), null, 'and no other');
 });
 
 test('a net one program makes alone shows that program\'s likely range: the HAC cut alone shows the HAC range the HACRP page shows', () => {

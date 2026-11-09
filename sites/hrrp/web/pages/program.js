@@ -22,8 +22,8 @@ import { estimateTag } from '../estimate-tag.js';
 import { SECTIONS, labelOf, recordCard, shellOf } from './parts.js';
 
 // The line under the hints while these pages show a newer CMS file (next) than the family's estimates in the footer and on
-// the front page (fy, the shell's): '' once they agree.
-const yearSplit = (next, fy) => (String(next) === String(fy) ? '' : html`<p class="prog__yr">${fillCopy(SHARED, 'yearSplitHrrp', { next: String(next), fy: String(fy) })}</p>`);
+// the front page (fy, the shell's), both numbers: '' once they agree.
+const yearSplit = (next, fy) => (next === fy ? '' : html`<p class="prog__yr">${fillCopy(SHARED, 'yearSplitHrrp', { next: String(next), fy: String(fy) })}</p>`);
 
 function top(view, { hospitalsUrl, familyFy }) {
   const { deck, card } = view;

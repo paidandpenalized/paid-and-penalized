@@ -42,7 +42,8 @@ export const COPY = typesetCopy({
   footFeedbackNote: 'Opens a Google Form.',
   footForm: 'Form P&P-{yy} · FY{fy}',
   // While the Readmissions pages show a newer CMS file than the family's estimates ({next} and {fy}): the line on the
-  // Readmissions program page, and the one under the front page's Readmissions card (yearNote, web/render/components.js).
+  // Readmissions program page (sites/hrrp/web/pages/program.js) and the one under the front page's Readmissions card
+  // (hub/home/below.js), each shown only while the two years differ.
   yearSplitHrrp: { text: "These pages show CMS's FY{next} file. The family's estimates across the three programs, on the front page and in the footer, use FY{fy}, the latest year all three share.", claim: 'HACRP-12' },
   // A hub or HACRP hospital page's note on a hospital whose Medicare agreement CMS lists as ended by the end of the
   // dollars' fiscal year (render/closed.js): before the year began, or during it; its tail says what that means for the

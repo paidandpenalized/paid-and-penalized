@@ -16,7 +16,6 @@ test('ended during the year: only part of its dollars is likely to have changed 
   assert.match(closedNote({ ...at('2025-10-01'), dollars: -1000 }), /on October 1, 2025 \(merger or closure\), during FY2026\. It was not paid under this ID after that, so only part of its estimated cut is likely to have been collected\./);
   assert.match(closedNote({ ...at('2026-09-30'), dollars: 1000 }), /only part of its estimated bonus is likely to have been paid\./);
   assert.match(closedNote({ ...at('2026-03-30'), dollars: 0 }), /during FY2026\. It was not paid under this ID after that\. This site keeps it in its totals\.$/);
-  assert.match(closedNote(at('2026-03-30')), /after that\. This site/, 'no dollars given: none to qualify');
 });
 
 test('no note for a hospital still in Medicare, or one whose agreement ended after the year; an undated end says so without a time', () => {

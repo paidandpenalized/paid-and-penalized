@@ -4,6 +4,7 @@
 // for every hospital.
 import { MIN_DISCHARGES, contrib } from '../../../engine/js/hrrp/formula.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
+import { cmsNamed } from '../../../pipeline/master.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { PAGE_SIZE } from './constants.js';
@@ -22,10 +23,6 @@ import { programPage } from './pages/program.js';
 import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH, csvPath, dictionaryPath, hospitalPath } from './links.js';
 import { buildPlaces } from './places.js';
 import { areaContext, hospitalContext, hospitalView, methodsView, placeView, programView } from './view.js';
-
-// Whether a CMS file gives the hospital a name: the hospital master names one that none does "Hospital <CCN> (name not
-// in CMS files)" (pp_engine/master.py build_record), and its page stays out of search engines until a file names it.
-export const cmsNamed = (h) => h.name !== `Hospital ${h.id} (name not in CMS files)`;
 
 // The first hospital whose factor the formula does not reproduce, or null.
 export function firstMismatch(hospitals, meta) {
@@ -72,9 +69,10 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   for (const group of shared.areas.values()) {
     ctx.emit({ path: csvPath(fy, group.csvName), noindex: robots !== null, text: hospitalCsv(group.rows.map((r) => r.h)) });
   }
-  // A hospital no CMS file names (the master's stand-in name, cmsNamed) keeps its page, unindexed until a file names it.
+  // A hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed) keeps its page, unindexed
+  // until a file names it.
   for (const hospital of hospitals) {
-    const own = robotsFor({ env: ctx.env, released, eligible: cmsNamed(hospital) });
+    const own = robotsFor({ env: ctx.env, released, eligible: cmsNamed(hospital.name, hospital.id) });
     ctx.emit({ path: hospitalPath(hospital.id), robots: own, text: hospitalPage({ view: hospitalView(hospital, shared), robots: own, assets, hospitalsUrl }) });
   }
   for (const place of places.list) {

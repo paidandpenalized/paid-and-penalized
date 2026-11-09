@@ -7,6 +7,12 @@ import { isoDate } from './format.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
+// The sentence for when the agreement ended, and its tail for the page's dollars: a cut or a bonus.
+const WHEN = {
+  before: { key: 'closedBefore', cut: 'closedTailBeforeCut', bonus: 'closedTailBeforeBonus' },
+  during: { key: 'closedDuring', cut: 'closedTailDuringCut', bonus: 'closedTailDuringBonus' },
+};
+
 // ccn: the hospital's; inactive: the master's { date (YYYY-MM-DD or null), reason } or null; fy: the dollars' fiscal year
 // (October 1 of the year before to September 30); dollars: the page's estimated dollars it qualifies (negative a cut,
 // positive a bonus, 0 or none for neither). '' for a hospital whose agreement had not ended by the year's end.
@@ -15,7 +21,7 @@ export function closedNote({ ccn, inactive, fy, dollars = 0 }) {
   const { date, reason } = inactive;
   if (!date) return fill('closedUndated', { ccn, reason });
   if (date > `${fy}-09-30`) return '';
-  const when = date < `${fy - 1}-10-01` ? 'Before' : 'During';
-  const kind = dollars < 0 ? 'Cut' : dollars > 0 ? 'Bonus' : null;
-  return fill(`closed${when}`, { ccn, date: isoDate(date), reason, fy: String(fy), tail: kind ? fill(`closedTail${when}${kind}`) : '' });
+  const when = WHEN[date < `${fy - 1}-10-01` ? 'before' : 'during'];
+  const tail = dollars < 0 ? when.cut : dollars > 0 ? when.bonus : null;
+  return fill(when.key, { ccn, date: isoDate(date), reason, fy: String(fy), tail: tail ? fill(tail) : '' });
 }

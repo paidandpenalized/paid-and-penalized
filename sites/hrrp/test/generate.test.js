@@ -6,9 +6,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, siteDates } from '../../../pipeline/site/context.js';
 import { escapeHtml } from '../../../web/render/html.js';
-import { REPO_ROOT } from '../../../pipeline/files.js';
 import { ASSETS, withTemp } from '../../../pipeline/test/helpers.js';
-import { HRRP, cmsNamed, generateHrrp } from '../web/generate.js';
+import { HRRP, generateHrrp } from '../web/generate.js';
 import { PROGRAM_PATH, hospitalPath } from '../web/links.js';
 import { buildPlaces } from '../web/places.js';
 import { loadHrrpOnce } from './fixtures.js';
@@ -50,8 +49,6 @@ test('released in production, a hospital no CMS file names keeps its page, unind
   withTemp('pp-hrrp-', async (dir) => {
     const unnamed = SLICE.hospitals[1];
     const hospitals = SLICE.hospitals.map((h) => (h === unnamed ? { ...h, name: `Hospital ${h.id} (name not in CMS files)` } : h));
-    assert.equal(cmsNamed(hospitals[1]), false);
-    assert.ok(SLICE.hospitals.every(cmsNamed), 'the real names are CMS names');
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     generateHrrp(ctx, { data: { ...SLICE, hospitals }, released: true, ...quiet });
     const path = hospitalPath(unnamed.id);
@@ -59,12 +56,6 @@ test('released in production, a hospital no CMS file names keeps its page, unind
     assert.ok(!ctx.indexable.includes(path), 'not in the sitemap');
     assert.equal(ctx.indexable.length, ctx.pages - 1);
   }));
-
-test('the stand-in name the noindex rule reads is the one the hospital master writes', () => {
-  const master = readFileSync(join(REPO_ROOT, 'engine/py/pp_engine/master.py'), 'utf8');
-  assert.ok(master.includes('f"Hospital {ccn} (name not in CMS files)"'), 'pp_engine/master.py build_record: update cmsNamed with it');
-  assert.equal(cmsNamed({ id: '990001', name: 'Hospital 990001 (name not in CMS files)' }), false);
-});
 
 test('a factor the formula does not reproduce stops the build and names the first such hospital, before any page', () =>
   withTemp('pp-hrrp-', async (dir) => {

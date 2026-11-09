@@ -3,11 +3,10 @@
 // records, then the real files checked by property.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { REPO_ROOT, masterPath, newestYear, readJson } from '../files.js';
-import { masterByCcn } from '../master.js';
+import { cmsNamed, masterByCcn } from '../master.js';
 import { hospitalRecord, placeText } from '../../web/render/format.js';
-import { loadHub } from '../../hub/data.js';
-import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 
 const SYNTHETIC = {
@@ -34,13 +33,18 @@ test('names and aliases read as the pages print them; a record with no alias get
   assert.deepEqual(hospitalRecord({ id: '990003', name: 'X', city: undefined }).city, '');
 });
 
-test('every site reads every hospital with a city as text, though the newest master has some with none', () => {
+test('every hospital reads with a city as text, though the newest master has some with none', () => {
   const raw = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
   assert.ok(raw.hospitals.some((r) => r.city === null), 'the newest master has a record with no city (if not, this test no longer covers one)');
   const textCity = (r) => typeof r.city === 'string';
-  assert.ok([...loadHub().master.values()].every(textCity), 'hub');
-  assert.ok([...loadHacrp().master.values()].every(textCity), 'HACRP');
-  const hrrp = loadHrrp();
-  assert.ok([...hrrp.master.values()].every(textCity), 'Readmissions, the master');
-  assert.ok(hrrp.hospitals.every(textCity), 'Readmissions, its own file');
+  // The hub and the HACRP site read the master through masterByCcn alone; the Readmissions site reads its own file too.
+  assert.ok([...masterByCcn(raw).values()].every(textCity), 'the master');
+  assert.ok(loadHrrp().hospitals.every(textCity), 'Readmissions, its own file');
+});
+
+test('the stand-in name cmsNamed reads is the one the hospital master writes', () => {
+  const master = readFileSync(REPO_ROOT + 'engine/py/pp_engine/master.py', 'utf8');
+  assert.ok(master.includes('f"Hospital {ccn} (name not in CMS files)"'), 'pp_engine/master.py build_record: update cmsNamed with it');
+  assert.equal(cmsNamed('Hospital 990001 (name not in CMS files)', '990001'), false);
+  assert.equal(cmsNamed('Example General Hospital', '990001'), true);
 });
