@@ -65,11 +65,13 @@ function sampleOf(label, table, type, rows, pathOf, join = () => null) {
 }
 
 // The sample hospitals by type, each the first in the newest HACRP file (in the file's order) that CMS cut, that has no
-// score, and that has a score and was not cut: [type, what it is, the test].
+// score, that has a score and was not cut, and that is in no HACRP decision (Maryland's: the hatched "N/A" pill, which axe
+// leaves some text unjudged under): [type, what it is, the test].
 const HOSPITALS = [
   ['hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'],
   ['hospital-unscored', 'with no score', (h) => h.total === null],
   ['hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'],
+  ['hospital-no-decision', 'with no HACRP decision (the hatched N/A pill)', (h) => h.paymentReduction === 'N/A'],
 ];
 
 // The sample hospital's page of a type (HOSPITALS), { type, name, path, hospital: its emitted record }, from the
