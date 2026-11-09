@@ -428,3 +428,9 @@ test('the dot plot takeaway puts the right article before each infection measure
   assert.ok(stackTake('MRSA', PD.measures.MRSA).includes('with an MRSA value'));
   assert.ok(stackTake('CDI', PD.measures.CDI).includes('with a CDI value'));
 });
+
+test('the kinds figure takeaway lowercases the second group after the semicolon, as the first group opens the sentence', () => {
+  const m = /were cut most often \([^)]*\); ([^,]*) hospitals, least/.exec(PAGE);
+  assert.ok(m, 'the takeaway is on the page');
+  assert.match(m[1], /^[a-z]|^(Medicare|Medicaid|CMS)|^[A-Z]{2,}/, m[1]);
+});
