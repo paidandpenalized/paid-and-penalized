@@ -125,7 +125,7 @@ describe('the what-if fits the window', { concurrency: CONCURRENCY }, () => {
   }
 });
 
-// A focused element's part in the walk, and whether it sits under the top bar. In the page: the skip link, the top
+// A focused element's part in the walk, whether it sits under the top bar, and whether any other sticky or fixed element covers it. In the page: the skip link, the top
 // bar's search (or, on a phone, the button that opens it), the theme toggle, a nav item (by position) or the footer's
 // feedback link; its rect against the bar's.
 // The skip link is left out of the rect check: it is placed over the top of the page on purpose, above the bar. The
@@ -153,8 +153,30 @@ async function focusFacts([feedbackLink, snap]) {
   const barBox = bar?.getBoundingClientRect();
   const under = Boolean(barBox) && role !== 'skip' && !bar.contains(el) && box.width * box.height > 0
     && box.top < barBox.bottom - snap && box.bottom > barBox.top && box.left < barBox.right && box.right > barBox.left;
+  // Wholly covered by any other sticky or fixed element (the what-if's result box held at a phone's foot, the hub's peer
+  // row): a 3 x 3 grid of points inside the element's box, those in the window, each tested for what is on top. The skip
+  // link is over the page on purpose.
+  const holders = new Set();
+  let seen = 0;
+  let hit = 0;
+  if (role !== 'skip') {
+    for (const fx of [0.1, 0.5, 0.9]) for (const fy of [0.15, 0.5, 0.85]) {
+      const x = box.left + fx * box.width;
+      const y = box.top + fy * box.height;
+      if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+      seen++;
+      const top = document.elementFromPoint(x, y);
+      if (!top || el.contains(top) || top.contains(el)) continue;
+      let holder = top;
+      while (holder && holder !== document.body && !['sticky', 'fixed'].includes(getComputedStyle(holder).position)) holder = holder.parentElement;
+      if (!holder || holder === document.body || holder.contains(el)) continue;
+      hit++;
+      holders.add(`${holder.localName}.${String(holder.className).split(/\s+/)[0]}`);
+    }
+  }
+  const covered = seen > 0 && hit === seen ? [...holders].join(', ') : null;
   const words = (el.getAttribute('aria-label') || el.textContent || '').trim().split(/\s+/).filter(Boolean).length;
-  return { role, under, desc: `<${el.localName}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(/\s+/)[0]}` : ''}> (${words} words)`, box: [box.top, box.bottom].map(Math.round), bar: barBox && [barBox.top, barBox.bottom].map(Math.round) };
+  return { role, under, covered, desc: `<${el.localName}${el.id ? `#${el.id}` : ''}${el.className && typeof el.className === 'string' ? `.${el.className.split(/\s+/)[0]}` : ''}> (${words} words)`, box: [box.top, box.bottom].map(Math.round), bar: barBox && [barBox.top, barBox.bottom].map(Math.round) };
 }
 
 // Presses `key` until `done(steps)` says so, at most MAX_PRESSES times; each step is the focused element's facts.
@@ -202,6 +224,8 @@ async function keyboardWalk(page, path) {
 
   const hidden = [...forward, ...backward].filter((s) => s.under).map((s) => `${s.desc} at ${s.box} under the bar at ${s.bar}`);
   assert.deepEqual([...new Set(hidden)], [], 'focused elements under the top bar');
+  const covered = [...forward, ...backward].filter((s) => s.covered).map((s) => `${s.desc} at ${s.box} under ${s.covered}`);
+  assert.deepEqual([...new Set(covered)], [], 'focused elements wholly under a sticky or fixed element');
 }
 
 describe('keyboard', { concurrency: CONCURRENCY }, () => {

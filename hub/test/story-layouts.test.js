@@ -177,7 +177,7 @@ test('a 1x window far shorter than a laptop\'s keeps the device\'s floor where t
   assert.ok(WIDE_MAX > 0 && WIDE_MAX < 0.25);
 });
 
-// The column step 3's words point at ("the tall column: 147 whose only cut is this one") stands a few dots wide, so it
+// The column step 3's words point at ("the tall column: 147 with no Readmissions cut") stands a few dots wide, so it
 // reads as a column, not a thread, at every size; its count's anchor is its top left.
 for (const size of SIZES.filter((s) => s.dpr >= 1)) {
   test(`at ${size.name}: the hospital-acquired conditions column is a few dots wide`, () => {

@@ -3,6 +3,7 @@
 // one strip and as scored on the strip under it, a line joining each one that moves), and before and after a change
 // to every value (shiftStrip: the same strip drawn twice, for a page script to move between). Drawn from the values
 // alone; the caller's words name what they mean.
+import { tickStep } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
@@ -78,6 +79,7 @@ export function silhouette(values, { x, lo, hi, bins, y, h, most = null }) {
 
 // values: sorted; floor, cap; domain [lo, hi]; labels { reported, scored, floor, cap, pulled }. Each strip is the
 // values' silhouette (as reported, then as scored); each value that moves is a dot on both strips, joined by a line.
+// format(value, step): an axis label, given the gap between ticks so its decimals can fit it (a gap of 0.5 needs one).
 export function pullIn({ values, floor, cap, domain: [lo, hi], labels, format, width }) {
   const left = 4;
   const right = width - 8;
@@ -117,7 +119,7 @@ ${floor > lo ? html`<line class="chart-boundary" x1="${fx}" x2="${fx}" y1="${y1 
 ${text({ x: cx + 4, y: y1 + bandH + 16, anchor: 'start', cls: 'chart-cap chart-label--halo', body: labels.cap })}
 ${text({ x: right, y: y1 + bandH + 30, anchor: 'end', cls: 'chart-label chart-label--halo', body: labels.pulled })}
 ${beyond ? text({ x: right, y: y1 - 8, anchor: 'end', cls: 'chart-note', body: labels.beyond(beyond) }) : ''}
-<g transform="translate(0 ${r2(end)})">${axis({ scale: x, orient: 'bottom', ticks: narrow ? 4 : 8, format })}</g>`,
+<g transform="translate(0 ${r2(end)})">${axis({ scale: x, orient: 'bottom', ticks: narrow ? 4 : 8, format: (v) => format(v, tickStep(lo, hi, narrow ? 4 : 8)) })}</g>`,
   });
 }
 

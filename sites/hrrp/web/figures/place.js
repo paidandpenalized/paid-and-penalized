@@ -85,8 +85,9 @@ export function mapFigure(place, md, ctx, nextFigure) {
   const nCut = place.hospitals.filter((h) => h.red > 0).length;
   const cut = fmtPct(top.h.red);
   const hospitals = hospitalsText(place.hospitals.length);
-  const takeaway = place.hospitals.length === 1 ? (nCut ? placeFill('mapTakeawayOneCut', { cut }) : placeT('mapTakeawayOneNone'))
-    : !nCut ? placeFill('mapTakeawayNone', { hospitals }) : placeFill(nCut === 1 ? 'mapTakeawayOnly' : 'mapTakeaway', { nCut: fmtInt(nCut), hospitals, cut, name: top.h.name });
+  const takeaway = (place.hospitals.length === 1 ? (nCut ? placeFill('mapTakeawayOneCut', { cut }) : placeT('mapTakeawayOneNone'))
+    // The name ends the sentence, so one that ends in a period ("Inc.") gives it the sentence's own.
+    : !nCut ? placeFill('mapTakeawayNone', { hospitals }) : placeFill(nCut === 1 ? 'mapTakeawayOnly' : 'mapTakeaway', { nCut: fmtInt(nCut), hospitals, cut, name: top.h.name.replace(/\.$/, '') }));
   const note = [
     placeT(md.dense ? 'mapNoteDense' : 'mapNote'),
     around && placeFill('mapNoteAround', { where: placeT(place.states.length > 1 ? 'mapAroundMany' : 'mapAroundOne') }),
@@ -112,9 +113,10 @@ ${keyOf({ dense: md.dense, around })}`, note, table,
 // ---------- the size of the cuts ----------
 
 // The figures below take n, the page's counter, and call it only when they draw (as mapFigure does).
-// sd: place-data sizeData(); edition: the edition's label; name: the place's.
-// wide: the wide drawing's width, by where the page sets the figure (layout.js: RAIL beside the map, HALF in a pair).
-export function sizeFigure(sd, { name, id, edition, n, wide }) {
+// sd: place-data sizeData(); edition: the edition's label; posted: the day CMS posted its file, as the page writes dates;
+// name: the place's. wide: the wide drawing's width, by where the page sets the figure (layout.js: RAIL beside the map,
+// HALF in a pair). Every place page has this figure, so its source line names the file and when CMS posted it.
+export function sizeFigure(sd, { name, id, edition, posted, n, wide }) {
   const tip = (i) => {
     const r = sd.rows[i];
     const words = { n: fmtInt(r.n), share: pct0(r.share), nation: pct0(r.nationShare) };
@@ -131,7 +133,7 @@ export function sizeFigure(sd, { name, id, edition, n, wide }) {
       : sd.nNone === 0 ? ['sizeTakeawayAll', { hospitals: hospitalsText(sd.n), average: fmtPct(sd.avg) }]
         : ['sizeTakeaway', { hospitals: hospitalsText(sd.n), zero: fmtInt(sd.nNone), average: fmtPct(sd.avg) }];
   return figure({
-    n: n(), takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition }), csvName: `hrrp-${id}-cuts`,
+    n: n(), takeaway: placeFill(key, { nation: pct0(sd.nationNone), ...words }), source: placeFill('sizeSource', { edition, date: posted }), csvName: `hrrp-${id}-cuts`,
     ...drawn(draw, wide), alt: placeFill('sizeAlt', { name }), note: placeFill('sizeNote', { name }),
     table: {
       columns: [{ name: placeT('sizeColFrom'), numeric: true }, { name: placeT('sizeColTo'), numeric: true }, { name: placeT('sizeColN'), numeric: true }, { name: placeT('sizeColShare'), numeric: true }, { name: placeT('sizeColNation'), numeric: true }],

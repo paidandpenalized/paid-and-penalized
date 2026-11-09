@@ -42,6 +42,10 @@ export function fractionWord(share, determiner = 'a') {
   return word.includes('-') ? word : `${determiner} ${word}`;
 }
 
+// "a" or "an" before an initialism read letter by letter: "an SSI", "an MRSA", "a CDI". The letters whose names start
+// with a vowel sound are A, E, F, H, I, L, M, N, O, R, S and X.
+export const articleFor = (initialism) => (/^[AEFHILMNORSX]/.test(initialism) ? 'an' : 'a');
+
 // The text with its first letter in upper case, for a label in sentence case; '' stays ''.
 export const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -108,8 +112,31 @@ function withSign(x, dp, plus) {
 // A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
 export const decimal = (x, dp) => withSign(x, dp, '');
 
-// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
+// A CMS value the engine stores past the places CMS prints (Readmissions' ratios, medians and weights), to dp decimals,
+// rounded as JavaScript's toFixed rounds (the stored double's own value), not as Intl does: the engine stores each so that
+// toFixed prints CMS's own text (1.00505 is "1.0050"), and Intl would split some ties the other way. A true minus for
+// negatives; no sign on a value that rounds to zero.
+export const cmsDecimal = (x, dp) => {
+  const body = Math.abs(x).toFixed(dp);
+  return x < 0 && Number(body) !== 0 ? `${MINUS}${body}` : body;
+};
+
+// A payment factor to four decimals: factor(0.9988) is "0.9988", factor(1) "1.0000". Readmissions' factors are exact at
+// four places, as CMS publishes them; value-based purchasing's run to ten (factorText prints those in full where CMS's
+// value is quoted), and this rounds them, and a what-if's own factors, as the page's other numbers round.
 export const factor = (x) => decimal(x, 4);
+
+// A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
+// gives it), never fewer than the four Readmissions' file gives: factorText(0.995) is "0.9950", factorText(1.0014638299)
+// "1.0014638299". At that many places the value is exact, so no rounding rule enters, and the base times the factor less
+// one gives the program's dollars.
+const FACTOR_MIN_PLACES = 4;
+const FACTOR_MAX_PLACES = 10;
+export function factorText(f) {
+  let places = FACTOR_MIN_PLACES;
+  while (places < FACTOR_MAX_PLACES && Math.abs(Number(f.toFixed(places)) - f) > 1e-12) places += 1;
+  return decimal(f, places);
+}
 
 // As decimal, with + for positives.
 export const signed = (x, dp = 1) => withSign(x, dp, '+');
@@ -137,12 +164,15 @@ export function money(x, { sign = false } = {}) {
 }
 
 // A range of dollars, low to high, as money() writes each end: "$850K–$1.2M"; the unit said once when both ends share
-// it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K").
+// it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K"). A range under
+// $10,000 whose ends money() would write in two units ("$764–$1K") gives both in whole dollars ("$764–$1,000").
+const WHOLE_RANGE_BELOW = 10_000;
 export function moneyRange(lo, hi) {
   if (!(lo <= hi)) throw new RangeError(`moneyRange: low ${lo} is above high ${hi}`);
-  const [a, b] = [money(lo), money(hi)];
-  if (lo < 0 || hi < 0) return `${a} to ${b}`;
   const unit = (s) => /[KMB]$/.exec(s)?.[0] ?? '';
+  let [a, b] = [money(lo), money(hi)];
+  if (unit(a) !== unit(b) && Math.max(Math.abs(lo), Math.abs(hi)) < WHOLE_RANGE_BELOW) [a, b] = [roundedDollars(lo), roundedDollars(hi)];
+  if (lo < 0 || hi < 0) return `${a} to ${b}`;
   return unit(a) && unit(a) === unit(b) ? `${a.slice(0, -1)}–${b.slice(1)}` : `${a}–${b}`;
 }
 

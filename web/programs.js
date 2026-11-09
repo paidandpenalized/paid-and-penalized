@@ -19,8 +19,9 @@ export const VBP_WITHHOLD_PCT = 2;
 export const HRRP_WINDOW_DAYS = 30;
 // The share of hospitals, from the highest score down, that hospital-acquired conditions cuts: the top quarter.
 export const HAC_TOP_SHARE = 0.25;
-// The share of its yearly payment increase a hospital loses for not reporting quality data (Quality reporting), and for
-// missing electronic health record requirements (Electronic health records).
+// The share of the market-basket increase (before the productivity adjustment) taken off a hospital's yearly update for
+// not reporting quality data (Quality reporting), and for missing electronic health record requirements (Electronic health
+// records): 42 CFR 412.64(d)(2) and (d)(3).
 export const IQR_REDUCTION_SHARE = 0.25;
 export const PI_REDUCTION_SHARE = 0.75;
 // The number of surgeries whose episodes the surgical episodes program measures.

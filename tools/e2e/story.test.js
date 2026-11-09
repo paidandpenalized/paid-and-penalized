@@ -159,7 +159,7 @@ for (const [width, height] of [[320, 640], [375, 667], [390, 844], [414, 896]]) 
       // The longest line the readout can show (Maryland's) leaves the map where it was.
       await page.locator('.smalls [data-st="MD"]').focus();
       await settle(page);
-      assert.match(await page.locator('.readout').textContent(), /^Maryland: not in these programs/);
+      assert.match(await page.locator('.readout').textContent(), /^Maryland: not adjusted by these programs/);
       const q = await parts();
       assert.deepEqual([q.readout.height, q.map.top, q.map.height], [p.readout.height, p.map.top, p.map.height], 'the readout keeps its height; the map stays put');
       await assertQuiet(seen, `the phone story at ${width}×${height}`);
@@ -279,7 +279,7 @@ describe('states you can read, and Find yours', () => {
       const { cols, rows } = await (await fetch(document.querySelector('form#find').dataset.src)).json();
       const at = (c) => cols.indexOf(c);
       const of = (status) => rows.find((r) => r[at('status')] === status);
-      return [['m', 'Not in these programs', of('m')[at('ccn')], of('m')[at('name')]], ['n', 'No estimate', of('n')[at('ccn')], of('n')[at('name')]]];
+      return [['m', 'Not adjusted', of('m')[at('ccn')], of('m')[at('name')]], ['n', 'No estimate', of('n')[at('ccn')], of('n')[at('name')]]];
     });
     for (const [, status, ccn, name] of picks) {
       await visit(page, tabs.base, `/?h=${ccn}`);

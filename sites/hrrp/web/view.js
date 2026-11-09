@@ -22,7 +22,7 @@ import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeD
 import { MIN_BAND, dollarsPerStep, drawsBands, drawsFlips, drawsWorth, peerFlips, pictureData, sizeBands } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
-import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, ratio } from './numbers.js';
+import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, fmtShare, ratio } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
@@ -140,7 +140,7 @@ export function hospitalView(h, ctx) {
     type: typeText(h),
     peer: {
       value: fill('peerValue', { peer: String(h.peer), n: String(PEERS.length) }),
-      note: fill('peerNote', { pct: fmtPct(h.dual * 100, 1) }),
+      note: fill('peerNote', { pct: fmtShare(h.dual, 1) }),
     },
     stars: starsOf(h),
     stamps: [
@@ -244,7 +244,7 @@ function placeCrumbs(place) {
 const stateRank = (place, S, ctx) => {
   if (place.kind !== 'state') return null;
   const rank = ctx.stateMeans.findIndex((v) => v <= S.meanRed + 1e-12) + 1;
-  return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0) };
+  return { rank, of: ctx.stateMeans.length - (ctx.hasDc ? 1 : 0), last: rank === ctx.stateMeans.length && rank > 1 };
 };
 
 // The places inside this one, each with its summary (summarize's result over the hospitals of it that are in this place: a metro
@@ -278,7 +278,7 @@ export function placeView(place, ctx) {
   const rank = stateRank(place, S, ctx);
   const dc = rank && ctx.hasDc ? placeT('deckAndDc') : '';
   const avg = S.n === 1 ? placeFill('deckAvgOne', { pct: fmtPct(S.meanRed) }) : placeFill('deckAvgMany', { hospitals: hospitals(S.n), pct: fmtPct(S.meanRed) });
-  const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
+  const rankWords = rank ? placeFill(rank.rank === 1 ? 'deckRankFirst' : rank.last ? 'deckRankLast' : 'deckRankNth', { n: String(rank.of), dc, ...(rank.rank === 1 || rank.last ? {} : { nth: ordinal(rank.rank) }) }) : placeT('deckNoRank');
   const lead = deckLead(S, edition.label);
   const kind = placeT(KIND_KEY[place.kind]);
   const spans = place.kind === 'metro' && place.states.length > 1;
@@ -288,6 +288,7 @@ export function placeView(place, ctx) {
     path: place.path,
     fy: ctx.meta.fy,
     edition: edition.label,
+    posted: fmtDate(ctx.meta.fileDate, 'long'),
     heading: placeFill('pageTitle', { name: place.name, edition: edition.label }),
     description: placeFill('pageDescription', { name: place.name, lead }),
     crumbs: placeCrumbs(place),
@@ -448,7 +449,6 @@ export function methodsView(ctx) {
     edition: edition.label,
     heading: methodsFill('pageTitle', { edition: edition.label }),
     description: methodsT('pageDescription'),
-    about: { intro: methodsFill('aboutIntro', { edition: edition.label }) },
     formula: {
       intro: methodsFill('formulaIntro', { conditions: spelled(CONDS.length), minCases: String(MIN_DISCHARGES) }),
       cap: methodsFill('formulaCap', { cap: String(CAP_PCT), nm: meta.nm.toFixed(4), pay: edition.payLong }),

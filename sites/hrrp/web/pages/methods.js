@@ -1,5 +1,5 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/methods.js at 33d1959). The Readmissions Methods page so far:
-// the kicker and heading, About, the formula (both formulas as preformatted blocks, the neutrality modifier at four
+// the kicker and heading, the formula (both formulas as preformatted blocks, the neutrality modifier at four
 // decimals), the peer-group medians table and the replication sentence, the dollar estimate's method with its modeled
 // totals, accuracy line and assumptions (the section every estimate tag links to, #methods-dollars), how to read a
 // penalty, places, history with the annual totals and their sources, feedback and privacy (the family's page holds the
@@ -7,7 +7,7 @@
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fillAround, fillCopy, printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
-import { externalLink, feedbackFor, page } from '../../../../web/render/layout.js';
+import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { DICTIONARY_PAGE, DOLLARS_HREF, METHODS_PATH } from '../links.js';
 import { mediansRows } from '../figures/how-data.js';
@@ -30,7 +30,6 @@ ${body}
 
 // view: methodsView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
 export function methodsPage({ view, robots, assets, hospitalsUrl = null }) {
-  const feedback = externalLink(feedbackFor({ path: METHODS_PATH }), t('feedbackLink'));
   const more = fillAround((marks) => fill('moreText', marks), {
     privacy: html`<a href="${SITE.pages.privacy}">${t('morePrivacy')}</a>`,
     accessibility: html`<a href="${SITE.pages.accessibility}">${t('moreAccessibility')}</a>`,
@@ -42,8 +41,6 @@ export function methodsPage({ view, robots, assets, hospitalsUrl = null }) {
 </header>
 <div class="meth__grid">
 <div class="prose">
-${section('about', t('aboutHeading'), html`<p>${view.about.intro}</p>
-<p>${fillAround((marks) => fill('aboutBy', marks), { feedback })}</p>`)}
 ${section('formula', t('formulaHeading'), html`<p>${view.formula.intro}</p>
 <pre class="formula">${t('formulaCut')}</pre>
 <p>${t('formulaBelow')}</p>

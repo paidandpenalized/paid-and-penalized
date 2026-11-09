@@ -1,6 +1,7 @@
 // The Methods page (/hacrp/methods/): as the build writes it, on the committed history, and its parts on the small
 // synthetic history (history-fixtures.js): the receipt, the proof strips and decision rules' tables, the periods, the
 // pipeline and the sources. Every total on the page is read back against the self-checks it summarizes.
+import { ceilToUnit } from '../../../engine/js/stats.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -207,7 +208,8 @@ test('the estimate section: what is shown, where it comes from and how it is lab
   const tagged = MEASURE_IDS.filter((id) => DATA.estimate[id].tagged);
   const body = strip(section);
   assert.ok(body.includes(tagged.map((id) => SHORT_NAMES[id]).join(' and ')), tagged.join());
-  assert.ok(body.includes(decimal(Math.max(...tagged.map((id) => DATA.estimate[id].maxError)), 4)));
+  // Rounded up to four places, as "up to" on the hospital pages is (view.js ceilText), so the two agree.
+  assert.ok(body.includes(decimal(ceilToUnit(Math.max(...tagged.map((id) => DATA.estimate[id].maxError)), 4), 4)));
   assert.ok(body.includes('0.001'));
   assert.ok(section.includes(DATA.boundaryText.highestNo) && section.includes(DATA.boundaryText.lowestYes), 'CMS\'s own text for the line, kept whole');
 });

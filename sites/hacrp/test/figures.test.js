@@ -22,6 +22,7 @@ import { buildPlaces } from '../web/places.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
+import { pullPanel, stackPanel, stackTake } from '../web/explore-figures.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
@@ -402,3 +403,45 @@ test('Figure 1\'s bars, table and takeaway carry the same text for each part (on
   }
 });
 
+
+test('the stacked-dots tooltip reads "1 hospital" for a column of one, "2 hospitals" for two', () => {
+  const id = MEASURE_IDS.find((k) => isSir(k));
+  const m = PD.measures[id];
+  const lone = { ...m, values: [0.31, 0.62, 0.62].sort((a, b) => a - b) };
+  const panel = stackPanel(id, lone, { rows: 12 });
+  const all = JSON.stringify(panel);
+  assert.match(all, /: 1 hospital[^s]/);
+  assert.match(all, /: 2 hospitals/);
+  assert.doesNotMatch(all, /: 1 hospitals/);
+});
+
+test('the dot plot takeaway puts the right article before each infection measure: an SSI, an MRSA, a CDI', () => {
+  const sir = MEASURE_IDS.filter((k) => isSir(k));
+  assert.ok(sir.length >= 5);
+  for (const id of sir) {
+    const take = stackTake(id, PD.measures[id]);
+    const short = SHORT_NAMES[id];
+    const article = /^[AEFHILMNORSX]/.test(short) ? 'an' : 'a';
+    assert.ok(take.includes(`with ${article} ${short} value`), take);
+  }
+  assert.ok(stackTake('SSI', PD.measures.SSI).includes('with an SSI value'));
+  assert.ok(stackTake('MRSA', PD.measures.MRSA).includes('with an MRSA value'));
+  assert.ok(stackTake('CDI', PD.measures.CDI).includes('with a CDI value'));
+});
+
+test('the kinds figure takeaway lowercases the second group after the semicolon, as the first group opens the sentence', () => {
+  const m = /were cut most often \([^)]*\); ([^,]*) hospitals, least/.exec(PAGE);
+  assert.ok(m, 'the takeaway is on the page');
+  assert.match(m[1], /^[a-z]|^(Medicare|Medicaid|CMS)|^[A-Z]{2,}/, m[1]);
+});
+
+test('Figure 3\'s axis never labels two neighbouring ticks alike, for every measure, at both drawings', () => {
+  for (const id of MEASURE_IDS) {
+    const panel = pullPanel(id, PD.measures[id]);
+    for (const svg of [panel.svg, panel.svgWide].map(String)) {
+      const labels = [...svg.matchAll(/<text class="chart-axis__label"[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+      assert.ok(labels.length >= 3, `${id}: the axis has labels`);
+      labels.forEach((l, i) => i && assert.notEqual(l, labels[i - 1], `${id}: ticks read ${labels.join(', ')}`));
+    }
+  }
+});

@@ -1,7 +1,7 @@
 // Ported from Thirty Day Readmissions (web/src/js/model.js at 33d1959).
 // The Readmissions site's number formatting. Built on web/render/format.js where the output is identical; "—" for a
 // missing or non-finite value, as the source printed it.
-import { count, decimal, isoDate, money, shortIsoDate, signed } from '../../../web/render/format.js';
+import { cmsDecimal, count, decimal, isoDate, money, shortIsoDate, signed } from '../../../web/render/format.js';
 import { toUnit } from '../../../engine/js/stats.js';
 
 const DASH = '—';
@@ -47,10 +47,11 @@ export const pagesOf = (list, size) => Array.from({ length: Math.ceil(list.lengt
 export const byId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
 // A payment adjustment factor to four decimals, as CMS publishes it: 0.9988, 1.0000.
-export const factor4 = (x) => (missing(x) ? DASH : decimal(x, 4));
+export const factor4 = (x) => ratio(x, 4);
 
-// An excess readmission ratio (or a peer median) to dp decimals; four as CMS publishes it, three on a slider.
-export const ratio = (x, dp = 4) => (missing(x) ? DASH : decimal(x, dp));
+// An excess readmission ratio (or a peer median) to dp decimals; four as CMS publishes it, three on a slider. Rounded as
+// the engine stores it (format.js cmsDecimal: toFixed, not Intl), so it prints CMS's own text.
+export const ratio = (x, dp = 4) => (missing(x) ? DASH : cmsDecimal(x, dp));
 
 // A condition's share of the cut, a fraction, in percentage points to dp decimals and without the unit: 0.00342 is "0.342".
 export const points = (x, dp = 3) => (missing(x) ? DASH : decimal(x * 100, dp));

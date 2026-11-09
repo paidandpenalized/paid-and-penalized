@@ -10,6 +10,7 @@ import { textWidth } from '../../../../web/charts/text.js';
 import { waterfall } from '../../../../web/charts/waterfall.js';
 import { capitalize, pct, spelled } from '../../../../web/render/format.js';
 import { factor4, fmtPct, points, ratio, roundTo } from '../numbers.js';
+import { oneKey } from '../../../../web/render/components.js';
 import { fill, t } from '../program/copy.js';
 import { inSentence } from '../wording.js';
 import { waterfallData } from '../worksheet.js';
@@ -34,7 +35,7 @@ const pointsText = (v) => `${points(v)}%`;
 // Why a part of zero is zero, in words, for a row's note (short: a phone, where the note shares the label's line).
 function reasonOf(p, short) {
   if (p.zero === 'none') return t('wfRowNone');
-  if (p.zero === 'few') return fill(short ? 'wfRowFewShort' : 'wfRowFew', { n: String(p.n), min: String(MIN_DISCHARGES) });
+  if (p.zero === 'few') return fill(oneKey(short ? 'wfRowFewShort' : 'wfRowFew', p.n), { n: String(p.n), min: String(MIN_DISCHARGES) });
   if (p.zero === 'below') return short ? t('wfRowBelowShort') : fill('wfRowBelow', { err: ratio(p.err), med: ratio(p.med) });
   return p.why;
 }

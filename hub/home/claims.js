@@ -2,13 +2,15 @@
 // them on every build, so the build stops rather than print a sentence the data no longer bear out. Shared by the story
 // (page.js) and what sits below it (below.js).
 
+import { copyText } from '../../web/render/components.js';
+
 // How near a simple fraction (a half to four fifths) must be to a share for the words to say it as one ("Two of every
 // three", "one hospital in five"); further off, they give the share.
 const FRACTION_NEAR = 0.02;
 
-// A claim the words make: ok, or the build stops, naming the words.
+// A claim the words make (a copy entry): ok, or the build stops, naming the words.
 export function holds(ok, words) {
-  if (!ok) throw new RangeError(`hub home: the data no longer bear out "${words}"`);
+  if (!ok) throw new RangeError(`hub home: the data no longer bear out "${copyText(words)}"`);
 }
 
 // The simple fraction nearest x, as { part, whole }, within FRACTION_NEAR; null when none is that near.

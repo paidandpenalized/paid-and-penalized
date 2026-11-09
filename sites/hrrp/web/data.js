@@ -5,6 +5,7 @@ import { parseCsv } from '../../../engine/js/csv.js';
 import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
+import { nameText } from '../../../web/render/format.js';
 import { scopeYears } from './figures/history-data.js';
 
 // The pinned output of Thirty Day Readmissions: the same body as the emitted file, plus the timeline, research and geo.
@@ -66,7 +67,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
   builtFiles.push([dollarsRel, dollarsFile]);
   const masterRel = masterPath(newest('data/emitted/hospital'));
   const masterFile = readJson(REPO_ROOT + masterRel);
-  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, r]));
+  // Each name as the pages print it (nameText: an initialism in capitals), as the hub and the HACRP site do.
+  const master = new Map(masterFile.hospitals.map((r) => [r.ccn, { ...r, name: nameText(r.name) }]));
   // Every pin the read file was built from, the master's and the atlas. The pinned file has no `sources` of its own.
   const ids = new Set([...(source === 'emitted' ? data.sources : [PIN_ID]), HISTORY_PIN_ID, ...masterFile.sources, ...dollarsFile.sources, ATLAS_ID]);
   const atlas = JSON.parse(readPinned(ATLAS_ID));
@@ -76,7 +78,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     fy,
     meta: data.meta,
     conditions: data.conditions,
-    hospitals: data.hospitals,
+    // Names and their aliases as the other sites print them (nameText: initialisms in capitals).
+    hospitals: data.hospitals.map((h) => ({ ...h, name: nameText(h.name), ...(h.alias ? { alias: nameText(h.alias) } : {}) })),
     history: data.history,
     // The fiscal years whose file lists each group the history leaves out (history-data.js scopeYears), for Methods.
     historyScope: scopeYears(parseCsv(readPinned(HISTORY_PIN_ID))),

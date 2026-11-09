@@ -9,7 +9,7 @@ import { placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { conditionShort } from './derive.js';
 import { hospitalPath } from './links.js';
-import { fmtInt, fmtMoney, fmtPct, points, ratio, roundTo } from './numbers.js';
+import { fmtInt, fmtMoney, fmtPct, fmtShare, points, ratio, roundTo } from './numbers.js';
 import { fill, t } from './program/copy.js';
 
 // The last digit can differ from a hand calculation (the note under the table); the note's words are in the copy.
@@ -53,7 +53,7 @@ export function worksheetRows(h, meta) {
   return {
     fields: [
       { no: 'A', label: t('wsFieldHospital'), value: h.name, id: h.id, note: fill('wsFieldHospitalNote', { place: h.place ?? placeText({ city: h.city, state: h.st }), ccn: h.id }) },
-      { no: 'B', label: t('wsFieldPeer'), value: fill('wsFieldPeerValue', { peer: String(h.peer), of: String(PEERS.length) }), note: fill('wsFieldPeerNote', { dual: fmtPct(h.dual * 100, 1) }) },
+      { no: 'B', label: t('wsFieldPeer'), value: fill('wsFieldPeerValue', { peer: String(h.peer), of: String(PEERS.length) }), note: fill('wsFieldPeerNote', { dual: fmtShare(h.dual, 1) }) },
       { no: 'C', label: t('wsFieldNm'), value: ratio(meta.nm), note: t('wsFieldNmNote') },
     ],
     lines,

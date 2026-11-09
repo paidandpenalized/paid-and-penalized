@@ -60,6 +60,12 @@ test('scores sort by value, with "N/A" and blanks last in either direction; text
   assert.throws(() => sortRows(base, 'ccn', 1), /key/);
 });
 
+test('filterRows with a set of CCNs lists exactly those rows, whatever the text says, still within a state', () => {
+  const two = [TABLE[0], TABLE.at(-1)].map((r) => r.cells[0]);
+  assert.deepEqual(ccns(filterRows(TABLE, { query: 'no such text', ccns: new Set(two) })), ccns(TABLE.filter((r) => two.includes(r.cells[0]))));
+  assert.deepEqual(filterRows(TABLE, { ccns: new Set() }), []);
+});
+
 test('filterRows keeps one state and names, cities or CCNs containing the query, case-insensitive', () => {
   assert.deepEqual(ccns(filterRows(TABLE, { query: '990013' })), ['990013']);
   assert.deepEqual(ccns(filterRows(TABLE, { query: 'aardvark' })), ['990013'], 'a city matches');

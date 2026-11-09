@@ -3,7 +3,7 @@
 // a pair of measures. The build draws the first measure's panels and the default states into the page; the page script
 // draws the rest from the explore asset, with these same functions. Kept apart from program-figures.js so the page
 // scripts never carry the build's map code.
-import { cmsText, count, decimal } from '../../../web/render/format.js';
+import { articleFor, cmsText, count, decimal } from '../../../web/render/format.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { drawn } from '../../../web/charts/figure.js';
 import { pullIn, stackedDots } from '../../../web/charts/measureDots.js';
@@ -13,6 +13,7 @@ import { agreeScatter } from '../../../web/charts/agree.js';
 import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { SHORT_NAMES, SIR_EXPECTED, SIR_EXPECTED_TEXT } from './constants.js';
+import { oneKey } from '../../../web/render/components.js';
 import { fill, t } from './explore/copy.js';
 import { edgesAround } from './compare.js';
 
@@ -51,13 +52,16 @@ export function stackPanel(id, m, { rows }) {
     one: fill(sir ? 'fig2OneSir' : 'fig2OnePsi', { one }), median: fill('fig2Median', { median: fmt(m.median) }), per: fill('fig2Per', { per: count(PER) }),
     zero: sir && m.zero ? fill('fig2Zero', { zero: count(m.zero) }) : null, over: fill('fig2Over', { over: count(over), hi: decimal(domain[1], 1) }),
   };
-  const tip = ({ from, to, count: c }) => fill('fig2Tip', { from: fmt(from), to: fmt(to), count: count(c) });
+  const tip = ({ from, to, count: c }) => fill(oneKey('fig2Tip', c), { from: fmt(from), to: fmt(to), count: count(c) });
   const draw = (width) => stackedDots({ values: m.values, domain, step: binStep, per: PER, rows, refs: { one: SIR_EXPECTED, median: m.median }, labels, tip, format: (v) => decimal(v, 1), width });
   return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig2Alt', { short: SHORT_NAMES[id] }), take: stackTake(id, m) };
 }
 export const stackTake = (id, m) => (isSir(id)
-  ? fill('fig2TakeSir', { zero: count(m.zero), n: count(m.n), short: SHORT_NAMES[id], median: decimal(m.median, m.params.decimals) })
+  ? fill('fig2TakeSir', { zero: count(m.zero), n: count(m.n), aShort: `${articleFor(SHORT_NAMES[id])} ${SHORT_NAMES[id]}`, median: decimal(m.median, m.params.decimals) })
   : fill('fig2TakePsi', { short: SHORT_NAMES[id], one: SIR_EXPECTED_TEXT, median: decimal(m.median, m.params.decimals), above: count(m.values.filter((v) => v > SIR_EXPECTED).length), n: count(m.n) }));
+
+// The decimals an axis's labels need when its ticks are step apart (1 or more: none; 0.5 or 0.2: one), so no two read alike.
+const decimalsOf = (step) => (String(step).split('.')[1] ?? '').length;
 
 // One measure as reported and as scored: its panel. m: measureSummary().
 export function pullPanel(id, m) {
@@ -68,7 +72,7 @@ export function pullPanel(id, m) {
   const hi = Math.min(Math.ceil(m.values[m.values.length - 1]), Math.max(2, Math.ceil(p.cap * 2.5)));
   const pulled = m.atCap + (p.floor > 0 ? m.atFloor : 0);
   const labels = { reported: t('fig3Reported'), scored: t('fig3Scored'), floor: fill('fig3Floor', { value: fmt(p.floor) }), cap: fill('fig3Cap', { value: fmt(p.cap) }), pulled: fill('fig3Pulled', { n: count(pulled) }), beyond: (k) => fill('fig3Beyond', { n: count(k), hi: decimal(hi, 0) }) };
-  const draw = (width) => pullIn({ values: m.values, floor: p.floor, cap: p.cap, domain: [lo, hi], labels, format: (v) => decimal(v, 0), width });
+  const draw = (width) => pullIn({ values: m.values, floor: p.floor, cap: p.cap, domain: [lo, hi], labels, format: (v, step) => decimal(v, decimalsOf(step)), width });
   return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig3Alt', { short: SHORT_NAMES[id] }), take: pullTake(id, m) };
 }
 export const pullTake = (id, m) => {

@@ -9,7 +9,7 @@
 //        of a last option that hands every match on, or null; onMore(query) acts on it)
 import { LIMIT, search } from './search.js';
 
-export function mountOmnibox(form, { load, words, open = (href) => window.location.assign(href), onMore = null, types }) {
+export function mountOmnibox(form, { load, words, open = (href) => window.location.assign(href), onMore = null, types, moreTypes = null }) {
   const input = form.querySelector('[role="combobox"]');
   const list = form.querySelector('[role="listbox"]');
   const status = form.querySelector('[role="status"]');
@@ -18,6 +18,8 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   let loading = null;
   let results = [];
   let total = 0;
+  // The entries onMore hands on: with moreTypes, the list's matches of those kinds, counted by the same matcher.
+  let handOn = [];
   let active = -1;
   // Whether the reader is in the box: a list typed for while the index loaded opens only then. A box that already has
   // the focus when this mounts is in it.
@@ -40,13 +42,14 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     active = -1;
   };
   // The options: the matches, then (where the site hands matches on) one for all of them when the list is cut short.
-  const more = () => Boolean(onMore && words.more && total > results.length);
+  const listedOf = () => (moreTypes ? results.filter((r) => moreTypes.includes(r.type)).length : results.length);
+  const more = () => Boolean(onMore && words.more && (moreTypes ? handOn.length : total) > listedOf());
   const count = () => results.length + (more() ? 1 : 0);
   const pick = (i) => {
     const query = input.value;
     close();
     if (i < results.length) open(results[i].href);
-    else if (more()) onMore(query.trim());
+    else if (more()) onMore(query.trim(), handOn);
   };
 
   const option = (id, selected, parts) => {
@@ -64,7 +67,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   };
   const paint = () => {
     const items = results.map((r, i) => option(`${listId}-${i}`, i === active, [['omni__t', r.label], ['omni__s', r.sub], ['omni__k', words.kind[r.type] ?? '']]));
-    if (more()) items.push(option(`${listId}-${results.length}`, active === results.length, [['omni__t', words.more(total)]]));
+    if (more()) items.push(option(`${listId}-${results.length}`, active === results.length, [['omni__t', words.more(moreTypes ? handOn.length : total)]]));
     if (!items.length) {
       const empty = document.createElement('li');
       empty.className = 'omni__empty';
@@ -83,6 +86,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     const query = input.value;
     if (!query.trim()) {
       results = [];
+      handOn = [];
       total = 0;
       status.textContent = '';
       close();
@@ -94,7 +98,12 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
       pending = true;
       return;
     }
-    ({ results, total } = search(query, index, { limit: LIMIT, types }));
+    // One pass: when the option hands matches on, every match is ranked once and the list shows the first LIMIT.
+    const handing = Boolean(onMore && moreTypes);
+    const found = search(query, index, { limit: handing ? Infinity : LIMIT, types });
+    ({ total } = found);
+    results = found.results.slice(0, LIMIT);
+    handOn = handing ? found.results.filter((r) => moreTypes.includes(r.type)) : [];
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);
     paint();

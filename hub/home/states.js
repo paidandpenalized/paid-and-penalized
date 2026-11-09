@@ -88,7 +88,7 @@ export function stateLegend({ states, fy }) {
 <p class="dkey__t"><span class="dkey__long">${fill('keyTitle', { fy: String(fy) })}</span><span class="dkey__short">${fill('keyTitleShort', { fy: String(fy) })}</span></p>
 <svg class="dkey__g" viewBox="0 0 ${width} 10" aria-hidden="true" focusable="false"><rect class="smap__land" width="${width}" height="10"/>${swatches.map((s) => html`<rect class="st st--${s.ink}" style="${tStyle(s.t)}" x="${s.x}" width="${sw}" height="10"/>`)}</svg>
 <p class="dkey__s"><span>${fill('keyCut', { end: pct(-end, 1) })}</span><span>${pct(0, 0)}</span><span>${fill('keyBonus', { end: pct(end, 1, { sign: true }) })}</span></p>
-<p class="dkey__md"><span class="dkey__hatch" aria-hidden="true"></span>${COPY.keyMaryland}</p>
+<p class="dkey__md"><span class="dkey__hatch" aria-hidden="true"></span>${fill('keyMaryland')}</p>
 </div>`;
 }
 

@@ -12,9 +12,10 @@
 //     unjudged. The grain darkens the light paper and lightens the dark one, a little more at some pixels than others, so
 //     the run lays down the paper as the grain leaves it at its darkest pixel (light) or its lightest (dark), measured in
 //     the browser, and axe holds every text colour on the paper to 4.5:1 there. axe.test.js's control prints both colours;
-//   - the two decorations drawn over text are hidden: the scroll frames' fade (a 28px gradient over a table's right edge)
-//     and the tape's torn edge. axe gives up on every cell of a table one of them overlaps (about 19,000 cells in a run of
-//     every page), and the fade only dims a strip of it.
+//   - the three decorations drawn over or behind text are hidden: the scroll frames' fade (a 28px gradient over a table's right
+//     edge), the tape's torn edge and the "N/A" pill's hatch (a stripe at its left end, which its text is indented clear of).
+//     axe gives up on every cell of a table one of them overlaps (about 19,000 cells in a run of every page), and the fade only
+//     dims a strip of it; it gives up on the pill's text however clear of the stripe it sits, and the pill's own paper stays.
 // Two checks keep this honest: some text must have been judged on every page, and none may be left unjudged because of
 // an image, a gradient or a pseudo-element drawn over it (what flatten removes). axe still leaves some text unjudged,
 // which is not covered here: text inside an SVG (the charts' labels), and in HTML text overlapped or partly obscured by
@@ -78,7 +79,7 @@ const flatten = (page, paper) => page.evaluate((css) => {
   const sheet = new CSSStyleSheet();
   sheet.replaceSync(css);
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-}, `body { background: ${paper} !important; } .printout::after, .receipt::after { display: none !important; }`);
+}, `body { background: ${paper} !important; } .printout::after, .receipt::after { display: none !important; } .pill--na { background-image: none !important; }`);
 
 // Runs axe on the page as it is, flattened: its violations ({ id, impact, help, nodes: [{ target, summary }] }), how
 // many rules passed (a run that checked nothing passes nothing), whether the contrast rule passed on any element (some

@@ -34,22 +34,23 @@ export const COPY = typesetCopy({
   // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} it does not list (never counted at $0),
   // when there are any.
   hrrpHead: 'Readmissions: most hospitals take a small cut.',
-  hrrpText: 'The readmissions program (HRRP) cuts pay, by up to {cap}, when a hospital’s readmissions run above expected. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.',
+  hrrpText: { text: 'HRRP cuts a hospital’s base payments, by up to {cap}, when its readmissions run above its peers’ median. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.', claim: ['HRRP-06', 'HRRP-09', 'HRRP-04'] },
   hrrpZero: '{zeroN} pass through at {zero}.',
   hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut; CMS cut {cmsN} scored hospitals (the HACRP pages' count),
   // {estN} of them with an estimate here; {more}: hacMore when the chart also holds hospitals with an estimate CMS cut
-  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart cut by it alone. Short enough to fit above
-  // the chart on a phone.
-  hacHead: 'Hospital-acquired conditions: a flat {cut} off one quarter.',
-  hacText: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} whose only cut is this one.',
+  // without a score ({n}, in words: "one"), else nothing; {onlyN} on the chart with no Readmissions cut (value-based
+  // purchasing, the next step, still cuts some of them, so not "whose only cut"). Short enough to fit above the chart on
+  // a phone.
+  hacHead: { text: 'Hospital-acquired conditions: a flat {cut} off one quarter.', claim: ['HACRP-01', 'HACRP-02'] },
+  hacText: { text: 'The HAC program scores infections and other harms; the quarter with the highest scores lose {cut} of their Medicare inpatient pay. CMS cut {cmsN} scored hospitals, {estN} of them with an estimate here{more}. The tall column: {onlyN} with no Readmissions cut.', claim: ['HACRP-17', 'HACRP-02', 'HACRP-01', 'HACRP-75'] },
   hacMore: '; it also cut {n} it didn’t score',
 
   // Step 4: value-based purchasing. {withhold} the share withheld, {bonusN} and {cutN} hospitals ahead and behind,
   // {bonus} the bonuses in FY{fy}.
   vbpHead: 'Value-based purchasing: some move right.',
-  vbpText: 'HVBP withholds {withhold} of each participant’s pay and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them in FY{fy}, estimated.',
+  vbpText: { text: 'HVBP withholds {withhold} of each participant’s base payments and pays it back by score, so it is budget-neutral by design. {bonusN} hospitals come out ahead and {cutN} behind; about {bonus} moves between them in FY{fy}, estimated.', claim: ['HUB-01', 'HUB-02', 'HUB-03'] },
 
   // Step 5: the net. {part} and {whole}: the simple fraction nearest the share of hospitals with a net cut, in words
   // ("Two of every three").
@@ -66,7 +67,7 @@ export const COPY = typesetCopy({
   // "add" when the highest state comes out ahead, "less" when every state takes a cut.
   statesHead: 'The programs take {lowShare} of hospital pay in {low} and add {highShare} in {high}.',
   statesHeadLess: 'The programs take {lowShare} of hospital pay in {low} and {highShare} in {high}.',
-  statesText: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model, outside these programs.',
+  statesText: { text: 'Each state is shaded by its hospitals’ combined net change as a share of their Medicare inpatient pay. {ahead} Maryland is paid under its own all-payer model; these programs don’t adjust it.', claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
   // Which states come out ahead ({states}: their names, as a list).
   aheadMany: 'Only {states} come out ahead.',
   aheadOne: 'Only {states} comes out ahead.',
@@ -95,7 +96,7 @@ export const COPY = typesetCopy({
   mapLabel: 'States, shaded by their hospitals’ combined net change. Each state’s numbers are its title.',
   stateLine: '{name}: {hospitals}, net {share} of pay, {cutShare} take a net cut',
   stateNone: '{name}: no hospital with an estimate',
-  stateMaryland: '{name}: not in these programs. Its {hospitals} are paid under the state’s all-payer model.',
+  stateMaryland: { text: '{name}: not adjusted by these programs. Its {hospitals} are paid under the state’s all-payer model.', claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
   hospital: 'hospital',
   hospitals: 'hospitals',
   readout: 'Point at, tap or tab to a state for its numbers.',
@@ -104,7 +105,7 @@ export const COPY = typesetCopy({
   keyTitleShort: 'Net change, est. FY{fy}, % of pay',
   keyCut: '{end} cut',
   keyBonus: '{end} bonus',
-  keyMaryland: 'Maryland: not in these programs',
+  keyMaryland: { text: 'Maryland: not adjusted', claim: ['HUB-05', 'HACRP-26', 'HACRP-91'] },
   smallStates: 'Small states',
 
   // The example card's own words: its lead (the hint shows with the search), the label of its programs' rows, the
@@ -132,8 +133,8 @@ export const COPY = typesetCopy({
   // {cut} its cut. Value-based purchasing: its two sides (its dek already says it is budget-neutral).
   takeHrrp: 'Most cuts are small; about one hospital in {whole} pays {zero}.',
   takeHrrpShare: 'Most cuts are small; {share} of its hospitals pay {zero}.',
-  takeHac: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.',
-  takeVbp: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.',
+  takeHac: { text: 'One flat step: {quarter} with the highest scores take the {cut} cut; the rest pay {zero}.', claim: ['HACRP-01', 'HACRP-02'] },
+  takeVbp: { text: 'One pool, two sides: the cuts on the left pay for the bonuses on the right.', claim: 'HUB-02' },
   // The histogram: its takeaway for a screen reader ({n} the hospitals in {program}, the program's full name, so nothing
   // is spelled out letter by letter; {bin} the bins' width in points; {parts} the groups it has, joined, so a program
   // without bonuses never says "0 with a bonus": histCut, histZero and histPartBonus) and its two labels (histCut, then
@@ -178,7 +179,7 @@ export const COPY = typesetCopy({
   estStepPayB: 'estimated Medicare inpatient pay',
   estStepRule: 'Apply each program’s {b} to the part of pay it covers.',
   estStepRuleB: 'published factor or rule',
-  estStepAdd: 'Add the programs {b}: each percentage applies to a different base.',
+  estStepAdd: { text: 'Add the programs {b}: each percentage applies to a different base.', claim: ['HACRP-72', 'HACRP-73', 'HACRP-74'] },
   estStepAddB: 'in dollars, never in percent',
   estMore: 'Read the methods',
   wsLabel: 'Worksheet: one hospital’s estimated FY{fy} dollars, line by line',
@@ -186,12 +187,12 @@ export const COPY = typesetCopy({
   wsExample: 'An example',
   wsCcn: 'CCN {ccn}',
   wsPay: '{name}, {place}: estimated Medicare inpatient pay',
-  wsBase: 'The part of pay the readmissions and value-based factors apply to',
-  wsBaseNote: 'base operating payments, estimated',
+  wsBase: { text: 'The part of pay the readmissions and value-based factors apply to', claim: ['HACRP-72', 'HACRP-73'] },
+  wsBaseNote: { text: 'base operating payments, estimated', claim: 'HRRP-21' },
   wsHrrp: 'Readmissions',
-  wsFactor: '(factor {factor} − {one}) × line {base}',
+  wsFactor: { text: '(factor {factor} − {one}) × line {base}', claim: ['HACRP-86', 'HACRP-87'] },
   wsHac: 'Hospital-acquired conditions',
-  wsCut: 'in the {cut} cut: −{cut} × (line {pay} + line {hrrp} + line {vbp})',
+  wsCut: { text: 'in the {cut} cut: −{cut} × (line {pay} + line {hrrp} + line {vbp})', claim: ['HACRP-74', 'HACRP-75'] },
   wsNoCut: 'not in the {cut} cut',
   wsVbp: 'Value-based purchasing',
   wsNet: '{net}, lines {a} + {b} + {c}',

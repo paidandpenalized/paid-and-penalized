@@ -21,10 +21,13 @@ export const COPY = {
   // Hospital page: where the cut ranks.
   rankNone: { text: 'No reduction, like {n} other hospitals.', claim: null },
   rankNoneOne: { text: 'No reduction, like {n} other hospital.', claim: null },
-  rankLine: {
-    text: 'Larger cut than {nation}% of hospitals nationally, {state}% of the {stateCount} in {stateName}, and {peer}% in peer group {group}.',
-    claim: 'HRRP-05',
-  },
+  rankLine: { text: 'Larger cut than {nation}, {state}, and {peer}.', claim: 'HRRP-05' },
+  rankNation: { text: '{pct}% of hospitals nationally', claim: 'HRRP-05' },
+  rankNationNone: { text: 'no hospital nationally', claim: 'HRRP-05' },
+  rankState: { text: '{pct}% of the {stateCount} in {stateName}', claim: 'HRRP-05' },
+  rankStateNone: { text: 'none of the {stateCount} in {stateName}', claim: 'HRRP-05' },
+  rankPeer: { text: '{pct}% in peer group {group}', claim: 'HRRP-05' },
+  rankPeerNone: { text: 'none in peer group {group}', claim: 'HRRP-05' },
 
   // Hospital page: the verdict sentence.
   sumNoneMeasured: {

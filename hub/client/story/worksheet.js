@@ -7,23 +7,13 @@
 // lines add exactly.
 import { programDollars } from '../../../engine/js/dollars/whatif.js';
 import { fillCopy } from '../../../web/render/components.js';
-import { decimal, dollars, placeText } from '../../../web/render/format.js';
+import { dollars, factorText, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { loadHubAsset } from '../../../web/client/hub-asset.js';
 import { inProgram } from '../../hospital/peers.js';
 import { signOf } from '../../hospital/text.js';
 import { COPY } from './copy.js';
 
-// A payment factor as the dollar file has it (to ten places), never shorter than the four places CMS publishes
-// Readmissions' in: factorText(0.995) is "0.9950", factorText(1.0014638299) "1.0014638299". Line 2 times the factor less
-// one then gives the program's line, to the dollar.
-const MIN_PLACES = 4;
-const MAX_PLACES = 10;
-export function factorText(f) {
-  let places = MIN_PLACES;
-  while (places < MAX_PLACES && Math.abs(Number(f.toFixed(places)) - f) > 1e-12) places += 1;
-  return decimal(f, places);
-}
 
 // What the worksheet says about a hospital with an estimate (hubHospitals' or the browser asset's row):
 //   text  the words of each element the page marks data-ws="<key>": the CCN, name and place ("City, ST"), each line's

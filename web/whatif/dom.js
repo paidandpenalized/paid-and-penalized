@@ -356,16 +356,30 @@ export function mountWhatIf(root, { rules, texts, share, range, env = globalThis
     if (linked) root.scrollIntoView({ block: 'start', behavior: 'auto' });
   };
 
+  const valueOf = (id) => vm.inputs.find((i) => i.id === id)?.value;
   for (const id of start.ids) {
     const row = rows[id];
+    // Each valid keystroke applies as it is typed, so a refused entry ("99" past the cap, "1e3") would leave its last
+    // accepted prefix in force. The value the measure had when the field gained focus is kept, and a refused entry
+    // that is left (change) puts it back, so the field, the score and the address agree.
+    let held;
+    let refused = false;
     row.number.addEventListener('input', () => {
       const value = entry(row.number);
       const ok = !Number.isNaN(value) && apply({ type: 'set', id, value }, { source: row.number, id });
+      refused = !ok;
       markInvalid(row.numberCheck, !ok);
     });
     row.number.addEventListener('change', () => {
-      markInvalid(row.numberCheck, false);
+      const restore = refused && held !== undefined && valueOf(id) !== held;
+      if (restore) apply({ type: 'set', id, value: held }, { id });
+      markInvalid(row.numberCheck, restore); // the entry was refused and the old value is back: say so until the next change
+      refused = false;
       commit(id);
+    });
+    row.number.addEventListener('focus', () => {
+      held = valueOf(id);
+      refused = false;
     });
     row.number.addEventListener('focus', reveal);
     row.slider.addEventListener('input', () => apply({ type: 'set', id, value: Number(row.slider.value) }, { source: row.slider, holdMax: true, id }));

@@ -269,7 +269,8 @@ test('infectionsFigure: a panel per measure of the nation\'s pooled rate, the sh
 
 test('hospitalInfectionsFigure: a panel per measure with two or more years of results, over the nation\'s median; none without them', () => {
   const sir = (cy, v) => ({ cy, sir: { CLABSI: v, CAUTI: v === null ? null : v + 0.5, SSI_COLON: null, SSI_HYST: null, MRSA: null, CDI: 2 } });
-  const fig = hospitalInfectionsFigure([sir(2021, 1.2), sir(2022, 0.8), sir(2024, 0.4)], S, { n: 7, source: SRC });
+  const fig = hospitalInfectionsFigure([sir(2021, 1.2), sir(2022, 0.8), sir(2024, 0.4)], S, { n: 7, source: SRC, ccn: '990101' });
+  assert.match(String(fig), /data-figure-csv="hacrp-990101-infections\.csv"/, 'the download names its hospital');
   // CLABSI, CAUTI and CDI each have three years; the others none.
   assert.equal(captionOf(fig)[0], '7');
   assert.deepEqual(headOf(fig).slice(1).length, 3);
@@ -287,7 +288,7 @@ test('hospitalInfectionsFigure: a panel per measure with two or more years of re
   assert.equal(hospitalInfectionsFigure(null, S, { n: 1, source: SRC }), null);
   assert.equal(hospitalInfectionsFigure([sir(2021, 1), sir(2022, 1)], { ...S, infections: [] }, { n: 1, source: SRC }), null);
   // A result far above the rest is held at the top of the chart and said so, and the table keeps the clipped value.
-  const high = hospitalInfectionsFigure([sir(2021, 9), sir(2022, 2)], S, { n: 1, source: SRC });
+  const high = hospitalInfectionsFigure([sir(2021, 9), sir(2022, 2)], S, { n: 1, source: SRC, ccn: '990101' });
   assert.match(String(high), /fig__note">/);
 });
 
@@ -462,7 +463,7 @@ test('statesYearsFigure: one small map a year, a state\'s column of shares in th
   const edges = [0, ...MAP_STEPS_PCT];
   assert.deepEqual(items, [
     ...edges.map((e, i) => [String(i + 1), i === edges.length - 1 ? `${e}% and up` : `${e}% to ${edges[i + 1]}%`]),
-    ['zero', 'None cut'], ['empty', 'No decision'], ['ring', `Outlined: ${STATE_NAMES.AL} and ${STATE_NAMES.GA}`],
+    ['zero', 'None cut'], ['few', `Fewer than ${FEW_DECIDED} hospitals with a payment decision`], ['empty', 'No decision'], ['ring', `Outlined: ${STATE_NAMES.AL} and ${STATE_NAMES.GA}`],
   ]);
   // Each small map outlines those two states (when they have a decision that year) and no other.
   const maps = String(fig).split('<div class="smallmaps__m">').slice(1);
@@ -506,7 +507,8 @@ test('recordStrip: a box a year in the ink of its decision, with a sentence of h
 
 test('yearsFigure: where a hospital\'s score stood each year; the table gives CMS\'s score text, its place in line and its decision, blank for the year with no score', () => {
   const rec = S.recordOf('990101');
-  const fig = yearsFigure(rec, S, { n: 5, source: SRC });
+  const fig = yearsFigure(rec, S, { n: 5, source: SRC, ccn: '990101' });
+  assert.match(String(fig), /data-figure-csv="hacrp-990101-years\.csv"/, 'the download names its hospital');
   const rows = rowsOf(fig);
   assert.equal(rows.length, S.fys.length);
   assert.deepEqual(rows[0].slice(0, 2), ['FY2021', '1.0100']);
@@ -516,11 +518,11 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
   // A key under the chart names the red dot and the hollow one.
   assert.match(noteOf(fig), /^● Red: a year CMS cut it\s+○ Hollow: a year it didn’t$/);
   // A never-cut hospital: the sentence has only the years decided.
-  same(numbers(takeaway(yearsFigure(S.recordOf('990104'), S, { n: 5, source: SRC }))), ['4']);
+  same(numbers(takeaway(yearsFigure(S.recordOf('990104'), S, { n: 5, source: SRC, ccn: '990104' }))), ['4']);
   // On the committed history, a hospital that was cut in some year and decided in more than one.
   const [ccn] = [...HD.recs].find(([, r]) => r.includes('Y') && [...r].filter((c) => c !== '.').length > 3);
   const real = HD.recordOf(ccn);
-  const realFig = yearsFigure(real, HD, { n: 2, source: SRC });
+  const realFig = yearsFigure(real, HD, { n: 2, source: SRC, ccn: '990101' });
   same(numbers(takeaway(realFig)), [String(real.cut), String(real.decided)]);
   assert.equal(rowsOf(realFig).length, HD.fys.length);
 });
@@ -528,7 +530,7 @@ test('yearsFigure: where a hospital\'s score stood each year; the table gives CM
 test('yearsFigure: a place in line is never rounded up across a whole percent (74.96% is not "higher than 75%")', () => {
   const rec = S.recordOf('990101');
   const near = { ...rec, years: rec.years.map((y, i) => (i === 0 ? { ...y, share: 0.7496 } : y)) };
-  const fig = yearsFigure(near, S, { n: 5, source: SRC });
+  const fig = yearsFigure(near, S, { n: 5, source: SRC, ccn: '990101' });
   const tip = text(/<title>(FY2021: score[^<]*)<\/title>/.exec(String(fig))[1]);
   assert.match(tip, /higher than 74% of scores/);
   assert.doesNotMatch(tip, /75%/);
@@ -579,6 +581,7 @@ test('placeMembers: a state takes its own hospitals with a record, a region or d
 
 test('placeYearsFigure: a roll call of the place\'s hospitals with its share cut each year beside the nation\'s, in the table, and the inline order the script reads', () => {
   const fig = placeYearsFigure({ place: place({ name: 'Alabama' }), hd: S, master: SM, next: () => 6, source: SRC, src: '/assets/p.json' });
+  assert.match(String(fig), /data-figure-csv="hacrp-state-al-years\.csv"/, 'the download names its place');
   assert.equal(captionOf(fig)[0], '6');
   const rows = rowsOf(fig);
   const own = [[10, 3], [10, 2], [0, 0], [10, 3], [10, 3]];
@@ -769,4 +772,28 @@ test('a hospital\'s own record counts a decision CMS gave without a score, marks
   assert.equal(HD.recs.get(yes.ccn)?.at(-1) ?? '.', '.');
   // A hospital with no decision in any year has no record; one with only unscored decisions has one.
   assert.equal(HD.recordOf('999999'), null);
+});
+
+test('one year reads "1 year", never "1 years": the record summary, the gap tip and the chance tip', () => {
+  const rec = S.recordOf('990104');
+  const never = String(recordStrip({ ...rec, cut: 0, decided: 1 }, S.fys));
+  assert.match(never, /Never cut in 1 year</);
+  assert.doesNotMatch(never, /1 years/);
+  assert.match(String(recordStrip({ ...rec, cut: 0, decided: 2 }, S.fys)), /Never cut in 2 years</);
+  // Cut in its one decided year: "Cut in 1 of 1 year".
+  const once = String(recordStrip({ ...rec, cut: 1, decided: 1 }, S.fys));
+  assert.match(once, /Cut in 1 of 1 year</);
+  assert.doesNotMatch(once, /1 years/);
+  const gap = String(gapFigure(S, { n: 8, source: SRC }));
+  assert.match(gap, /1 year apart: /);
+  assert.doesNotMatch(gap, /1 years apart/);
+  assert.match(gap, /2 years apart: /);
+  const chance = String(chanceFigure(S, { n: 6, source: SRC }));
+  assert.match(chance, /Cut in 1 year: /);
+  assert.doesNotMatch(chance, /1 years/);
+  // The tip's hospital count is singular for one, too: a panel where one k was observed at exactly one hospital.
+  const one = { ...S, panelChance: { ...S.panelChance, observed: S.panelChance.observed.map((o, k) => (k === 2 ? 1 : o)) } };
+  const tipped = String(chanceFigure(one, { n: 6, source: SRC }));
+  assert.match(tipped, /Cut in 2 years: 1 hospital; chance/);
+  assert.doesNotMatch(tipped, /: 1 hospitals;/);
 });

@@ -4,7 +4,7 @@
 // answers. The readout is for the eye; a quiet live region beside it ([data-said]) says a state's line when the state is
 // picked, never as the pointer passes over the map or the focus moves (a focused state's own name is its line). The
 // lines are the server's (hub/home/states.js stateLine): each state's title on the map and each button's name, so the
-// readout says exactly what the map's tooltips and a screen reader say, Maryland's included ("not in these programs").
+// readout says exactly what the map's tooltips and a screen reader say, Maryland's included ("not adjusted by these programs").
 // An address's #state=<code> (the family search's state pick) names a state to pin.
 import { US_STATES } from '../../../engine/js/states.js';
 

@@ -65,19 +65,24 @@ export function cliff({ domain: [lo, hi], band: [highestNo, lowestYes], actual, 
   // under it, below the ledge, ending left of the dot when there is room there.
   const actualText = html`${labels.actual} <tspan class="chart-value">${labels.actualValue}</tspan>`;
   const actualW = capsWidth(`${labels.actual} ${labels.actualValue}`);
-  const actualAt = over
+  // The cut level's label inside the pit, just right of the drop: on one line where it fits, else its words on a second
+  // line, ending at the right edge if they don't fit from the drop.
+  const cutW = amountWidth(labels.cut, Y.amount) + 6 + capsWidth(labels.cutWords);
+  const oneLine = xl + 10 + cutW <= width;
+  const actualAt0 = over
     ? (xa + 12 + actualW <= width ? { x: xa + 12, y: Y.floor - 12, anchor: 'start' } : { x: xa - 12, y: Y.floor - 12, anchor: 'end' })
     : (xa - 12 - actualW >= 0 ? { x: xa - 12, y: Y.ledge + 22, anchor: 'end' } : { x: xa + 12, y: Y.ledge + 22, anchor: 'start' });
+  // Under the line with the label to the right of the dot, a label that runs across the drop would land on the cut level's
+  // label (the same height); it drops below that label instead, still inside the pit.
+  const actualAt = !over && actualAt0.anchor === 'start' && actualAt0.x + actualW > xl + 10
+    ? { ...actualAt0, y: Y.cutLabel + (oneLine ? 22 : 38) }
+    : actualAt0;
   // The highest score's label just above its ring, ending at it; left off (the ring stays, and the table and the
   // takeaway name it) where this hospital's label would run into it, as on a phone with the hospital near the line.
   const highText = `${labels.highest} ${labels.highestValue}`;
   const showHigh = !(over && Math.abs(xa - x1) < 2 * DOT);
   const clash = over && actualAt.x + (actualAt.anchor === 'start' ? actualW : 0) + 8 > x1 - capsWidth(highText);
   const showHighLabel = showHigh && !clash;
-  // The cut level's label inside the pit, just right of the drop: on one line where it fits, else its words on a second
-  // line, ending at the right edge if they don't fit from the drop.
-  const cutW = amountWidth(labels.cut, Y.amount) + 6 + capsWidth(labels.cutWords);
-  const oneLine = xl + 10 + cutW <= width;
   const wordsAt = xl + 10 + capsWidth(labels.cutWords) <= width ? { x: xl + 10, anchor: 'start' } : { x: width - 2, anchor: 'end' };
   const cutLabel = oneLine
     ? text({ x: xl + 10, y: Y.cutLabel, anchor: 'start', cls: 'chart-label chart-label--pen', body: level(labels.cut, labels.cutWords, true) })

@@ -177,6 +177,11 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   const out = HOSPITALS.find((h) => h.est && h.inHrrp && !h.est.hrrpListed && Number.isFinite(HUB.hrrp.hospitals.get(h.ccn)?.paf))
     ?? { ...listedTdr, est: { ...listedTdr.est, hrrpListed: false } };
   assert.ok(whatifRow(block(mainOf(render(out)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`This page uses FY${FY}, the latest year all three programs share, whose file did not list it.`)), 'the unlisted hospital\'s year line');
+  // A hospital FY's file listed that the newer file doesn't (so no Readmissions page): the row says why it has none.
+  // (A real one when the data has it; otherwise one made from a listed hospital.)
+  const gone = HOSPITALS.find((h) => h.est && !h.inHrrp && h.est.hrrpListed) ?? { ...listedTdr, inHrrp: false };
+  assert.ok(whatifRow(block(mainOf(render(gone)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`CMS’s FY${HUB.hrrp.fy} Readmissions file doesn’t list it, so it has no Readmissions page here.`)), 'the year line of a hospital the newer file dropped');
+  assert.ok(!whatifRow(block(mainOf(render(NOT_IN_TDR.est.hrrpListed ? { ...NOT_IN_TDR, est: { ...NOT_IN_TDR.est, hrrpListed: false } } : NOT_IN_TDR)), 'id="whatif"', '</section>'), 'hrrp').includes('Readmissions file doesn’t list it'), 'and none for a hospital neither file lists');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
   assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');
@@ -278,7 +283,7 @@ test('a toggle the hospital has no group for is disabled, with the reason', () =
 });
 
 test('Maryland\'s and a no-inputs hospital\'s pages are the variant: record, status and why, program pages; no swarm, no what-if', () => {
-  for (const [h, status, text] of [[MARYLAND, 'Not in these programs', 'Maryland’s hospitals are paid under the state’s all-payer model, outside these three programs.'], [NO_INPUTS, 'No estimate', `CMS’s FY${FY} payment file has no usable row for this hospital, so this site can’t price it.`]]) {
+  for (const [h, status, text] of [[MARYLAND, 'Not adjusted', 'Maryland’s hospitals are paid under the state’s all-payer model, so these three programs don’t adjust their pay. The hospital-acquired conditions program still scores them.'], [NO_INPUTS, 'No estimate', `CMS’s FY${FY} payment file has no usable row for this hospital, so this site can’t price it.`]]) {
     const page = render(h, 'noindex');
     const main = mainOf(page);
     assert.ok(main.includes(`<article class="hh hh--none" data-ccn="${h.ccn}">`), `${status}: the variant's root`);

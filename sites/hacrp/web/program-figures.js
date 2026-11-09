@@ -304,6 +304,10 @@ ${imageOf(wide, alt, 'wide')}
   });
 }
 
+// A group label inside a sentence: its first word goes lowercase ("For-profit" to "for-profit"), but a proper noun
+// ("Medicare-dependent") or an acronym keeps its capitals.
+const midSentence = (label) => (/^(Medicare|Medicaid|CMS)\b|^[A-Z]{2,}/.test(label) ? label : label.charAt(0).toLowerCase() + label.slice(1));
+
 // Figure: the share cut by kind of hospital, against the nation's.
 function typesFigure(pd, { n, source }) {
   const nationShare = pd.counts.yes / pd.counts.decided;
@@ -324,7 +328,7 @@ function typesFigure(pd, { n, source }) {
   const art = both(draw);
   return figure({
     n, source, alt: t('typesAlt'), ...art, csvName: 'hacrp-share-cut-by-type', note: fill('typesSize', { band: bandText }),
-    takeaway: fill('typesTakeaway', { high: hi.label, highShare: hi.valueText, low: lo.label, lowShare: lo.valueText, nation }),
+    takeaway: fill('typesTakeaway', { high: hi.label, highShare: hi.valueText, low: midSentence(lo.label), lowShare: lo.valueText, nation }),
     table: {
       columns: [{ name: t('typesColGroup') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }, { name: t('figColShare'), numeric: true }],
       rows: pd.types.flatMap((k) => k.groups.map((g) => [`${kindLabel(k.kind)}: ${groupLabel(k.kind, g.key)}`, num(count(g.decided), g.decided), num(count(g.yes), g.yes), num(pct(g.yes / g.decided, 1), g.yes / g.decided)])),
@@ -574,7 +578,7 @@ ${dotKey({ rings: !dense })}`;
   const states = dense ? codes.map((code) => places.places.get(`state:${code.toLowerCase()}`)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, 'en')) : null;
   return figure({
     n: next(), chart, source, csvName: `hacrp-${place.kind}-${place.key}-map`,
-    takeaway: fill('placeMapTakeaway', { name: nameInText(place, { start: true }), yes: count(c.yes), decided: count(c.decided) }),
+    takeaway: c.decided ? fill('placeMapTakeaway', { name: nameInText(place, { start: true }), yes: count(c.yes), decided: count(c.decided) }) : fill('placeMapTakeawayNone', { name: nameInText(place, { start: true }) }),
     table: dense ? {
       columns: [{ name: t('placeColPlace') }, { name: t('figColDecided'), numeric: true }, { name: t('figColCut'), numeric: true }],
       rows: states.map((p) => [p.name, num(count(p.counts.decided), p.counts.decided), num(count(p.counts.yes), p.counts.yes)]),

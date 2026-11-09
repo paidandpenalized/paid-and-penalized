@@ -491,6 +491,7 @@ export const COPY = {
   ledgerWorse: { text: 'worse', claim: null },
   ledgerColPart: { text: 'Part of score', claim: null },
   ledgerTop: { text: 'added the most', claim: null },
+  ledgerTopMeasured: { text: 'added the most of its measured results', claim: null },
   rankWorse: { text: 'Worse than {share} of the other {n} hospitals', claim: null },
   rankBetter: { text: 'Better than {share} of the other {n} hospitals', claim: null },
   rankMiddle: { text: 'At the national median', claim: null },
@@ -498,6 +499,10 @@ export const COPY = {
   rulerMedian: { text: 'median {median}', claim: null },
   figLedgerTakeaway: {
     text: 'Of its {k} measures with a value, this hospital is above the national median on {above}; {short} added the most to its score.',
+    claim: null,
+  },
+  figLedgerTakeawayMeasured: {
+    text: 'Of its {k} measures with a value, this hospital is above the national median on {above}; of its measured results, {short} added the most to its score.',
     claim: null,
   },
   figLedgerTakeawayNone: { text: 'Of its {k} measures with a value, this hospital is above the national median on {above}.', claim: null },

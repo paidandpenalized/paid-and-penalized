@@ -61,7 +61,7 @@ test('results stop at the limit; total counts every match', () => {
 });
 
 // The combobox mounted on a stand-in search form (dom.js), over INDEX by default.
-function setup(t, { load = async () => INDEX, onMore = null, more = null } = {}) {
+function setup(t, { load = async () => INDEX, onMore = null, more = null, moreTypes = null } = {}) {
   const s = comboForm(t);
   const opened = [];
   const loads = { n: 0 };
@@ -70,6 +70,7 @@ function setup(t, { load = async () => INDEX, onMore = null, more = null } = {})
     words: { empty: 'No matches.', kind: { hospital: 'Hospital', state: 'State' }, count: (n) => `${n} matches`, failed: 'Did not load.', more },
     open: (href) => opened.push(href),
     onMore,
+    moreTypes,
   });
   const key = (k) => { let prevented = false; s.input.listeners.keydown({ key: k, preventDefault: () => { prevented = true; } }); return prevented; };
   return { ...s, opened, loads, key };
@@ -198,6 +199,22 @@ test('the combobox: a list cut short offers every match as a last option, where 
   s.key('Enter');
   assert.deepEqual(handed, ['example']);
   assert.deepEqual(s.opened, []);
+});
+
+test('the combobox: with moreTypes the last option counts and hands on only those kinds, by the list\'s own matcher', async (t) => {
+  const entries = [
+    ...Array.from({ length: 12 }, (_, i) => ({ type: 'hospital', key: `9900${10 + i}`, label: `Example ${i}`, href: `/h/${i}/` })),
+    { type: 'state', key: 'EX', label: 'Example State', href: '/s/ex/' },
+  ];
+  const handed = [];
+  const s = setup(t, { load: async () => buildIndex(entries), more: (n) => `All ${n} matches`, moreTypes: ['hospital'], onMore: (q, matches) => handed.push([q, matches.map((m) => m.key)]) });
+  await s.type('example');
+  assert.equal(s.texts().at(-1), 'All 12 matches', 'the state is not counted');
+  s.key('ArrowUp');
+  s.key('Enter');
+  assert.equal(handed.length, 1);
+  assert.equal(handed[0][1].length, 12);
+  assert.ok(!handed[0][1].includes('EX'));
 });
 
 test('the combobox: a failed load says so, and the next try loads again', async (t) => {

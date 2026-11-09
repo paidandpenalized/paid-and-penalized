@@ -16,6 +16,10 @@ import { fill } from './copy.js';
 
 const SLIDER_HEADROOM = 1.2;
 
+// A documented tolerance, not a method constant: the largest predicted-infection count a reader may enter for one measure.
+// It sits far above any one hospital's predicted count in CMS's files (NHSN's model predicts a few hundred at most, for
+// the largest hospitals), so only a typo meets it, such as 1e300, which would otherwise print a 300-digit line.
+export const MAX_PREDICTED_COUNT = 10000;
 const isValue = (x) => typeof x === 'number' && Number.isFinite(x) && x >= 0;
 // The measures a what-if moves: the scored ones, or none for a hospital with no score.
 const whatIfIds = (hospital) => (hospital.total === null ? [] : scoredMeasures(hospital));
@@ -82,7 +86,7 @@ export function reduce(state, action) {
         const { [id]: _, ...rest } = state.predicted;
         return { ...state, predicted: rest };
       }
-      if (!isValue(count)) return state;
+      if (!isValue(count) || count > MAX_PREDICTED_COUNT) return state;
       return { ...state, predicted: { ...state.predicted, [id]: count } };
     }
     default:

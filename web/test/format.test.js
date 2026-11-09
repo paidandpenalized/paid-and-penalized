@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, decimal, dollars, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
+import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -47,6 +47,11 @@ test('moneyRange says a shared unit once and never uses a dash beside a minus', 
   assert.equal(moneyRange(1_000_000, 1_400_000), '$1.0–1.4M');
   assert.equal(moneyRange(850_000, 1_200_000), '$850K–$1.2M');
   assert.equal(moneyRange(400, 900), '$400–$900');
+  // Ends that money() would write in two units, under $10,000: both in whole dollars.
+  assert.equal(moneyRange(764, 999.6), '$764–$1,000');
+  assert.equal(moneyRange(640, 1_090), '$640–$1,090');
+  assert.equal(moneyRange(-1_090, -640), '−$1,090 to −$640');
+  assert.equal(moneyRange(900, 12_000), '$900–$12K', 'past $10,000 the units stay');
   assert.equal(moneyRange(12_000, 12_400), '$12–12K');
   assert.equal(moneyRange(-12_000, 40_000), '−$12K to $40K');
   assert.equal(moneyRange(-1_400_000, -1_000_000), '−$1.4M to −$1.0M');
@@ -135,4 +140,17 @@ test('pctFloor rounds a share down, never across a step: higher-than sentences s
   assert.equal(pctFloor(0.12345, 1), '12.3%');
   assert.equal(pctFloor(0), '0%');
   assert.equal(pctFloor(1), '100%');
+});
+
+test('cmsDecimal rounds as the engines store CMS values (toFixed), not as Intl does; factor() rounds as the page does', () => {
+  // 1.00505 and 0.01265 are stored so that toFixed(4) prints CMS's text; Intl reads them as ties and rounds up.
+  assert.equal(cmsDecimal(1.00505, 4), '1.0050');
+  assert.equal(cmsDecimal(0.01265, 4), '0.0126');
+  assert.equal(factor(1), '1.0000');
+  assert.equal(factor(0.9988), '0.9988');
+  // The one place they differ: a stored tie, which factor() (a computed factor, as the page rounds) reads Intl's way.
+  assert.equal(factor(1.00505), '1.0051');
+  assert.notEqual(factor(1.00505), cmsDecimal(1.00505, 4));
+  assert.equal(cmsDecimal(-0.0173, 4), '−0.0173');
+  assert.equal(cmsDecimal(-0.00004, 4), '0.0000', 'no sign on a value that rounds to zero');
 });

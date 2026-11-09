@@ -114,7 +114,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
     const cls = ['ledger__row', m.id === topId && 'is-top', better && 'is-better', !m.hasZ && 'is-none', m.assigned && 'is-assigned'].filter(Boolean).join(' ');
     const dash = html`<span aria-hidden="true">—</span><span class="vh">${t('noValue')}</span>`;
     return { m, r, value, fmt, rank, markup: html`<li class="${cls}">
-<div class="ledger__name"><div class="ledger__short">${shortName(m)}${m.id === topId ? html` <span class="ledger__tag">${t('ledgerTop')}</span>` : ''}</div><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
+<div class="ledger__name"><div class="ledger__short">${shortName(m)}${m.id === topId ? html` <span class="ledger__tag">${t(view.assignedLarger ? 'ledgerTopMeasured' : 'ledgerTop')}</span>` : ''}</div><p class="ledger__label">${m.label}</p>${rank ? html`<p class="ledger__rank">${rank}</p>` : ''}${notes(m)}</div>
 <div class="ledger__ruler">${svg}</div>
 <p class="ledger__num"><span class="ledger__k">${t('colValue')}</span><span class="cms">${m.hasValue ? m.valueText : dash}</span></p>
 <p class="ledger__num"><span class="ledger__k">${t('colZ')}</span><span class="cms">${m.hasZ ? m.zText : dash}</span></p>
@@ -125,7 +125,7 @@ export function ledgerFigure({ view, nat, model, n, source, notes }) {
   const above = valued.filter((row) => row.value > row.r.median).length;
   const takeaway = !valued.length ? t('figLedgerNoValues')
     : valued.length === 1 ? fill('figRangeOne', { short: valued[0].m.short, side: t(above ? 'figSideAbove' : 'figSideBelow') })
-    : view.largest ? fill('figLedgerTakeaway', { k: String(valued.length), above: String(above), short: view.largest.short })
+    : view.largest ? fill(view.assignedLarger ? 'figLedgerTakeawayMeasured' : 'figLedgerTakeaway', { k: String(valued.length), above: String(above), short: view.largest.short })
       : fill('figLedgerTakeawayNone', { k: String(valued.length), above: String(above) });
   const chart = html`<div class="ledger">
 <div class="ledger__head" aria-hidden="true"><span>${t('colMeasure')}</span><span class="ledger__dir"><span>← ${t('ledgerBetter')}</span><span>${t('ledgerColRuler')}</span><span>${t('ledgerWorse')} →</span></span><span class="num">${t('colValue')}</span><span class="num">${t('colZ')}</span><span class="num">${t('ledgerColPart')}</span></div>

@@ -18,6 +18,7 @@ function el(name) {
     append: (...xs) => { node.children.push(...xs); },
     replaceChildren: (...xs) => { node.children = xs; },
     addEventListener: (type, fn) => { node.handlers[type] = fn; },
+    dispatchEvent: (e) => node.handlers[e.type]?.(e),
     setAttribute() {}, removeAttribute() {}, scrollIntoView() {}, focus() { globalThis.document.activeElement = node; },
     querySelectorAll: () => [],
   };
@@ -41,8 +42,10 @@ async function run(t, { hash = '', results, heads = [], media, maps = [], figs =
   table.querySelectorAll = () => heads;
   const fetched = [];
   const errors = [];
+  const listeners = {};
   globalThis.document = {
-    activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : null), createElement: el,
+    activeElement: null, querySelector: (s) => (s === '.ht[data-src]' ? table : s === '#ht-name' || s === '#ht-state' ? parts[s] ?? null : s === '#hospitals' ? section : null), createElement: el,
+    addEventListener: (type, fn) => { listeners[type] = fn; },
     // The map's figure is found from its .usmap part (client/program.js figuresWith).
     querySelectorAll: (s) => (s === 'svg.chart--us-map' ? maps : s === '.usmap' ? figs.map((fig) => ({ closest: (c) => (c === '.fig' ? fig : null) })) : []),
   };
@@ -64,7 +67,7 @@ async function run(t, { hash = '', results, heads = [], media, maps = [], figs =
   await import(`../client/${entry}.js?run=${Math.random()}`);
   const settle = () => new Promise((r) => setTimeout(r, 0));
   await settle();
-  return { table, retry, nojs, parts, fetched, errors, settle, section, opened };
+  return { table, retry, nojs, parts, fetched, errors, settle, section, opened, listeners };
 }
 
 const ASSET = {
@@ -201,6 +204,19 @@ test("a place page's table lists the place's hospitals only (data-area), whateve
   // The program page's table, with no area, lists every hospital.
   const program = await run(t, { results: [true] });
   assert.deepEqual(rowCcns(program.parts.tbody), ['990051', '990052']);
+});
+
+test("the top bar's hand-off lists exactly the hospitals its matcher found, whatever the text says; the reader's own edit goes back to the text filter", async (t) => {
+  const s = await run(t, { results: [true] });
+  const filter = s.parts['#ht-name'];
+  // The page script loads table.js once (module cache), so this is the module the mounted table uses.
+  const { showInTable } = await import('../client/table.js');
+  showInTable('st. joseph', ['990052']);
+  assert.equal(filter.value, 'st. joseph');
+  assert.deepEqual(rowCcns(s.parts.tbody), ['990052'], 'the plain substring "st. joseph" would find none');
+  filter.value = 'example';
+  filter.handlers.input();
+  assert.deepEqual(rowCcns(s.parts.tbody), ['990051'], 'editing the box filters by its text again');
 });
 
 test('a place page with more hospitals than the first screenful shows the first rows and a button for the rest', async (t) => {

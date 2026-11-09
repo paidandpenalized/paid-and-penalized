@@ -68,8 +68,8 @@ export function statusModel(h, fy) {
   const maryland = h.status === 'maryland';
   return {
     ccn: h.ccn, name: h.name, place: placeOf(h),
-    status: HOSPITAL_COPY[maryland ? 'statusMaryland' : 'statusNoInputs'],
-    why: maryland ? HOSPITAL_COPY.statusMarylandText : fillCopy(HOSPITAL_COPY, 'statusNoInputsText', { fy: String(fy) }),
+    status: fillCopy(HOSPITAL_COPY, maryland ? 'statusMaryland' : 'statusNoInputs'),
+    why: maryland ? fillCopy(HOSPITAL_COPY, 'statusMarylandText') : fillCopy(HOSPITAL_COPY, 'statusNoInputsText', { fy: String(fy) }),
     href: hospitalPathOf('hub', h.ccn),
   };
 }

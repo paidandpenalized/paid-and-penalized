@@ -8,16 +8,21 @@ export const COPY = typesetCopy({
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
-  estimateHow: "The result is close to CMS's but not exact, and the page says how close: the largest difference this site found between its recomputation and the values CMS published.",
+  estimateHow: "The result is close to CMS's but not exact, and the page says how close: for a value CMS publishes, the largest difference this site found from it; for dollars, which CMS doesn't publish hospital by hospital, a likely range from a test against hospitals' own cost reports.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
+  // Where the method itself is: the family's dollar estimates on the hospital-acquired conditions Methods page (its
+  // dollars section, {dollars}), and each program's own figures on its Methods page ({hacrp}, {hrrp}: links).
+  methodsDollars: "The front page's and the hospital pages' dollar estimates are worked out step by step, and tested against hospitals' own cost reports, on the {dollars}.",
+  dollarsLink: 'hospital-acquired conditions Methods page',
+  methodsPrograms: "Each program's own figures, and how this site recomputes CMS's, are on its Methods page: {hacrp} and {hrrp}.",
   // How the hospital-acquired conditions counts differ from page to page (hub/pages.js hacCounts fills them).
   countsHeading: 'How the counts differ',
   countsCms: "In FY{fy}, CMS cut {yes} hospitals under the hospital-acquired conditions program. CMS gave {decidedYes} of them a Total HAC Score, and the program's own pages here count those, among the {decided} scored hospitals with a payment decision.",
-  countsEstimated: "This site estimates dollars for {est} hospitals: every hospital in that program's file except Maryland's {maryland}, paid under the state's own all-payer model, and {noInputs} with no usable row in CMS's payment file. So {priced} of the {decidedYes} scored hospitals CMS cut have an estimate here.",
+  countsEstimated: { text: "This site estimates dollars for {est} hospitals: every hospital in that program's file except Maryland's {maryland}, paid under the state's own all-payer model, and {noInputs} with no usable row in CMS's payment file. So {priced} of the {decidedYes} scored hospitals CMS cut have an estimate here.", claim: 'HUB-04' },
   countsTotals: "The front page's charts and totals add up all {est} hospitals with an estimate. The hospital-acquired conditions pages add up the {headline} of them that program scored, so a program's total can differ slightly between the two.",
   // Which hospital a figure belongs to.
   ccnHeading: 'Hospitals as CMS listed them',
-  ccnText: "Every figure is for a hospital's CCN, its Medicare provider number, as CMS listed it in that year's files. A hospital that has since closed or merged keeps the figures CMS's files gave its CCN for that year.",
+  ccnText: { text: "Every figure is for a hospital's CCN, its Medicare provider number, as CMS listed it in that year's files. A hospital that has since closed or merged keeps the figures CMS's files gave its CCN for that year.", claim: ['HACRP-68', 'HUB-16'] },
 
   // ---------- The policy pages (hub/policy.js, hub/corrections.js) ----------
   // Each page: a description, the "in brief" card's lines (*Brief1…), then its sections (*<Section>Heading and its
@@ -52,9 +57,9 @@ export const COPY = typesetCopy({
   termsAdviceHeading: 'What the numbers are not',
   termsAdvice: "Nothing here is medical, legal, financial or investment advice. A hospital's result in a CMS program comes from CMS's formula applied to the data hospitals report to CMS. It is not a quality grade, and it says nothing about any one patient's care. Don't use these pages on their own to choose a hospital or a treatment.",
   termsAsOfHeading: 'How current it is',
-  termsAsOf: "Every page built from CMS data names the CMS file it uses and when CMS released it. CMS revises and replaces its files. This site can lag behind a new release; when it is updated, its corrections log says so. Before relying on a number for a decision, check it against CMS's own release.",
+  termsAsOf: "Each program's pages name the CMS file they use and when CMS released it. CMS revises and replaces its files. This site can lag behind a new release; when it is updated, its corrections log says so. Before relying on a number for a decision, check it against CMS's own release.",
   termsReuseHeading: 'Reusing this work',
-  termsReuse: "This site's text, charts and derived data are licensed under {contentLicense}: reuse them, commercially or not, with credit to Paid & Penalized and a link to the page. The code is under the {codeLicense} license. CMS's data are works of the U.S. government. The typefaces are under the SIL Open Font License.",
+  termsReuse: { text: "This site's text, charts and derived data are licensed under {contentLicense}: reuse them, commercially or not, with credit to Paid & Penalized and a link to the page. The code is under the {codeLicense} license. CMS's data are works of the U.S. government. The typefaces are under the SIL Open Font License.", claim: 'HUB-15' },
   termsWarrantyHeading: 'No warranty',
   termsWarranty: 'The site is offered as is, without warranty of any kind. Its author is not responsible for decisions made with it.',
   termsContactHeading: 'Questions',
@@ -74,7 +79,7 @@ export const COPY = typesetCopy({
   privacySearchHeading: 'Searching and sharing',
   privacySearch: "The hospital search downloads a list of hospitals and searches it in your browser. What you type isn't sent anywhere. A what-if you share is stored in the link after its # sign, a part of the address browsers don't send to servers.",
   privacyFeedbackHeading: 'Sending feedback',
-  privacyFeedback: "The feedback link opens a Google Form owned by the project's Google account. Google receives what you submit, along with your IP address, under {googlePolicy}. The form doesn't collect email addresses and doesn't ask you to sign in.",
+  privacyFeedback: "The feedback link opens a Google Form owned by the project's Google account. Google receives what you submit, along with your IP address, under {googlePolicy}. The form doesn't collect email addresses and doesn't require you to sign in.",
   privacyFeedback2: "The site and page you came from are filled in for you; you can change or clear them. One optional question asks how to reach you, if you'd like a reply, and another asks which role best describes you. Answers go to a private spreadsheet.",
   privacyPhiHeading: 'Leave out patient information',
   privacyPhi: "Don't include any patient information in feedback: no names, dates of birth, record numbers or details about anyone's care.",
@@ -89,13 +94,13 @@ export const COPY = typesetCopy({
   correctionsReportHeading: 'Reporting an error',
   correctionsReport: 'Use the {feedback} and choose “Something looks wrong.” Say which page, which number or sentence, and what you think it should be. A link to the CMS file or rule behind your point helps most.',
   correctionsCountsHeading: 'What counts as an error',
-  correctionsCounts: "A number that doesn't match CMS's file, a calculation done wrong, or a sentence its source doesn't support. Disagreeing with how CMS designed a program is a different matter: these pages explain CMS's method, and CMS sets it. CMS takes public comments on its payment rules each year.",
+  correctionsCounts: { text: "A number that doesn't match CMS's file, a calculation done wrong, or a sentence its source doesn't support. Disagreeing with how CMS designed a program is a different matter: these pages explain CMS's method, and CMS sets it. CMS takes public comments on its payment rules each year.", claim: 'HUB-14' },
   correctionsHospitalHeading: "A hospital's own data",
-  correctionsHospital: "If a hospital's data in CMS's file is wrong, the fix happens at CMS. Hospitals review their data with CMS before CMS publishes it, and this site can't change CMS's values; it shows what CMS published.",
+  correctionsHospital: { text: "If a hospital's data in CMS's file is wrong, the fix happens at CMS. Hospitals review their data with CMS before CMS publishes it, and this site can't change CMS's values; it shows what CMS published.", claim: 'HUB-13' },
   correctionsProcessHeading: 'What happens to a report',
   correctionsProcess: 'Each report is checked against the CMS source. If the site is wrong, the page is fixed and an entry goes in the log below: what changed, when, and which pages and numbers it affects. Numbers are not changed quietly, and a mistake in an entry is fixed with a new entry.',
   correctionsCmsHeading: 'When CMS revises its data',
-  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each of the site's pages still names the CMS file it was built from and when CMS released it.",
+  correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each program's pages still name the CMS file they were built from and when CMS released it.",
   correctionsSitesHeading: "Each site's data",
   correctionsSite: "{site}: CMS's file released {cms}; this site's numbers last changed {changed}.",
   correctionsLogHeading: 'The log',
@@ -147,5 +152,8 @@ export const COPY = typesetCopy({
 
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',
+  // Who has no hospital page anywhere on the family's sites (the program sites' rows: HACRP-18 subsection (d) hospitals,
+  // HRRP-12 and HRRP-13 the hospitals paid outside the inpatient system).
+  notFoundHospitals: { text: 'Hospital pages here are for the hospitals in CMS’s program files; critical access hospitals and the hospitals Medicare pays outside its inpatient payment system have none.', claim: ['HACRP-18', 'HRRP-12', 'HRRP-13'] },
   notFoundHome: 'Go to the home page',
 });

@@ -47,13 +47,18 @@ export function lastCall(keyOf, fn) {
 export const typesetCopy = (copy) => Object.freeze(Object.fromEntries(Object.entries(copy)
   .map(([k, v]) => [k, typeof v === 'string' ? typeset(v) : { ...v, text: typeset(v.text) }])));
 
+// A copy entry's words: the string itself, or the text of a sentence that cites the claims register ({ text, claim }).
+export const copyText = (entry) => (typeof entry === 'string' ? entry : entry.text);
+
+// The copy key for a count: key's singular twin (key + "One") when n is 1, else key itself ("1 case", "2 cases").
+export const oneKey = (key, n) => (n === 1 ? `${key}One` : key);
+
 // copy[key] (a string, or { text, claim }), typeset, with each {placeholder} replaced. Values must be strings (format numbers
 // first); a placeholder with no value, or a value with no placeholder, throws. plain: leave the text untypeset (a
 // file that isn't page copy, such as the data dictionary's Markdown).
 export function fillCopy(copy, key, values = {}, { plain = false } = {}) {
   if (!has(copy, key)) throw new RangeError(`no copy key "${key}"`);
-  const entry = copy[key];
-  const source = typeof entry === 'string' ? entry : entry.text;
+  const source = copyText(copy[key]);
   const text = plain ? source : typeset(source);
   const used = new Set();
   const out = text.replace(PLACEHOLDER, (_, name) => {

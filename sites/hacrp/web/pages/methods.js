@@ -11,6 +11,7 @@ import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { counter } from '../../../../web/charts/figure.js';
+import { ceilToUnit } from '../../../../engine/js/stats.js';
 import { CUTOFF_PERCENTILE, FACT_SHEET_CUT, HEADLINE_MIN, REDUCTION_TEXT, SHORT_NAMES, SIR_BASE_YEAR, SIR_EXPECTED_TEXT, SIR_NEXT_BASE_YEAR, SIR_NEXT_FY, WINSOR_HIGH, WINSOR_LOW } from '../constants.js';
 import { fyLabel } from '../copy.js';
 import { fill, fillKeep, t } from '../methods/copy.js';
@@ -224,7 +225,7 @@ ${printout(html`<table class="gb takes">
   ].map(([what, from, label, kind]) => html`<tr><th scope="row">${t(what)}</th><td>${typeof from === 'string' ? t(from) : from}</td><td><span class="takes__tag takes__tag--${kind}">${t(label)}</span></td></tr>`)}</tbody>
 </table>`)}
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
-${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(estimate.maxError, 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollars ? dollarsTagNote() : ''}`)}
+${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(ceilToUnit(estimate.maxError, 4), 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollars ? dollarsTagNote() : ''}`)}
 <p><a href="${SITE.pages.methods}#estimate">${t('estimateFamily')}</a></p>` },
     ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },

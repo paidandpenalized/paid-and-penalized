@@ -6,7 +6,7 @@ import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
-import { fillCopy } from '../../web/render/components.js';
+import { copyText, fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
@@ -53,6 +53,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.doesNotMatch(methods, /id="ai"/);
     assert.doesNotMatch(methods, /deterministic code/);
     assert.match(methods, /href="\/about\/#ai"/);
+    // Where the methods themselves are: the dollar estimates' section of the HACRP Methods page, and both programs' pages.
+    assert.ok(methods.includes('<a href="/hacrp/methods/#dollars">hospital-acquired conditions Methods page</a>'), 'the dollars section');
+    assert.ok(methods.includes('<a href="/hacrp/methods/">Hospital-Acquired Conditions</a> and <a href="/hrrp/methods/">Readmissions</a>'), 'each program\'s Methods page');
     // Its description says what the page covers now that the AI paragraph is on /about/.
     assert.ok(methods.includes(`<meta name="description" content="${escapeHtml(COPY.methodsDescription)}">`));
     // How the hospital-acquired conditions counts differ from page to page, each count the dollar file's own, and the CCN
@@ -73,7 +76,8 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
-    assert.ok(notFound.includes(fillCopy(SHARED, 'notInHrrp')), 'the line on who is not in the Readmissions program');
+    assert.ok(notFound.includes(escapeHtml(fillCopy(COPY, 'notFoundHospitals'))), 'the line on which hospitals have pages here');
+    assert.ok(!notFound.includes(escapeHtml(fillCopy(SHARED, 'notInHrrp'))), 'not the Readmissions-only line');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
     assert.ok(notFound.includes(`href="${escapeHtml(feedbackHref({ siteName: SITE.name }))}"`));
@@ -179,6 +183,8 @@ test('each policy page has one h1, the brief as a record card, an index of its s
     }
   }));
 
+const textOfKey = (key) => copyText(COPY[key]);
+
 test('every word of the five pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
   withHub((read) => {
     for (const { path, stem } of POLICY) {
@@ -186,15 +192,15 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
       const words = textOf(text);
       const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
       for (const key of keys) {
-        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(COPY[key])), `${path}: ${key}`); continue; }
+        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(textOfKey(key))), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.
-        const stretch = COPY[key].split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
+        const stretch = textOfKey(key).split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
         assert.ok(words.includes(stretch), `${path}: ${key} is not on the page`);
       }
       assert.doesNotMatch(words, /\{\w+\}/, `${path}: a placeholder left unfilled`);
       // Where its words call for the form (not privacy's, which describes the footer's link), the link is the prefilled one.
       const href = feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path });
-      if (keys.some((k) => COPY[k].includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
+      if (keys.some((k) => textOfKey(k).includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
     }
   }));
 

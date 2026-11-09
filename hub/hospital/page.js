@@ -191,10 +191,13 @@ function figure(h, { peers, figures, group }, { fy, all }) {
 
 // ---------- the what-if section ----------
 // The Readmissions row's second line, for a hospital with a Readmissions page here: that page shows CMS's newer file's
-// factor (hrrp: loadHub().hrrp), so the row says which and why this page's differs; '' otherwise.
+// factor (hrrp: loadHub().hrrp), so the row says which and why this page's differs. A hospital this page's year lists
+// but the newer file doesn't has no Readmissions page, and the row says why. '' otherwise.
 function hrrpYearLine(h, { fy, hrrp }) {
-  const record = h.inHrrp ? hrrp?.hospitals.get(h.ccn) : null;
-  if (!record || !Number.isFinite(record.paf) || String(hrrp.fy) === fy) return '';
+  if (!hrrp || String(hrrp.fy) === fy) return '';
+  if (!h.inHrrp) return h.est.hrrpListed ? html`<p class="hh__why">${fill('whyHrrpYearGone', { next: String(hrrp.fy) })}</p>` : '';
+  const record = hrrp.hospitals.get(h.ccn);
+  if (!record || !Number.isFinite(record.paf)) return '';
   return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(hrrp.fy), factor: factor(record.paf), fy })}</p>`;
 }
 

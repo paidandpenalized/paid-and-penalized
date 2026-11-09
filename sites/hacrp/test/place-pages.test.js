@@ -125,6 +125,10 @@ test('a place with no hospital with a payment decision has no share, rank, stamp
   assert.ok(labels.includes('Hospitals cut'));
   assert.doesNotMatch(text, /<p class="stamp/);
   assert.doesNotMatch(text, /id="scores"/, 'no histogram of scores with a decision');
+  // Neither the card nor the map says "of 0".
+  assert.ok(text.includes('No hospital with a payment decision'));
+  assert.ok(text.includes(': no hospital with a payment decision.'));
+  assert.doesNotMatch(text, /Of 0 with|cut of 0/);
   // Its map and its table are still there.
   assert.match(text, /id="where"/);
   assert.match(text, /class="block hospitals"/);

@@ -90,7 +90,9 @@ export function sortRows(rows, key, dir) {
 
 // tableRows in state (when given) whose name, city or CCN holds query (trimmed, any case; searchKey), in the order
 // given.
-export function filterRows(rows, { state = null, query = '' } = {}) {
+// With ccns (a Set), exactly those hospitals instead: the top bar's matches, which its matcher chose, not the text.
+export function filterRows(rows, { state = null, query = '', ccns = null } = {}) {
   const q = query.trim().toLowerCase();
-  return rows.filter((r) => (!state || cellOf(r.cells, 'state') === state) && (!q || r.key.includes(q)));
+  return rows.filter((r) => (!state || cellOf(r.cells, 'state') === state)
+    && (ccns ? ccns.has(cellOf(r.cells, 'ccn')) : (!q || r.key.includes(q))));
 }

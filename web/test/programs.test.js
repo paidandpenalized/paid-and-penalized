@@ -97,7 +97,7 @@ test('the method constants are the programs\' own rules: the 3% Readmissions cap
   assert.deepEqual([HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT].map(rulePercent), ['3%', '1%', '2%']);
 });
 
-test('the other method constants the deks say in words: the 30-day window, the highest-scoring quarter, the quarter and three-quarters of a yearly increase, five surgeries', () => {
+test('the other method constants the deks say in words: the 30-day window, the highest-scoring quarter, the quarter and three-quarters of the market-basket increase, five surgeries', () => {
   assert.deepEqual([HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES], [30, 0.25, 0.25, 0.75, 5]);
   // The hospital-acquired conditions cut falls on the scores above the engine's 75th-percentile line: the top quarter.
   assert.equal(HAC_TOP_SHARE, 1 - LINE_PERCENTILE);
@@ -107,28 +107,31 @@ test('the deks say the rules\' numbers in the words they read in (the copy holds
   const NUMBER_WORD = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|sixty|ninety|hundred|half|third|thirds|quarter|quarters|three-quarters)\b/i;
   for (const id of IDS) {
     const key = `dek${id.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
-    assert.doesNotMatch(COPY[key], NUMBER_WORD, key);
+    assert.doesNotMatch(COPY[key].text, NUMBER_WORD, key);
   }
-  assert.equal(programDek('hrrp'), 'Cuts pay by up to 3% when more patients than expected return to the hospital in the thirty days after leaving.');
+  assert.equal(programDek('hrrp'), 'Cuts base payments by up to 3% when a hospital\u2019s risk-adjusted readmissions in the thirty days after discharge run above its peer group\u2019s median.');
   assert.equal(programDek('hacrp'), 'Cuts pay by a flat 1% for the quarter of hospitals with the highest infection and patient-safety scores.');
-  assert.equal(programDek('iqr'), 'Hospitals that don\u2019t report required quality data lose a quarter of their yearly payment increase.');
-  assert.equal(programDek('pi'), 'Hospitals that miss electronic health record requirements lose three-quarters of their yearly increase.');
+  assert.equal(programDek('iqr'), 'Hospitals that don\u2019t report required quality data have a quarter of the market-basket increase taken off their yearly payment update.');
+  assert.equal(programDek('pi'), 'Hospitals that miss electronic health record requirements have three-quarters of the market-basket increase taken off their yearly update.');
   assert.equal(programDek('team'), 'In selected areas, hospitals earn or owe money against a spending target for five surgeries.');
 });
 
 test('each dek is copy with no digit, and fills with the rule\'s percent and nothing left over', () => {
   for (const id of IDS) {
     const key = `dek${id.replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())}`;
-    assert.equal(typeof COPY[key], 'string', `COPY.${key}`);
-    assert.doesNotMatch(COPY[key], /\d/, key);
+    // A dek states the program's rule, so it is a sourced entry ({ text, claim }: the claim ids in hub/CLAIMS.md or a
+    // program site's register; the copy gate checks them).
+    assert.equal(typeof COPY[key].text, 'string', `COPY.${key}`);
+    assert.ok(COPY[key].claim, `COPY.${key}: its claim ids`);
+    assert.doesNotMatch(COPY[key].text, /\d/, key);
     const dek = programDek(id);
     assert.ok(dek.length > 40, id);
     assert.doesNotMatch(dek, /[{}]/, `${id}: every placeholder filled`);
     assert.match(dek, /^[A-Z].*\.$/, `${id}: a sentence`);
   }
-  assert.match(programDek('hrrp'), /^Cuts pay by up to 3% when more patients than expected return to the hospital/);
+  assert.match(programDek('hrrp'), /^Cuts base payments by up to 3% when a hospital\u2019s risk-adjusted readmissions/);
   assert.match(programDek('hacrp'), /^Cuts pay by a flat 1% for the quarter of hospitals with the highest infection and patient-safety scores\.$/);
-  assert.match(programDek('hvbp'), /^Holds back 2% of pay and returns it by quality score, as a bonus or a net cut\. Budget-neutral by design\.$/);
+  assert.match(programDek('hvbp'), /^Holds back 2% of base payments and returns it by quality score, as a bonus or a net cut\. Budget-neutral by design\.$/);
   assert.equal(programDek('wage-index'), 'Raises or lowers the labor share of each payment to match local wages.');
   assert.equal(programDek('team'), 'In selected areas, hospitals earn or owe money against a spending target for five surgeries.');
   // The deks that carry a percent are the three the constants name; no other dek has a digit in its output either.

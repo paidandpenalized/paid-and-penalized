@@ -33,3 +33,9 @@ test('explorer filters combine', () => {
   assert.deepEqual([bedBand(100), bedBand(300), bedBand(500)], BED_BANDS.slice(1));
   assert.deepEqual(Object.keys(TEACH_LABEL), ['none', 'minor', 'major']);
 });
+
+test('a hospital with no city is not found by the text "null"', () => {
+  const list = [{ id: 'a', name: 'Alpha General', city: null, st: 'UT' }, { id: 'b', name: 'Beta Medical', city: 'Ogden', st: 'UT' }];
+  assert.deepEqual(applyFilters(list, { text: 'null' }), []);
+  assert.deepEqual(applyFilters(list, { text: 'alpha' }).map((h) => h.id), ['a']);
+});

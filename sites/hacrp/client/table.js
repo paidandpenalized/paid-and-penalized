@@ -15,7 +15,9 @@ import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
 // Every match for a query, handed on by the top bar's search: the table shows them through its own text filter
 // (mountTable reads it if the table mounts later). A state filter could hide them, so the table goes back to all
 // states, in the URL and the state menu, as the menu itself writes it.
-export function showInTable(query) {
+// The matches are kept (handed) for a table that mounts later; the reader's own edit of the filter box ends them.
+let handed = null;
+export function showInTable(query, ccns = null) {
   const filter = document.querySelector('#ht-name');
   if (!filter) return;
   const { pathname, search, hash } = window.location;
@@ -26,11 +28,16 @@ export function showInTable(query) {
     states.value = '';
     states.dispatchEvent(new Event('change'));
   }
+  handed = ccns ? { query, ccns: new Set(ccns) } : null;
   filter.value = query;
   filter.dispatchEvent(new Event('input'));
   document.querySelector('#hospitals')?.scrollIntoView({ block: 'start' });
 }
-document.addEventListener?.('hacrp:show-in-table', (e) => showInTable(String(e.detail ?? '')));
+document.addEventListener?.('hacrp:show-in-table', (e) => {
+  const d = e.detail;
+  if (d && typeof d === 'object') showInTable(String(d.query ?? ''), d.ccns ?? null);
+  else showInTable(String(d ?? ''));
+});
 
 
 // linked: the page was opened from a link naming a state (#state=XX), so a valid one brings the table into view.
@@ -48,7 +55,7 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
   const heads = [...table.querySelectorAll('th[data-key]')];
   const codes = stateCodes(rows);
   // The search above may have filled the text filter before the table mounted.
-  const view = { state: null, query: search.value, key: null, dir: 1, expanded: false };
+  const view = { state: null, query: search.value, ccns: handed && handed.query === search.value ? handed.ccns : null, key: null, dir: 1, expanded: false };
 
   select?.append(...codes.map((code) => {
     const option = document.createElement('option');
@@ -143,6 +150,9 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
   });
   search.addEventListener('input', () => {
     view.query = search.value;
+    // The hand-off's own input event takes the handed-on set; any other text, the reader's edit, drops it.
+    if (handed?.query !== search.value) handed = null;
+    view.ccns = handed?.ccns ?? null;
     render({ typing: true });
   });
   all.addEventListener('click', () => {

@@ -13,7 +13,7 @@ import { nationalContext } from '../../sites/hacrp/web/compare.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { groupLabel } from '../../sites/hacrp/web/groups.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
-import { KINDS as HRRP_KINDS, METHODS_PATH as HRRP_METHODS_PATH, PROGRAM_PATH as HRRP_PROGRAM_PATH, hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { DICTIONARY_PAGE as HRRP_DICTIONARY_PAGE, KINDS as HRRP_KINDS, METHODS_PATH as HRRP_METHODS_PATH, PROGRAM_PATH as HRRP_PROGRAM_PATH, hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { buildPlaces } from '../../sites/hrrp/web/places.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
@@ -65,11 +65,13 @@ function sampleOf(label, table, type, rows, pathOf, join = () => null) {
 }
 
 // The sample hospitals by type, each the first in the newest HACRP file (in the file's order) that CMS cut, that has no
-// score, and that has a score and was not cut: [type, what it is, the test].
+// score, that has a score and was not cut, and that is in no HACRP decision (Maryland's: the hatched "N/A" pill, which axe
+// leaves some text unjudged under): [type, what it is, the test].
 const HOSPITALS = [
   ['hospital-cut', 'with a payment cut', (h) => isDecided(h) && h.paymentReduction === 'Yes'],
   ['hospital-unscored', 'with no score', (h) => h.total === null],
   ['hospital-not-cut', 'with a score and no cut', (h) => isDecided(h) && h.paymentReduction === 'No'],
+  ['hospital-no-decision', 'with no HACRP decision (the hatched N/A pill)', (h) => h.paymentReduction === 'N/A'],
 ];
 
 // The sample hospital's page of a type (HOSPITALS), { type, name, path, hospital: its emitted record }, from the
@@ -135,7 +137,7 @@ export function peerChartSamples() {
 // placeholder page (value-based purchasing's, the one with a figure), the program page, its Methods and dictionary, the three sample hospitals
 // (hospitalSample), the first region, division, state and metro page in dist/, the two sample hospitals' pages across the
 // programs (hubHospitalSample), the Readmissions program page, its three sample hospitals' pages (hrrpHospitalSample), its
-// first place of each kind (hrrpPlaceSamples) and its Methods page, and
+// first place of each kind (hrrpPlaceSamples) and its Methods page and its data dictionary, and
 // a path no page has (the not-found page, served with status 404). name is the page's
 // name in a test's title: its type, and a policy page's path; never a hospital's name or address. Needs dist/ and the
 // emitted data, whichever site the browser visits.
@@ -159,6 +161,7 @@ export function samplePages() {
     ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hrrpData.hospitals)),
     ...hrrpPlaceSamples(hrrpData),
     page('hrrp-methods', HRRP_METHODS_PATH),
+    page('hrrp-dictionary', HRRP_DICTIONARY_PAGE),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }

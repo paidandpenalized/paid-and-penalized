@@ -15,13 +15,14 @@ import { count, money, pct } from '../../../web/client/format.js';
 import { HAC_CUT_PCT, HRRP_CAP_PCT, rulePercent } from '../../../web/programs.js';
 import { inkColor, onThemeChange, readColors, readFonts } from '../colors.js';
 import { TAU, clamp01, deviceRatio, ease, fontOf, outCubic, paintDots, smooth } from '../paint.js';
+import { copyText } from '../../../web/render/components.js';
 import { COPY } from './copy.js';
 import { tickText, wholePercents } from '../scale.js';
 import { clearOfKey, fitBox, stageGeometry } from './geometry.js';
 import { OUT_A, createLayouts } from './layouts.js';
 
 // The words with their {placeholders} filled (a function replacement: a value holding "$&" or "$0" prints as itself).
-const say = (key, values = {}) => COPY[key].replace(/\{(\w+)\}/g, (_, name) => values[name]);
+const say = (key, values = {}) => copyText(COPY[key]).replace(/\{(\w+)\}/g, (_, name) => values[name]);
 // The gate sweep: it starts at SW0 of the transition and takes SW1 of it. It rises through the crowd at a steady pace
 // over the first CROSS of its time, so each hospital is seen to move as the gate reaches it, then speeds to the top.
 const SW0 = 0.04;

@@ -154,7 +154,7 @@ test('the states map: a path per state and DC with its title line, shaded by its
     if (p.code === 'MD') {
       assert.equal(p.cls, 'st st--md');
       assert.equal(p.t, null);
-      assert.match(p.title, /^Maryland: not in these programs/);
+      assert.match(p.title, /^Maryland: not adjusted by these programs/);
       continue;
     }
     assert.equal(p.cls, `st st--${s.share < 0 ? 'pen' : 'rew'}`, p.code);
@@ -178,7 +178,7 @@ test('the states map: a path per state and DC with its title line, shaded by its
   assert.ok(end >= Math.max(...[...states.values()].filter((s) => !s.notInPrograms).map((s) => Math.abs(s.share))));
   assert.ok(textOf(key).includes(`${pct(-end, 1)} cut`));
   assert.ok(textOf(key).includes(`${pct(end, 1, { sign: true })} bonus`));
-  assert.ok(textOf(key).includes('Maryland: not in these programs'));
+  assert.ok(textOf(key).includes('Maryland: not adjusted'));
   // Its title in full, and a short one the narrowest phones show instead (one line at 320 px), each with the year.
   assert.match(key, new RegExp(`<p class="dkey__t"><span class="dkey__long">State net change, est\\. FY${hub.fy}, % of Medicare inpatient pay</span><span class="dkey__short">Net change, est\\. FY${hub.fy}, % of pay</span></p>`));
   // The readout's prompt waits, hidden, for the script that makes the states answer to pointing, tapping and tabbing. It

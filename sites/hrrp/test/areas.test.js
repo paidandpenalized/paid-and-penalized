@@ -67,7 +67,7 @@ test('a place page: the kind, the deck (take/takes, the average, the state rank,
   const S = summarize(zz.hospitals);
   assert.match(text, /<p class="cap kicker">State<\/p>\s*<h1 class="place__title">Zedland<\/h1>/);
   assert.ok(text.includes(`${S.nPen} of ${S.n} hospitals take a cut in FY2027:`));
-  assert.match(text, /The average cut, counting all 7 hospitals, is \d\.\d\d%, the (largest|2nd-largest) among the 2 states in the program\./);
+  assert.match(text, /The average cut, counting all 7 hospitals, is \d\.\d\d%, the (largest|smallest) among the 2 states in the program\./);
   assert.match(text, /Estimated total: \$[\d.]+[KMB]?<a class="est-tag"/);
   assert.deepEqual(labels(text), ['1 Hospitals', '2 Penalized', '3 Average cut', '4 Cut 1% or more', `5 At the ${CAP_PCT}% cap`, '6 Estimated dollars']);
   assert.match(text, /<span>Zedland · FY2027<\/span><span>Compared with all hospitals nationally<\/span>/);
@@ -77,7 +77,8 @@ test('the deck: "the largest", "the Nth-largest", "one hospital", and none measu
   const two = areaOf(); // ZZ and ZY
   const ranks = ['zz', 'zy'].map((k) => placeView(placeOf('state', k, two), two).deck.average);
   assert.ok(ranks.some((r) => r.includes('the largest among the 2 states in the program. ')), ranks.join('|'));
-  assert.ok(ranks.some((r) => r.includes('the 2nd-largest among the 2 states in the program. ')), ranks.join('|'));
+  assert.ok(ranks.some((r) => r.includes('the smallest among the 2 states in the program. ')), ranks.join('|'));
+  assert.ok(!ranks.some((r) => r.includes('2nd-largest')), 'the last place is the smallest, not the Nth-largest');
   assert.ok(!placeView(placeOf('metro', '99901', two), two).deck.average.includes('states'), 'only states are ranked');
   const one = areaOf([hospital({ id: '990070', st: 'ZY', cbsa: null, cbsaName: null, c: { HF: { n: 10, err: 1.2, flag: 0, ratio: 0.1 } }, paf: 1, red: 0, pen: 0 })]);
   const view = placeView(placeOf('state', 'zy', one), one);
@@ -140,7 +141,7 @@ test('hostile text in a place name is escaped', () => {
 });
 
 test('the 404 line is a Readmissions sentence with no digit (the family 404 page prints it: hub/test/pages.test.js)', () => {
-  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals Medicare pays under its inpatient payment system, so critical access hospitals and the hospitals paid outside it (children’s, cancer, psychiatric, rehabilitation and long-term care hospitals) are not in it and have no page here.');
+  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children’s, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico’s hospitals are not in it and have no page here.');
 });
 
 // On the data.
@@ -171,6 +172,8 @@ test('on the data: a state is ranked, and its rank is among the states and DC', 
   const ranks = PLACES.list.filter((p) => p.kind === 'state').map((p) => placeView(p, DATA_AREA).deck.average);
   assert.equal(ranks.filter((r) => r.includes('the largest among')).length, 1);
   assert.ok(ranks.every((r) => r.includes('states and DC in the program')));
+  assert.equal(ranks.filter((r) => r.includes('the smallest among')).length, 1, 'the last place is the smallest');
+  assert.ok(!ranks.some((r) => /the (\d+)(st|nd|rd|th)-largest among the (\d+) states/.test(r) && Number(/the (\d+)(?:st|nd|rd|th)-largest/.exec(r)[1]) > Number(/among the (\d+) states/.exec(r)[1]) + 1), 'no rank past the count');
 });
 
 // The cards' and the deck's notes, as exact strings.
