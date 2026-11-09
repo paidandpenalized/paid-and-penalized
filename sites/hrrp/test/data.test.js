@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { REPO_ROOT, hrrpPath, newestYear, masterPath, readJson, readManifest } from '../../../pipeline/files.js';
 import { ATLAS_ID } from '../../../web/charts/geo.js';
 import { loadHrrp, changedOn, PIN_ID } from '../web/data.js';
+import { nameText } from '../../../web/render/format.js';
 
 const emitted = loadHrrp();
 const pinned = loadHrrp({ exists: () => false });
@@ -81,4 +82,13 @@ test('the master is keyed by CCN and the shapes cover the states', () => {
   assert.ok(emitted.master.has(emitted.hospitals[0].id));
   assert.ok(emitted.shapes.size >= 50);
   assert.ok(emitted.manifest.length > 0);
+});
+
+test('hospital names are printed as nameText has them, initialisms in capitals, in the hospitals and the master', () => {
+  const raw = readJson(`${REPO_ROOT}${hrrpPath(2027)}`);
+  const changed = raw.hospitals.filter((h) => nameText(h.name) !== h.name);
+  assert.ok(changed.length > 0, 'some names carry an initialism');
+  const byId = new Map(emitted.hospitals.map((h) => [h.id, h]));
+  for (const h of raw.hospitals) assert.equal(byId.get(h.id).name, nameText(h.name), h.id);
+  for (const r of emitted.master.values()) assert.equal(r.name, nameText(r.name), r.ccn);
 });
