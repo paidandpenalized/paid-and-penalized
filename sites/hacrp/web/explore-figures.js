@@ -59,6 +59,9 @@ export const stackTake = (id, m) => (isSir(id)
   ? fill('fig2TakeSir', { zero: count(m.zero), n: count(m.n), aShort: `${articleFor(SHORT_NAMES[id])} ${SHORT_NAMES[id]}`, median: decimal(m.median, m.params.decimals) })
   : fill('fig2TakePsi', { short: SHORT_NAMES[id], one: SIR_EXPECTED_TEXT, median: decimal(m.median, m.params.decimals), above: count(m.values.filter((v) => v > SIR_EXPECTED).length), n: count(m.n) }));
 
+// The decimals an axis's labels need when its ticks are step apart (1 or more: none; 0.5 or 0.2: one), so no two read alike.
+const decimalsOf = (step) => (String(step).split('.')[1] ?? '').length;
+
 // One measure as reported and as scored: its panel. m: measureSummary().
 export function pullPanel(id, m) {
   const p = m.params;
@@ -68,7 +71,7 @@ export function pullPanel(id, m) {
   const hi = Math.min(Math.ceil(m.values[m.values.length - 1]), Math.max(2, Math.ceil(p.cap * 2.5)));
   const pulled = m.atCap + (p.floor > 0 ? m.atFloor : 0);
   const labels = { reported: t('fig3Reported'), scored: t('fig3Scored'), floor: fill('fig3Floor', { value: fmt(p.floor) }), cap: fill('fig3Cap', { value: fmt(p.cap) }), pulled: fill('fig3Pulled', { n: count(pulled) }), beyond: (k) => fill('fig3Beyond', { n: count(k), hi: decimal(hi, 0) }) };
-  const draw = (width) => pullIn({ values: m.values, floor: p.floor, cap: p.cap, domain: [lo, hi], labels, format: (v) => decimal(v, 0), width });
+  const draw = (width) => pullIn({ values: m.values, floor: p.floor, cap: p.cap, domain: [lo, hi], labels, format: (v, step) => decimal(v, decimalsOf(step)), width });
   return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig3Alt', { short: SHORT_NAMES[id] }), take: pullTake(id, m) };
 }
 export const pullTake = (id, m) => {

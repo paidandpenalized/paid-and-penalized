@@ -22,7 +22,7 @@ import { buildPlaces } from '../web/places.js';
 import { TYPE_KINDS, programData } from '../web/program-data.js';
 import { spearman } from '../../../engine/js/stats.js';
 import { mapFigure, part1, part2 } from '../web/program-figures.js';
-import { stackPanel, stackTake } from '../web/explore-figures.js';
+import { pullPanel, stackPanel, stackTake } from '../web/explore-figures.js';
 import { hospitalView } from '../web/view.js';
 import { ASSETS, CASES, inputs, master } from './fixtures.js';
 import { DATA, HISTORY_ARGS, PAGE_CTX, PD, PLACES, RANGE, SEARCH_URL, VIEWS, renderPlace, renderProgram } from './pinned.js';
@@ -433,4 +433,15 @@ test('the kinds figure takeaway lowercases the second group after the semicolon,
   const m = /were cut most often \([^)]*\); ([^,]*) hospitals, least/.exec(PAGE);
   assert.ok(m, 'the takeaway is on the page');
   assert.match(m[1], /^[a-z]|^(Medicare|Medicaid|CMS)|^[A-Z]{2,}/, m[1]);
+});
+
+test('Figure 3\'s axis never labels two neighbouring ticks alike, for every measure, at both drawings', () => {
+  for (const id of MEASURE_IDS) {
+    const panel = pullPanel(id, PD.measures[id]);
+    for (const svg of [panel.svg, panel.svgWide].map(String)) {
+      const labels = [...svg.matchAll(/<text class="chart-axis__label"[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+      assert.ok(labels.length >= 3, `${id}: the axis has labels`);
+      labels.forEach((l, i) => i && assert.notEqual(l, labels[i - 1], `${id}: ticks read ${labels.join(', ')}`));
+    }
+  }
 });
