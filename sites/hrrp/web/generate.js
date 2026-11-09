@@ -23,6 +23,10 @@ import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH, csvPath, dictionaryPath, h
 import { buildPlaces } from './places.js';
 import { areaContext, hospitalContext, hospitalView, methodsView, placeView, programView } from './view.js';
 
+// Whether a CMS file gives the hospital a name: the hospital master names one that none does "Hospital <CCN> (name not
+// in CMS files)" (pp_engine/master.py build_record), and its page stays out of search engines until a file names it.
+export const cmsNamed = (h) => h.name !== `Hospital ${h.id} (name not in CMS files)`;
+
 // The first hospital whose factor the formula does not reproduce, or null.
 export function firstMismatch(hospitals, meta) {
   return hospitals.find((h) => contrib(h, meta).paf !== h.paf) ?? null;
@@ -68,8 +72,10 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   for (const group of shared.areas.values()) {
     ctx.emit({ path: csvPath(fy, group.csvName), noindex: robots !== null, text: hospitalCsv(group.rows.map((r) => r.h)) });
   }
+  // A hospital no CMS file names (the master's stand-in name, cmsNamed) keeps its page, unindexed until a file names it.
   for (const hospital of hospitals) {
-    ctx.emit({ path: hospitalPath(hospital.id), robots, text: hospitalPage({ view: hospitalView(hospital, shared), robots, assets, hospitalsUrl }) });
+    const own = robotsFor({ env: ctx.env, released, eligible: cmsNamed(hospital) });
+    ctx.emit({ path: hospitalPath(hospital.id), robots: own, text: hospitalPage({ view: hospitalView(hospital, shared), robots: own, assets, hospitalsUrl }) });
   }
   for (const place of places.list) {
     const view = placeView(place, area);
