@@ -13,7 +13,8 @@ import { count, fractionWord, money, numberWord, pct } from '../../web/render/fo
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { SITE, hospitalPathOf, underConstruction } from '../../web/site.js';
-import { factorText, paintWorksheet, worksheetModel } from '../client/story/worksheet.js';
+import { factorText } from '../../web/render/format.js';
+import { paintWorksheet, worksheetModel } from '../client/story/worksheet.js';
 import { loadHub } from '../data.js';
 import { BIN_POINTS, directory, programBins } from '../home/below.js';
 import { COPY } from '../home/copy.js';

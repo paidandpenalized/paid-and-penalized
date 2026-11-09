@@ -111,6 +111,18 @@ export const decimal = (x, dp) => withSign(x, dp, '');
 // A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000".
 export const factor = (x) => decimal(x, 4);
 
+// A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
+// gives it), never fewer than the four Readmissions' file gives: factorText(0.995) is "0.9950", factorText(1.0014638299)
+// "1.0014638299". At that many places the value is exact, so no rounding rule enters, and the base times the factor less
+// one gives the program's dollars.
+const FACTOR_MIN_PLACES = 4;
+const FACTOR_MAX_PLACES = 10;
+export function factorText(f) {
+  let places = FACTOR_MIN_PLACES;
+  while (places < FACTOR_MAX_PLACES && Math.abs(Number(f.toFixed(places)) - f) > 1e-12) places += 1;
+  return decimal(f, places);
+}
+
 // As decimal, with + for positives.
 export const signed = (x, dp = 1) => withSign(x, dp, '+');
 

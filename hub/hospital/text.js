@@ -2,7 +2,7 @@
 // restates for another peer group or a what-if. Pure and browser-safe. fill(key, values) fills hub/hospital/copy.js's
 // words (the build's fillCopy, or the script's own).
 import { HAC_CUT_PCT, rulePercent } from '../../web/programs.js';
-import { count, factor, money, pct } from '../../web/render/format.js';
+import { count, factorText, money, pct } from '../../web/render/format.js';
 
 // The most decimals a share is printed with.
 const MAX_DP = 6;
@@ -70,9 +70,9 @@ export function whyText(fill, h, id, f, { fy, group }) {
   const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
   const median = id === 'hacrp' ? [fill('whyHacCount')] : f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
   const own = {
-    hrrp: () => (est.hrrpListed ? fill('whyFactor', { fy, factor: factor(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
+    hrrp: () => (est.hrrpListed ? fill('whyFactor', { fy, factor: factorText(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
     hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('whyHacNone', { fy })),
-    hvbp: () => (est.vbpListed ? fill('whyFactor', { fy, factor: factor(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
+    hvbp: () => (est.vbpListed ? fill('whyFactor', { fy, factor: factorText(est.vbpFactor) }) : fill('whyVbpOut', { fy })),
   }[id]();
   return [own, peers, ...median];
 }

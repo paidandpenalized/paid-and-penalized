@@ -103,6 +103,8 @@ export const COPY = typesetCopy({
   whyHrrpYear: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}'s, the latest year all three programs share.",
   // The same for a hospital FY{fy}'s file did not list.
   whyHrrpYearOut: "Its Readmissions page shows CMS's FY{next} factor, {factor}. This page uses FY{fy}, the latest year all three programs share, whose file did not list it.",
+  // The same for a hospital FY{fy}'s file lists but the newer one doesn't, which so has no Readmissions page here.
+  whyHrrpYearGone: "CMS's FY{next} Readmissions file doesn't list it, so it has no Readmissions page here.",
   whyHrrpOut: "Not in CMS's FY{fy} Readmissions file.",
   whyVbpOut: "Not in CMS's FY{fy} value-based purchasing file.",
   whyHacCut: "CMS's FY{fy} decision: the flat {rate} cut.",
