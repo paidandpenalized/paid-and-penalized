@@ -66,13 +66,12 @@ export function rankLine(h, ctx) {
   }
   const inState = ctx.byState.get(h.st);
   const inPeer = ctx.byPeer.get(h.peer);
+  // A share of 0 says so in words ("none of the 6 in Delaware"), not "0% of the 6".
+  const clause = (key, pct, extra) => (pct ? fill(key, { pct: String(pct), ...extra }) : fill(`${key}None`, extra));
   return fill('rankLine', {
-    nation: String(rankPct(ctx.sortedRed, h.red)),
-    state: String(rankPct(inState, h.red)),
-    stateCount: fmtInt(inState.length),
-    stateName: ctx.states[h.st],
-    peer: String(rankPct(inPeer, h.red)),
-    group: String(h.peer),
+    nation: clause('rankNation', rankPct(ctx.sortedRed, h.red), {}),
+    state: clause('rankState', rankPct(inState, h.red), { stateCount: fmtInt(inState.length), stateName: ctx.states[h.st] }),
+    peer: clause('rankPeer', rankPct(inPeer, h.red), { group: String(h.peer) }),
   });
 }
 

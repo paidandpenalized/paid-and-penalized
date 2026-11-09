@@ -96,6 +96,10 @@ test('rankLine: the share of hospitals with a smaller cut, nationally, in the st
   // The biggest cut in a set is larger than every other hospital's, and the line still says 99%, never 100%.
   const big = Array.from({ length: 300 }, (_, i) => hosp({ id: String(990001 + i), red: (i + 1) / 1000 }));
   assert.match(rankLine(big[299], rankContext(big, states)), /^Larger cut than 99% of hospitals nationally, 99% of the 300 in Zedland, and 99% in peer group 1\.$/);
+  // A smallest cut in a place has no smaller one there: "none", never "0%".
+  const small = Array.from({ length: 6 }, (_, i) => hosp({ id: String(990001 + i), red: i === 0 ? 0.1 : 0.5 + i / 10, peer: 1, st: i < 3 ? 'ZZ' : 'YY' }));
+  assert.equal(rankLine(small[3], rankContext(small, states)), 'Larger cut than 50% of hospitals nationally, none of the 3 in Yonderland, and 50% in peer group 1.');
+  assert.doesNotMatch(rankLine(small[3], rankContext(small, states)), /\b0%/);
   // The source printed "1 other hospitals"; one reads singular here.
   const zeros2 = withZeros(2);
   assert.equal(rankLine(zeros2[0], rankContext(zeros2, states)), 'No reduction, like 1 other hospital.');
