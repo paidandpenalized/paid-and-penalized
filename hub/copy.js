@@ -8,7 +8,7 @@ export const COPY = typesetCopy({
   methodsIntro: "How this site works with CMS's public data.",
   estimateHeading: 'What “estimate” means here',
   estimateWhat: "A number labeled “estimate” applies CMS's published method to CMS's public data, in a case where an input CMS used is not public.",
-  estimateHow: "The result is close to CMS's but not exact, and the page says how close: for a value CMS publishes, the largest difference this site found from it; for dollars, which CMS doesn't publish hospital by hospital, a likely range from a test against hospitals' own cost reports.",
+  estimateHow: "The result is close to CMS's but not exact, and the site says how close: for a value CMS publishes, the largest difference this site found from it; for dollars, which CMS doesn't publish hospital by hospital, how its estimates compare with hospitals' own cost reports.",
   estimateNot: "An estimate is never a made-up number, and it is never presented as CMS's own. CMS's published values are always shown as CMS published them.",
   // Where the method itself is: the family's dollar estimates on the hospital-acquired conditions Methods page (its
   // dollars section, {dollars}), and each program's own figures on its Methods page ({hacrp}, {hrrp}: links).
@@ -152,8 +152,9 @@ export const COPY = typesetCopy({
 
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',
-  // Who has no hospital page anywhere on the family's sites (the program sites' rows: HACRP-18 subsection (d) hospitals,
-  // HRRP-12 and HRRP-13 the hospitals paid outside the inpatient system).
-  notFoundHospitals: { text: 'Hospital pages here are for the hospitals in CMS’s program files; critical access hospitals and the hospitals Medicare pays outside its inpatient payment system have none.', claim: ['HACRP-18', 'HRRP-12', 'HRRP-13'] },
+  // Who has no hospital page anywhere on the family's sites, by kind (the program sites' rows: HACRP-18 the subsection (d)
+  // hospitals CMS's files list, Maryland's included; HRRP-12 the kinds paid outside the inpatient system; HRRP-13 critical
+  // access hospitals; HRRP-16 Puerto Rico's, outside the fifty states and DC).
+  notFoundHospitals: { text: 'Hospital pages here are for the hospitals in CMS’s program files; critical access hospitals, children’s, cancer, psychiatric, rehabilitation and long-term care hospitals, and Puerto Rico’s hospitals have none.', claim: ['HACRP-18', 'HRRP-12', 'HRRP-13', 'HRRP-16'] },
   notFoundHome: 'Go to the home page',
 });

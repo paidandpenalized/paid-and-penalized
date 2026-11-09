@@ -1,5 +1,5 @@
 // Ported from Thirty Day Readmissions (web/src/js/views/methods.js at 33d1959).
-// The Readmissions Methods page's words: the kicker and heading, About, the formula and the replication sentence, the
+// The Readmissions Methods page's words: the kicker and heading, the formula and the replication sentence, the
 // dollar estimate's method with its accuracy line and assumptions, how to read a penalty, places, history, feedback and
 // privacy, accessibility, the pinned sources, the glossary and reuse. No digit characters: every number arrives through a {placeholder}. A sentence that states a program rule carries the
 // claim id of its row in sites/hrrp/CLAIMS.md.
@@ -192,7 +192,7 @@ export const COPY = {
   historyColSource: { text: 'Source', claim: null },
   moreHeading: { text: 'Feedback, privacy and accessibility', claim: null },
   feedbackText: {
-    text: 'The feedback link opens a Google Form, so Google sees what you send and your IP address. The link fills in only the site and the page you were on. Please leave out any patient information.',
+    text: 'The feedback link at the foot of every page opens a Google Form, so Google sees what you send and your IP address. The link fills in only the site and the page you were on. Please leave out any patient information.',
     claim: null,
   },
   moreText: { text: 'How the family of sites handles privacy, including how visits are counted, is on the {privacy} page, and its accessibility standard is on the {accessibility} page.', claim: null },

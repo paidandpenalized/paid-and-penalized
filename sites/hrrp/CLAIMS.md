@@ -68,8 +68,9 @@ A claim marked `unverified` may not be used in copy.
   for excess readmissions"). "The same for every hospital in a year" is how the formula uses it: one multiplier in
   every hospital's sum.
 - **HRRP-11** quotes the CMS program page's account of the statute. A "subsection (d) hospital" is a hospital paid under
-  section 1886(d) of the Social Security Act, the inpatient prospective payment system; the site's 404 line says that a
-  hospital paid another way is not in the program, and names the kinds in HRRP-12 and HRRP-13.
+  section 1886(d) of the Social Security Act, the inpatient prospective payment system; the Methods page's line on who is
+  not in the program (`web/copy.js` notInHrrp) says that a hospital paid another way is not in it, and names the kinds in
+  HRRP-12 and HRRP-13. The family's not-found page cites HRRP-12, HRRP-13 and HRRP-16 for the kinds with no page.
 - **HRRP-12** is the list of hospital classifications in 42 CFR 412.23 (the regulation's headings, in order: psychiatric,
   rehabilitation, children's, long-term care, cancer); each is excluded from the inpatient prospective payment system and
   paid under another system (the psychiatric, rehabilitation and long-term care paragraphs name theirs). The last fragment
