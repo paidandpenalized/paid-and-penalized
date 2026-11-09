@@ -19,6 +19,7 @@ test('a scored "Yes" hospital: the whole view', () => {
     city: 'Exampleton',
     state: 'AL',
     zip: '',
+    inactive: null,
     county: 'Example County',
     point: null,
     geo: null,

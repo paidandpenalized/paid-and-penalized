@@ -539,6 +539,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
 
 /* Each program's dollars as rows adding to the net: a label, a track (the signed bar from the zero line, the peers'
+/* A hospital whose Medicare agreement has ended (page.js closed): the year note's size, in ink, under it. */
+.hh__closed { margin-top: 8px; color: var(--ink); font-size: 13px; line-height: 1.45; }
    median tick), the figure and its word. One grid, so every track lines up; the rows are its subgrids. --z is the zero
    line's place on the track, --a and --w a bar's start and width, --m a tick's place, each a fraction of the track. */
 .hh__sum { display: grid; grid-template-columns: 11.25em minmax(0, 1fr) auto 4.2em; column-gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 13.5px; }

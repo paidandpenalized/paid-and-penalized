@@ -108,6 +108,11 @@ test('production, released: every hospital page and every place page plus /hacrp
       if (!placeAt.has(path)) assert.ok(levels(text).every((level, i, all) => (i === 0 ? level === 1 : level <= all[i - 1] + 1)), `${path}: heading levels ${levels(text)}`);
       // A page loads the figure script exactly when it has a figure, and the cite script when it has the citation.
       assert.equal(text.includes(`src="${ASSETS.js.figure}"`), text.includes(' data-figure>'), `${path}: figure script`);
+      // A hospital whose Medicare agreement CMS lists as ended by the year's end carries the note (web/render/closed.js), and no other.
+      if (hospitalAt.has(path)) {
+        const end = DATA.master.get(hospitalAt.get(path).ccn).inactive?.date;
+        assert.equal(text.includes('<p class="hosp__closed">'), end != null && end <= `${DATA.fy}-09-30`, `${path}: the closed note`);
+      }
       assert.equal(text.includes(`src="${ASSETS.js.cite}"`), text.includes(' data-cite-copy '), `${path}: cite script`);
       // A place page loads its own script (the table, the rule and the map), and the program page its own. It names its
       // place in its one h1, its canonical address and its breadcrumb's last item, and its hospital table lists exactly the

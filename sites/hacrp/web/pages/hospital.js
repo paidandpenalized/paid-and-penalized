@@ -10,6 +10,7 @@ import { STATE_NAMES } from '../../../../engine/js/states.js';
 import { stateMap } from '../../../../web/charts/geo.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { cmsText, count, decimal, dotList, isoDate, ordinal, unbroken } from '../../../../web/render/format.js';
+import { closedNote } from '../../../../web/render/closed.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -170,6 +171,13 @@ function leadMarkup(view) {
   return fillAround(({ decision: at }) => leadSentence(view, at), { decision });
 }
 
+// The note on a hospital whose Medicare agreement CMS lists as ended by the year's end (web/render/closed.js), on its
+// estimated HAC cut: '' for any other.
+function closed(view, money) {
+  const text = closedNote({ ccn: view.ccn, inactive: view.inactive, fy: view.fy, dollars: money.estimated ? money.hac : 0 });
+  return text ? html`<p class="hosp__closed">${text}</p>` : '';
+}
+
 function verdict(view, nat, history, money) {
   const words = [...whySentences(view), ...(view.status === 'maryland' ? [t('lineMaryland')] : []), ...(view.scored ? [t('scoreCompares')] : [])].join(' ');
   const { beside, below } = moneyVerdict(view, money);
@@ -180,6 +188,7 @@ ${beside}
 </div>
 <p class="hosp__summary">${leadMarkup(view)}</p>
 ${below}
+${closed(view, money)}
 ${words && html`<p class="hosp__why">${words}</p>`}
 ${view.scored && html`<div class="hosp__lineblock">
 <p class="hosp__line">${fillKeep('lineCut', { lowestYes: view.boundaryText.lowestYes }, ['lowestYes'])}</p>

@@ -94,6 +94,8 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     city: master.city,
     state: master.state,
     zip: master.zip ?? '',
+    // CMS's end of its Medicare agreement ({ date, reason }, from the hospital master), or null while it has none.
+    inactive: master.inactive ?? null,
     county: master.county ?? null,
     // Where the master puts it: [lon, lat] (null without one) and how it was found ('address', 'zip' or 'county').
     point: Number.isFinite(master.lat) && Number.isFinite(master.lon) ? [master.lon, master.lat] : null,

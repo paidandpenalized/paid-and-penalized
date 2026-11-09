@@ -16,6 +16,7 @@ import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
+import { closedNote } from '../../web/render/closed.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
@@ -141,9 +142,17 @@ function band(h) {
   return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${text}</span>${bar}</p>`;
 }
 
+// The note on a hospital whose Medicare agreement CMS lists as ended by the year's end (web/render/closed.js; its master
+// record's `inactive`), on its net (none for a hospital with no estimate): '' for any other.
+function closed(h, master, fy) {
+  const text = closedNote({ ccn: h.ccn, inactive: master?.inactive ?? null, fy: Number(fy), dollars: h.est?.net ?? 0 });
+  return text ? html`<p class="hh__closed">${text}</p>` : '';
+}
+
 // The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a
-// scenario shows), the common fiscal year's note, the rows, and the button down to the what-if.
-function netBlock(h, figures, fy, sets) {
+// scenario shows), the common fiscal year's note, the note on a hospital whose agreement has ended, the rows, and the
+// button down to the what-if.
+function netBlock(h, master, figures, fy, sets) {
   const { net } = h.est;
   const sign = signOf(net);
   const stampLabel = fill({ cut: 'stampCut', bonus: 'stampBonus', zero: 'stampZero' }[sign]);
@@ -155,6 +164,7 @@ function netBlock(h, figures, fy, sets) {
 </div>
 <div class="hh__band" data-band>${band(h)}</div>
 <p class="hh__fy">${fill('fyNote', { fy })}</p>
+${closed(h, master, fy)}
 ${sumRows(h, figures, fy, sets)}
 <a class="hh__wbtn" href="#whatif"><span class="ico ico--capsule" aria-hidden="true"></span>${fill('whatIfButton')}</a>
 </section>`;
@@ -262,7 +272,7 @@ ${peerRow(h, group)}
 <div class="wrap hh__hero">
 <div class="hh__money">
 ${recordCard(h, master, fy)}
-${netBlock(h, group.figures, fy, sets)}
+${netBlock(h, master, group.figures, fy, sets)}
 </div>
 ${figure(h, group, { fy, all })}
 </div>
@@ -286,6 +296,7 @@ ${recordCard(h, master, fy)}
 <h2 class="stamp stamp--ink hh__sh" id="hh-status-h">${fill(maryland ? 'statusMaryland' : 'statusNoInputs')}</h2>
 <p class="hh__st">${maryland ? fill('statusMarylandText') : fill('statusNoInputsText', { fy })}</p>
 ${maryland ? '' : html`<p class="hh__st">${h.cut ? fill('statusHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('statusHacNone', { fy })}</p>`}
+${closed(h, master, fy)}
 </section>
 ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 <h2 class="h-sm" id="hh-pages-h">${fill('pagesHeading')}</h2>
