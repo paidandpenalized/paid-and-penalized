@@ -209,6 +209,7 @@ labels, or a statement about the site: the next section).
 | `hub/copy.js` | termsReuse | HUB-15 |
 | `hub/copy.js` | correctionsCounts | HUB-14 |
 | `hub/copy.js` | correctionsHospital | HUB-13 |
+| `hub/copy.js` | notFoundHospitals | HACRP-18, HRRP-12, HRRP-13 |
 | `hub/hospital/copy.js` | descriptionMaryland | HUB-04, HUB-05, HACRP-26, HACRP-91 |
 | `hub/hospital/copy.js` | statusMaryland | HUB-05, HACRP-26, HACRP-91 |
 | `hub/hospital/copy.js` | statusMarylandText | HUB-04, HUB-05, HACRP-26, HACRP-91, HACRP-13 |
@@ -219,8 +220,7 @@ labels, or a statement about the site: the next section).
 ## Statements about this site
 
 Statements the hub's pages make about the site itself, checked against the code and config at the date above (no
-primary source applies). "True" means the code does what the sentence says. "Not yet" means the sentence promises more
-than the hub's pages do today; it stays in this table until the copy or the pages change.
+primary source applies). "True" means the code does what the sentence says.
 
 | statement | copy key | code evidence | verdict |
 |---|---|---|---|
@@ -242,7 +242,7 @@ than the hub's pages do today; it stays in this table until the copy or the page
 | Uses public CMS data and shows no patient information. | `web/copy.js` affiliation | Inputs are `data/pinned/` public files (`manifest.json`) | True |
 | Built from public data, CMS's above all; deterministic, published code. | `hub/copy.js` aboutBrief3, aboutAi | `data/pinned/manifest.json`; the repository is public | True |
 | The formula has not been told which hospitals employ the author. | `hub/copy.js` aboutCoi | No CCN-specific branch in `engine/`; the one fixed CCN, `hub/model.js` EXAMPLE_CCN, is picked by a stated rule (`exampleRule`) | True of the code |
-| These hospitals have no page here. | `web/copy.js` notInHrrp (on the not-found page and the Readmissions Methods page) | `hospital/`, `hacrp/hospital/`, `hrrp/hospital/` in the build hold no critical access, IPPS-excluded or Puerto Rico CCN | True |
-| Every page built from CMS data names the CMS file it uses and when CMS released it. | `hub/copy.js` termsAsOf, correctionsCms | The program sites' pages do; the hub's front page and hospital pages name the programs' files but not which file or its release date, and `/corrections/` lists only the program sites' files | Not yet |
-| An estimate's page says how close it is: the largest difference from the values CMS published. | `hub/copy.js` estimateHow | True of recomputed values; CMS publishes no hospital-level dollars, so the hub's dollars show a back-test against cost reports and a likely range instead | Not yet (for dollars) |
-| Each fix is logged with its date; numbers are not changed quietly. | `hub/copy.js` correctionsBrief1, correctionsProcess | `hub/corrections.js` reads `corrections/`, which holds no entry yet; the 2026-11-02 front-page wording changes (PR #20) have none | Not yet |
+| These hospitals have no page here. | `web/copy.js` notInHrrp (the Readmissions Methods page); `hub/copy.js` notFoundHospitals (the not-found page) | `hospital/`, `hacrp/hospital/`, `hrrp/hospital/` in the build hold no critical access, IPPS-excluded or Puerto Rico CCN | True |
+| Each program's pages name the CMS file they use and when CMS released it. | `hub/copy.js` termsAsOf, correctionsCms | The HACRP pages and the Readmissions program, hospital and place pages each carry a source line with the file and its posting date; the data dictionaries point to Methods, which lists every file read | True |
+| An estimate's page says how close it is: for a value CMS publishes, the largest difference from it; for dollars, a likely range from a test against hospitals' cost reports. | `hub/copy.js` estimateHow | The recompute pages give the largest difference; the dollar pages give the back-test's likely range (`hub/model.js` netRange, `engine/js/dollars/ranges.js`) | True |
+| Each fix is logged with its date; numbers are not changed quietly. | `hub/copy.js` correctionsBrief1, correctionsProcess | `hub/corrections.js` reads `corrections/`; its first entry logs the whole-site review's corrections and the 2026-11-02 rewording | True |
