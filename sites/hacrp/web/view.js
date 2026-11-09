@@ -84,6 +84,8 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
 
   // The measure that added most, among those with a measured result: never one CMS assigned (its view entry).
   const largest = largestPart(measures);
+  // Whether a measure CMS assigned added more than that one: then "added the most" is only true among the measured results.
+  const assignedLarger = largest !== null && measures.some((m) => m.assigned && m.contribution !== null && m.contribution > largest.contribution);
 
   const scored = h.total !== null;
   return {
@@ -120,5 +122,6 @@ export function hospitalView({ hospital: h, model, estimate, footnotes, master, 
     oneMeasure: n === 1,
     measures,
     largest,
+    assignedLarger,
   };
 }

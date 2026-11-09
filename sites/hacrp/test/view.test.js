@@ -58,6 +58,7 @@ test('a scored "Yes" hospital: the whole view', () => {
         footnotes: [] },
     ],
     largest: 'CLABSI',
+    assignedLarger: false,
   });
 });
 

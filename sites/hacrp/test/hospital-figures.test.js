@@ -68,6 +68,14 @@ test('the ledger: each row CMS\'s value and z-score, its rank among every hospit
   const ssi = /<li class="ledger__row[^"]*is-assigned">[\s\S]*?<\/li>/.exec(fig)[0];
   assert.match(ssi, /<path class="chart-hyp"/, 'a hollow ▲');
   assert.match(ssi, /no value: CMS assigned the worst score/);
+  // An assigned measure that added more than the largest measured one: "most" is only said of the measured results.
+  const bigger = view.measures.some((m) => m.assigned && m.contribution !== null && m.contribution > view.largest.contribution);
+  assert.equal(view.assignedLarger, bigger);
+  if (bigger) {
+    assert.match(fig, /added the most of its measured results/);
+    assert.match(fig, /of its measured results, [^<]* added the most to its score/);
+    assert.doesNotMatch(fig, />added the most</);
+  }
   // Two drawings of each ruler, hidden from screen readers (the row's words say the same).
   assert.equal((fig.match(/<svg aria-hidden="true" data-fit="(narrow|wide)" class="chart chart--ruler"/g) ?? []).length, 12);
 });
