@@ -13,6 +13,7 @@ import { agreeScatter } from '../../../web/charts/agree.js';
 import { MEASURE_IDS, isSir } from '../../../engine/js/hacrp/measures.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
 import { SHORT_NAMES, SIR_EXPECTED, SIR_EXPECTED_TEXT } from './constants.js';
+import { oneKey } from '../../../web/render/components.js';
 import { fill, t } from './explore/copy.js';
 import { edgesAround } from './compare.js';
 
@@ -51,7 +52,7 @@ export function stackPanel(id, m, { rows }) {
     one: fill(sir ? 'fig2OneSir' : 'fig2OnePsi', { one }), median: fill('fig2Median', { median: fmt(m.median) }), per: fill('fig2Per', { per: count(PER) }),
     zero: sir && m.zero ? fill('fig2Zero', { zero: count(m.zero) }) : null, over: fill('fig2Over', { over: count(over), hi: decimal(domain[1], 1) }),
   };
-  const tip = ({ from, to, count: c }) => fill(c === 1 ? 'fig2TipOne' : 'fig2Tip', { from: fmt(from), to: fmt(to), count: count(c) });
+  const tip = ({ from, to, count: c }) => fill(oneKey('fig2Tip', c), { from: fmt(from), to: fmt(to), count: count(c) });
   const draw = (width) => stackedDots({ values: m.values, domain, step: binStep, per: PER, rows, refs: { one: SIR_EXPECTED, median: m.median }, labels, tip, format: (v) => decimal(v, 1), width });
   return { id, short: SHORT_NAMES[id], ...both(draw), alt: fill('fig2Alt', { short: SHORT_NAMES[id] }), take: stackTake(id, m) };
 }

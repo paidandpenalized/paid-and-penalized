@@ -6,7 +6,7 @@ import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as SHARED } from '../../web/copy.js';
-import { fillCopy } from '../../web/render/components.js';
+import { copyText, fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
@@ -182,8 +182,7 @@ test('each policy page has one h1, the brief as a record card, an index of its s
     }
   }));
 
-// A copy entry's words: the string, or a sourced entry's text.
-const copyText = (key) => (typeof COPY[key] === 'string' ? COPY[key] : COPY[key].text);
+const textOfKey = (key) => copyText(COPY[key]);
 
 test('every word of the five pages\' copy shows on its page, and the feedback link in its words is prefilled with the page', () =>
   withHub((read) => {
@@ -192,15 +191,15 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
       const words = textOf(text);
       const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
       for (const key of keys) {
-        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(copyText(key))), `${path}: ${key}`); continue; }
+        if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(textOfKey(key))), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.
-        const stretch = copyText(key).split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
+        const stretch = textOfKey(key).split(/\{\w+\}/).map((x) => x.trim()).reduce((a, b) => (b.length > a.length ? b : a), '');
         assert.ok(words.includes(stretch), `${path}: ${key} is not on the page`);
       }
       assert.doesNotMatch(words, /\{\w+\}/, `${path}: a placeholder left unfilled`);
       // Where its words call for the form (not privacy's, which describes the footer's link), the link is the prefilled one.
       const href = feedbackHref({ siteName: SITE.name, pageUrl: SITE.origin + path });
-      if (keys.some((k) => copyText(k).includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
+      if (keys.some((k) => textOfKey(k).includes('{feedback}'))) assert.ok(text.includes(String(externalLink(href, COPY.feedbackForm))), `${path}: feedback link`);
     }
   }));
 

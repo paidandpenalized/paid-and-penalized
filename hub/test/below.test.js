@@ -9,11 +9,11 @@ import { pctOf, programDollars } from '../../engine/js/dollars/whatif.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, footerOf } from '../../pipeline/test/helpers.js';
 import { HAC_TOP_SHARE, programDek } from '../../web/programs.js';
-import { count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
+import { copyText } from '../../web/render/components.js';
+import { count, factorText, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { SITE, hospitalPathOf, underConstruction } from '../../web/site.js';
-import { factorText } from '../../web/render/format.js';
 import { paintWorksheet, worksheetModel } from '../client/story/worksheet.js';
 import { loadHub } from '../data.js';
 import { BIN_POINTS, directory, programBins } from '../home/below.js';
@@ -355,5 +355,5 @@ test('a histogram whose labels would count hospitals its bars do not draw stops 
 });
 
 test('the words below the story carry no digit: every number arrives through a placeholder', () => {
-  for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(typeof entry === 'string' ? entry : entry.text, /\d/, key);
+  for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(copyText(entry), /\d/, key);
 });

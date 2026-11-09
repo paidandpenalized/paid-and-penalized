@@ -14,7 +14,7 @@ import { miniTiles } from '../../../web/charts/tileMap.js';
 import { STATE_NAMES } from '../../../engine/js/states.js';
 import { usProjected, usYearMap } from '../../../web/charts/geo.js';
 import { TILES } from '../../../web/charts/states.js';
-import { lastCall, paraOf } from '../../../web/render/components.js';
+import { lastCall, oneKey, paraOf } from '../../../web/render/components.js';
 import { cmsText, count, listText, pct, pctFloor, shownAbove } from '../../../web/render/format.js';
 import { html, jsonScript } from '../../../web/render/html.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
@@ -161,7 +161,6 @@ export function chanceFigure(hd, { n, source }) {
   });
 }
 // A copy key's singular form (its key plus One) for a count of exactly one: "1 year", not "1 years".
-const oneKey = (key, n) => (n === 1 ? `${key}One` : key);
 // A chance count as words a reader can hold: a whole number from one up, else "1 in N".
 function chanceText(x) {
   if (x >= 0.995) return count(Math.round(x));
@@ -288,12 +287,15 @@ export function statesYearsFigure(hd, { n, source }) {
     if (!best || above > best.above) best = { st, above };
     if (!least || below > least.below) least = { st, below };
   }
+  let anyFew = false; // whether any tile drawn carries the dashed outline, which the key then explains
   const maps = hd.fys.map((fy, i) => {
     const states = Object.fromEntries(codes.map((code) => {
       const y = hd.byState.get(code)?.years[i];
       if (!y || !y.decided) return [code, { value: null, label: `${STATE_NAMES[code] ?? code}`, empty: true }];
       const s = share(y.cut, y.decided);
-      return [code, { value: s * 100, label: `${STATE_NAMES[code] ?? code}: ${pct0(s)}`, few: y.decided < FEW_DECIDED }];
+      const few = y.decided < FEW_DECIDED;
+      anyFew ||= few;
+      return [code, { value: s * 100, label: `${STATE_NAMES[code] ?? code}: ${pct0(s)}`, few }];
     }));
     return html`<div class="smallmaps__m"><p class="smallmaps__fy">${fyLabel(fy)}</p>${imageOf(miniTiles({ states, ramp: MAP_STEPS_PCT, width: 220, outline: [best.st, least.st] }), fill('statesHMapAlt', { fy: String(fy) }), null)}</div>`;
   });
@@ -301,8 +303,7 @@ export function statesYearsFigure(hd, { n, source }) {
   const edges = [0, ...MAP_STEPS_PCT];
   const step = (i) => (i === edges.length - 1 ? fill('keyUp', { from: `${edges[i]}%` }) : fill('valueRange', { from: `${edges[i]}%`, to: `${edges[i + 1]}%` }));
   // The dashed outline's entry, as the program page's state map (Figure 18) has it, when any state in any year carries one.
-  const fewKey = [...hd.byState.values()].some((v) => v.years.some((y) => y.decided && y.decided < FEW_DECIDED));
-  const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li>${fewKey ? html`<li><span class="smallmaps__sw smallmaps__sw--few"></span>${fill('keyFew', { n: count(FEW_DECIDED) })}</li>` : ''}<li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
+  const key = html`<ul class="smallmaps__key" role="list">${edges.map((_, i) => html`<li><span class="smallmaps__sw smallmaps__sw--${i + 1}"></span>${step(i)}</li>`)}<li><span class="smallmaps__sw smallmaps__sw--zero"></span>${t('keyNone')}</li>${anyFew ? html`<li><span class="smallmaps__sw smallmaps__sw--few"></span>${fill('keyFew', { n: count(FEW_DECIDED) })}</li>` : ''}<li><span class="smallmaps__sw smallmaps__sw--empty"></span>${t('keyNoDecision')}</li><li><span class="smallmaps__sw smallmaps__sw--ring"></span>${fill('keyRing', { a: STATE_NAMES[best.st], b: STATE_NAMES[least.st] })}</li></ul>`;
   const chart = html`${key}<div class="smallmaps">${maps}</div>`;
   return figure({
     n, source, chart, csvName: 'hacrp-cut-by-state-year',

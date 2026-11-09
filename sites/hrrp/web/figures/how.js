@@ -9,7 +9,7 @@ import { columns } from '../../../../web/charts/columns.js';
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { punchCard } from '../../../../web/charts/punchCard.js';
 import { searchForm } from '../../../../web/render/shell.js';
-import { printout } from '../../../../web/render/components.js';
+import { oneKey, printout } from '../../../../web/render/components.js';
 import { capitalize, count, listText, noun, pct, shownAbove, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { conditionShort } from '../derive.js';
@@ -102,7 +102,7 @@ const groupOf = (bands, bin) => bands.find((b) => bin.x0 + 0.5 < b.x1)?.peer ?? 
 // The figure and the line about its axis marks, which goes with the step's words (it would stretch the figure's column).
 function dualFigure({ dual, edition, n }) {
   // Two tones alternate by peer group (odd groups ink, even groups penalty red); the group numbers above the columns name them, so there is no key.
-  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${groupOf(dual.bands, b) % 2 ? 'dual-odd' : 'dual-even'}`, tip: fill(b.n === 1 ? 'fig2TipOne' : 'fig2Tip', { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
+  const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${groupOf(dual.bands, b) % 2 ? 'dual-odd' : 'dual-even'}`, tip: fill(oneKey('fig2Tip', b.n), { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
     bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
     // One row of group numbers over the bands: the first says "Group" where its band has room (the number alone on a phone), the rest the number.

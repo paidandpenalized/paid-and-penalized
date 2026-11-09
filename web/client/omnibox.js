@@ -18,7 +18,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
   let loading = null;
   let results = [];
   let total = 0;
-  // The entries onMore hands on: with moreTypes, only those kinds, counted by the same matcher as the list.
+  // The entries onMore hands on: with moreTypes, the list's matches of those kinds, counted by the same matcher.
   let handOn = [];
   let active = -1;
   // Whether the reader is in the box: a list typed for while the index loaded opens only then. A box that already has
@@ -98,8 +98,12 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
       pending = true;
       return;
     }
-    ({ results, total } = search(query, index, { limit: LIMIT, types }));
-    handOn = onMore && moreTypes ? search(query, index, { limit: Infinity, types: moreTypes }).results : [];
+    // One pass: when the option hands matches on, every match is ranked once and the list shows the first LIMIT.
+    const handing = Boolean(onMore && moreTypes);
+    const found = search(query, index, { limit: handing ? Infinity : LIMIT, types });
+    ({ total } = found);
+    results = found.results.slice(0, LIMIT);
+    handOn = handing ? found.results.filter((r) => moreTypes.includes(r.type)) : [];
     active = results.length ? 0 : -1;
     status.textContent = words.count(total);
     paint();

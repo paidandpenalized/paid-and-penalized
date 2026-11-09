@@ -86,9 +86,8 @@ export function mapFigure(place, md, ctx, nextFigure) {
   const cut = fmtPct(top.h.red);
   const hospitals = hospitalsText(place.hospitals.length);
   const takeaway = (place.hospitals.length === 1 ? (nCut ? placeFill('mapTakeawayOneCut', { cut }) : placeT('mapTakeawayOneNone'))
-    : !nCut ? placeFill('mapTakeawayNone', { hospitals }) : placeFill(nCut === 1 ? 'mapTakeawayOnly' : 'mapTakeaway', { nCut: fmtInt(nCut), hospitals, cut, name: top.h.name }))
-    // The name ends the sentence: one that already ends in a period ("Inc.") takes no second.
-    .replace(/\.\.$/, '.');
+    // The name ends the sentence, so one that ends in a period ("Inc.") gives it the sentence's own.
+    : !nCut ? placeFill('mapTakeawayNone', { hospitals }) : placeFill(nCut === 1 ? 'mapTakeawayOnly' : 'mapTakeaway', { nCut: fmtInt(nCut), hospitals, cut, name: top.h.name.replace(/\.$/, '') }));
   const note = [
     placeT(md.dense ? 'mapNoteDense' : 'mapNote'),
     around && placeFill('mapNoteAround', { where: placeT(place.states.length > 1 ? 'mapAroundMany' : 'mapAroundOne') }),

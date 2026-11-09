@@ -9,6 +9,7 @@ import { ruler } from '../../../../web/charts/ruler.js';
 import { WIDTH, columnPath, frame, isNarrow, lineD, mark, r2, text } from '../../../../web/charts/svg.js';
 import { decimal, pct, pctFloor, roundedDollars } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
+import { oneKey } from '../../../../web/render/components.js';
 import { fill, t } from '../hospital/copy.js';
 import { MIN_DISCHARGES, CAP_PCT } from '../../../../engine/js/hrrp/formula.js';
 import { fmtInt, fmtPct, gapText, ratio, roundTo } from '../numbers.js';
@@ -46,9 +47,8 @@ const gapCell = (row) => {
 
 function rowWords(row) {
   if (!row.n) return { cases: t('rowNoCases'), note: t('rulerNoCases') };
-  const one = row.n === 1 ? 'One' : '';
-  const cases = fill(`rowCases${one}`, { n: fmtInt(row.n) });
-  return { cases, note: row.measured ? null : fill(`rulerFew${one}`, { n: fmtInt(row.n), min: String(MIN_DISCHARGES) }) };
+  const cases = fill(oneKey('rowCases', row.n), { n: fmtInt(row.n) });
+  return { cases, note: row.measured ? null : fill(oneKey('rulerFew', row.n), { n: fmtInt(row.n), min: String(MIN_DISCHARGES) }) };
 }
 
 // The text of the "worth per" cell: dollars, "payment weight not published" for a counted condition with none, a dash otherwise.
