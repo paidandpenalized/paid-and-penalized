@@ -1,7 +1,7 @@
 // The program page's hospital search, the hero's box (web/client/omnibox.js): each hospital found by name, city, state, ZIP code or
 // CCN, and each place the site has a page for, opening its page. Worksheet R's box (client/worksheet.js) shares the
 // asset (client/hospitals.js) and the index, and searches hospitals only.
-import { count } from '../../../web/render/format.js';
+import { count, placeText } from '../../../web/render/format.js';
 import { buildIndex } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
@@ -18,8 +18,8 @@ const placeEntries = ({ places }) => places.map(([kind, key, name, path, n]) => 
 }));
 
 // The asset's hospitals as search entries; href: where a pick goes (the hospital's page).
-const hospitalEntries = ({ hospitalPath, hospitals }) => hospitals.map((h) => ({
-  type: 'hospital', key: h.id, label: h.name, sub: [`${h.city}, ${h.st}`, h.zip].filter(Boolean).join(' '), extra: `${h.city} ${h.st} ${h.zip}`, href: `${hospitalPath}${h.id.toLowerCase()}/`,
+export const hospitalEntries = ({ hospitalPath, hospitals }) => hospitals.map((h) => ({
+  type: 'hospital', key: h.id, label: h.name, sub: [placeText({ city: h.city, state: h.st }), h.zip].filter(Boolean).join(' '), extra: `${h.city ?? ''} ${h.st} ${h.zip}`, href: `${hospitalPath}${h.id.toLowerCase()}/`,
 }));
 
 // The words an omnibox shows (what the site's boxes say for kinds, counts and failure).
