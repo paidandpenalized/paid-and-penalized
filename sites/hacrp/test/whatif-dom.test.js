@@ -413,6 +413,31 @@ test('a refused entry shows its error line, named by the field; a valid entry or
   assert.equal(n.value, '1.400');
 });
 
+test('a refused entry that is left puts back the value the field had on focus: no accepted prefix, score or address is left behind', () => {
+  const stub = windowStub();
+  const root = mount(true, stub);
+  const n = field(root, 'MRSA', 'number');
+  const error = field(root, 'MRSA', 'error');
+  const score = () => q(root, 'head-score').textContent;
+  const start = score();
+  n.fire('focus', { target: n });
+  type(n, '1'); // a valid prefix, applied as typed
+  assert.notEqual(score(), start);
+  type(n, '199999'); // the whole entry is past the cap and refused
+  assert.equal(error.hidden, false);
+  n.fire('change');
+  assert.equal(score(), start, 'the score is back');
+  assert.equal(n.value, '0.900', 'the field shows the value it had');
+  assert.equal(error.hidden, false, 'the refusal stays said');
+  assert.ok(!decodeURIComponent(stub.urls.at(-1) ?? '').includes('MRSA='), 'the address no longer names the prefix');
+  // A good entry that is left stays, and hides the error.
+  n.fire('focus', { target: n });
+  type(n, '1.4');
+  n.fire('change');
+  assert.equal(n.value, '1.400');
+  assert.equal(error.hidden, true);
+});
+
 test('the ramp: a hypothetical past the range clamps to the edge with an arrow; labels never overlap', () => {
   const root = mount(false, windowStub());
   const labelsApart = () => {
