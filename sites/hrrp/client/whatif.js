@@ -12,8 +12,9 @@ import { ratio } from '../web/numbers.js';
 const hook = (root, name) => root.querySelector(`[data-wi="${name}"]`);
 
 // On a phone the result box is held at the window's foot (styles.css .wi__out), over whatever scrolls under it. Its height
-// goes on the page's root as --wi-out-h (0 when it isn't held), which the stylesheet reads as the root's scroll-padding-bottom,
-// so a keyboard-focused slider or button is left clear above the box, as the sticky peer row's --peers-h does at the top.
+// goes on the page's root as --wi-out-h (0 when it isn't held), which the stylesheet reads as the what-if's controls'
+// scroll-margin-bottom, so a keyboard-focused slider or button is left clear above the box (Safari through the top bar's
+// focus handler, web/client/topbar.js), as the front page's controls clear its held chart.
 function trackResultBox(root) {
   const box = root.querySelector('.wi__out');
   if (!box) return;
