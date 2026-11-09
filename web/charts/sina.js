@@ -2,7 +2,7 @@
 // many share its neighborhood (a sina plot): the column's outline is its distribution. A horizontal line crosses
 // every column (CMS's line); dots at or past it in the penalty ink. Under each column: its name and its counts.
 //   columns  [{ label, short, sub, sub2, scores, yes (per score: past the line), tip }] (short: the label on a phone;
-//            sub, sub2: two lines under it, the second left out on a phone); line: the score; domain [lo, hi]
+//            sub, sub2: two lines under it, both left out on a phone, where six columns have no room for them; the figure's table keeps the numbers); line: the score; domain [lo, hi]
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { axis } from './axis.js';
@@ -36,7 +36,7 @@ export function sina({ columns, line, domain: [lo, hi], labels, width, height = 
     });
     return mark({
       tip: c.tip, value: null, hit: { x: cx - colW / 2, y: top, width: colW, height: base - top + 40 },
-      body: html`${text({ x: cx, y: base + 18, cls: 'chart-label', body: narrow ? c.short : c.label })}${text({ x: cx, y: base + 32, cls: 'chart-note', body: c.sub })}${narrow ? '' : text({ x: cx, y: base + 45, cls: 'chart-note', body: c.sub2 })}`,
+      body: html`${text({ x: cx, y: base + 18, cls: 'chart-label', body: narrow ? c.short : c.label })}${narrow ? '' : html`${text({ x: cx, y: base + 32, cls: 'chart-note', body: c.sub })}${text({ x: cx, y: base + 45, cls: 'chart-note', body: c.sub2 })}`}`,
     });
   });
   const ly = r2(y(line));
