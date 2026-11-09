@@ -109,6 +109,20 @@ test('the data: every place draws, the map keeps a metro\'s other in-state hospi
   for (const p of [...places.list.filter((q) => q.kind !== 'metro'), ...places.list.filter((q) => q.kind === 'metro').slice(0, 40)]) noJunk(pageOf(ctx, p));
 });
 
+test('the map takeaway ends in one period when the top hospital\'s name ends in one', () => {
+  const data = loadHrrpOnce();
+  const places = buildPlaces(data.hospitals, data.meta);
+  const ctx = areaContext({ ...data, places });
+  const topOf = (p) => p.hospitals.reduce((a, h) => (h.red > a.red ? h : a), p.hospitals[0]);
+  const dotted = places.list.filter((p) => p.kind === 'metro' && p.hospitals.length > 1 && topOf(p).red > 0 && topOf(p).name.endsWith('.'));
+  assert.ok(dotted.length > 0, 'the data has a metro whose largest cut is at a name ending in a period');
+  for (const p of dotted) {
+    const text = pageOf(ctx, p);
+    assert.doesNotMatch(text, /\.\.(<|\s)/, p.key);
+    assert.match(text, /is at [^<]*\.<\/|, at [^<]*\.<\//, p.key);
+  }
+});
+
 test('the nation\'s side: the same hospitals as the place line, once for the build', () => {
   const data = loadHrrpOnce();
   const side = nationalSide(data);
