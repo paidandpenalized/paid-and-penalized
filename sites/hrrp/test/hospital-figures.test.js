@@ -61,6 +61,13 @@ test('rulers: a condition with exactly one case reads "1 case", never "1 cases"'
   assert.ok(!fig.includes('1 cases'));
 });
 
+test('the dual-eligible share rounds half up from CMS\'s four decimals: 0.2065 is "20.7%", on the card and in Worksheet R', () => {
+  const h = hospital({ id: '990023', dual: 0.2065 });
+  const text = textOf(pageOf(h, ctxFor([h, ...OTHERS])));
+  assert.ok(text.includes('20.7% of stays dual-eligible'));
+  assert.ok(!text.includes('20.6%'));
+});
+
 test('rulers: the cap note only when the parts pass 3.00 points; at the cap another 0.01 is worth $0', () => {
   const over = hospital({ id: '990021', paf: 0.97, red: 3, pen: 300000, c: { HF: { n: 40, err: 1.5, flag: 1, ratio: 0.1 }, AMI: { n: 30, err: 0.9, flag: 0, ratio: 0.1 } } });
   const d = hospitalView(over, ctx).figures.rulers;

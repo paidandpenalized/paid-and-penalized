@@ -22,7 +22,7 @@ import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeD
 import { MIN_BAND, dollarsPerStep, drawsBands, drawsFlips, drawsWorth, peerFlips, pictureData, sizeBands } from './figures/picture-data.js';
 import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
-import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, ratio } from './numbers.js';
+import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, fmtShare, ratio } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
 import { fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
@@ -140,7 +140,7 @@ export function hospitalView(h, ctx) {
     type: typeText(h),
     peer: {
       value: fill('peerValue', { peer: String(h.peer), n: String(PEERS.length) }),
-      note: fill('peerNote', { pct: fmtPct(h.dual * 100, 1) }),
+      note: fill('peerNote', { pct: fmtShare(h.dual, 1) }),
     },
     stars: starsOf(h),
     stamps: [
