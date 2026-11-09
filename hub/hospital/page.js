@@ -15,7 +15,7 @@
 import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { cmsDecimal, count, dollars, dotList, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
+import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
@@ -198,7 +198,7 @@ function hrrpYearLine(h, { fy, hrrp }) {
   if (!h.inHrrp) return h.est.hrrpListed ? html`<p class="hh__why">${fill('whyHrrpYearGone', { next: String(hrrp.fy) })}</p>` : '';
   const record = hrrp.hospitals.get(h.ccn);
   if (!record || !Number.isFinite(record.paf)) return '';
-  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(hrrp.fy), factor: cmsDecimal(record.paf, 4), fy })}</p>`;
+  return html`<p class="hh__why">${fill(h.est.hrrpListed ? 'whyHrrpYear' : 'whyHrrpYearOut', { next: String(hrrp.fy), factor: factor(record.paf), fy })}</p>`;
 }
 
 function programRow(h, id, figures, ctx) {

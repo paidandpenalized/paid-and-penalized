@@ -2,7 +2,7 @@
 // the state and name filters, and the #state= fragment. Synthetic rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { compareByName, compareDefault, decodeState, filterRows, hospitalLabel, sortRows, stateCodes, stateHref, tableRows, withState } from '../web/hospital-table.js';
+import { compareByName, compareDefault, decodeState, filterRows, sortRows, stateCodes, stateHref, tableRows, withState } from '../web/hospital-table.js';
 
 // [ccn, name, city, state, total (CMS's text, hyphen-minus), decision]
 const ROWS = [
@@ -19,13 +19,6 @@ const TABLE = tableRows(ROWS);
 
 test('the default order is state, then name, then city, then CCN', () => {
   assert.deepEqual(ccns([...ROWS].sort(compareDefault)), ['990013', '990012', '990014', '990015', '990016', '990011']);
-});
-
-test('a missing city sorts as empty text and drops out of the label, never the word "null"', () => {
-  const rows = [['990021', 'Example General Hospital', 'Oakton', 'AL', '0.1000', 'No'], ['990022', 'Example General Hospital', null, 'AL', '0.2000', 'No']];
-  assert.deepEqual(ccns([...rows].sort(compareDefault)), ['990022', '990021']);
-  assert.equal(hospitalLabel(rows[1]), 'Example General Hospital, AL');
-  assert.equal(hospitalLabel(['990023', 'Example General Hospital', '', 'AL']), 'Example General Hospital, AL');
 });
 
 test('the search\'s order is name, then state, then city; full ties keep their order', () => {

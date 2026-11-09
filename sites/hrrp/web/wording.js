@@ -68,10 +68,8 @@ export function rankLine(h, ctx) {
   const inPeer = ctx.byPeer.get(h.peer);
   // When no hospital in the group has a smaller cut, the clause says so in words ("none of the 6 in Delaware"), not "0% of
   // the 6"; a share above none keeps its floored percent, as the page's history table prints it.
-  const clause = (key, sorted, extra) => {
-    const p = percentileRank(sorted, h.red);
-    return p === 0 ? fill(`${key}None`, extra) : fill(key, { pct: String(rankPct(sorted, h.red, p)), ...extra });
-  };
+  const clause = (key, sorted, extra) => (percentileRank(sorted, h.red) === 0
+    ? fill(`${key}None`, extra) : fill(key, { pct: String(rankPct(sorted, h.red)), ...extra }));
   return fill('rankLine', {
     nation: clause('rankNation', ctx.sortedRed, {}),
     state: clause('rankState', inState, { stateCount: fmtInt(inState.length), stateName: ctx.states[h.st] }),

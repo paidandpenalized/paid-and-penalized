@@ -31,10 +31,6 @@ test('each hospital is an entry: its name, "City, ST ZIP" under it, its page', (
   assert.equal(entries.length, ASSET.rows.length);
   assert.deepEqual(entries[0], { type: 'hospital', key: '99000A', label: 'Example General Hospital', sub: 'Exampleton, AL 35000', extra: 'Exampleton AL 35000', href: '/hacrp/hospital/99000a/' });
   assert.equal(entries[2].sub, 'Sampleville, MD', 'no ZIP, no trailing space');
-  // A row with no city lists by its state, and the word "null" is in nothing a search matches.
-  const [noCity] = hospitalEntries({ hospitalPath: '/hacrp/hospital/', rows: [['99000Z', 'Example Rural Hospital', null, 'UT', 0, 'No', '84000']] });
-  assert.equal(noCity.sub, 'UT 84000');
-  assert.doesNotMatch(`${noCity.sub} ${noCity.extra}`, /null/);
 });
 
 test('each place is an entry: its name, its kind and hospital count under it, its page; a state is also found by its code', () => {

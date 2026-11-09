@@ -112,16 +112,17 @@ function withSign(x, dp, plus) {
 // A fixed number of decimals: a true minus for negatives, no plus sign, no sign on a value that rounds to zero.
 export const decimal = (x, dp) => withSign(x, dp, '');
 
-// A CMS value to dp decimals, rounded as JavaScript's toFixed rounds (the stored double's own value), not as Intl does:
-// the engines store each value CMS publishes so that toFixed prints CMS's own text (1.00505 is "1.0050"), and Intl would
-// split some ties the other way. A true minus for negatives; no sign on a value that rounds to zero.
+// A CMS value the engine stores past the places CMS prints (Readmissions' ratios, medians and weights), to dp decimals,
+// rounded as JavaScript's toFixed rounds (the stored double's own value), not as Intl does: the engine stores each so that
+// toFixed prints CMS's own text (1.00505 is "1.0050"), and Intl would split some ties the other way. A true minus for
+// negatives; no sign on a value that rounds to zero.
 export const cmsDecimal = (x, dp) => {
   const body = Math.abs(x).toFixed(dp);
   return x < 0 && Number(body) !== 0 ? `${MINUS}${body}` : body;
 };
 
-// A payment factor to four decimals, as the page's other numbers round (a what-if's own factors included): factor(0.9988)
-// is "0.9988", factor(1) "1.0000". A factor quoted from CMS's file goes through cmsDecimal.
+// A payment factor to four decimals, as CMS publishes it: factor(0.9988) is "0.9988", factor(1) "1.0000". CMS's factors
+// are exact at four places, so no rounding rule enters; a what-if's own factors round as the page's other numbers do.
 export const factor = (x) => decimal(x, 4);
 
 // A payment factor as CMS published it, to as many places as it has (up to ten, as value-based purchasing's Table 16B
