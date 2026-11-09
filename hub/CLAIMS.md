@@ -52,7 +52,7 @@ already support hub sentences, so the hub cites them instead of repeating them:
   hospitals not; `notInHrrp`), HRRP-15 (the excess readmission ratio, a risk-adjusted one), HRRP-21 (the base operating
   DRG payment), HRRP-23 (unplanned readmissions within 30 days).
 - Hospital-acquired conditions: HACRP-01 (paid 99 percent: the 1 percent cut), HACRP-02 (above the 75th percentile:
-  the top quarter), HACRP-12 (FY2027 results not posted until early 2027), HACRP-13 (Maryland's hospitals are scored but
+  the top quarter), HACRP-18 (the hospitals CMS scores, Maryland's included: the not-found line), HACRP-12 (FY2027 results not posted until early 2027), HACRP-13 (Maryland's hospitals are scored but
   not cut), HACRP-17 (the program scores hospital-acquired conditions), HACRP-26 (CMS exempts Maryland's hospitals from
   the cut), HACRP-68 (CCN stands for CMS Certification Number), HACRP-72 and HACRP-73 (the readmissions and value-based
   factors apply to the base operating DRG payment), HACRP-74 and HACRP-75 (the HAC cut is 1 percent of the whole payment
@@ -209,7 +209,7 @@ labels, or a statement about the site: the next section).
 | `hub/copy.js` | termsReuse | HUB-15 |
 | `hub/copy.js` | correctionsCounts | HUB-14 |
 | `hub/copy.js` | correctionsHospital | HUB-13 |
-| `hub/copy.js` | notFoundHospitals | HACRP-18, HRRP-12, HRRP-13 |
+| `hub/copy.js` | notFoundHospitals | HACRP-18, HRRP-12, HRRP-13, HRRP-16 |
 | `hub/hospital/copy.js` | descriptionMaryland | HUB-04, HUB-05, HACRP-26, HACRP-91 |
 | `hub/hospital/copy.js` | statusMaryland | HUB-05, HACRP-26, HACRP-91 |
 | `hub/hospital/copy.js` | statusMarylandText | HUB-04, HUB-05, HACRP-26, HACRP-91, HACRP-13 |
@@ -242,7 +242,7 @@ primary source applies). "True" means the code does what the sentence says.
 | Uses public CMS data and shows no patient information. | `web/copy.js` affiliation | Inputs are `data/pinned/` public files (`manifest.json`) | True |
 | Built from public data, CMS's above all; deterministic, published code. | `hub/copy.js` aboutBrief3, aboutAi | `data/pinned/manifest.json`; the repository is public | True |
 | The formula has not been told which hospitals employ the author. | `hub/copy.js` aboutCoi | No CCN-specific branch in `engine/`; the one fixed CCN, `hub/model.js` EXAMPLE_CCN, is picked by a stated rule (`exampleRule`) | True of the code |
-| These hospitals have no page here. | `web/copy.js` notInHrrp (the Readmissions Methods page); `hub/copy.js` notFoundHospitals (the not-found page) | `hospital/`, `hacrp/hospital/`, `hrrp/hospital/` in the build hold no critical access, IPPS-excluded or Puerto Rico CCN | True |
+| These hospitals have no page here. | `web/copy.js` notInHrrp (the Readmissions Methods page); `hub/copy.js` notFoundHospitals (the not-found page) | `hospital/`, `hacrp/hospital/`, `hrrp/hospital/` in the build hold no critical access, IPPS-excluded or Puerto Rico CCN; Maryland's hospitals, in CMS's files, have hub and HACRP pages, and the not-found line names no rule that would exclude them | True |
 | Each program's pages name the CMS file they use and when CMS released it. | `hub/copy.js` termsAsOf, correctionsCms | The HACRP pages and the Readmissions program, hospital and place pages each carry a source line with the file and its posting date; the data dictionaries point to Methods, which lists every file read | True |
-| An estimate's page says how close it is: for a value CMS publishes, the largest difference from it; for dollars, a likely range from a test against hospitals' cost reports. | `hub/copy.js` estimateHow | The recompute pages give the largest difference; the dollar pages give the back-test's likely range (`hub/model.js` netRange, `engine/js/dollars/ranges.js`) | True |
+| The site says how close an estimate is: for a value CMS publishes, the largest difference from it; for dollars, how the estimates compare with hospitals' cost reports. | `hub/copy.js` estimateHow | The recompute pages give the largest difference; the hub and HACRP dollar pages give the back-test's likely range (`hub/model.js` netRange, `engine/js/dollars/ranges.js`); the Readmissions Methods page gives its estimate's share within 15% of cost reports (`sites/hrrp/web/view.js` accuracy) | True |
 | Each fix is logged with its date; numbers are not changed quietly. | `hub/copy.js` correctionsBrief1, correctionsProcess | `hub/corrections.js` reads `corrections/`; its first entry logs the whole-site review's corrections and the 2026-11-02 rewording | True |
