@@ -17,6 +17,15 @@ import { fill, fillKeep, t } from './money/copy.js';
 
 const FACTOR_DP = 4;
 
+// A payment factor to as many places as the value needs, from four (what CMS publishes for Readmissions) to ten (what its
+// Value-Based Purchasing table gives), so base times the factor less one gives the printed dollars. Same as web/render/format.js factorText.
+const MAX_FACTOR_DP = 10;
+function factorText(f) {
+  let places = FACTOR_DP;
+  while (places < MAX_FACTOR_DP && Math.abs(Number(f.toFixed(places)) - f) > 1e-12) places += 1;
+  return decimal(f, places);
+}
+
 // The source line every dollar figure carries: this site's arithmetic on CMS's payment files and the HACRP file, its
 // release date kept on one line. source: the HACRP dataset's manifest entry ({ id, pdcReleased }).
 export const moneySourceText = ({ fy, source }) => fillKeep('stmtSource', { fy: String(fy), id: source.id, date: isoDate(source.pdcReleased) }, ['date']);
@@ -168,10 +177,10 @@ export function statementLines(m) {
   if (m.parts.mdhAddon) lines.push({ key: 'base', kind: 'sum', label: t('stmtBase'), sub: t('stmtBaseNote'), amount: m.base, bar: { part: [0, at(m.base)] } });
   for (const key of OTHER_PARTS.filter((k) => shown.includes(k))) lines.push(part(key));
   lines.push({ key: 'total', kind: 'sum', label: t('stmtTotal'), sub: null, amount: m.total, bar: { part: [0, at(m.total)] } });
-  const factorSub = (factor, listed, unlisted) => (listed ? fill('stmtFactor', { factor: decimal(factor, FACTOR_DP), one: decimal(1, 0) }) : t(unlisted));
+  const factorSub = (factor, listed, unlisted, text = (f) => decimal(f, FACTOR_DP)) => (listed ? fill('stmtFactor', { factor: text(factor), one: decimal(1, 0) }) : t(unlisted));
   const adjust = (amount) => (amount < 0 ? { cut: [at(m.base + amount), at(m.base)] } : { add: [at(m.base), at(m.base + amount)] });
   lines.push({ key: 'hrrp', kind: 'program', label: t('stmtHrrp'), sub: factorSub(m.hrrpFactor, m.hrrpListed, 'stmtHrrpUnlisted'), amount: m.hrrp, bar: { scope: [0, at(m.base)], ...adjust(m.hrrp) } });
-  lines.push({ key: 'hvbp', kind: 'program', label: t('stmtHvbp'), sub: factorSub(m.vbpFactor, m.vbpListed, 'stmtHvbpUnlisted'), amount: m.hvbp, bar: { scope: [0, at(m.base)], ...adjust(m.hvbp) } });
+  lines.push({ key: 'hvbp', kind: 'program', label: t('stmtHvbp'), sub: factorSub(m.vbpFactor, m.vbpListed, 'stmtHvbpUnlisted', factorText), amount: m.hvbp, bar: { scope: [0, at(m.base)], ...adjust(m.hvbp) } });
   lines.push({ key: 'after', kind: 'sum', label: t('stmtAfter'), sub: null, amount: m.after, bar: { part: [0, at(m.after)] } });
   lines.push({
     key: 'hac', kind: 'program', label: t('stmtHac'),

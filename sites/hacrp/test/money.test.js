@@ -329,6 +329,22 @@ test('the tables\' estimated cut: the dollars at stake for a cut, 0 for no cut a
   for (const [, ccn, cell] of rowsOf) assert.equal(cell, cutText(cutDollars(DATA.dollars.byCcn.get(ccn.toUpperCase()))), ccn);
 });
 
+test('the statement prints the Value-Based Purchasing factor with every place it has, so base times the factor less one gives the printed dollars', () => {
+  let checked = 0;
+  let longer = 0;
+  for (const row of rows.filter((r) => r.status === 'estimated')) {
+    const m = hospitalMoney(row);
+    if (!m.vbpListed) continue;
+    const hvbp = statementLines(m).lines.find((l) => l.key === 'hvbp');
+    const printed = Number(/\(([\d.]+) − /.exec(text(hvbp.sub))[1]);
+    assert.ok(Math.abs(printed - m.vbpFactor) < 1e-9, `${row.ccn}: ${printed} for ${m.vbpFactor}`);
+    assert.ok(Math.abs(Math.round(m.base * (printed - 1)) - m.hvbp) <= 1, `${row.ccn}: base times the printed factor less one`);
+    if (/\.\d{5,}/.test(String(printed))) longer += 1;
+    checked += 1;
+  }
+  assert.ok(checked > 0 && longer > 0, 'some factors need more than four places');
+});
+
 test('a likely range in the statement is plain in the lines and the figure\'s table, and never breaks on the page', () => {
   const JOIN = '\u2060';
   for (const row of [CUT, TEACHING, NEAR]) { // two cut, one not (a net with a range, a HAC line without)
