@@ -57,10 +57,12 @@ ${sections.map((s) => html`${s.heading ? html`<h4 class="pol__entry-sub" id="${s
 `;
 }
 
-// One site's line: its name, the date of the CMS file it uses and the date its numbers last changed.
+// One site's line: its name, the date of the CMS file it uses and the date its numbers last changed. A scenario's site
+// (web/site.js programs: scenario) is built from many files and gives the newest date CMS put on one of them, and says so.
 function siteLine([id, { cmsReleased, changed }]) {
   if (!has(SITE.sites, id)) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
-  return html`<li>${sentence('correctionsSite', { cms: time(cmsReleased), changed: time(changed) }, { site: SITE.sites[id].title })}</li>
+  const key = SITE.programs.find((p) => p.id === id)?.scenario ? 'correctionsSiteScenario' : 'correctionsSite';
+  return html`<li>${sentence(key, { cms: time(cmsReleased), changed: time(changed) }, { site: SITE.sites[id].title })}</li>
 `;
 }
 

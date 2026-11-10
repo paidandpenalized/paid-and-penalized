@@ -129,6 +129,7 @@ export const COPY = typesetCopy({
   correctionsCms: "When CMS revises or replaces a file a site uses, the site is updated and the log says so. Until then, each program's pages still name the CMS file they were built from and when CMS released it.",
   correctionsSitesHeading: "Each site's data",
   correctionsSite: "{site}: CMS's file released {cms}; this site's numbers last changed {changed}.",
+  correctionsSiteScenario: "{site}: a scenario built from many files; the newest CMS file it uses is dated {cms}; this site's numbers last changed {changed}.",
   correctionsLogHeading: 'The log',
   correctionsLogEmpty: 'No corrections yet.',
 

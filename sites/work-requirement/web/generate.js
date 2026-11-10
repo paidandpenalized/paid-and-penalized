@@ -15,7 +15,8 @@ import { axisTop, hospitalRows, stripsAsset } from './program/strips.js';
 
 // ctx: the build's context (pipeline/site/context.js). data: loadMedicaid()'s result (tests pass their own); released:
 // whether the site's pages may be indexed in a production build; log: where progress lines go. Returns the two dates the
-// hub's corrections page lists: the CMS-64 file's (the newest CMS input) and the day the scenario file was built.
+// hub's corrections page lists: the newest date CMS gives any of the scenario file's inputs (data.js newestCmsDate) and
+// the day the scenario file was built.
 export function generateWr(ctx, { data = loadMedicaid(), released = SITE.sites['work-requirement'].released, log = console.log } = {}) {
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;

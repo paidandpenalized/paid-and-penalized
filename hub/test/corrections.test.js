@@ -150,6 +150,10 @@ test('each site gives the date of CMS\'s file and the date its numbers last chan
   assert.doesNotMatch(text, /mailto:/);
   const time = (iso) => `<time datetime="${iso}">${isoDate(iso)}</time>`;
   assert.ok(text.includes(fillCopy(COPY, 'correctionsSite', { site: SITE.sites.hacrp.title, cms: time('2026-08-13'), changed: time('2026-10-22') })));
+  // A scenario's site is built from many files: its line says the date is the newest CMS file's.
+  const scen = page({ entries: ENTRIES, updated: new Map([['work-requirement', { cmsReleased: '2026-10-05', changed: '2026-11-10' }]]) });
+  assert.ok(scen.includes(fillCopy(COPY, 'correctionsSiteScenario', { site: SITE.sites['work-requirement'].title, cms: time('2026-10-05'), changed: time('2026-11-10') })));
+  assert.doesNotMatch(scen, new RegExp(`${SITE.sites['work-requirement'].title}: CMS's file released`));
 });
 
 test('with no site dates the sites section is left out; a site the family does not have or a bad date stops the build', () => {

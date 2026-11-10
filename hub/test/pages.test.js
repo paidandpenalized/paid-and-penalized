@@ -171,11 +171,12 @@ const POLICY = [
   { path: '/corrections/', title: SHARED.corrections, stem: 'corrections' },
 ];
 
-// Builds the hub once in production mode and hands fn a reader for its files. A site has given its dates (for
-// /corrections/) and the corrections folder is one that does not exist, so the log is empty whatever the repo holds.
+// Builds the hub once in production mode and hands fn a reader for its files. Two sites, a program's and a scenario's,
+// have given their dates (for /corrections/) and the corrections folder is one that does not exist, so the log is empty
+// whatever the repo holds.
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-  const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }]]);
+  const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['work-requirement', { cmsReleased: '2026-10-05', changed: '2026-11-10' }]]);
   await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [], released: true });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });

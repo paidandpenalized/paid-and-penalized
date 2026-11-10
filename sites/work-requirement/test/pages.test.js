@@ -16,7 +16,7 @@ import { programDek } from '../../../web/programs.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { SECTIONS } from '../web/constants.js';
-import { loadMedicaid } from '../web/data.js';
+import { cmsDate, isCms, loadMedicaid, newestCmsDate } from '../web/data.js';
 import { WR, generateWr } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { methodsPage } from '../web/pages/methods.js';
@@ -49,7 +49,7 @@ test('the manifest: id, the page script and the kit\'s styles then the site\'s o
   assert.deepEqual(WR.styles, [...KIT_STYLES, 'sites/work-requirement/web/styles.css']);
 });
 
-test('the generator writes the program page and Methods, noindex while the site is unreleased (even in production), and returns the CMS-64 file\'s date and the day the numbers changed', () =>
+test('the generator writes the program page and Methods, noindex while the site is unreleased (even in production), and returns the newest date CMS gives an input and the day the numbers changed', () =>
   withTemp('pp-wr-', async (dir) => {
     assert.equal(SITE.sites['work-requirement'].released, false);
     const ctx = createContext({ outDir: dir, env: 'production', assets: testAssets() });
@@ -60,9 +60,7 @@ test('the generator writes the program page and Methods, noindex while the site 
       const text = readFileSync(join(dir, path, 'index.html'), 'utf8');
       assert.ok(text.includes('<meta name="robots" content="noindex">'), path);
     }
-    const cms64 = readJson(REPO_ROOT + 'data/pinned/manifest.json').find((e) => e.id === 'cms64-viii-2026-02');
-    assert.deepEqual(result, { updated: { cmsReleased: cms64.datasetModified, changed: builtOn(file.built_at) } });
-    assert.equal(result.updated.cmsReleased, '2026-02-17');
+    assert.deepEqual(result, { updated: { cmsReleased: data.meta.cmsReleased, changed: builtOn(file.built_at) } });
   }));
 
 test('the program page: its title and dek, the Work requirement tab current, the section menu (five steps, then Methods)', () => {
@@ -109,4 +107,32 @@ test('the Methods page: its heading under the section menu with Methods current,
 
 test('every page links the shared stylesheet, then the site\'s own', () => {
   for (const text of [program, methods]) assert.ok(text.includes(`<link rel="stylesheet" href="${assets.sheets['work-requirement']}">`));
+});
+
+// /corrections/ lists one date of CMS's per site. The scenario is built from many files, so it gives the newest date CMS
+// put on any of them: a CMS-served input's release or modified date, else the Last-Modified of the CMS file it was cut
+// from; never the day this site downloaded it.
+test('the corrections date: the newest date CMS gives any of the scenario file\'s CMS inputs, by a stated rule', () => {
+  const manifest = new Map(readJson(REPO_ROOT + 'data/pinned/manifest.json').map((e) => [e.id, e]));
+  const entries = file.sources.map((id) => manifest.get(id));
+  const dated = entries.filter((e) => isCms(e) && cmsDate(e));
+  assert.ok(dated.length >= 5, `${dated.length} dated CMS inputs`);
+  assert.equal(data.meta.cmsReleased, dated.map(cmsDate).sort().at(-1));
+  assert.ok(dated.every((e) => cmsDate(e) <= data.meta.cmsReleased));
+  // It is CMS's date, not a download date: some input was downloaded after it.
+  assert.ok(entries.some((e) => e.retrieved > data.meta.cmsReleased));
+  // The rule on its own: the order of the dates, the hosts, and no date from a download day or another publisher.
+  const cms = 'https://data.cms.gov/x.csv';
+  assert.equal(cmsDate({ pdcReleased: '2026-08-13', pdcModified: '2026-01-26' }), '2026-08-13');
+  assert.equal(cmsDate({ pdcModified: '2026-01-26', datasetModified: '2026-02-17' }), '2026-01-26');
+  assert.equal(cmsDate({ datasetModified: '2026-02-17', derivedFrom: { lastModified: '2026-10-05' } }), '2026-02-17');
+  assert.equal(cmsDate({ derivedFrom: { lastModified: '2026-10-05' }, retrieved: '2026-11-04' }), '2026-10-05');
+  assert.equal(cmsDate({ retrieved: '2026-11-04' }), null);
+  assert.ok(isCms({ downloadUrl: 'https://download.medicaid.gov/data/x.csv' }));
+  assert.ok(isCms({ derivedFrom: { downloadUrl: 'https://downloads.cms.gov/FILES/x.zip' } }));
+  assert.ok(isCms({ memberOf: { downloadUrl: cms } }));
+  assert.ok(!isCms({ downloadUrl: 'https://www.rwjf.org/x' }));
+  assert.ok(!isCms({ downloadUrl: 'https://notcms.gov.example.com/x' }));
+  assert.equal(newestCmsDate([{ downloadUrl: cms, pdcReleased: '2026-08-13' }, { downloadUrl: 'https://www.rwjf.org/x', pdcReleased: '2026-12-01' }, { downloadUrl: cms, retrieved: '2026-12-02' }]), '2026-08-13');
+  assert.throws(() => newestCmsDate([{ downloadUrl: cms, retrieved: '2026-11-04' }]), RangeError);
 });
