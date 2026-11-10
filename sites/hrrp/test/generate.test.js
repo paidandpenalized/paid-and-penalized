@@ -2,7 +2,7 @@
 // while the site is unreleased, and the two dates the build collects.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createContext, siteDates } from '../../../pipeline/site/context.js';
 import { escapeHtml } from '../../../web/render/html.js';
@@ -36,6 +36,23 @@ test('writes the program page and a page per hospital, noindex while unreleased,
       assert.match(text, /<meta name="robots" content="noindex">/);
     }
     assert.doesNotThrow(() => siteDates('hrrp', result));
+  }));
+
+// Methods says every chart on these pages has its numbers in a table on the same page (methods/copy.js accessText): each figure
+// that draws a chart carries one.
+test('every figure that draws a chart, on every page written, carries a table of its numbers', () =>
+  withTemp('pp-hrrp-', async (dir) => {
+    generateHrrp(createContext({ outDir: dir, env: 'production', assets: ASSETS }), { data: SLICE, released: false, ...quiet });
+    const pages = readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('index.html'));
+    let charts = 0;
+    for (const file of pages) {
+      for (const [fig] of readFileSync(join(dir, file), 'utf8').matchAll(/<figure\b[^]*?<\/figure>/g)) {
+        if (!/<svg[^>]*class="[^"]*\bchart\b/.test(fig)) continue;
+        charts += 1;
+        assert.ok(fig.includes('<table'), `${file}: a chart with no table: ${/<figcaption[^]*?<\/figcaption>/.exec(fig)?.[0].slice(0, 120)}`);
+      }
+    }
+    assert.ok(charts > 20, `found ${charts} charts`);
   }));
 
 test('released in production, the pages are indexable', () =>

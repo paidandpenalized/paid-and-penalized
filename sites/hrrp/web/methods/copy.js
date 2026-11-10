@@ -215,7 +215,7 @@ export const COPY = {
 
   accessHeading: { text: 'Accessibility', claim: null },
   accessText: {
-    text: 'Every chart has a text description, and its numbers are also in a table on the same page. Selecting individual dots or map areas needs a mouse or touch; the tables, search and links reach the same pages by keyboard.',
+    text: 'On these Readmissions pages, every chart has a text description, and its numbers are also in a table on the same page. Selecting individual dots or map areas needs a mouse or touch; the tables, search and links reach the same pages by keyboard.',
     claim: null,
   },
   pinsHeading: { text: 'Pinned files', claim: null },
