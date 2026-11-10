@@ -12,7 +12,7 @@ import { escapeHtml } from '../../../web/render/html.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { pageHospital } from '../client/find.js';
 import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
-import { COPY } from '../web/copy.js';
+import { COPY, t as words4 } from '../web/copy.js';
 import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import {
@@ -255,7 +255,7 @@ test('the page: step 4 drawn whole without a script, its controls hidden, and th
     const svg = new RegExp(`<svg[^>]*data-fit="${drawing}"[^>]*>([\\s\\S]*?)</svg>`).exec(section)?.[1];
     assert.equal(svg, parts[drawing].text, `${drawing}: the server's drawing is the browser's`);
   }
-  assert.ok(section.includes(`Figure 4.</span> ${escapeHtml(parts.cap)}`), 'the caption');
+  assert.ok(section.includes(`Figure 4.</span> <span data-h-said>${escapeHtml(parts.cap)}</span>`), 'the caption, its takeaway in the span the browser rewrites');
   assert.ok(section.includes(parts.facs.text));
   assert.match(section, /data-h-pick hidden/, 'the random button waits for the script');
   assert.match(section, /<figure class="fig" id="figure-4"/);
@@ -341,4 +341,83 @@ test('the factor rows: each beside the state\'s other drawn hospitals, ranked am
   assert.equal((parts.facs.text.match(/class="wr-rug"/g) ?? []).length, 3, 'three rugs; the decline has none');
   assert.equal((parts.facs.text.match(/class="wr-fac"/g) ?? []).length, 4);
   for (const m of words(parts.facs).matchAll(/than ([\d,]+) of the ([\d,]+)/g)) assert.equal(Number(m[2].replace(/,/g, '')), others);
+});
+
+// ---------- step 4 in the browser: the caption after a failed fetch ----------
+
+// Step 4's parts as mountHospital looks them up, on stand-ins: the caption is the figure's number, its takeaway span and
+// the scenario tag, so a test can see that only the span's text changes.
+function stepFour() {
+  const node = (extra = {}) => ({
+    hidden: false, innerHTML: '', textContent: '', dataset: {}, attrs: {},
+    setAttribute(k, v) { this.attrs[k] = String(v); },
+    removeAttribute(k) { delete this.attrs[k]; },
+    replaceChildren(...xs) { this.children = xs; },
+    addEventListener(type, fn) { this.on = fn; },
+    ...extra,
+  });
+  const said = node();
+  const capN = node({ textContent: 'Figure 4.' });
+  const tag = node({ textContent: 'scenario' });
+  const cap = node({ children: [capN, ' ', said, ' ', tag] });
+  const notePara = node();
+  const note = node({ parentElement: notePara });
+  const parts = { '[data-h-said]': said, '[data-h-fig]': node(), '[data-h-facs]': node(), '[data-h-none]': node(), '[data-h-note]': note, '.fig__table': node(), '.fig__cap': cap };
+  const svgs = ['narrow', 'wide'].map((fit) => node({ dataset: { fit } }));
+  const fig = { querySelector: (s) => parts[s] ?? null, querySelectorAll: (s) => (s === 'svg[data-fit]' ? svgs : []) };
+  const card = node();
+  const button = node();
+  const pick = node({ querySelector: () => button });
+  const own = { '[data-h-card]': card, '#figure-4': fig, '[data-h-pick]': pick, '[data-h-noscript]': node() };
+  const section = { querySelector: (s) => own[s] ?? null };
+  return { section, said, cap, capN, tag, card };
+}
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+async function mountWithFetches(t, outcomes) {
+  const { mountHospital } = await import('../client/hospital.js');
+  const { createStore } = await import('../client/state.js');
+  // Two drawn hospitals in one state, so a second pick fetches the same state's asset again.
+  const drawnRows = rows.filter((r) => r.share);
+  const first = drawnRows[0];
+  const second = drawnRows.find((r) => r.state === first.state && r.ccn !== first.ccn);
+  const calls = [];
+  const saved = { fetch: globalThis.fetch, document: globalThis.document };
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    const ok = outcomes[calls.length - 1];
+    return ok ? { ok: true, json: async () => JSON.parse(JSON.stringify(chunks.get(first.state))) } : { ok: false, status: 503 };
+  };
+  globalThis.document = { createElement: () => ({}) };
+  t.after(() => Object.assign(globalThis, saved));
+  const store = createStore({ scenario: 'middle', use: 1, hospital: first, totals: null, stateCode: null });
+  const dom = stepFour();
+  mountHospital(dom.section, { store, rows, urls: { [first.state]: `/assets/wr-hosp-${first.state}.json` } });
+  await settle();
+  return { ...dom, store, first, second, calls };
+}
+const capWords = (row) => figureParts({ ...subject(row), lenient: true }, { k: MIDDLE, use: 1 }).cap;
+
+test('step 4 in the browser: a failed fetch says so in the takeaway\'s span; a later success puts the takeaway back, the tag kept', async (t) => {
+  const r = await mountWithFetches(t, [false, true]);
+  assert.equal(r.said.textContent, words4('hFailed'));
+  assert.deepEqual(r.cap.children, [r.capN, ' ', r.said, ' ', r.tag], 'the caption\'s parts are where they were');
+  r.store.set({ hospital: r.second });
+  await settle();
+  assert.equal(r.calls.length, 2, 'the failed asset is fetched again');
+  assert.equal(r.said.textContent, capWords(r.second), 'no stale failure text');
+  assert.deepEqual(r.cap.children, [r.capN, ' ', r.said, ' ', r.tag]);
+});
+
+test('step 4 in the browser: two failures in a row leave one failure line and the scenario tag', async (t) => {
+  const r = await mountWithFetches(t, [false, false]);
+  r.store.set({ hospital: r.second });
+  await settle();
+  assert.equal(r.calls.length, 2);
+  assert.equal(r.said.textContent, words4('hFailed'));
+  assert.deepEqual(r.cap.children, [r.capN, ' ', r.said, ' ', r.tag], 'the tag is still there');
+});
+
+test('step 4\'s takeaway is written in its own span inside the caption, before the scenario tag', () => {
+  assert.match(section, /<figcaption class="fig__cap" id="figure-4-cap"><span class="fig__n">[^<]*<\/span> <span data-h-said>[^<]+<\/span> <span class="[^"]*"/);
 });

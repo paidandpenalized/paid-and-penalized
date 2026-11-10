@@ -36,9 +36,9 @@ const getJson = async (url) => {
 export function mountHospital(section, { store, rows, urls, say = () => {} }) {
   const card = section.querySelector('[data-h-card]');
   const fig = section.querySelector('#figure-4');
-  if (!card || !fig) return;
-  const cap = fig.querySelector('.fig__cap');
-  const capN = cap.querySelector('.fig__n');
+  if (!card || !fig || !fig.querySelector('[data-h-said]')) return;
+  // The caption's takeaway (its own span, between the figure's number and the scenario tag): rewritten, never moved.
+  const said = fig.querySelector('[data-h-said]');
   const drawn = fig.querySelector('[data-h-fig]');
   const svgs = [...fig.querySelectorAll('svg[data-fit]')];
   const facs = fig.querySelector('[data-h-facs]');
@@ -54,10 +54,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
     const parts = figureParts(s, v);
     card.innerHTML = cardHtml(s, v).text;
     card.removeAttribute('aria-busy');
-    // The takeaway is the text between the figure's number and the caption's tag, rewritten in place.
-    const said = capN.nextSibling;
-    if (said?.nodeType === 3) said.textContent = ` ${parts.cap}${said.nextSibling ? ' ' : ''}`;
-    else capN.after(` ${parts.cap}${capN.nextSibling ? ' ' : ''}`);
+    said.textContent = parts.cap;
     drawn.hidden = Boolean(parts.reason);
     none.hidden = !parts.reason;
     none.innerHTML = parts.none ? parts.none.text : '';
@@ -82,8 +79,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
     const message = () => Object.assign(document.createElement('p'), { className: 'small', textContent: t('hFailed') });
     card.replaceChildren(message());
     card.removeAttribute('aria-busy');
-    capN.nextSibling?.remove();
-    cap.append(` ${t('hFailed')}`);
+    said.textContent = t('hFailed');
     drawn.hidden = true;
     table.hidden = true;
     note.parentElement.hidden = true;

@@ -4,7 +4,8 @@
 // data-sorted-up and data-sorted-down, a CSV download and a tooltip layer). The build
 // fails if a value the chart plots is missing from the table.
 //   n            the figure's number on its page (a positive integer)
-//   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
+//   takeaway     the finding, in a sentence built from data (text, or Safe markup: e.g. the text in a span a script
+//                rewrites); source: the source line (text or Safe)
 //   capTag       optional: a tag (Safe markup, e.g. the scenario tag) set after the takeaway, the figure's one tag for
 //                what all its numbers are
 //   svg          a chart from this kit (Safe, starting <svg), drawn about phone wide
@@ -44,7 +45,7 @@ const isChart = (svg) => svg instanceof Safe && svg.text.startsWith('<svg ');
 
 function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key }) {
   if (!Number.isInteger(n) || n < 1) throw new RangeError(`figure: n must be a positive integer, got ${n}`);
-  if (typeof takeaway !== 'string' || !takeaway) throw new TypeError(`figure ${n}: a takeaway is required`);
+  if (!(typeof takeaway === 'string' || takeaway instanceof Safe) || !String(takeaway)) throw new TypeError(`figure ${n}: a takeaway is required`);
   if (chart !== null) {
     if (!(chart instanceof Safe) || svg !== undefined) throw new TypeError(`figure ${n}: chart must be Safe markup, given in place of svg`);
   } else if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);

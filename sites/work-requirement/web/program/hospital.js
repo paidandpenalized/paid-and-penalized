@@ -546,7 +546,7 @@ export function hospitalStep({ data, rows, label, hubCcns = new Set(), chunks = 
 <div class="wr-step__stage">
 ${figure({
     n: 4,
-    takeaway: parts.cap,
+    takeaway: html`<span data-h-said>${parts.cap}</span>`,
     chart: chartOf(parts),
     note: html`<span data-h-note>${parts.note}</span>`,
     capTag: scenarioTag(fy),
