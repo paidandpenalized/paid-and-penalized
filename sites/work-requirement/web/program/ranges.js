@@ -1,7 +1,7 @@
 // Step 1's three ranges (revenue lost, added uncompensated care, the fall in operating income), each low case to high
 // with the selected case's value and a small tick bar, and the counts line under them. Shared by the build (finding.js)
 // and the browser (client/page.js redraws them when the case or the use rate moves). Pure. totals: model.js's.
-import { count, money, moneyRange } from '../../../../web/render/format.js';
+import { count, money, moneyRange, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
@@ -39,5 +39,18 @@ export const countsText = (totals) => fill('counts', {
   redLow: count(totals.low.into_red), redHigh: count(totals.high.into_red), red: count(totals.middle.into_red),
 });
 
+// What the page's live line says (client/page.js) when the case or the use rate moves: the case's three numbers and its
+// counts. use: the use rate's multiple.
+export const statusText = (totals, selected, use) => {
+  const c = totals[selected];
+  return fill('rangesStatus', {
+    scenario: scenWord(selected), use: pct(use, 0), lost: money(c.lost), added: money(c.added_uncompensated), income: money(-c.income_change),
+    falls: count(c.falls_1pp), red: count(c.into_red),
+  });
+};
+
+// The ranges, the counts line, and the page's one live line, empty until the script writes it: the ranges, the counts
+// and the chips' readout are rewritten silently, and this line says what changed, once.
 export const ranges = (totals, selected) => html`<div class="wr-ranges">${rangesInner(totals, selected)}</div>
-<p class="wr-counts small">${countsText(totals)}</p>`;
+<p class="wr-counts small">${countsText(totals)}</p>
+<p class="vh wr-status" role="status"></p>`;

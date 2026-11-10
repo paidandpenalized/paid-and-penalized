@@ -43,6 +43,12 @@ export const COPY = {
   rangeIncome: { text: 'Operating income falls by', claim: null },
   rangeMid: { text: '{scenario} case: {value}', claim: null },
   rangeAlt: { text: 'Low {low}, middle {middle}, high {high}.', claim: null },
+  // What a screen reader hears when the case, the use rate or a group changes (client/page.js; the ranges, the counts
+  // and the chips' readout change without a sound): the case's numbers, then the group's readout when one is lit.
+  rangesStatus: {
+    text: '{scenario} case at {use} use: {lost} of Medicaid revenue lost a year, {added} of care given uncompensated, operating income down {income}. {falls} hospitals lose a point or more of operating margin; {red} go from a positive to a negative total margin.',
+    claim: null,
+  },
   counts: {
     text: '{fallsLow} to {fallsHigh} hospitals lose a point or more of operating margin ({falls} in the middle case), and {redLow} to {redHigh} go from a positive to a negative total margin ({red}).',
     claim: null,

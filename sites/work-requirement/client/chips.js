@@ -4,9 +4,11 @@
 // hospital back.
 import { groupReadout, inGroup } from '../web/program/strips.js';
 
-// root: the chips' block; items: the hospitals drawn; onGroup(group or null): a group lit ({ key, name, test }) or none.
-// Returns refresh(k, use), which writes the readout again for the case shown (index k in SCENARIOS) and the use rate.
-export function mountChips(root, { items, onGroup }) {
+// root: the chips' block; items: the hospitals drawn; onGroup(group or null): a group lit ({ key, name, test }) or none;
+// say(text): the page's live line, which speaks the readout when a press changes it (the readout itself is silent).
+// Returns refresh(k, use), which writes the readout again for the case shown (index k in SCENARIOS) and the use rate and
+// returns it while a group is lit ('' when none is), for the page's live line to say with the case's numbers.
+export function mountChips(root, { items, onGroup, say = () => {} }) {
   const buttons = [...root.querySelectorAll('button[data-group]')];
   const select = root.querySelector('select');
   const clear = root.querySelector('.wr-chips__clear');
@@ -31,6 +33,7 @@ export function mountChips(root, { items, onGroup }) {
     if (!state) select.value = '';
     clear.hidden = !group;
     readout();
+    say(out.textContent);
     onGroup(group);
   };
 
@@ -50,5 +53,6 @@ export function mountChips(root, { items, onGroup }) {
   return (k, use = 1) => {
     shown = { k, use };
     readout();
+    return group ? out.textContent : '';
   };
 }

@@ -30,7 +30,7 @@ function chips(states) {
   return html`<div class="wr-chips" role="group" aria-labelledby="wr-chips-h" hidden>
 <p class="wr-chips__head"><span class="cap" id="wr-chips-h">${t('chipsHeading')}</span> <button type="button" class="wr-chips__clear" hidden>${t('chipsClear')}</button></p>
 <div class="wr-chips__row">${GROUPS.map((key) => html`<button type="button" class="wr-chip" data-group="${key}" data-name="${groupWords('group_', key)}" aria-pressed="false">${groupWords('chip_', key)}</button>`)}<select class="wr-chip wr-chips__state" aria-label="${t('chipStateLabel')}"><option value="">${t('chipState')}</option>${states.map(([code, name]) => html`<option value="${code}">${name}</option>`)}</select></div>
-<p class="wr-chips__out small" aria-live="polite">${t('chipHint')}</p>
+<p class="wr-chips__out small">${t('chipHint')}</p>
 </div>`;
 }
 

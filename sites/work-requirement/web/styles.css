@@ -186,7 +186,7 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-wl--part .wr-wl__d { padding-left: 18px; font-weight: 400; }
 .wr-wl--part .wr-wl__v { font-weight: 400; }
 .wr-ws__foot { padding: 8px 12px 10px; color: var(--ink-2); }
-.wr-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 0.625rem/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.wr-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
 /* What "mitigation" means, at the head of the second worksheet. */
 .wr-mitig { display: grid; gap: 6px; padding: 10px 12px 12px; border-bottom: var(--rule) solid var(--pen); font-size: var(--fs-sm); line-height: 1.45; }
 .wr-mitig__h { font: 400 1.125rem/1.2 var(--font-display); }

@@ -12,11 +12,13 @@ import { r2 } from '../../../web/charts/svg.js';
 import { fillCopy } from '../../../web/render/components.js';
 import { count, money, moneyRange, pct } from '../../../web/render/format.js';
 import { pageHospital, defaultPool } from '../client/find.js';
+import { WIDE_MEDIA } from '../client/page.js';
 import { GROUPS, REF_SHARE, SCENARIOS } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import { stripWords } from '../web/program/finding.js';
+import { statusText } from '../web/program/ranges.js';
 import { howModel } from '../web/program/how.js';
 import { serverTotals } from '../web/program/model.js';
 import { textWidth } from '../../../web/charts/text.js';
@@ -282,4 +284,34 @@ test('the medians\' labels stay inside the strips for every group and every case
   // The wide drawing names every group in full; the phone's shortens only names too long for it.
   assert.equal(fullNames.filter((d) => d === 'wide').length, (names.length + states.length) * SCENARIOS.length * USES.length);
   assert.ok(checked > 1000, `${checked} labels`);
+});
+
+// The script draws only the strips drawing on show, so it must agree with the stylesheet on which one that is.
+test('the script\'s wide width is the stylesheet\'s', () => {
+  const charts = readFileSync(REPO_ROOT + 'web/styles/charts.css', 'utf8');
+  assert.match(charts, new RegExp(`@media ${WIDE_MEDIA.replace(/[()]/g, '\\$&')} \\{\\s*\\.chart\\[data-fit="narrow"\\] \\{ display: none; \\}`));
+});
+
+// A screen reader hears one line when the case, the use rate or a group changes: the page's only live region is the
+// step's status line (empty until the script writes it); the ranges, the counts and the chips' readout are silent.
+test('one live line for the step, in the copy\'s words with the case\'s numbers', () => {
+  const live = [...section.matchAll(/<[^>]+(?:role="status"|aria-live=)[^>]*>/g)].map((m) => m[0]);
+  assert.deepEqual(live.filter((tag) => !tag.includes('wr-use__note')), ['<p class="vh wr-status" role="status">'], 'the use note aside');
+  assert.match(section, /<p class="vh wr-status" role="status"><\/p>/, 'empty in the markup');
+  const totals = serverTotals(data);
+  for (const s of SCENARIOS) {
+    for (const use of [data.params.use_min, 1, data.params.use_max]) {
+      const line = statusText(totals, s, use);
+      assert.ok(line.startsWith(`${fillCopy(COPY, `scen${s[0].toUpperCase()}${s.slice(1)}`)} case at ${pct(use, 0)} use: ${money(totals[s].lost)}`), line);
+      assert.ok(line.includes(money(-totals[s].income_change)) && line.includes(count(totals[s].into_red)), line);
+      assert.doesNotMatch(line, /[{}]/);
+    }
+  }
+});
+
+test('the work-requirement tags are set at the caption size, as the scenario tag is', () => {
+  const site = readFileSync(REPO_ROOT + 'sites/work-requirement/web/styles.css', 'utf8');
+  const shared = readFileSync(REPO_ROOT + 'web/styles/components.css', 'utf8');
+  assert.match(/^\.wr-tag \{[^}]*\}/m.exec(site)[0], /font: 400 var\(--fs-cap\)\/1\.5 var\(--font-type\)/);
+  assert.match(/^\.scen-tag \{[^}]*\}/m.exec(shared)[0], /font: 400 var\(--fs-cap\)\/1\.5 var\(--font-type\)/);
 });

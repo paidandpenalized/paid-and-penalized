@@ -9,7 +9,7 @@ import { fillCopy } from '../../../web/render/components.js';
 import { decimal } from '../../../web/render/format.js';
 import { textWidth } from '../../../web/charts/text.js';
 import { createStore } from '../client/state.js';
-import { useControl } from '../client/whatif.js';
+import { perFrame, useControl } from '../client/whatif.js';
 import { SCENARIOS, USE_STEP } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
@@ -305,4 +305,19 @@ test('the shared state: set() tells each subscriber what changed, once, and noth
   off();
   store.set({ scenario: 'low' });
   assert.equal(seen.length, 2, 'unsubscribed');
+});
+
+test('the slider\'s moves reach the totals once a frame, the newest move\'s', () => {
+  const frames = [];
+  const got = [];
+  const next = perFrame((v) => got.push(v), (fn) => frames.push(fn));
+  for (const v of [1.05, 1.1, 1.15, 1.2]) next(v);
+  assert.equal(frames.length, 1, 'one frame asked for');
+  assert.deepEqual(got, [], 'nothing before the frame');
+  frames.shift()();
+  assert.deepEqual(got, [1.2], 'the newest move, once');
+  next(1);
+  assert.equal(frames.length, 1, 'a later move asks for a new frame');
+  frames.shift()();
+  assert.deepEqual(got, [1.2, 1]);
 });

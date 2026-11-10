@@ -39,6 +39,22 @@ export function useControl({ server, fetchBase, apply, fail }) {
   return { setUse, load };
 }
 
+// fn, called at most once an animation frame (frame: requestAnimationFrame) with the newest value handed to the function
+// returned: a slider dragged across many stops in one frame recomputes and redraws the page once, for the last.
+export function perFrame(fn, frame) {
+  let pending;
+  let queued = false;
+  return (value) => {
+    pending = value;
+    if (queued) return;
+    queued = true;
+    frame(() => {
+      queued = false;
+      fn(pending);
+    });
+  };
+}
+
 // head: the stage head; store: the page's state; server: the file's totals; baseUrl: the what-if's asset.
 export function mountWhatif(head, { store, server, baseUrl }) {
   const radios = [...head.querySelectorAll('input[name="wr-scen"]')];
@@ -78,9 +94,11 @@ export function mountWhatif(head, { store, server, baseUrl }) {
       showNote(t('useFailed'), true);
     },
   });
+  // The slider's own value and label follow each move at once; the totals, and every step drawn from them, once a frame.
+  const nextUse = perFrame((use) => control.setUse(use), (fn) => window.requestAnimationFrame(fn));
   const setUse = (use) => {
     showUse(use);
-    control.setUse(use);
+    nextUse(use);
   };
 
   for (const radio of radios) radio.addEventListener('change', () => radio.checked && store.set({ scenario: radio.value }));
