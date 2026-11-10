@@ -3,10 +3,13 @@
 // overlap each other and stay inside the drawing, and on the wide drawing each row's words stay clear of its plot; the
 // what-if's payment-cut chart keeps its cut label clear of CMS's line once the what-if is used. Pages: the HACRP
 // hospital samples with a score (site.js samplePages) and the three hardest peer charts (site.js peerChartSamples).
+// And the program page's slide rule (Figure 4): on every measure, as it opens and with its cursor walked end to end,
+// the cursor's readings never overlap the rule's words and stay inside the drawing.
 // Runs against dist/ (make build) or any URL (E2E_BASE_URL); see site.js. Messages name a page by its type, never a
 // hospital.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { PROGRAM_PATH } from '../ci/page-types.js';
 import { CONCURRENCY, assertQuiet, lowerAMeasure, settle, useBrowser, useContext, withPage } from './lib.js';
 import { peerChartSamples, samplePages } from './site.js';
 
@@ -84,6 +87,32 @@ function peerFacts(slack) {
   return { fit: svg.dataset.fit, overlaps, outside, onPlot };
 }
 
+// In the page: the shown slide rule (the program page's Figure 4, on the measure picked), the pairs of its words whose
+// boxes overlap and its words past the drawing, in the drawing's units (window.svgBox: lib.js), named by class and
+// text; and where its cursor stands (its slider value, and the last).
+function slideFacts(slack) {
+  const svg = [...document.querySelectorAll('svg.chart--slide')].find((el) => el.checkVisibility());
+  if (!svg) return null;
+  const toSvg = svg.getScreenCTM().inverse();
+  const vb = svg.viewBox.baseVal;
+  const words = [...svg.querySelectorAll('text')].map((el) => {
+    const b = window.svgBox(el);
+    const [p, q] = [new DOMPoint(b.left, b.top).matrixTransform(toSvg), new DOMPoint(b.right, b.bottom).matrixTransform(toSvg)];
+    return { name: `${el.getAttribute('class')} "${el.textContent.trim()}"`, x0: Math.min(p.x, q.x), x1: Math.max(p.x, q.x), y0: Math.min(p.y, q.y), y1: Math.max(p.y, q.y) };
+  }).filter((w) => w.x1 > w.x0);
+  const overlaps = [];
+  for (const [i, a] of words.entries()) {
+    for (const c of words.slice(i + 1)) {
+      if (Math.min(a.x1, c.x1) - Math.max(a.x0, c.x0) > slack.x && Math.min(a.y1, c.y1) - Math.max(a.y0, c.y0) > slack.y) overlaps.push(`${a.name} and ${c.name}`);
+    }
+  }
+  // Up and down by the taller slack: a box runs a unit or so above its ink (a reading raised over the words sets its
+  // ink well inside the drawing, its box's top a unit past it).
+  const outside = words.filter((w) => w.x0 < -slack.x || w.y0 < -slack.y || w.x1 > vb.width + slack.x || w.y1 > vb.height + slack.y)
+    .map((w) => `${w.name} (${Math.round(w.x0)} to ${Math.round(w.x1)}, ${Math.round(w.y0)} to ${Math.round(w.y1)}, of ${vb.width} by ${vb.height})`);
+  return { width: vb.width, overlaps, outside, now: svg.getAttribute('aria-valuenow'), max: svg.getAttribute('aria-valuemax') };
+}
+
 // In the page: the payment-cut chart's cut label, its words' left edge against CMS's line (the drop's right edge).
 function cliffFacts() {
   const label = document.querySelector('#whatif .wi-cliff__level--cut');
@@ -107,6 +136,34 @@ for (const width of WIDTHS) {
         await assertQuiet(seen, name);
       }));
     }
+    // The slide rule on the program page: each measure picked in turn, as it opens (the national median), then from its
+    // left end to its right by PageUp (a tenth of the scale or less a press), past the average's word on the way.
+    it('the program page\'s slide rule: its readings clear its words and stay inside it, as it opens and dragged end to end', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+      const fig = page.locator('figure').filter({ has: page.locator('svg.chart--slide') });
+      const ids = await fig.locator('.mtoggle__b[data-measure]').evaluateAll((bs) => bs.map((b) => b.dataset.measure));
+      assert.ok(ids.length > 1, 'a button for each measure');
+      for (const id of ids) {
+        await fig.locator(`.mtoggle__b[data-measure="${id}"]`).click();
+        const svg = fig.locator(`.mpanel[data-measure="${id}"] svg.chart--slide:visible`);
+        await svg.waitFor();
+        const check = (got, when) => {
+          assert.ok(got, `${id}: a slide rule is shown`);
+          assert.deepEqual(got.overlaps, [], `${id} (${got.width} drawing) ${when}: words that overlap`);
+          assert.deepEqual(got.outside, [], `${id} (${got.width} drawing) ${when}: words past the drawing`);
+        };
+        check(await page.evaluate(slideFacts, SLACK), 'as it opens');
+        await svg.press('Home');
+        let got = await page.evaluate(slideFacts, SLACK);
+        for (let k = 0; k < 100 && got.now !== got.max; k++) {
+          check(got, `at ${got.now}`);
+          await svg.press('PageUp');
+          got = await page.evaluate(slideFacts, SLACK);
+        }
+        check(got, `at ${got.now}`);
+        assert.equal(got.now, got.max, `${id}: the cursor reached the right end`);
+      }
+      await assertQuiet(seen, 'program');
+    }));
     // The payment-cut chart's words, on the sample hospitals (the one with no cut has its label to the right of the dot on a phone).
     for (const { name, path } of SAMPLES) {
       it(`${name}: the payment-cut chart's words do not overlap`, () => withPage(tabs, { path, watched: true }, async (page, { seen }) => {

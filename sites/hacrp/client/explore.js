@@ -6,7 +6,8 @@
 import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { ruleCompare, ruleRank } from '../../../web/charts/scoreRule.js';
 import { once } from '../../../web/client/once.js';
-import { SLIDE_PAD } from '../../../web/charts/slideRule.js';
+import { SLIDE_PAD, readPlaces } from '../../../web/charts/slideRule.js';
+import { r2 } from '../../../web/charts/svg.js';
 import { zFromValue } from '../../../engine/js/hacrp/params.js';
 import { hospitalHref } from '../web/hospital-table.js';
 import { imageOf, imagePair } from '../../../web/charts/figure.js';
@@ -135,15 +136,23 @@ export function mountSlideRules(root = document, only = null) {
       const readZ = cursor.querySelector('[data-read="z"]');
       const width = svg.viewBox.baseVal.width;
       const toX = (v) => SLIDE_PAD + ((v - s.lo) / (s.hi - s.lo)) * (width - 2 * SLIDE_PAD);
+      // The value reading's line (slideRule.js): the rule's top and the words on it, which the reading moves aside for.
+      const line = JSON.parse(cursor.getAttribute('data-line'));
       let value = s.value;
       const set = (v) => {
         value = Math.min(s.hi, Math.max(s.lo, v));
-        const z = zFromValue(value, s);
-        cursor.setAttribute('transform', `translate(${toX(value).toFixed(2)} 0)`);
-        readValue.textContent = decimal(value, s.dp);
-        readZ.textContent = cmsText(decimal(z, 2));
-        svg.setAttribute('aria-valuenow', decimal(value, s.dp));
-        svg.setAttribute('aria-valuetext', `${decimal(value, s.dp)}: z ${cmsText(decimal(z, 2))}`);
+        const at = r2(toX(value));
+        const read = decimal(value, s.dp);
+        const z = cmsText(decimal(zFromValue(value, s), 2));
+        const place = readPlaces({ cur: at, value: read, z, width, ...line });
+        cursor.setAttribute('transform', `translate(${at} 0)`);
+        readValue.textContent = read;
+        readValue.setAttribute('x', place.x);
+        readValue.setAttribute('y', place.y);
+        readZ.textContent = z;
+        readZ.setAttribute('x', place.zx);
+        svg.setAttribute('aria-valuenow', read);
+        svg.setAttribute('aria-valuetext', `${read}: z ${z}`);
       };
       const fromEvent = (e) => set(s.lo + ((svgPoint(svg, e).x - SLIDE_PAD) / (width - 2 * SLIDE_PAD)) * (s.hi - s.lo));
       svg.setAttribute('tabindex', '0');
