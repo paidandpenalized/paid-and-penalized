@@ -8,7 +8,7 @@ import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
-import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
+import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, MDH_ADDON_SHARE, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { PER_STEP, historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
@@ -460,7 +460,8 @@ export function methodsView(ctx) {
     },
     meta,
     conditions: edition.conditions,
-    dollars: methodsFill('dollarsInputs', { edition: edition.label }),
+    dollars: [methodsFill('dollarsInputs', { edition: edition.label }), methodsT('dollarsInputsMdh'), methodsT('dollarsRates')].join(' '),
+    dollarsMdh: methodsFill('dollarsFormulaMdh', { share: `${MDH_ADDON_SHARE * 100}%` }),
     totals: totals?.modelBase == null ? null : {
       text: methodsFill('dollarsTotals', { base: fmtMoney(totals.modelBase), pen: fmtMoney(totals.modelPen), cms: fmtMoney(totals.cmsEst), source: cmsLabel ?? methodsT('cmsSourceNone') }),
       url: httpsUrl(totals.cmsSrc?.url),

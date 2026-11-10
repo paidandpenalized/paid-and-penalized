@@ -12,6 +12,11 @@ export const NTAP_AMOUNT = 1739715745.72;
 // (CR 13595, May 2, 2024) extended the model's termination date to 12/31/2026. The row drops out of later editions.
 export const PARHM_END = '2026-12-31';
 
+// A Medicare-dependent hospital is paid the federal rate plus this share of the amount by which its hospital-specific rate
+// exceeds it (42 CFR 412.108(c)(2)(iii)); the data's base includes it (engine/py/pp_engine/dollars.py MDH_SHARE, the same
+// value). Methods' dollar formula prints it.
+export const MDH_ADDON_SHARE = 0.75;
+
 // "About 2,900 hospitals": the hospital count rounded to the nearest hundred (Thirty Day Readmissions, views/explainer.js).
 export const ROUND_COUNT_TO = 100;
 
@@ -31,11 +36,12 @@ export const HISTORY_SIMULATED_FYS = Object.freeze([2025]);
 export const CLAIMS = {
   NTAP_AMOUNT: 'HRRP-07',
   PARHM_END: 'HRRP-08',
+  MDH_ADDON_SHARE: 'HRRP-29',
 };
 
 // What the copy gate reads: the prefix of this site's claim ids, and the method constants it checks (name and type).
 export const CLAIM_PREFIX = 'HRRP';
-export const METHOD_CONSTANTS = Object.freeze({ NTAP_AMOUNT: 'number', PARHM_END: 'string' });
+export const METHOD_CONSTANTS = Object.freeze({ NTAP_AMOUNT: 'number', PARHM_END: 'string', MDH_ADDON_SHARE: 'number' });
 
 // Care Compare rates hospitals from one star to this many (CMS's overall rating scale); the record card shows the rating as filled and empty stars.
 export const STARS_MAX = 5;

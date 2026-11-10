@@ -42,8 +42,21 @@ export const COPY = {
     claim: null,
   },
   dollarsFormula: { text: 'cases × case-mix index × (labor amount × wage index + non-labor amount × cost-of-living adjustment)', claim: null },
+  // The formula's second line: a Medicare-dependent hospital's add-on (the engine's est_mdh_addon).
+  dollarsFormulaMdh: {
+    text: '+ for a Medicare-dependent hospital: {share} × (cases × case-mix index for the hospital-specific rate × hospital-specific rate − the line above, if more than zero) × the part of the year it keeps the status',
+    claim: ['HRRP-25', 'HRRP-29'],
+  },
   dollarsInputs: {
-    text: 'Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the {edition} IPPS impact file, which uses claims from two years earlier. The standardized amounts come from the final rule’s standardized-amount tables (correction notice), choosing the column that matches each hospital’s quality-reporting and EHR status as CMS flags it in the impact file.',
+    text: 'Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the {edition} IPPS impact file, which uses claims from two years earlier.',
+    claim: null,
+  },
+  dollarsInputsMdh: {
+    text: 'A Medicare-dependent hospital’s second line takes the same cases but the file’s other case-mix index, the one it gives for hospitals paid under their hospital-specific rate.',
+    claim: 'HRRP-30',
+  },
+  dollarsRates: {
+    text: 'The standardized amounts come from the final rule’s standardized-amount tables (correction notice), choosing the column that matches each hospital’s quality-reporting and EHR status as CMS flags it in the impact file.',
     claim: null,
   },
 

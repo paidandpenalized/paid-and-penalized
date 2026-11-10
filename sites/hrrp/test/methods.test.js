@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { textOf } from '../../../pipeline/site/html.js';
 import { ASSETS } from '../../../pipeline/test/helpers.js';
 import { methodsPage } from '../web/pages/methods.js';
-import { NTAP_AMOUNT } from '../web/constants.js';
+import { MDH_ADDON_SHARE, NTAP_AMOUNT } from '../web/constants.js';
 import { verdict } from '../../../engine/js/hrrp/formula.js';
 import { buildPlaces } from '../web/places.js';
 import { areaContext, methodsView } from '../web/view.js';
@@ -36,6 +36,18 @@ test('the accuracy line states the check against cost reports, and is dropped wi
   const bare = textOf(page(ctxOf({ meta: { ...DOLLAR_META, dollarCheck: undefined } })));
   assert.ok(!bare.includes('cost reports,') && !bare.includes('Accuracy'));
   assert.ok(bare.includes('Assumptions'), 'the assumptions stay');
+});
+
+test('the dollar formula has the Medicare-dependent add-on as its second line, its share the method constant; the case mix is said per side', () => {
+  const text = page();
+  const [federal, mdh, ...rest] = [...text.matchAll(/<pre class="formula">([\s\S]*?)<\/pre>/g)][1][1].split('\n').map(textOf);
+  assert.equal(rest.length, 0, 'two lines');
+  assert.equal(federal, 'cases × case-mix index × (labor amount × wage index + non-labor amount × cost-of-living adjustment)');
+  assert.ok(mdh.startsWith(`+ for a Medicare-dependent hospital: ${MDH_ADDON_SHARE * 100}% × (cases × case-mix index for the hospital-specific rate`), mdh);
+  const words = textOf(text);
+  assert.ok(words.includes('Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the FY2027 IPPS impact file'));
+  assert.ok(words.includes('A Medicare-dependent hospital’s second line takes the same cases but the file’s other case-mix index'));
+  assert.ok(words.includes('The standardized amounts come from the final rule’s standardized-amount tables'));
 });
 
 test('the assumptions: the fixed rows, the Medicare-dependent row with its end date and largest shortfall', () => {

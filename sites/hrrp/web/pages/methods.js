@@ -48,7 +48,8 @@ ${section('formula', t('formulaHeading'), html`<p>${view.formula.intro}</p>
 ${mediansTable({ rows: mediansRows(view.meta), conditions: view.conditions, edition: view.edition, collapsed: true })}
 <p>${view.formula.replication}</p>`)}
 ${section(DOLLARS_ID, t('dollarsHeading'), html`<p>${t('dollarsIntro')}</p>
-<pre class="formula">${t('dollarsFormula')}</pre>
+<pre class="formula">${t('dollarsFormula')}
+${view.dollarsMdh}</pre>
 <p>${view.dollars}</p>
 ${view.totals && html`<p>${view.totals.text}${view.totals.url && html` ${externalLink(view.totals.url, t('cmsSourceLink'))}`}</p>`}
 ${view.accuracy && html`<h3>${t('accuracyHeading')}</h3>
