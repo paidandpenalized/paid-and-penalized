@@ -72,11 +72,12 @@ function stripsFigure({ rows, top, words, selected }) {
   };
   return figure({
     n: 1,
-    takeaway: fill('figTakeaway', { placed: count(items.length), n: count(inScenario) }),
+    takeaway: fill('figTakeaway', { placed: count(items.length), n: count(inScenario), none: count(inScenario - items.length) }),
     svg: draw('narrow'),
     svgWide: draw('wide'),
     alt: stripsAlt(items),
-    source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
+    capTag: scenarioTag(fy),
+    source: fill('figSource', { fy: String(fy) }),
     claimLevel: 'hypothetical',
     table: tableOf(items, top),
     csvName: 'work-requirement-strips',

@@ -10,7 +10,7 @@ import { scenarioTag } from '../../../../web/render/shell.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { METHODS_PATH } from '../links.js';
-import { LINKS, TABLE_ROWS, chainHtml, statusText, worksheetBody } from './chain.js';
+import { LINKS, TABLE_ROWS, chainHtml, scenTag, statusText, worksheetBody } from './chain.js';
 import { declineRange, serverTotals } from './model.js';
 import { scenWord } from './ranges.js';
 
@@ -49,7 +49,7 @@ function worksheet(n, view, data) {
   const { lines: [from, to] } = LINKS[n - 1];
   const id = `wr-ws-${n}`;
   return html`<div class="wr-ws" id="${id}" popover role="dialog" aria-labelledby="${id}-t">
-<div class="wr-ws__head"><p class="wr-ws__t" id="${id}-t">${fill('wsTitle', { from: count(from), to: count(to), what: t(`link${n}Lab`) })}</p><button type="button" class="wr-ws__x" popovertarget="${id}" popovertargetaction="hide" aria-label="${t('wsClose')}">${t('wsCloseMark')}</button></div>
+<div class="wr-ws__head"><p class="wr-ws__t" id="${id}-t">${fill('wsTitle', { from: count(from), to: count(to), what: t(`link${n}Lab`) })} ${scenTag(view.how.fy)}</p><button type="button" class="wr-ws__x" popovertarget="${id}" popovertargetaction="hide" aria-label="${t('wsClose')}">${t('wsCloseMark')}</button></div>
 ${n === 2 ? mitigation(data, view.scenario) : ''}
 <table class="wr-ws__lines"><thead class="vh"><tr><th scope="col">${t('wsLine')}</th><th scope="col">${t('wsWhat')}</th><th scope="col">${t('wsAmount')}</th></tr></thead>
 <tbody class="wr-ws__body" data-ws-body="${n}">${worksheetBody(n, view)}</tbody></table>
@@ -87,7 +87,8 @@ ${figure({
     n: 2,
     takeaway: fill('howTakeaway', { n: count(inScenario) }),
     chart: chainHtml(view),
-    source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
+    capTag: scenarioTag(fy),
+    source: fill('figSource', { fy: String(fy) }),
     claimLevel: 'hypothetical',
     table: tableOf(view.totals),
     csvName: 'work-requirement-chain',

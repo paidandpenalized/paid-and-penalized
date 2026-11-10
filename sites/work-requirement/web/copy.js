@@ -81,7 +81,7 @@ export const COPY = {
   chipReadoutOne: { text: '{group}: one drawn, a loss of {median} of patient revenue, against a median of {all} for all ({scenario} case).', claim: null },
 
   // Figure 1: the three strips (web/program/strips.js).
-  figTakeaway: { text: '{placed} of the {n} hospitals in scenario states, each a dot at the share of its patient revenue it could lose, in all three cases.', claim: null },
+  figTakeaway: { text: '{placed} of the {n} hospitals in scenario states, each a dot at the share of its patient revenue it could lose, in all three cases ({none} with no loss aren’t drawn).', claim: null },
   figAlt: {
     text: 'Three strips of dots, the low, middle and high cases, on one square-root scale of the share of patient revenue lost. Median losses: {low}, {middle} and {high}.',
     claim: null,
@@ -462,7 +462,6 @@ export const COPY = {
   bNamedSumNone: { text: 'Exposed on both, by name: none in the {scenario} case', claim: null },
   bNamedLead: { text: 'Sorted by the share of patient revenue lost, largest first, then by name. The order is exposure, not a grade.', claim: null },
   bNamedCaption: { text: 'Hospitals exposed on both, {scenario} case', claim: null },
-  bColNo: { text: 'No.', claim: null },
   bColHosp: { text: 'Hospital', claim: null },
   bGrpMedicaid: { text: 'Medicaid, scenario', claim: null },
   bGrpMedicare: { text: 'Medicare, FY{pfy}', claim: null },

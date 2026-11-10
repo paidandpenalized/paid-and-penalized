@@ -13,8 +13,9 @@
 // reads it in its step's order, and focus may reach it, which makes its step the one in view at once (its words brought
 // on screen), so focus never rests in a figure not shown; when focus is in a figure as it goes, it moves to the new
 // step's heading. Each figure is scaled down (CSS zoom) just enough to fit the window under the head, never below
-// MIN_ZOOM: its words laid out across the whole column, its drawings at the width they had; an open table scrolls in
-// the pin.
+// MIN_ZOOM: its words laid out across the whole column, its drawings at the width they had; where that still leaves it
+// too tall, its drawings are narrowed (never below MIN_DRAWING of their width) and its words keep their size; an open
+// table scrolls in the pin.
 //
 // Between two steps the figures crossfade; between two steps whose figures are fields of dots, the field
 // (client/field.js) flies the dots first. With reduced motion the steps cut (base.css drops every transition) and there is
@@ -28,6 +29,14 @@ export const LINE_PX = 48;
 // The least a figure is scaled to fit, and the room kept under it.
 export const MIN_ZOOM = 0.9;
 const FOOT_PX = 10;
+// The drawings that give way when the least zoom still leaves a figure too tall (not the chain's, whose rows are as tall
+// as their words), and the least share of their width they are narrowed to.
+const GIVES_WAY = 'svg.chart:not(.chart--chain)';
+export const MIN_DRAWING = 0.6;
+
+// The share of their width a figure's drawings keep so that a figure over by `over` px fits, their heights together
+// `drawn` px (a drawing keeps its shape, so its height goes with its width): never below MIN_DRAWING, never above 1.
+export const drawingShare = (over, drawn) => (over > 0 && drawn > 0 ? Math.max(MIN_DRAWING, Math.min(1, (drawn - over) / drawn)) : 1);
 
 // 'off' (the stacked page), 'cut' (the stage, no motion) or 'field' (the stage and the field).
 export const stageMode = ({ wide, motion }) => (!wide ? 'off' : motion ? 'field' : 'cut');
@@ -116,6 +125,12 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
     for (const p of plans) if (p.up > p.z) scale(p, Math.floor(p.up * 1000) / 1000);
     for (const p of plans) p.over = p.up > p.z && heightOf(p.fig) > p.room;
     for (const p of plans) if (p.over) scale(p, p.z);
+    // Still too tall at the least zoom (a short window): the drawings give way, not the words, which keep MIN_ZOOM's size.
+    for (const p of plans) {
+      p.give = p.svgs.filter(([svg]) => svg.matches(GIVES_WAY));
+      p.share = drawingShare(heightOf(p.fig) - p.room, p.give.reduce((sum, [svg]) => sum + svg.getBoundingClientRect().height, 0));
+    }
+    for (const p of plans) if (p.share < 1) for (const [svg, w] of p.give) svg.style.maxWidth = `${w * p.share}px`;
   };
   // One fit a frame, however many things asked for it.
   let fitting = false;

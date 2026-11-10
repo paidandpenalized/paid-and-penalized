@@ -117,6 +117,12 @@ test('the named table is sorted by share lost, largest first, ties broken by nam
       assert.deepEqual(ccns, list.map((p) => p.ccn));
     }
   }
+  // R28: the order is the share's, so no row carries a rank: each row opens on the hospital's name, and the head has no
+  // number column.
+  for (const row of String(namedBody(model, MIDDLE, 1)).match(/<tr[^>]*>[\s\S]*?<\/tr>/g)) assert.match(row, /^<tr[^>]*><th scope="row">/);
+  const head = /<table class="gb wr-named__t">[\s\S]*?<\/thead>/.exec(section)[0];
+  assert.equal([...head.matchAll(/<th scope="col"/g)].length, 5, 'the hospital, then the two Medicaid and the two Medicare columns');
+  assert.doesNotMatch(head, /No\./);
   // Ties, on synthetic hospitals: equal shares go by name.
   const synth = (ccn, name, share) => ({ ccn, name, city: 'X', state: 'ZZ', cls: 'scenario', groups: 0, share: [share, share, share] });
   const synthRows = [synth('990001', 'Zeta', 0.02), synth('990002', 'Alpha', 0.02), synth('990003', 'Mid', 0.03), synth('990004', 'Low', 0.001)];

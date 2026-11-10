@@ -5,8 +5,8 @@
 // dot flies from where the figure it leaves put it to where the figure it enters puts it, and the stage then fades the
 // new figure in over it. The places come from the same layout functions the SVGs are drawn with (strips.js, states.js,
 // both.js), at the page's case, use rate, selected state and group, and are mapped onto the screen through each SVG's
-// own box. The colors are the figures' tokens (FIELD_TONES; test/stage.test.js holds each to 3:1 against the paper in
-// both themes).
+// own box. The colors are the figures' tokens (FIELD_TONES; test/stage.test.js holds each mark's to 3:1 against the paper
+// in both themes; FIELD_CONTEXT is the one context tone, step 5's dots outside the corner).
 import { SCENARIOS } from '../web/constants.js';
 import { bothLayout, isBoth, xOf } from '../web/program/both.js';
 import { statesLayout } from '../web/program/states.js';
@@ -14,9 +14,11 @@ import { dotSize, stripsLayout } from '../web/program/strips.js';
 
 // The steps the field draws, by section id, and the figure each one's dots are read from.
 export const FIELD_STEPS = Object.freeze({ finding: 'figure-1', states: 'figure-3', both: 'figure-5' });
-// The tokens a dot may take: the selected case's and the corner's (pen), the rest of step 5's plot (pen-scar), its strip
-// of hospitals with no penalty estimate (ink-3), and the page's hospital (ink).
-export const FIELD_TONES = Object.freeze(['pen', 'pen-scar', 'ink-3', 'ink']);
+// The tokens a dot may take: the selected case's and the corner's (pen), step 5's strip of hospitals with no penalty
+// estimate (ink-3), the page's hospital (ink), and the rest of step 5's plot, context in the pen ramp's palest step
+// (FIELD_CONTEXT, as Figure 5 draws them: styles.css .wr-bdots).
+export const FIELD_CONTEXT = 'pen-seq-1';
+export const FIELD_TONES = Object.freeze(['pen', 'ink-3', 'ink', FIELD_CONTEXT]);
 // The drawing the field maps through: from 900px every figure shows its wide one.
 const DRAWING = 'wide';
 // The flight: each dot's own run, and how much later the dots bound for the right edge leave than those for the left.
@@ -56,7 +58,7 @@ export function fieldPoints(step, { view, items, top, only = null, states, both 
   } else if (step === 'both') {
     const layout = bothLayout({ model: both, drawing: DRAWING, k, use: view.use });
     const { geo, sx, sy } = layout;
-    for (const p of both.pts) out.set(p.ccn, { x: sx(xOf(p, k, view.use)), y: sy(p.y), r: geo.dot / 2, tone: isBoth(both, p, k, view.use) ? 'pen' : 'pen-scar' });
+    for (const p of both.pts) out.set(p.ccn, { x: sx(xOf(p, k, view.use)), y: sy(p.y), r: geo.dot / 2, tone: isBoth(both, p, k, view.use) ? 'pen' : FIELD_CONTEXT });
     both.strip.forEach((s, i) => out.set(s.ccn, { x: layout.stripDots[i][0], y: layout.stripDots[i][1], r: geo.stripDot / 2, tone: 'ink-3' }));
   } else {
     throw new RangeError(`field: no dots for step "${step}"`);

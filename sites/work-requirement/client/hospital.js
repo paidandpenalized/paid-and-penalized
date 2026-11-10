@@ -54,8 +54,10 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
     const parts = figureParts(s, v);
     card.innerHTML = cardHtml(s, v).text;
     card.removeAttribute('aria-busy');
-    capN.nextSibling?.remove();
-    cap.append(` ${parts.cap}`);
+    // The takeaway is the text between the figure's number and the caption's tag, rewritten in place.
+    const said = capN.nextSibling;
+    if (said?.nodeType === 3) said.textContent = ` ${parts.cap}${said.nextSibling ? ' ' : ''}`;
+    else capN.after(` ${parts.cap}${capN.nextSibling ? ' ' : ''}`);
     drawn.hidden = Boolean(parts.reason);
     none.hidden = !parts.reason;
     none.innerHTML = parts.none ? parts.none.text : '';

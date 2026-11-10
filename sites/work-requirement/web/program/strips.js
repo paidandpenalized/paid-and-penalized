@@ -8,6 +8,7 @@
 // asset stripsAsset writes and decodeStrips reads), in the file's order, which is the order dots stack in.
 import { rowToBase, scenario } from '../../../../engine/js/medicaid/scenario.js';
 import { dotsD } from '../../../../web/charts/dots.js';
+import { pathNumbers } from '../../../../web/charts/pathd.js';
 import { isNarrow, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { count, decimal, money, pct } from '../../../../web/render/format.js';
@@ -99,15 +100,17 @@ export const median = (values) => medianOf([...values].sort((a, b) => a - b));
 // ---------- the layout ----------
 
 // The two drawings: the phone's (the kit's 300 across) and the wide one, at about the stage's width at 1280 and 1440. L,
-// R: the strips' margins; head: a strip's header rows; strips: the three strips' height together; axis: the room under
-// them; dot: the pitch range a strip's dots may take.
+// R: the strips' margins; head: a strip's header rows; strips: the three strips' height together; tall: the selected
+// strip's share of it (the other two split the rest); axis: the room under them (the wide drawing sets its title and the
+// scale's note on one row); dot: the pitch range a strip's dots may take. The wide drawing's selected strip has the room
+// for a pitch near 2.7 units in the middle case, so its dots draw about 2 px across with a gap at 1440 by 900.
 export const DRAWINGS = Object.freeze({
-  narrow: { width: 300, L: 6, R: 6, head: 32, strips: 420, axis: 52, dot: [0.9, 3] },
-  wide: { width: 680, L: 8, R: 8, head: 34, strips: 380, axis: 50, dot: [1, 5] },
+  narrow: { width: 300, L: 6, R: 6, head: 32, strips: 420, tall: 0.46, axis: 52, dot: [0.9, 3] },
+  wide: { width: 680, L: 8, R: 8, head: 34, strips: 430, tall: 0.58, axis: 36, dot: [1, 5] },
 });
-// The selected strip's share of the strips' height; the other two split the rest.
-const TALL = 0.46;
 const DOT_STEP = 0.1;
+// Each dot's run (dots.js dotsD): the stage scales its figures with CSS zoom, under which Firefox streaks a zero-length dot.
+export const DOT_RUN = 1;
 // The labeled ticks (shares), those under the axis's top.
 const TICKS = [0, 0.005, 0.01, 0.02, 0.04, 0.08, 0.12, 0.16, 0.2];
 export const tickText = (v) => (v === 0 ? '0' : pct(v, v < REF_SHARE ? 1 : 0));
@@ -153,14 +156,15 @@ function pitchFor(values, { x, L, room, dot: [lo, hi] }) {
 // The three strips for a drawing: items, the hospitals drawn (drawn(rows)); top, the axis's top; selected, the tall case;
 // use, the use rate's multiple of each share (1 at the default); only, a test for the hospitals a group keeps (null: all).
 // Each strip: { s, y0, h, top, bot, mid, d, at (each item's [x, y], null for one a group leaves out), counts (every
-// hospital's columns, for the group's gray outline), median (every hospital's), groupMedian (the group's, or null) }.
+// hospital's columns, for the group's gray outline), shown (the columns of the dots drawn: every hospital's, or the
+// group's), median (every hospital's), groupMedian (the group's, or null) }.
 export function stripsLayout({ items, drawing, top, selected, use = 1, only = null }) {
   const geo = DRAWINGS[drawing];
   const x = axisOf(geo, top);
   const k = SCENARIOS.indexOf(selected);
   let y = 0;
   const strips = SCENARIOS.map((s, i) => {
-    const h = geo.strips * (i === k ? TALL : (1 - TALL) / 2);
+    const h = geo.strips * (i === k ? geo.tall : (1 - geo.tall) / 2);
     const y0 = y;
     y += h;
     const room = h - geo.head - 6;
@@ -169,6 +173,7 @@ export function stripsLayout({ items, drawing, top, selected, use = 1, only = nu
     const d = pitchFor(values, { x, L: geo.L, room, dot: geo.dot });
     const all = stack(values, { x, L: geo.L, d, mid });
     let at = all.at;
+    let shown = all.counts;
     let groupMedian = null;
     if (only) {
       const keep = items.map((r) => only(r));
@@ -177,9 +182,10 @@ export function stripsLayout({ items, drawing, top, selected, use = 1, only = nu
       at = new Array(items.length).fill(null);
       let n = 0;
       keep.forEach((on, j) => { if (on) at[j] = group.at[n++]; });
+      shown = group.counts;
       groupMedian = median(kept);
     }
-    return { s, y0, h, top: y0 + geo.head, bot: y0 + geo.head + room, mid, d, at, counts: all.counts, median: median(values), groupMedian };
+    return { s, y0, h, top: y0 + geo.head, bot: y0 + geo.head + room, mid, d, at, counts: all.counts, shown, median: median(values), groupMedian };
   });
   return { geo, x, top, selected, strips, height: geo.strips + geo.axis };
 }
@@ -212,8 +218,26 @@ export function placeAt(x, w, { gap, span: [lo, hi] }) {
   return x - lo > hi - x ? { x: hi, anchor: 'end' } : { x: lo, anchor: 'start' };
 }
 
-// A strip's dot diameter at pitch d.
-export const dotSize = (d) => Math.max(0.9, d * 0.9);
+// The selected strip's dot diameter at pitch d: a little under the pitch, so each dot stands apart from the next. The
+// other two strips' pitch is too small for dots to stand apart (they drew as a moiré of slivers), so each of their columns
+// is drawn as the one bar its dots make (columnsD).
+export const DOT_GAP = 0.82;
+export const dotSize = (d) => Math.max(0.9, d * DOT_GAP);
+
+// A strip's columns of dots as one path of vertical strokes, each a stroke the pitch wide (stroke-width d, so the columns
+// meet edge to edge) from its top dot's top to its bottom dot's bottom: counts, the columns ([column, dots]); a column
+// of n dots reaches ceil((n - 1) / 2) pitches above the middle line (offset). In tenths of a unit, each stroke after the
+// first moved to relative to the last one's end, so the moves add up exactly.
+export function columnsD(counts, { L, d, mid }) {
+  const cols = [...counts].sort((a, b) => a[0] - b[0]).map(([c, n]) => [Math.round((L + (c + 0.5) * d) * 10), Math.round((mid - (Math.ceil((n - 1) / 2) + 0.5) * d) * 10), Math.round(n * d * 10)]);
+  let out = '';
+  let end = null;
+  for (const [x, y, len] of cols) {
+    out += end ? `m${pathNumbers((x - end[0]) / 10, (y - end[1]) / 10)}v${pathNumbers(len / 10)}` : `M${pathNumbers(x / 10, y / 10)}v${pathNumbers(len / 10)}`;
+    end = [x, y + len];
+  }
+  return out;
+}
 
 // The gray outline of every hospital behind a group's dots: each column's stack as one bar.
 // A column of n dots reaches ceil((n - 1) / 2) pitches above the middle line (offset).
@@ -242,7 +266,9 @@ function strip(st, { layout, group }) {
   const on = st.s === layout.selected;
   const ref = r2(x(REF_SHARE));
   const placed = st.at.filter(Boolean);
-  const dots = html`<path class="chart-dots wr-dots${group || on ? ' wr-dots--on' : ''}" stroke-width="${r2(dotSize(st.d))}" d="${dotsD(placed)}"/>`;
+  const dots = on
+    ? html`<path class="chart-dots wr-dots wr-dots--on" stroke-width="${r2(dotSize(st.d))}" d="${dotsD(placed, { run: DOT_RUN })}"/>`
+    : html`<path class="wr-cols${group ? ' wr-cols--on' : ''}" stroke-width="${r2(st.d)}" d="${columnsD(st.shown, { L: geo.L, d: st.d, mid: st.mid })}"/>`;
   const mx = r2(x(st.median));
   const medians = group
     ? html`<line class="wr-median wr-median--all" x1="${mx}" x2="${mx}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>${st.groupMedian === null ? '' : html`<line class="wr-median" x1="${r2(x(st.groupMedian))}" x2="${r2(x(st.groupMedian))}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>`}`
@@ -290,9 +316,10 @@ function axisBlock(layout, words) {
     return html`<line class="chart-axis__tick" x1="${at}" x2="${at}" y1="${r2(y)}" y2="${r2(y + 4)}"/>${show ? html`<text class="chart-axis__label" x="${at}" y="${r2(y + 16)}" text-anchor="middle">${tickText(v)}</text>` : ''}`;
   });
   const right = geo.width - geo.R;
+  const oneRow = !isNarrow(geo.width);
   return html`<g class="chart-axis"><line class="chart-axis__line" x1="${geo.L}" x2="${r2(right)}" y1="${r2(y)}" y2="${r2(y)}"/>${labels}</g>
 <text class="chart-axis__title" x="${r2(right)}" y="${r2(y + 31)}" text-anchor="end">${fill('stripAxis', { fy: String(words.fy) })}</text>
-<text class="chart-note" x="${geo.L}" y="${r2(y + 45)}">${fill('stripScale', { line: pct(REF_SHARE, 0) })}</text>`;
+<text class="chart-note" x="${geo.L}" y="${r2(y + (oneRow ? 31 : 45))}">${fill('stripScale', { line: pct(REF_SHARE, 0) })}</text>`;
 }
 
 // The thread's name label's type size (styles.css .wr-thread__name).
@@ -315,7 +342,7 @@ export function thread(layout, i, name) {
 export function stripsBody(layout, { words, group = null, lit = null, hospital = null }) {
   const narrow = isNarrow(layout.geo.width);
   const litDots = lit && lit.length
-    ? layout.strips.map((st) => html`<path class="chart-dots wr-dots--lit" stroke-width="${r2(dotSize(st.d) + 3)}" d="${dotsD(lit.map((i) => st.at[i]).filter(Boolean))}"/>`)
+    ? layout.strips.map((st) => html`<path class="chart-dots wr-dots--lit" stroke-width="${r2(dotSize(st.d) + 3)}" d="${dotsD(lit.map((i) => st.at[i]).filter(Boolean), { run: DOT_RUN })}"/>`)
     : '';
   return html`${gridOf(layout)}
 ${layout.strips.map((st) => strip(st, { layout, group }))}

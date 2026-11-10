@@ -17,8 +17,7 @@ import { dotsPath, spread } from '../../../../web/charts/dots.js';
 import { figure, num } from '../../../../web/charts/figure.js';
 import { frame, hatchDefs, hatchFill, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
-import { COPY as SHARED } from '../../../../web/copy.js';
-import { estTag, fillCopy } from '../../../../web/render/components.js';
+import { estTag } from '../../../../web/render/components.js';
 import { count, decimal, money, pct, placeText } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
@@ -29,7 +28,7 @@ import { scenTag } from './chain.js';
 import { serverPick } from './hospital.js';
 import { scenWord } from './ranges.js';
 import { labelKit, overlap } from './labels.js';
-import { axisTop, fitText, inGroup, placeAt } from './strips.js';
+import { DOT_RUN, axisTop, fitText, inGroup, placeAt } from './strips.js';
 
 const MIDDLE = SCENARIOS.indexOf(DEFAULT_SCENARIO);
 const caseWord = (k) => scenWord(SCENARIOS[k]).toLowerCase();
@@ -117,13 +116,13 @@ export const sumsOf = (list, k, use) => ({ lost: list.reduce((a, p) => a + p.los
 
 // ---------- the layout ----------
 
-// The two drawings: the phone's (the kit's 300 across) and the wide one (about the stage at 1280 and 1440). L, R, T, B:
-// the plot's margins; strip: the hatched strip's top and bottom under the plot's bottom (its label on a row of its own
-// under it, so no label covers a strip dot); tagRow: the row under the plot's
-// bottom the across axis's tag takes on the phone (null: on the title's row, at its left).
+// The two drawings: the phone's (the kit's 300 across) and the wide one (about the stage at 1280 and 1440; tall enough to
+// fill the stage at 1440 by 900). L, R, T, B: the plot's margins; strip: the hatched strip's top and bottom under the
+// plot's bottom (its label on a row of its own under it, so no label covers a strip dot). The across axis's tag is the
+// caption's (one scenario tag to a figure).
 export const DRAWINGS = Object.freeze({
-  narrow: { width: 300, height: 466, L: 38, R: 6, T: 26, B: 100, strip: [54, 80], tagRow: 45, dot: 3.2, stripDot: 2 },
-  wide: { width: 680, height: 366, L: 52, R: 10, T: 26, B: 82, strip: [40, 62], tagRow: null, dot: 4.4, stripDot: 2.6 },
+  narrow: { width: 300, height: 466, L: 38, R: 6, T: 26, B: 100, strip: [54, 80], dot: 3.2, stripDot: 2 },
+  wide: { width: 680, height: 470, L: 52, R: 10, T: 26, B: 82, strip: [40, 62], dot: 4.4, stripDot: 2.6 },
 });
 const X_TICKS = [0, 0.005, 0.01, 0.02, 0.04, 0.08, 0.12, 0.16, 0.2];
 const Y_TICKS = [0, 0.0001, 0.0005, 0.001, 0.0025, 0.005, 0.01];
@@ -137,7 +136,7 @@ export const LABEL_FONTS = Object.freeze({
   'wr-b__line': { size: 11, mono: false },
   'wr-b__name': { size: 13, mono: false },
   'wr-b__strip': { size: { narrow: 10.5, wide: 11 }, mono: false },
-  'wr-axtag__t': { size: 9.5, mono: true },
+  'wr-axtag__t': { size: 12, mono: false, spacing: 0.08 },
   'chart-axis__label': { size: 11, mono: true },
   'chart-axis__title': { size: 11, mono: false },
 });
@@ -174,12 +173,9 @@ export function bothLayout({ model, drawing, k, use, ccn = null }) {
   // The fixed labels: the axes' titles and tags, the line's label and the strip's (on its own row under the strip). The
   // corner's count and the cut's label are placed with the page's hospital (placed), clear of its mark.
   const yTitle = labelAt('chart-axis__title', wide ? fill('bAxisY', { pfy }) : t('bAxisYShort'), wide ? plot.x0 : 2, 12, 'start', drawing);
-  const yTag = labelAt('wr-axtag__t', t('hEstimate'), yTitle.box[0] + yTitle.box[2] + 9, 12, 'start', drawing);
+  // The penalties' tag, in the family's estimate tag's capitals (styles.css .wr-axtag, as .est-tag).
+  const yTag = labelAt('wr-axtag__t', t('hEstimate').toUpperCase(), yTitle.box[0] + yTitle.box[2] + 9, 12, 'start', drawing);
   const xTitle = labelAt('chart-axis__title', wide ? fill('bAxisX', { fy: String(model.fy) }) : t('bAxisXShort'), plot.x1, plot.y1 + 31, 'end', drawing);
-  const scen = fillCopy(SHARED, 'scenarioTag', { year: String(model.fy) });
-  const xTag = geo.tagRow === null
-    ? labelAt('wr-axtag__t', scen, plot.x0 + 3, plot.y1 + 31, 'start', drawing)
-    : labelAt('wr-axtag__t', scen, plot.x1 - 3, plot.y1 + geo.tagRow, 'end', drawing);
   const lineLabel = labelAt('wr-b__line', fill('bLine', { line: pct(BOTH_SHARE, 0) }), lineX - 4, plot.y0 + 11, 'end', drawing);
   const nCah = model.strip.filter((s) => s.cah).length;
   const stripLabel = labelAt('wr-b__strip', wide ? fill('bStrip', { n: count(model.strip.length), cah: count(nCah) }) : fill('bStripShort', { n: count(model.strip.length) }), plot.x1, strip.y1 + 13, 'end', drawing);
@@ -205,7 +201,7 @@ export function bothLayout({ model, drawing, k, use, ccn = null }) {
     yTicks.push({ y, label: show ? labelAt('chart-axis__label', shortPct(v), plot.x0 - 5, y + 4, 'end', drawing) : null });
   }
 
-  const layout = { drawing, geo, plot, sx, sy, k, use, n, on, off, stripDots, strip, lineX, cutY, fixed: { yTitle, xTitle, lineLabel, stripLabel }, tags: [yTag, xTag], xTicks, yTicks };
+  const layout = { drawing, geo, plot, sx, sy, k, use, n, on, off, stripDots, strip, lineX, cutY, fixed: { yTitle, xTitle, lineLabel, stripLabel }, tags: [yTag], xTicks, yTicks };
   return Object.assign(layout, placed(model, layout, ccn));
 }
 
@@ -300,11 +296,11 @@ export function bothBody(layout) {
 ${grid}
 <rect class="wr-b__corner" x="${r2(lineX)}" y="${r2(plot.y0)}" width="${r2(plot.x1 - lineX)}" height="${r2(Math.max(0, cutY - plot.y0))}"/>
 ${axes}
-${dotsPath(off, 'wr-bdots', geo.dot)}
-${dotsPath(on, 'wr-bdots wr-bdots--on', geo.dot)}
+${dotsPath(off, 'wr-bdots', geo.dot, { run: DOT_RUN })}
+${dotsPath(on, 'wr-bdots wr-bdots--on', geo.dot, { run: DOT_RUN })}
 <line class="wr-b__cutline" x1="${r2(lineX)}" x2="${r2(lineX)}" y1="${r2(plot.y0)}" y2="${r2(plot.y1)}"/><line class="wr-b__cutline" x1="${r2(plot.x0)}" x2="${r2(plot.x1)}" y1="${r2(cutY)}" y2="${r2(cutY)}"/>
 <rect class="wr-gutter wr-b__band" x="${r2(plot.x0)}" y="${r2(strip.y0)}" width="${r2(plot.x1 - plot.x0)}" height="${r2(strip.y1 - strip.y0)}" fill="${hatchFill(id)}"/>
-${dotsPath(stripDots, 'wr-bdots wr-bdots--strip', geo.stripDot)}
+${dotsPath(stripDots, 'wr-bdots wr-bdots--strip', geo.stripDot, { run: DOT_RUN })}
 ${text(stripLabel)}
 ${text(labels[0])}${text(labels[1])}${tags.map(tag)}
 ${text(count_, ' chart-label--halo')}${text(sub, ' chart-label--halo')}${text(cutLabel, ' chart-label--halo')}${text(lineLabel, ' chart-label--halo')}
@@ -399,10 +395,10 @@ export function namedSummary(model, k, use, list = exposed(model, k, use)) {
 // The named table's caption (read by a screen reader) for the selected case.
 export const namedCaption = (k) => fill('bNamedCaption', { scenario: caseWord(k) });
 
-// The named table's body: the corner's hospitals in order (exposed), each numbered, linked where its page exists, with its
+// The named table's body: the corner's hospitals in order (exposed: by share, then name; no rank column, R28), each linked where its page exists, with its
 // place and kind, its share and loss (scenario) and its penalties and their share (estimate). Rows past NAMED_FIRST carry
 // a class the script hides until "Show all".
-export const namedBody = (model, k, use, list = exposed(model, k, use)) => html`${list.map((p, i) => html`<tr${i >= NAMED_FIRST ? html` class="wr-named__more"` : ''} data-ccn="${p.ccn}"><td class="num">${count(i + 1)}</td><th scope="row">${nameOf(p)}<small>${fill('stHitPlace', { place: placeText({ city: p.city, state: p.state }), kind: kindOf(p) })}</small></th><td class="num">${pct(-xOf(p, k, use), 2)}</td><td class="num">${money(-p.lost[k] * use)}</td><td class="num">${money(-p.pen)}</td><td class="num">${pct(-p.y, 3)}</td></tr>`)}`;
+export const namedBody = (model, k, use, list = exposed(model, k, use)) => html`${list.map((p, i) => html`<tr${i >= NAMED_FIRST ? html` class="wr-named__more"` : ''} data-ccn="${p.ccn}"><th scope="row">${nameOf(p)}<small>${fill('stHitPlace', { place: placeText({ city: p.city, state: p.state }), kind: kindOf(p) })}</small></th><td class="num">${pct(-xOf(p, k, use), 2)}</td><td class="num">${money(-p.lost[k] * use)}</td><td class="num">${money(-p.pen)}</td><td class="num">${pct(-p.y, 3)}</td></tr>`)}`;
 
 function named(model, k, use, list = exposed(model, k, use)) {
   const n = list.length;
@@ -413,7 +409,7 @@ function named(model, k, use, list = exposed(model, k, use)) {
 <div class="wr-named__wrap">
 <table class="gb wr-named__t">
 <caption class="vh" data-b-cap>${namedCaption(k)}</caption>
-<thead><tr><th scope="col" rowspan="2" class="num">${t('bColNo')}</th><th scope="col" rowspan="2">${t('bColHosp')}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${t('bGrpMedicaid')} ${scenTag(model.fy)}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${fill('bGrpMedicare', { pfy })} ${estimate()}</th></tr>
+<thead><tr><th scope="col" rowspan="2">${t('bColHosp')}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${t('bGrpMedicaid')} ${scenTag(model.fy)}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${fill('bGrpMedicare', { pfy })} ${estimate()}</th></tr>
 <tr><th scope="col" class="num">${t('bColShareA')}</th><th scope="col" class="num">${t('bColLostA')}</th><th scope="col" class="num">${t('bColPenA')}</th><th scope="col" class="num">${t('bColShareA')}</th></tr></thead>
 <tbody data-b-rows>${namedBody(model, k, use, list)}</tbody>
 </table>
@@ -448,7 +444,8 @@ ${figure({
     svgWide: draw('wide'),
     alt: bothAlt(model, k, use),
     note: fill('bNote', { strip: count(model.strip.length), cah: count(model.strip.filter((s) => s.cah).length), none: count(model.none) }),
-    source: html`${fill('bSource', { fy: String(fy), pfy: String(model.penaltyFy) })} ${scenarioTag(fy)}`,
+    capTag: scenarioTag(fy),
+    source: fill('bSource', { fy: String(fy), pfy: String(model.penaltyFy) }),
     claimLevel: 'hypothetical',
     table: tableOf(model),
     csvName: 'work-requirement-exposed-on-both',

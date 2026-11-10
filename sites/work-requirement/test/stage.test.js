@@ -8,9 +8,9 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../../pipeline/files.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { standIn } from '../../../web/test/dom.js';
-import { FIELD_STEPS, FIELD_TONES, FLIGHT_MS, STAGGER_MS, dotAt, fieldPoints, flightOf, onScreen } from '../client/field.js';
+import { FIELD_CONTEXT, FIELD_STEPS, FIELD_TONES, FLIGHT_MS, STAGGER_MS, dotAt, fieldPoints, flightOf, onScreen } from '../client/field.js';
 import { rebin } from '../client/page.js';
-import { LINE_PX, MIN_ZOOM, STAGE_MEDIA, mountStage, stageMode, stepAt, zoomFor } from '../client/stage.js';
+import { LINE_PX, MIN_DRAWING, MIN_ZOOM, STAGE_MEDIA, drawingShare, mountStage, stageMode, stepAt, zoomFor } from '../client/stage.js';
 import { SCENARIOS } from '../web/constants.js';
 import { loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
@@ -45,7 +45,7 @@ const sectionOf = (id) => new RegExp(`<section class="step wr-step[^"]*" id="${i
 
 // ---------- review focus 5: the field's colors ----------
 
-test('the field\'s dot and page-hospital colors stand 3:1 or more off --paper and --paper-2, light and dark', () => {
+test('the field\'s mark and page-hospital colors stand 3:1 or more off --paper and --paper-2, light and dark; step 5\'s context tone is Figure 5\'s', () => {
   const tokens = readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8');
   const split = tokens.indexOf('@media (prefers-color-scheme: dark)');
   const blocks = { light: tokens.slice(0, split), dark: tokens.slice(split) };
@@ -59,7 +59,11 @@ test('the field\'s dot and page-hospital colors stand 3:1 or more off --paper an
     return (hi + 0.05) / (lo + 0.05);
   };
   assert.ok(FIELD_TONES.includes('ink'), 'the page\'s hospital is drawn in ink');
-  for (const tone of FIELD_TONES) {
+  // The context tone (step 5's dots outside the corner) is pale by design and is the figure's own: no mark needs it to
+  // read, since the corner's dots, its count and the table carry the finding.
+  const css = readFileSync(REPO_ROOT + 'sites/work-requirement/web/styles.css', 'utf8');
+  assert.equal(/^\.wr-bdots \{ stroke: var\(--([a-z0-9-]+)\); \}/m.exec(css)[1], FIELD_CONTEXT);
+  for (const tone of FIELD_TONES.filter((x) => x !== FIELD_CONTEXT)) {
     for (const [theme, block] of Object.entries(blocks)) {
       for (const paper of ['paper', 'paper-2']) {
         const r = ratio(token(block, tone), token(block, paper));
@@ -300,7 +304,7 @@ test('step 5\'s dots: every plotted hospital and every strip hospital where Figu
     const d = pts.get(p.ccn);
     const where = String([d.x, d.y]);
     assert.ok(isBoth(both, p, k, view.use) ? on.has(where) : off.has(where), p.ccn);
-    assert.equal(d.tone, isBoth(both, p, k, view.use) ? 'pen' : 'pen-scar');
+    assert.equal(d.tone, isBoth(both, p, k, view.use) ? 'pen' : FIELD_CONTEXT);
     assert.equal(d.x, layout.sx(xOf(p, k, view.use)));
   }
   both.strip.forEach((s, i) => assert.deepEqual([pts.get(s.ccn).x, pts.get(s.ccn).y], layout.stripDots[i]));
@@ -350,4 +354,14 @@ test('Figure 1\'s table: the build\'s cells are binsOf at the default; the scrip
   assert.ok(up.medians.every((m, i) => Math.abs(m - server.medians[i] * 1.25) < 1e-12), 'the medians scale with the use rate');
   rebin(cells, binsOf(items, top, 1));
   assert.deepEqual(snapshot(), before);
+});
+
+// A short window: past the least zoom the drawings give way (narrowed, so shortened), and the words keep their size.
+test('drawingShare: the share of their width the drawings keep so the figure fits, never below MIN_DRAWING nor above 1', () => {
+  assert.equal(drawingShare(0, 300), 1, 'not over: unchanged');
+  assert.equal(drawingShare(-20, 300), 1);
+  assert.equal(drawingShare(60, 300), 0.8, 'over by a fifth of the drawings\' height');
+  assert.equal(drawingShare(1000, 300), MIN_DRAWING);
+  assert.equal(drawingShare(50, 0), 1, 'no drawing to narrow');
+  assert.ok(MIN_DRAWING >= 0.5 && MIN_DRAWING < 1);
 });

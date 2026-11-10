@@ -42,6 +42,8 @@ const DRAW = { narrow: { width: 300, L: 2, R: 4 }, wide: { width: 400, L: 2, R: 
 // The bars' heights: a link's bar, link 4's three steps and its result.
 const BAR = 28;
 const STEP = 11;
+// How far link 4's band runs past its result bar, above and below.
+const BAND_OUT = 4;
 
 // The dollar scale every link shares: zero at the left margin, the revenue at risk (the largest amount any link draws,
 // in any case at any use rate) at the right.
@@ -88,8 +90,9 @@ function link1(drawing, view) {
 
 // ---------- labels that stay inside the drawing ----------
 
-// The labels' type sizes (styles.css): notes and key words at 11, a link's big value by drawing.
-const NOTE = 11;
+// The labels' type sizes (styles.css): notes and key words at the kit's label size (12: drawn about 11 px at the least
+// zoom), a link's big value by drawing.
+export const NOTE = 12;
 export const VAL = Object.freeze({ narrow: 18, wide: 22 });
 const noteW = (text) => textWidth(text, NOTE);
 const valW = (text, drawing) => textWidth(text, VAL[drawing], { mono: true });
@@ -105,7 +108,7 @@ const worst = ({ totals, use, how }, key) => (Math.max(...vals(totals, key).map(
 
 // Key items flowed left to right from x0 in rows of rowH, each kept inside maxX. items: { cls, fill, value, words }.
 // Returns { body, bottom } (bottom: the last row's baseline).
-function keyRows(items, { x0, y0, maxX, rowH = 14 }) {
+function keyRows(items, { x0, y0, maxX, rowH = 16 }) {
   let x = x0;
   let y = y0;
   const out = items.map((item) => {
@@ -168,7 +171,7 @@ function link3(drawing, view) {
     { cls: 'wr-bar--pen', value: money(c.added_uncompensated), words: t('link3Still') },
     { cls: 'wr-bar--hatch', fill: `url(#${hatch})`, value: money(c.care_avoided), words: t('link3NotGiven') },
     { cls: 'wr-bar--rew', value: money(c.other_coverage), words: t('link3Other') },
-  ], { x0: geo.L, y0: yb + bar + 14, maxX: geo.width - geo.R - SLACK });
+  ], { x0: geo.L, y0: yb + bar + 15, maxX: geo.width - geo.R - SLACK });
   const h = key.bottom + 5;
   return svg(drawing, h, fill('link3Alt', { v: money(v), still: money(c.added_uncompensated), notGiven: money(c.care_avoided), other: money(c.other_coverage) }), html`${hatchDefs(hatch)}${grid(x, ticksOf(top), h)}
 <text class="chart-note" x="${geo.L}" y="9">${fill('link3Bracket', { cost: money(v), lost: money(c.lost), ratio: decimal(v / c.lost, 2) })}</text><path class="wr-bracket" d="M${r2(geo.L)} 18V13H${r2(end)}V18"/>
@@ -209,28 +212,30 @@ function link4(drawing, view) {
   ];
   let words;
   let h;
+  // The words under the result clear the band from the low case to the high (it runs BAND_OUT past the bar).
+  const under = yr + BAR + BAND_OUT + 13;
   if (side) {
-    h = yr + BAR + 16;
+    h = under + 4;
     words = html`${labels.map((label, i) => html`<text class="chart-note" x="${r2(zero + 6)}" y="${y[i] + STEP - 2}">${label}</text>`)}
-<text class="chart-note" x="${r2(zero + 8)}" y="${yr + BAR + 10}">${note}</text>`;
+<text class="chart-note" x="${r2(zero + 8)}" y="${under}">${note}</text>`;
   } else {
     const key = keyRows([
       { cls: 'wr-bar--scar', value: money(-c.lost), words: t('link4KeyLost') },
       { cls: 'wr-bar--rew', value: money(c.other_coverage, { sign: true }), words: t('link4KeyOther') },
       { cls: 'wr-bar--hatch', fill: `url(#${hatch})`, value: money(c.care_avoided, { sign: true }), words: t('link4KeyNotGiven') },
-    ], { x0: geo.L, y0: yr + BAR + 26, maxX: right - SLACK });
+    ], { x0: geo.L, y0: under + 16, maxX: right - SLACK });
     h = key.bottom + 5;
-    words = html`<text class="chart-note" x="${geo.L}" y="${yr + BAR + 12}">${note}</text>${key.body}`;
+    words = html`<text class="chart-note" x="${geo.L}" y="${under}">${note}</text>${key.body}`;
   }
   // "Less income" under the result, where it clears the left edge.
   const less = t('link4Less');
   const lessFits = side && zero - 4 - noteW(less) >= 0;
   return svg(drawing, h, fill('link4Alt', { scenario: scenWord(scenario).toLowerCase(), v: money(v), ...range }), html`${hatchDefs(hatch)}${grid(x, ticksOf(top), h)}
 ${bars}
-${rect('wr-band', zero - w(Math.max(...net)), zero - w(Math.min(...net)), yr - 4, BAR + 8)}${rect('wr-bar wr-bar--net', zero - w(Math.abs(v)), zero, yr, BAR)}
+${rect('wr-band', zero - w(Math.max(...net)), zero - w(Math.min(...net)), yr - BAND_OUT, BAR + 2 * BAND_OUT)}${rect('wr-bar wr-bar--net', zero - w(Math.abs(v)), zero, yr, BAR)}
 <line class="chart-zero" x1="${r2(zero)}" x2="${r2(zero)}" y1="4" y2="${yr + BAR + 4}"/><text class="chart-axis__label" x="${r2(zero)}" y="9" text-anchor="middle">${tickText(0)}</text>
 <text class="wr-val" x="${r2(zero + 8)}" y="${yr + BAR / 2 - 2}" dy="0.35em">${money(v)}</text>
-${words}${lessFits ? html`<text class="chart-note" x="${r2(zero - 4)}" y="${yr + BAR + 12}" text-anchor="end">${less}</text>` : ''}`);
+${words}${lessFits ? html`<text class="chart-note" x="${r2(zero - 4)}" y="${under}" text-anchor="end">${less}</text>` : ''}`);
 }
 
 const DRAWERS = [link1, link2, link3, link4];
@@ -264,33 +269,33 @@ const headRow = (text) => html`<tr class="wr-wl wr-wl--head"><td class="wr-wl__n
 export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
 const rangeOf = (totals, key, sign = 1) => fill('wsRange', { low: money(sign * totals.low[key]), high: money(sign * totals.high[key]) });
 
-// The lines of link n's worksheet (the inside of its tbody), for a view.
+// The lines of link n's worksheet (the inside of its tbody), for a view. The worksheet's head carries its one scenario
+// tag (how.js); line 1, from the cost reports, carries its own measured tag.
 export function worksheetBody(n, { totals, scenario, use, how }) {
   const c = totals[scenario];
   const { params, fy, declines } = how;
-  const tags = html` ${scenTag(fy)}`;
   const decline = c.lost / (c.at_risk * use);
   const ratio = c.lost_cost / c.lost;
   const lines = {
     1: () => html`${lineRow({ n: LINE.revenue, key: 'ws1', note: fill('ws1Note', { fy: String(fy) }), tags: html` <span class="wr-tag">${t('wsMeasured')}</span>`, value: money(c.medicaid_revenue), raw: c.medicaid_revenue, cls: ' wr-wl--eq' })}
-${lineRow({ n: LINE.share, op: '×', key: 'ws2', note: t('ws2Note'), tags, value: pct(c.at_risk / c.medicaid_revenue, 1), raw: c.at_risk / c.medicaid_revenue })}
-${lineRow({ n: LINE.atRisk, op: '=', key: 'ws3', note: fill('ws3Note', { a: count(LINE.revenue) }), tags, value: money(c.at_risk), raw: c.at_risk, cls: ' wr-wl--eq wr-wl--res' })}`,
-    2: () => html`${lineRow({ n: LINE.decline, op: '×', key: 'ws4', note: fill('ws4Note', { lo: pct(declines[scenario][0], 0), hi: pct(declines[scenario][1], 0), scenario: scenWord(scenario).toLowerCase() }), tags, value: pct(decline, 1), raw: decline })}
+${lineRow({ n: LINE.share, op: '×', key: 'ws2', note: t('ws2Note'), value: pct(c.at_risk / c.medicaid_revenue, 1), raw: c.at_risk / c.medicaid_revenue })}
+${lineRow({ n: LINE.atRisk, op: '=', key: 'ws3', note: fill('ws3Note', { a: count(LINE.revenue) }), value: money(c.at_risk), raw: c.at_risk, cls: ' wr-wl--eq wr-wl--res' })}`,
+    2: () => html`${lineRow({ n: LINE.decline, op: '×', key: 'ws4', note: fill('ws4Note', { lo: pct(declines[scenario][0], 0), hi: pct(declines[scenario][1], 0), scenario: scenWord(scenario).toLowerCase() }), value: pct(decline, 1), raw: decline })}
 ${lineRow({ n: LINE.use, op: '×', key: 'ws5', note: fill('ws5Note', { pct: pct(1, 0) }), value: pct(use, 0), raw: use })}
-${lineRow({ n: LINE.lost, op: '=', key: 'ws6', note: fill('ws6Note', { a: count(LINE.atRisk), b: count(LINE.decline), c: count(LINE.use) }), range: rangeOf(totals, 'lost', -1), tags, value: money(-c.lost), raw: c.lost, cls: ' wr-wl--eq wr-wl--res' })}`,
-    3: () => html`${lineRow({ n: LINE.ratio, op: '×', key: 'ws7', note: t('ws7Note'), tags, value: decimal(ratio, 2), raw: ratio })}
-${lineRow({ n: LINE.cost, op: '=', key: 'ws8', note: fill('ws8Note', { a: count(LINE.lost), b: count(LINE.ratio) }), tags, value: money(c.lost_cost), raw: c.lost_cost, cls: ' wr-wl--eq' })}
+${lineRow({ n: LINE.lost, op: '=', key: 'ws6', note: fill('ws6Note', { a: count(LINE.atRisk), b: count(LINE.decline), c: count(LINE.use) }), range: rangeOf(totals, 'lost', -1), value: money(-c.lost), raw: c.lost, cls: ' wr-wl--eq wr-wl--res' })}`,
+    3: () => html`${lineRow({ n: LINE.ratio, op: '×', key: 'ws7', note: t('ws7Note'), value: decimal(ratio, 2), raw: ratio })}
+${lineRow({ n: LINE.cost, op: '=', key: 'ws8', note: fill('ws8Note', { a: count(LINE.lost), b: count(LINE.ratio) }), value: money(c.lost_cost), raw: c.lost_cost, cls: ' wr-wl--eq' })}
 ${lineRow({ n: LINE.uninsured, op: '×', key: 'ws9', note: fill('ws9Note', { v: money(c.other_coverage) }), value: decimal(params.uninsured_share, 2), raw: params.uninsured_share })}
 ${lineRow({ n: LINE.stillUsed, op: '×', key: 'ws10', note: fill('ws10Note', { v: money(c.care_avoided) }), value: decimal(params.care_still_used, 2), raw: params.care_still_used })}
 ${headRow(fill('wsSplit', { n: count(LINE.cost) }))}
 ${partRow({ kind: 'part', name: 'still', label: fill('wsSplitStill', { n: count(LINE.still) }), value: money(c.added_uncompensated), raw: c.added_uncompensated })}
 ${partRow({ kind: 'part', name: 'not-given', label: t('wsSplitNotGiven'), value: money(c.care_avoided), raw: c.care_avoided })}
 ${partRow({ kind: 'part', name: 'other', label: t('wsSplitOther'), value: money(c.other_coverage), raw: c.other_coverage })}`,
-    4: () => html`${lineRow({ n: LINE.still, op: '=', key: 'ws11', note: fill('ws11Note', { a: count(LINE.cost), b: count(LINE.uninsured), c: count(LINE.stillUsed) }), range: rangeOf(totals, 'added_uncompensated'), tags, value: money(c.added_uncompensated), raw: c.added_uncompensated, cls: ' wr-wl--eq wr-wl--res' })}
+    4: () => html`${lineRow({ n: LINE.still, op: '=', key: 'ws11', note: fill('ws11Note', { a: count(LINE.cost), b: count(LINE.uninsured), c: count(LINE.stillUsed) }), range: rangeOf(totals, 'added_uncompensated'), value: money(c.added_uncompensated), raw: c.added_uncompensated, cls: ' wr-wl--eq wr-wl--res' })}
 ${partRow({ kind: 'step', name: 'lost', label: html`<span class="wr-wl__op">−</span> ${fill('wsStepLost', { n: count(LINE.lost) })}`, value: money(-c.lost), raw: -c.lost })}
 ${partRow({ kind: 'step', name: 'other', label: html`<span class="wr-wl__op">+</span> ${t('wsStepOther')}`, value: money(c.other_coverage, { sign: true }), raw: c.other_coverage })}
 ${partRow({ kind: 'step', name: 'not-given', label: html`<span class="wr-wl__op">+</span> ${t('wsStepNotGiven')}`, value: money(c.care_avoided, { sign: true }), raw: c.care_avoided })}
-${lineRow({ n: LINE.income, op: '=', key: 'ws12', note: t('ws12Note'), range: rangeOf(totals, 'income_change'), tags, value: money(c.income_change), raw: c.income_change, cls: ' wr-wl--eq wr-wl--res' })}`,
+${lineRow({ n: LINE.income, op: '=', key: 'ws12', note: t('ws12Note'), range: rangeOf(totals, 'income_change'), value: money(c.income_change), raw: c.income_change, cls: ' wr-wl--eq wr-wl--res' })}`,
   };
   return lines[n]();
 }

@@ -114,17 +114,19 @@ const stateOf = (model, code) => model.states.find((s) => s.code === code);
 // ---------- the drawing ----------
 
 // The two drawings: the phone's (the kit's 300 across) and the wide one (about the stage at 1280 and 1440, with the
-// strips'). gut: the gutter's left and right; L, R, T, B: the plot's margins; rMax: the radius of the largest loss the
-// drawing can show (the high case at the top use rate). The wide drawing sets the gutter's title and the up axis's on one
-// row above the plot, the phone's on two.
+// strips'; tall enough to fill the stage at 1440 by 900). gut: the gutter's left and right; L, R, T, B: the plot's
+// margins; rMax: the radius of the largest loss the drawing can show (the high case at the top use rate). The wide drawing
+// sets the gutter's title and the up axis's on one row above the plot, the phone's on two.
 export const DRAWINGS = Object.freeze({
   narrow: { width: 300, height: 470, gut: [2, 50], L: 88, R: 8, T: 48, B: 66, rMax: 17 },
-  wide: { width: 680, height: 380, gut: [2, 72], L: 116, R: 10, T: 26, B: 58, rMax: 26 },
+  wide: { width: 680, height: 480, gut: [2, 74], L: 118, R: 10, T: 26, B: 58, rMax: 28 },
 });
 // The smallest dot, as a share of rMax (a dot's area is its dollars above it).
 const R_FLOOR = 0.1;
-// The scales' steps: across, ticks every 2 points up to the top; up, the range padded to whole 2 points, ticked every 4.
+// The scales' steps: across, ticks every 2 points, the top the next whole point past the data; up, the range padded to
+// whole 2 points, ticked every 4.
 const X_STEP = 0.02;
+const X_TOP_STEP = 0.01;
 const Y_GRID = 0.02;
 const Y_TICK = 0.04;
 const Y_PAD = 0.005;
@@ -132,12 +134,12 @@ const Y_PAD = 0.005;
 // Each label's type, by class (styles.css sets the same): size in px (a viewBox unit), by drawing where it differs, and
 // whether it is the type face (mono). The fit test reads it.
 export const LABEL_FONTS = Object.freeze({
-  'wr-st__code': { size: { narrow: 9.5, wide: 10 }, mono: true },
+  'wr-st__code': { size: { narrow: 9.5, wide: 11.5 }, mono: true },
   'wr-st__name': { size: { narrow: 12, wide: 13 }, mono: false },
-  'wr-st__gut': { size: { narrow: 9.5, wide: 10 }, mono: true },
-  'wr-st__fn': { size: { narrow: 9.5, wide: 10 }, mono: true },
+  'wr-st__gut': { size: { narrow: 10.5, wide: 11 }, mono: true },
+  'wr-st__fn': { size: { narrow: 9.5, wide: 11 }, mono: true },
   'wr-st__head': { size: 11, mono: false },
-  'wr-iso__label': { size: 10.5, mono: true },
+  'wr-iso__label': { size: 11, mono: true },
   'wr-iso__title': { size: 11, mono: false },
   'chart-axis__label': { size: 11, mono: true },
   'chart-axis__title': { size: 11, mono: false },
@@ -156,7 +158,7 @@ function scalesOf(model) {
   const ys = model.states.filter((s) => (s.cls === 'scenario' || GUTTER.includes(s.cls)) && s.y !== null).map((s) => s.y);
   const xMax = Math.max(...scen.map((s) => numbersOf(s, SCENARIOS.length - 1, model.useMax).x));
   return {
-    xTop: Math.ceil(xMax / X_STEP - 1e-9) * X_STEP,
+    xTop: Math.ceil(xMax / X_TOP_STEP - 1e-9) * X_TOP_STEP,
     y0: Math.max(0, Math.floor((Math.min(...ys) - Y_PAD) / Y_GRID) * Y_GRID),
     y1: Math.ceil((Math.max(...ys) + Y_PAD) / Y_GRID) * Y_GRID,
     lostTop: Math.max(...scen.map((s) => s.lost[SCENARIOS.length - 1] * model.useMax)),
@@ -194,8 +196,9 @@ const PAD = 2;
 const padded = (b) => [b[0] - PAD, b[1] - PAD / 2, b[2] + 2 * PAD, b[3] + PAD];
 const clear = (box, boxes) => !boxes.some((q) => overlap(q, padded(box)));
 const insidePlot = (box, plot) => box[0] >= plot.x0 + 1 && box[0] + box[2] <= plot.x1 - 1 && box[1] >= plot.y0 + 1 && box[1] + box[3] <= plot.y1 - 1;
-// A whisker (a horizontal segment { x0, x1, y }) through a box.
-const crosses = (box, s) => s.y >= box[1] && s.y <= box[1] + box[3] && s.x1 >= box[0] && s.x0 <= box[0] + box[2];
+// A whisker (a horizontal segment { x0, x1, y }, with its end caps CAP above and below) through a box.
+export const CAP = 3;
+const crosses = (box, s) => s.y + CAP >= box[1] && s.y - CAP <= box[1] + box[3] && s.x1 >= box[0] && s.x0 <= box[0] + box[2];
 
 // A label beside a dot c ({ x, y, r }): the first box, ring by ring outward and then by angle (right, left, the diagonals,
 // above, below), inside the plot and clear of every box placed, every other dot and every whisker; a box pushed out gets
@@ -407,10 +410,10 @@ ${contoursOf(layout)}
 ${axesOf(layout)}
 <rect class="wr-gutter" x="${r2(g0)}" y="${r2(plot.y0)}" width="${r2(g1 - g0)}" height="${r2(plot.y1 - plot.y0)}" fill="${hatchFill(id)}"/>
 ${label('wr-st__head', g0, drawing === 'wide' ? 12 : plot.y0 - 8, t('stGutter'))}
-<g class="wr-st__whiskers">${points.map((p) => html`<path class="wr-st__whisker" d="M${r2(p.lo)} ${r2(p.y)}H${r2(p.hi)}M${r2(p.lo)} ${r2(p.y - 3)}v6M${r2(p.hi)} ${r2(p.y - 3)}v6"/>`)}</g>
+<g class="wr-st__whiskers">${points.map((p) => html`<path class="wr-st__whisker" d="M${r2(p.lo)} ${r2(p.y)}H${r2(p.hi)}M${r2(p.lo)} ${r2(p.y - CAP)}v${2 * CAP}M${r2(p.hi)} ${r2(p.y - CAP)}v${2 * CAP}"/>`)}</g>
 ${[...points].sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1)).map((p) => html`<g class="wr-st${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${tipOf(p, k)}</title><circle class="wr-st__dot" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${r2(p.r)}"/></g>`)}
 ${sel ? html`<circle class="wr-st__ring" cx="${r2(sel.x)}" cy="${r2(sel.y)}" r="${r2(sel.r + 3)}"/>` : ''}
-${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${fill('stTipGutter', { state: p.name, status: t(`stStatus_${p.cls}`), y: pct(p.share, 1) })}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${p.r}"/></g>${label('wr-st__gut', p.anchor === 'start' ? p.labelBox[0] : p.labelBox[0] + p.labelBox[2], p.y + 3.5, p.label, p.anchor)}`)}
+${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${fill('stTipGutter', { state: p.name, status: t(`stStatus_${p.cls}`), y: pct(p.share, 1) })}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${p.r}"/></g><rect class="wr-st__gutbg" x="${r2(p.labelBox[0] - 1.5)}" y="${r2(p.labelBox[1] - 1)}" width="${r2(p.labelBox[2] + 3)}" height="${r2(p.labelBox[3] + 2)}"/>${label('wr-st__gut', p.anchor === 'start' ? p.labelBox[0] : p.labelBox[0] + p.labelBox[2], p.y + 3.5, p.label, p.anchor)}`)}
 ${gsel ? html`<circle class="wr-st__ring" cx="${r2(gsel.x)}" cy="${r2(gsel.y)}" r="${r2(gsel.r + 3)}"/>` : ''}
 ${labels.map((l) => html`${l.leader ? html`<line class="wr-st__leader" x1="${r2(l.leader[0])}" y1="${r2(l.leader[1])}" x2="${r2(l.leader[2])}" y2="${r2(l.leader[3])}"/>` : ''}${label(l.cls, l.box[0], l.box[1] + l.box[3] * 0.8, l.text)}`)}
 ${isoLabels.map((l) => label('wr-iso__label', l.box[0], l.y, l.text))}${isoTitle ? label('wr-iso__title', isoTitle.x, isoTitle.y, isoTitle.text, 'end') : ''}
@@ -463,21 +466,20 @@ export function cardBody(model, code, { k, use }) {
   const n = numbersOf(s, k, use);
   const lo = numbersOf(s, 0, use);
   const hi = numbersOf(s, SCENARIOS.length - 1, use);
-  const tags = html` ${scenTag(model.fy)}`;
   const row = (line) => lineRow({ ...line, inline: true });
   const range = (f) => fill('wsRange', { low: f(lo), high: f(hi) });
   const decline = s.declines[k];
   const top = s.top;
   const max = top.length ? top[0].share[k] * use : 1;
-  return html`<p class="wr-stcard__sub small muted">${fill('stCardSub', { n: count(s.n), fy: String(model.fy), a: count(2), b: count(4) })}</p>
+  return html`<p class="wr-stcard__sub small muted">${fill('stCardSub', { n: count(s.n), fy: String(model.fy), a: count(2), b: count(4) })} ${scenTag(model.fy)}</p>
 <table class="wr-ws__lines wr-stcard__lines"><thead class="vh"><tr><th scope="col">${t('wsLine')}</th><th scope="col">${t('wsWhat')}</th><th scope="col">${t('wsAmount')}</th></tr></thead>
 <tbody>${row({ n: 1, key: 'ws1', note: fill('stL1Note', { fy: String(model.fy) }), tags: measured(), value: money(s.revenue), raw: s.revenue, cls: ' wr-wl--eq' })}
-${row({ n: 2, op: '×', key: 'ws2', note: fill('stL2Note', { viii: pct(s.viii, 1) }), tags, value: pct(s.atRisk / s.revenue, 1), raw: s.atRisk / s.revenue })}
-${row({ n: 3, op: '=', key: 'ws3', tags, value: money(s.atRisk), raw: s.atRisk, cls: ' wr-wl--eq' })}
+${row({ n: 2, op: '×', key: 'ws2', note: fill('stL2Note', { viii: pct(s.viii, 1) }), value: pct(s.atRisk / s.revenue, 1), raw: s.atRisk / s.revenue })}
+${row({ n: 3, op: '=', key: 'ws3', value: money(s.atRisk), raw: s.atRisk, cls: ' wr-wl--eq' })}
 ${row({ n: 4, op: '×', key: 'ws4', note: fill('stL4Note', { scenario: caseWord(k) }), range: fill('wsRange', { low: pct(s.declines[0], 0), high: pct(s.declines[SCENARIOS.length - 1], 0) }), value: pct(decline, 0), raw: decline })}
-${row({ n: 5, op: '=', key: 'stL5', note: use === 1 ? fill('stL5Note', { a: count(3), b: count(4) }) : fill('stL5NoteUse', { a: count(3), b: count(4), use: pct(use, 0) }), range: range((x) => money(-x.lost)), tags, value: money(-n.lost), raw: n.lost, cls: ' wr-wl--eq wr-wl--res' })}
+${row({ n: 5, op: '=', key: 'stL5', note: use === 1 ? fill('stL5Note', { a: count(3), b: count(4) }) : fill('stL5NoteUse', { a: count(3), b: count(4), use: pct(use, 0) }), range: range((x) => money(-x.lost)), value: money(-n.lost), raw: n.lost, cls: ' wr-wl--eq wr-wl--res' })}
 ${row({ n: 6, key: 'stL6', note: s.nP < s.n ? fill('stL6NoteLess', { n: count(s.nP), lost: money(n.lostP), a: count(5) }) : fill('stL6Note', { n: count(s.nP) }), tags: measured(), value: money(s.nprP), raw: s.nprP })}
-${row({ n: 7, op: '=', key: 'stL7', note: fill('stL7Note', { a: count(6) }), range: range((x) => pct(-x.share, 2)), tags, value: pct(-n.share, 2), raw: n.share, cls: ' wr-wl--eq wr-wl--res' })}</tbody></table>
+${row({ n: 7, op: '=', key: 'stL7', note: fill('stL7Note', { a: count(6) }), range: range((x) => pct(-x.share, 2)), value: pct(-n.share, 2), raw: n.share, cls: ' wr-wl--eq wr-wl--res' })}</tbody></table>
 <p class="wr-stcard__axes small muted">${fill('stAxes', { y: pct(n.y, 1), x: pct(n.x, 1), n: count(7) })}</p>
 <div class="wr-hits"><p class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> <span class="wr-hits__sub">${fill('stHitsSub', { scenario: caseWord(k) })}</span></p>
 ${top.length ? html`<ol class="wr-hits__list" role="list">${top.map((h) => html`<li class="wr-hit"><span class="wr-hit__name">${nameOf(h)}<small>${fill('stHitPlace', { place: placeText({ city: h.city }), kind: kindOf(h.kind) })}</small></span><span class="wr-hit__bar" aria-hidden="true"><i style="width: ${r2((h.share[k] * use / max) * 100)}%"></i></span><span class="wr-hit__v">${pct(h.share[k] * use, 1)}</span></li>`)}</ol>` : html`<p class="small muted">${t('stHitsNone')}</p>`}
@@ -551,7 +553,8 @@ ${figure({
     svgWide: draw('wide'),
     alt: statesAlt(model, k, use),
     note: fill('stNote', { floor: money(floorLost(model)), territories: territories.map((s) => s.code).join(', ') }),
-    source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
+    capTag: scenarioTag(fy),
+    source: fill('figSource', { fy: String(fy) }),
     claimLevel: 'hypothetical',
     table: tableOf(model),
     csvName: 'work-requirement-states',

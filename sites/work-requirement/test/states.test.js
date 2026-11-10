@@ -4,6 +4,8 @@
 // the territories' list with its reason and never a number.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT } from '../../../pipeline/files.js';
 import { rowToBase, scenario } from '../../../engine/js/medicaid/scenario.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
@@ -16,7 +18,7 @@ import { programPage } from '../web/pages/program.js';
 import { drawn, hospitalRows, median, stripsAlt } from '../web/program/strips.js';
 import { pct } from '../../../web/render/format.js';
 import {
-  DRAWINGS, LABEL_FONTS, cardBody, decodeStates, headlineOf, mostExposed, numbersOf, ranked, statesAlt, statesAsset, statesBody, statesLayout,
+  CAP, DRAWINGS, LABEL_FONTS, cardBody, decodeStates, headlineOf, mostExposed, numbersOf, ranked, statesAlt, statesAsset, statesBody, statesLayout,
   statesModel, tableRows,
 } from '../web/program/states.js';
 
@@ -279,7 +281,7 @@ test('Figure 3\'s labels, in every case at every use rate with any state selecte
           for (const l of layout.isoLabels) {
             for (const p of layout.points) {
               assert.ok(!onDot(l.box, p, 1), `${at}: ${l.text} on ${p.code}'s dot`);
-              assert.ok(!(p.y >= l.box[1] && p.y <= l.box[1] + l.box[3] && p.hi >= l.box[0] && p.lo <= l.box[0] + l.box[2]), `${at}: ${l.text} on ${p.code}'s whisker`);
+              assert.ok(!(p.y + CAP >= l.box[1] && p.y - CAP <= l.box[1] + l.box[3] && p.hi >= l.box[0] && p.lo <= l.box[0] + l.box[2]), `${at}: ${l.text} on ${p.code}'s whisker or its end cap`);
             }
           }
           // Every contour drawn is labeled (statesBody draws the labeled levels only), and the selected state is named.
@@ -333,6 +335,25 @@ test('the gutter discloses its stack: the note says dots may sit off their level
       const title = new RegExp(`<g class="wr-st wr-st--none[^"]*" data-st="${g.code}"><title>([^<]*)</title>`).exec(body)?.[1];
       assert.ok(title, `${drawing} ${g.code}: a title`);
       assert.ok(title.includes(data.states[g.code].name) && title.includes(pct(byCode.get(g.code).y, 1)), `${drawing} ${g.code}: ${title}`);
+    }
+  }
+});
+
+// The fit test above measures each label at LABEL_FONTS's size, in the drawing's own units; the stylesheet draws them at
+// the same sizes (a viewBox unit is a CSS pixel of the drawing, scaled with it), so the test holds at the size shown.
+test('Figure 3\'s label sizes in the stylesheet are LABEL_FONTS\'s, in both drawings', () => {
+  const css = readFileSync(REPO_ROOT + 'sites/work-requirement/web/styles.css', 'utf8');
+  const sizeIn = (rule) => Number(/font(?:-size)?:[^;]*?([\d.]+)px/.exec(rule)?.[1]);
+  for (const [cls, { size }] of Object.entries(LABEL_FONTS)) {
+    if (!cls.startsWith('wr-')) continue;
+    const base = [...css.matchAll(/^([^{}\n]+)\{([^}]*)\}/gm)].filter(([, sel, body]) => !sel.includes('data-fit') && sel.split(',').some((x) => x.trim() === `.${cls}`) && /font/.test(body));
+    assert.ok(base.length, `${cls}: a font rule`);
+    const wide = typeof size === 'number' ? size : size.wide;
+    assert.equal(sizeIn(base[base.length - 1][2]), wide, `${cls} wide`);
+    if (typeof size !== 'number' && size.narrow !== size.wide) {
+      const narrow = [...css.matchAll(/^\.chart--states\[data-fit="narrow"\] ([^{]+)\{([^}]*)\}/gm)].find(([, sel]) => sel.includes(`.${cls}`));
+      assert.ok(narrow, `${cls}: a narrow rule`);
+      assert.equal(sizeIn(narrow[2]), size.narrow, `${cls} narrow`);
     }
   }
 });

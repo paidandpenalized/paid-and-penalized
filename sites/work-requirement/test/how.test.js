@@ -14,7 +14,7 @@ import { SCENARIOS, USE_STEP } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
-import { LINKS, VAL, axisFigure, linkFigure, worksheetBody } from '../web/program/chain.js';
+import { LINKS, NOTE, VAL, axisFigure, linkFigure, worksheetBody } from '../web/program/chain.js';
 import { howModel } from '../web/program/how.js';
 import { baseAsset, decodeBase, serverTotals, totalsAt } from '../web/program/model.js';
 import { rangesInner } from '../web/program/ranges.js';
@@ -205,18 +205,19 @@ test('the what-if: a newer move wins over an older one still loading, and a fail
   assert.deepEqual(g.applied.map(([use]) => use), [1]);
 });
 
-test('every computed worksheet line carries the scenario tag; line 1, from the cost reports, is measured', () => {
+test('each worksheet carries one scenario tag, in its head; line 1, from the cost reports, is measured; no line repeats the tag', () => {
   const view = { totals: server, scenario: 'middle', use: 1, how };
   const rows = LINKS.flatMap(({ n }) => [...worksheetBody(n, view).text.matchAll(/<tr class="wr-wl[^"]*" data-line="(\d+)"[\s\S]*?<\/tr>/g)].map((m) => [Number(m[1]), m[0]]));
   assert.deepEqual(rows.map(([n]) => n), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-  // Lines 5, 9 and 10 are inputs (the what-if and two method constants), not results.
-  const inputs = [5, 9, 10];
   for (const [n, row] of rows) {
-    if (n === 1) {
-      assert.ok(row.includes(fillCopy(COPY, 'wsMeasured')) && !row.includes('scen-tag'), 'line 1: measured');
-    } else if (!inputs.includes(n)) {
-      assert.match(row, /<span class="scen-tag">SCENARIO · \d{4} \$<\/span>/, `line ${n}`);
-    }
+    if (n === 1) assert.ok(row.includes(fillCopy(COPY, 'wsMeasured')), 'line 1: measured');
+    assert.doesNotMatch(row, /scen-tag/, `line ${n}: the head carries the tag`);
+  }
+  const sheets = [...section.matchAll(/<div class="wr-ws" id="wr-ws-\d"[\s\S]*?<!-- \/wr-ws -->/g)].map((m) => m[0]);
+  assert.equal(sheets.length, LINKS.length);
+  for (const sheet of sheets) {
+    assert.equal(sheet.match(/class="scen-tag"/g).length, 1, 'one tag to a worksheet');
+    assert.match(/<div class="wr-ws__head">[\s\S]*?<\/div>/.exec(sheet)[0], /<span class="scen-tag">SCENARIO · \d{4} \$<\/span>/);
   }
 });
 
@@ -230,7 +231,7 @@ function extent(cls, x, anchor, inner, drawing) {
   else if (cls.includes('chart-axis__label')) w = textWidth(plainText(inner), 11, { mono: true });
   else {
     const value = /<tspan class="wr-val--sm">([^<]*)<\/tspan>/.exec(inner);
-    w = value ? textWidth(value[1], 11, { mono: true }) + textWidth(plainText(inner.replace(value[0], '')), 11) : textWidth(plainText(inner), 11);
+    w = value ? textWidth(value[1], NOTE, { mono: true }) + textWidth(plainText(inner.replace(value[0], '')), NOTE) : textWidth(plainText(inner), NOTE);
   }
   const left = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
   return [left, left + w];
@@ -320,4 +321,26 @@ test('the slider\'s moves reach the totals once a frame, the newest move\'s', ()
   assert.equal(frames.length, 1, 'a later move asks for a new frame');
   frames.shift()();
   assert.deepEqual(got, [1.2, 1]);
+});
+
+// Link 4's words (the steps' names, the range, "less income") never sit on its band from the low case to the high.
+test('no word in link 4 lies on its band, in every case at every use rate, phone and wide', () => {
+  let checked = 0;
+  for (const use of [0.75, 1, 1.25]) {
+    const totals = use === 1 ? server : totalsAt(base, use);
+    for (const scenario of SCENARIOS) {
+      for (const svg of linkFigure(4, { totals, scenario, use, how }).text.match(/<svg [\s\S]*?<\/svg>/g)) {
+        const drawing = /data-fit="(\w+)"/.exec(svg)[1];
+        const [bx, by, bw, bh] = ['x', 'y', 'width', 'height'].map((a) => Number(new RegExp(`<rect class="wr-band"[^>]* ${a}="([\\d.-]+)"`).exec(svg)[1]));
+        for (const [, attrs, inner] of svg.matchAll(/<text class="chart-note"([^>]*)>([\s\S]*?)<\/text>/g)) {
+          const [l, r] = extent('chart-note', Number(attr(attrs, 'x')), attr(attrs, 'text-anchor') ?? 'start', inner, drawing);
+          const y = Number(attr(attrs, 'y'));
+          const on = l < bx + bw && r > bx && y - NOTE * 0.8 < by + bh && y + NOTE * 0.2 > by;
+          assert.ok(!on, `${drawing} ${scenario} at ${use}: "${plainText(inner)}" on the band`);
+          checked += 1;
+        }
+      }
+    }
+  }
+  assert.ok(checked > 20, `${checked} words`);
 });

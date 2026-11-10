@@ -137,3 +137,21 @@ test('the corrections date: the newest date CMS gives any of the scenario file\'
   assert.equal(newestCmsDate([{ downloadUrl: cms, pdcReleased: '2026-08-13' }, { downloadUrl: 'https://www.rwjf.org/x', pdcReleased: '2026-12-01' }, { downloadUrl: cms, retrieved: '2026-12-02' }]), '2026-08-13');
   assert.throws(() => newestCmsDate([{ downloadUrl: cms, retrieved: '2026-11-04' }]), RangeError);
 });
+
+// One scenario tag to a block: each figure's caption carries the figure's one tag (not its source line, nor its drawing);
+// the state card, the step-5 dollars box and each worksheet carry one each (how.test.js holds the worksheets).
+test('one scenario tag to a block: every figure\'s in its caption, none in its source or drawing; one in the state card', () => {
+  const tag = /class="scen-tag"/g;
+  const figures = [...program.matchAll(/<figure class="fig" id="figure-(\d)"[\s\S]*?<\/figure>/g)];
+  assert.equal(figures.length, 5);
+  for (const [fig, n] of figures) {
+    const cap = /<figcaption[\s\S]*?<\/figcaption>/.exec(fig)[0];
+    assert.equal((cap.match(tag) ?? []).length, 1, `Figure ${n}: its caption carries the tag`);
+    assert.equal((fig.match(tag) ?? []).length, 1, `Figure ${n}: and nothing else in it does`);
+    for (const svg of fig.match(/<svg[\s\S]*?<\/svg>/g) ?? []) assert.doesNotMatch(svg, /SCENARIO/, `Figure ${n}: no tag in a drawing`);
+  }
+  const card = /<div class="wr-stcard__body" data-st-card>[\s\S]*?<!-- \/wr-stcard__body -->/.exec(program)[0];
+  assert.equal(card.match(tag).length, 1, 'the state card');
+  const read = /<div class="wr-both__read" data-b-read>[\s\S]*?<\/div>/.exec(program)[0];
+  assert.equal(read.match(tag).length, 1, 'the step-5 dollars box');
+});

@@ -13,7 +13,7 @@ import { fillCopy } from '../../../web/render/components.js';
 import { count, money, moneyRange, pct } from '../../../web/render/format.js';
 import { pageHospital, defaultPool } from '../client/find.js';
 import { WIDE_MEDIA } from '../client/page.js';
-import { GROUPS, REF_SHARE, SCENARIOS } from '../web/constants.js';
+import { DEFAULT_SCENARIO, GROUPS, REF_SHARE, SCENARIOS } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
@@ -77,15 +77,24 @@ test('the asset round-trips the rows and the axis', () => {
   assert.throws(() => decodeStrips({ cols: ['ccn'], rows: [], top: 1, words: {} }), TypeError);
 });
 
-test('the server SVG holds one dot per drawn scenario hospital per strip, in both drawings, and no thread', () => {
+test('the server SVG holds one dot per drawn scenario hospital in the selected strip and a bar per column of them in the others, in both drawings, and no thread', () => {
   const svgs = section.match(/<svg role="img"[\s\S]*?<\/svg>/g) ?? [];
   assert.equal(svgs.length, 2, 'the phone drawing and the wide one');
   for (const svg of svgs) {
     const strips = [...svg.matchAll(/<g class="wr-strip[^"]*" data-scen="(\w+)">([\s\S]*?)<\/g>/g)];
     assert.deepEqual(strips.map((m) => m[1]), SCENARIOS);
     for (const [, s, body] of strips) {
-      const d = /<path class="chart-dots wr-dots[^"]*" stroke-width="[^"]+" d="([^"]+)"\/>/.exec(body)[1];
-      assert.equal(d.match(/h0/g).length, items.length, `${s}: one dot per drawn hospital`);
+      if (s === DEFAULT_SCENARIO) {
+        const d = /<path class="chart-dots wr-dots wr-dots--on" stroke-width="[^"]+" d="([^"]+)"\/>/.exec(body)[1];
+        assert.equal(d.match(/h\.1/g).length, items.length, `${s}: one dot per drawn hospital`);
+        assert.doesNotMatch(d, /h0/, `${s}: no zero-length dot (Firefox streaks one under the stage's zoom)`);
+      } else {
+        // Each column's bar is its dots' pitch wide and its count of dots tall, so the bars' lengths over the pitch count every hospital.
+        const [, width, d] = /<path class="wr-cols" stroke-width="([^"]+)" d="([^"]+)"\/>/.exec(body);
+        const total = [...d.matchAll(/v([\d.]+)/g)].reduce((sum, m) => sum + Math.round(Number(m[1]) / Number(width)), 0);
+        assert.equal(total, items.length, `${s}: the bars hold every drawn hospital`);
+        assert.doesNotMatch(body, /wr-dots/, `${s}: no dots`);
+      }
     }
     assert.match(svg, /class="wr-dots wr-dots--on"|class="chart-dots wr-dots wr-dots--on"/);
     assert.doesNotMatch(svg, /wr-thread/, 'the server draws no page hospital');
@@ -93,6 +102,7 @@ test('the server SVG holds one dot per drawn scenario hospital per strip, in bot
   // The caption counts the drawn against all scenario hospitals, and the note the rest.
   const cap = words(/<figcaption[\s\S]*?<\/figcaption>/.exec(section)[0]);
   assert.ok(cap.includes(count(items.length)) && cap.includes(count(scenarioRows.length)), cap);
+  assert.ok(cap.includes(`(${count(scenarioRows.length - items.length)} with no loss`), `the caption says how many aren't drawn: ${cap}`);
   assert.ok(words(section).includes(fillCopy(COPY, 'figNotPlaced', { n: count(scenarioRows.length - items.length) })));
 });
 
