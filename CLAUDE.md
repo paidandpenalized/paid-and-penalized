@@ -55,6 +55,10 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   hospitals' names and locations to equal the master's. Two commands use the network, both run by hand and never by
   the build or the tests: `run.py geocode` (the Census Geocoder; its output is a pinned input) and `make refresh`
   (CMS's files from data.cms.gov; below).
+- The HCRIS layer, `data/emitted/hcris/fy<YYYY>/hcris.json` (FY2011 on): Medicare cost reports, one row per acute or
+  critical access hospital and HCRIS year, rebuilt from per-year cells tables pinned from CMS's zips (rules in
+  `pp_engine/hcris/`, files in `pp_pipeline/hcris/`, commands under `run.py hcris`). Sites read it through
+  `pp_engine.hcris.reader` (design: `docs/specs/2026-11-05-hcris-layer-design.md`). CMS's raw zips stay out of git.
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),
   validated by `engine/js/schema.js`, which throws on any keyword it doesn't support. `schemas/conformance/`
   holds language-neutral test cases; `engine/py/pp_engine/schema.py`, the Python twin, passes the same set.

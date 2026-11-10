@@ -375,3 +375,65 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   "can only understate the difference". The FY2026 rule pays whichever rate yields "the greatest aggregate payment"
   (90 FR 37231; HACRP-92), and the cost report settles it on the period's totals, so the year's totals are the rule's
   own comparison, not an understatement. The code was already making that comparison; only the description changes.
+
+## hcris methods_version 1 (2026-11-05)
+- `data/emitted/hcris/fy<YYYY>/hcris.json`, FY2011 to FY2026, is the first emission of the HCRIS layer: Medicare
+  hospital cost reports (Form CMS-2552-10) as one row per acute or critical access hospital (CCN ranges 0001 to 0879
+  and 1300 to 1399) and HCRIS year. CMS's HCRIS year is the federal fiscal year a cost reporting period begins in
+  ("cost reports beginning in FY2024"); each row carries its period dates.
+- Built from `data/pinned/hcris-fy<YYYY>/hcris_fy<YYYY>_cells.csv`, one row per report with the 41 cells in
+  `pp_engine/hcris/cells.py` (Worksheets S-3 Part I, G-3, S-10 Parts I and II, by worksheet, line and column per
+  PRM-II chapter 40), derived from CMS's zip of the 2026-10-05 posting (`pipeline/py/pp_pipeline/hcris/pins.py`).
+  S-10 before Part II existed (worksheet code S100000) reads as Part I. Nine ratios are derived on the row.
+- A hospital with more than one report in a year: periods that don't overlap and cover at most 366 days are added up
+  (flows summed, stocks from the last period); otherwise (a change of fiscal year, overlapping periods) the row keeps
+  the report covering the most days, alone. `shape` and `basis` say which.
+- Every row keeps CMS's status codes and a label: "settled" (codes 2, 3, 4) when every report behind it is, else "as
+  filed" (1, 5). A year under 80% settled is `early`: its S-10 figures move most at settlement. `stillFiling` marks a
+  year whose reports are not all due yet (42 CFR 413.24(f)(2)(i)).
+- Checked against CMS's Hospital Provider Cost Report PUF: on every report the two share (same record number), all 24
+  compared cells are equal (FY2011 to FY2024; a pinned 2% sample runs in the tests).
+
+## hcris methods_version 2 (2026-11-05)
+- Twenty-one cells added, so each year's pinned cells table is re-derived from the same zips and every
+  `data/emitted/hcris/fy<YYYY>/hcris.json` gains columns (`schema_version` 2; 61 cells in all, not the 41 the entry
+  above says: it had 40):
+  - Worksheet G-3 lines 6 to 24, one cell each (contributions, investment income, the fifteen ancillary-income lines
+    8 to 22, governmental appropriations, other). Line 24's subscripts (24.01 to 24.49 other, 24.51 to 24.60 other
+    COVID-19 funding) are not read one by one; they stay inside line 25.
+  - Worksheet S-3 Part I column 7 (title XIX) on line 13 (nursery days, inside line 14) and line 32 (labor and
+    delivery inpatient days, outside line 14).
+- New derived columns: `other_operating_income` (G-3 lines 8 to 22), `medicaid_days_maternity` (S-3 I lines 13 + 32,
+  column 7) and `patient_margin` (line 5 ÷ line 3, the column v1 called `operating_margin`). `operating_margin` is now
+  (line 5 + lines 8 to 22) ÷ (line 3 + lines 8 to 22): operating other income counts, donations (6), investment
+  income (7), governmental appropriations (23) and line 24 with its subscripts, COVID-19 funding among them, don't
+  (DATA-B-03, decided 2026-11-05). Blank lines 8 to 22 count as zero.
+- The early line is read on the settled share rounded to a whole percent (DATA-B-04, decided 2026-11-05). FY2022, at
+  79.86%, rounds to 80% and is no longer early. No other year moves.
+- No cell from v1 changes value.
+
+## hcris methods_version 3 (2026-11-05)
+- G-3 line 24 ("other (specify)") and its subscripts 24.01 to 24.49 are sorted entry by entry by the hospital's own
+  label (DATA-B-03, decided 2026-11-05, later). Each year gains a second pinned table,
+  `data/pinned/hcris-fy<YYYY>/hcris_fy<YYYY>_g3_line24.csv` (report, line, label from the alphanumeric file, amount),
+  from the same zips. `pipeline/py/pp_pipeline/hcris/other_income_rules.csv` holds the keyword rules, in order, first
+  match wins; each emitted file records its SHA-256 (`otherIncomeRules`), so a rules change is a methods change.
+- Operating: physician and professional, pharmacy (340B and contract pharmacy among it), grant income (sponsored
+  research read as grant income), the kinds of income lines 8 to 22 already hold, and labels the hospital itself
+  calls operating ("other operating revenue" and its variants). Out of the operating margin:
+  investment-type income (interest, dividends, gains, unrealized gains, equity in affiliates), contributions,
+  appropriations and taxes, relief funding, labels the hospital calls non-operating, and every entry the rules
+  can't sort (generic labels such as "other revenue" or "miscellaneous income", blank labels, and named kinds the
+  decision doesn't place: Medicaid supplemental payments, capitation, services sold, transfers from affiliates).
+- New columns (`schema_version` 3): `line24_operating`, `line24_non_operating`, `line24_unclassified`, each report's
+  line-24 dollars by class. `other_operating_income` is now lines 8 to 22 plus `line24_operating`, so
+  `operating_margin` moves for every hospital with an operating line-24 entry. FY2023: $31.3B of line 24's $94.5B
+  sorts as operating (33%), $16.6B as non-operating (18%), $46.6B unclassified (49%).
+- Scope: CCNs ending 0880 to 0899 count as acute (`kind` 0001 to 0899). CMS's numbering table and the State
+  Operations Manual (ch. 2, sec. 2779A1) reserve the block for "hospitals participating in ORD demonstration
+  project"; the only ones in HCRIS are eleven Texas CCNs (450880 to 450894), which CMS's provider file codes as
+  short-term hospitals, eight of them paid under the IPPS in the FY2026 final rule's impact file. Every year's cells
+  table is re-derived from the same zips; it gains those hospitals' reports (8 to 11 hospital-years a year through
+  FY2025, none yet in FY2026) and no other row changes.
+- For hospitals already in v2, no value changes except `other_operating_income` and `operating_margin` (about 1,900
+  hospitals a full year). Settled shares move by 0.04 points at most; no year's early flag changes.
