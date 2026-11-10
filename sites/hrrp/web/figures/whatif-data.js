@@ -4,6 +4,7 @@
 // their edition values (the what-if is an approximation, and says so). Pure.
 import { CAP, CONDS, cutPct, isMeasured, peerMedian, weightPublished } from '../../../../engine/js/hrrp/formula.js';
 import { r2 } from '../../../../web/charts/svg.js';
+import { moneyShown } from '../../../../web/render/format.js';
 import { sliderRange, whatIfPaf } from '../../../../engine/js/hrrp/whatif.js';
 import { conditionShort } from '../derive.js';
 import { fill, t } from '../hospital/copy.js';
@@ -15,6 +16,9 @@ import { hospitalOf, sheetRow } from './worksheet-data.js';
 export const WI_STEP = 0.001;
 // The page data's script id (the page writes it, figures/whatif.js, and the script reads it).
 export const WHATIF_DATA_ID = 'hrrp-hospital';
+// One step of the payment adjustment factor, which CMS publishes to four decimals (numbers.js factor4): the cut moves by this
+// share of base payments at a time.
+export const FACTOR_STEP = 1e-4;
 
 // What a result field reads at a state ({ paf, cut, dollars }); the browser writes the same words.
 export const resultWords = (state) => ({
@@ -83,14 +87,31 @@ export function sliderRows(h, meta, conditions) {
   });
 }
 
-// The hospital page's what-if, as data. The rows and the starting state; `client` is what the browser needs to recompute (the
-// hospital's worksheet row, its base payments, the neutrality modifier and its own peer group's medians).
+// Why the savings the rows print add up to more than the cut at the actual ratios, or null where they don't. sliders: sliderRows();
+// start: whatIfState() at the actual ratios. Each saving is worked out with that condition alone moved, on a factor that moves in
+// whole steps, so the steps the rows save can add up to more than the cut's: 'steps' (the percents as printed, exact at two
+// decimals, add up past the cut's). Else 'rounded' where only the dollars as printed (money(): "about $62K") do.
+export function savingsOverCut(sliders, start) {
+  const saved = sliders.map((s) => s.escape).filter((e) => e?.saveCut > 0);
+  const steps = (pct) => Math.round(pct / 100 / FACTOR_STEP);
+  if (saved.reduce((n, e) => n + steps(e.saveCut), 0) > steps(start.cut)) return 'steps';
+  if (start.dollars === null) return null;
+  const shown = saved.filter((e) => e.saveDollars !== null).reduce((n, e) => n + moneyShown(e.saveDollars), 0);
+  return shown > moneyShown(start.dollars) ? 'rounded' : null;
+}
+
+// The hospital page's what-if, as data. The rows, the starting state and why the rows' savings add up to more than the cut (`over`,
+// with one step of the cut in dollars, null without base payments); `client` is what the browser needs to recompute (the
+// hospital's worksheet row, its base payments, the neutrality modifier and its own peer group's medians). The browser redraws the
+// result and the waterfall, never the rows' savings, so `over` holds at every ratio the reader tries.
 export function whatIfData(h, ctx) {
   const { meta, edition } = ctx;
   const sliders = sliderRows(h, meta, edition.conditions);
+  const state = whatIfState(h, meta);
   return {
     sliders,
-    start: { ...whatIfState(h, meta), actualCut: h.red, actualPaf: h.paf, pen: h.pen ?? null },
+    start: { ...state, actualCut: h.red, actualPaf: h.paf, pen: h.pen ?? null },
+    over: { why: savingsOverCut(sliders, state), step: h.base == null ? null : h.base * FACTOR_STEP },
     wf: whatIfWaterfall(h, meta, edition.conditions),
     client: {
       row: sheetRow(h), base: h.base ?? null,

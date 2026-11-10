@@ -23,7 +23,7 @@ import { STEP } from './layout.js';
 
 // Punch card: the largest sets each get a column; the rest are pooled.
 const KEEP = 12;
-// The least width, in drawing units, between two labeled cutoffs on the dual-share axis; a closer one goes unlabeled.
+// The least width, in drawing units, between two labeled cutoffs on a row of the dual-share axis (cutoffLabels).
 const TICK_GAP = 24;
 const COLUMNS_HEIGHT = 180;
 // The claim a "New for" note names in the content file (its `claim` field), and the line that says where the note comes from.
@@ -88,12 +88,17 @@ function punchFigure({ sets, conditions, edition, n }) {
 
 // ---------- Step 3 ----------
 
-// The cutoffs to label at this drawing width: left to right, each one at least TICK_GAP units from the last one labeled.
-function labeled(ticks, top, width) {
+// The cutoffs' labels at this drawing width ({ ticks, stagger }: columns' options): all on one row where each is TICK_GAP units
+// or more from the one before it; else on two rows, every other one a row lower (a phone's drawing), where each row's are that far
+// apart; else one row, left to right, each one labeled at least TICK_GAP units from the last one labeled.
+function cutoffLabels(ticks, top, width) {
   const pitch = (width - 12) / top;
+  const fits = (row) => row.every((v, i) => !i || (v - row[i - 1]) * pitch >= TICK_GAP);
+  if (fits(ticks)) return { ticks, stagger: false };
+  if ([0, 1].every((r) => fits(ticks.filter((_, i) => i % 2 === r)))) return { ticks, stagger: true };
   const out = [];
   for (const v of ticks) if (!out.length || (v - out[out.length - 1]) * pitch >= TICK_GAP) out.push(v);
-  return out;
+  return { ticks: out, stagger: false };
 }
 
 // The peer group (1 to 5) a one-point bin falls in, by its middle.
@@ -104,7 +109,7 @@ function dualFigure({ dual, edition, n }) {
   // Two tones alternate by peer group (odd groups ink, even groups penalty red); the group numbers above the columns name them, so there is no key.
   const bins = dual.bins.map((b) => ({ ...b, cls: `${BAR_CLASS} ${groupOf(dual.bands, b) % 2 ? 'dual-odd' : 'dual-even'}`, tip: fill(oneKey('fig2Tip', b.n), { from: `${b.x0}%`, to: `${b.x1}%`, n: count(b.n) }) }));
   const draw = (width) => columns({
-    bins, domain: [0, dual.top], ticks: labeled(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
+    bins, domain: [0, dual.top], ...cutoffLabels(dual.ticks, dual.top, width), format: (v) => `${Math.round(v)}%`, width, height: COLUMNS_HEIGHT,
     // One row of group numbers over the bands: the first says "Group" where its band has room (the number alone on a phone), the rest the number.
     bands: dual.bands.map((b, i) => ({ x0: b.x0, x1: b.x1, label: i ? String(b.peer) : fill('fig2Band', { n: String(b.peer) }), short: String(b.peer) })),
   });

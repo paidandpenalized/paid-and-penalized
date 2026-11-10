@@ -9,7 +9,9 @@ import { sliderRange, whatIfPaf } from '../../../engine/js/hrrp/whatif.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { generateHrrp } from '../web/generate.js';
 import { areaGroups, areaKeyOf } from '../web/figures/neighbors-data.js';
-import { WI_STEP, medianTarget, movedHospital, whatIfData, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
+import { FACTOR_STEP, WI_STEP, medianTarget, movedHospital, resultWords, whatIfData, whatIfState, whatIfWaterfall } from '../web/figures/whatif-data.js';
+import { escapeWords, overNote } from '../web/figures/whatif.js';
+import { fmtMoney } from '../web/numbers.js';
 import { HOSPITAL_COLUMNS, hospitalCsv } from '../web/csv.js';
 import { csvPath } from '../web/links.js';
 import { hospitalPage } from '../web/pages/hospital.js';
@@ -76,6 +78,32 @@ test('what-if: while the other conditions keep the cut at its maximum, reaching 
   for (const s of wi.sliders) assert.deepEqual([s.escape.saveCut, s.escape.saveDollars, s.escape.atCap], [0, 0, true]);
   assert.match(figureOf(pageOf(capped, ctx), 2), /the other conditions still keep the cut at its maximum/);
   assert.ok(CAP === 0.03);
+});
+
+test('what-if: where each condition alone saves a step more than its share, the rows add up past the cut, and a note under the figure says why', () => {
+  // Two conditions, each 0.014% of base payments over its median: together 0.028%, a cut of three steps of the factor; either
+  // alone leaves 0.014%, one step, so each saves two, and the rows add up to four.
+  const c = { HF: { n: 40, err: 1.0014, flag: 1, ratio: 0.1 }, AMI: { n: 40, err: 1.0014, flag: 1, ratio: 0.1 } };
+  const stepped = hospital({ id: '990033', paf: 0.9997, red: 0.03, base: 10000000, pen: 3000, c });
+  const wi = whatIfData(stepped, ctx);
+  assert.deepEqual(wi.sliders.map((s) => [s.escape.saveCut, s.escape.saveDollars]), [[0.02, 2000], [0.02, 2000]]);
+  assert.equal(wi.start.cut, 0.03);
+  assert.deepEqual(wi.over, { why: 'steps', step: 1000 });
+  const note = 'Each saving is for that condition alone. The payment adjustment factor has four decimal places, so the cut moves in steps of about $1K, and the savings above add up to more than the cut.';
+  const fig = figureOf(pageOf(stepped, ctx), 2);
+  assert.ok(fig.includes(`<p class="small muted fig__note">${note}</p>`), 'under the figure');
+  assert.ok(fig.indexOf('fig__note') > fig.indexOf('data-wi="parts"') && fig.indexOf('fig__note') < fig.indexOf('fig__source'), 'after the chart, before the source');
+  assert.match(overNote({ why: 'steps', step: null }), /in steps of 0\.01% of base payments,/, 'with no base payments, the step as their share');
+  // One step each and two in all, so the percents add up; only the dollars, $1,500 each printed as $2K, come to more than $3K.
+  const half = { HF: { ...c.HF, err: 1.001 }, AMI: { ...c.AMI, err: 1.001 } };
+  const rounded = hospital({ id: '990034', paf: 0.9998, red: 0.02, base: 15000000, pen: 3000, c: half });
+  const wr = whatIfData(rounded, ctx);
+  assert.deepEqual(wr.sliders.map((s) => [s.escape.saveCut, s.escape.saveDollars]), [[0.01, 1500], [0.01, 1500]]);
+  assert.equal(wr.over.why, 'rounded');
+  assert.ok(figureOf(pageOf(rounded, ctx), 2).includes('<p class="small muted fig__note">Each dollar figure is rounded, so the savings above add up to more than the cut.</p>'));
+  // One condition over its median saves the whole cut: no note.
+  assert.equal(whatIfData(CUT, ctx).over.why, null);
+  assert.ok(!figureOf(pageOf(CUT, ctx), 2).includes('fig__note'));
 });
 
 test('what-if: the waterfall follows the ratios; a condition brought under its median reads "at or under", not "rounds to nothing"', () => {
@@ -280,6 +308,38 @@ test('on the data: a condition CMS flagged with no published payment weight says
   const [h, s] = rows[0];
   const tr = new RegExp(`<tr><th[^>]*>${s.short}</th>[\\s\\S]*?</tr>`).exec(figureOf(render(h), 2))[0];
   assert.ok(!tr.includes('0.00%') && !tr.includes('$0<'), tr);
+});
+
+// The savings the rows print (escapeWords: "the cut shrinks by 0.06% of base payments, about $186K"), in hundredths of a percent and
+// in dollars as printed, and the cut as the result box prints it.
+const UNIT = { '': 1, K: 1e3, M: 1e6, B: 1e9 };
+const shownDollars = (s) => { const [, n, u] = /^\$([\d.]+)([KMB]?)$/.exec(s); return Math.round(Number(n) * UNIT[u]); };
+const hundredths = (s) => Math.round(Number(s.replace('%', '')) * 100);
+function printedSums(wi) {
+  const saved = wi.sliders.map((s) => /shrinks by ([\d.]+%) of base payments(?:, about (\$[\d.]+[KMB]?))?/.exec(escapeWords(s))).filter(Boolean);
+  const words = resultWords(wi.start);
+  return {
+    pctOver: saved.reduce((n, m) => n + hundredths(m[1]), 0) > hundredths(words.cut),
+    dollarsOver: wi.start.dollars !== null && saved.reduce((n, m) => n + (m[2] ? shownDollars(m[2]) : 0), 0) > shownDollars(words.dollars),
+  };
+}
+
+test('on the data: the note under the what-if is on every page whose rows, as printed, add up to more than the cut, and on no other', () => {
+  const by = { steps: [], rounded: [], none: [] };
+  for (const h of DATA.hospitals) {
+    const wi = whatIfData(h, SHARED);
+    const { pctOver, dollarsOver } = printedSums(wi);
+    assert.equal(wi.over.why, pctOver ? 'steps' : dollarsOver ? 'rounded' : null, h.id);
+    if (wi.sliders.filter((s) => s.escape?.saveCut > 0).length > 1) by[wi.over.why ?? 'none'].push(h);
+  }
+  assert.ok(by.steps.length > 100 && by.rounded.length > 10 && by.none.length > 100, `${by.steps.length} by steps, ${by.rounded.length} by rounding, ${by.none.length} with two or more savings and no note`);
+  for (const h of by.steps.slice(0, 5)) {
+    const fig = figureOf(render(h), 2);
+    assert.match(fig, /<p class="small muted fig__note">Each saving is for that condition alone\./, h.id);
+    assert.ok(fig.includes(`so the cut moves in steps of about ${fmtMoney(h.base * FACTOR_STEP)},`), `${h.id}: one step of the hospital's own base payments`);
+  }
+  for (const h of by.rounded.slice(0, 5)) assert.match(figureOf(render(h), 2), /fig__note">Each dollar figure is rounded/, h.id);
+  for (const h of by.none.slice(0, 5)) assert.ok(!figureOf(render(h), 2).includes('fig__note'), h.id);
 });
 
 test('on the data: a ratio over its median by under half a step still comes to no cut at the median (Bring all to median)', () => {

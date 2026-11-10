@@ -7,9 +7,11 @@
 //            across the top, for groups the axis is divided into (a peer group's range); without it the chart is drawn as before.
 //            A label is centered in its band and never wider than the band: the label if it fits, else `short` if it fits,
 //            else none (the shading stays).
+//   stagger  optional: true to set the tick labels on two rows, every other one a row lower (axis.js), for ticks too close for
+//            one row; the drawing is that row taller, so the columns keep their height.
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
-import { axis } from './axis.js';
+import { STAGGER_ROW, axis } from './axis.js';
 import { capsWidth, columnPath, frame, mark, r2, text } from './svg.js';
 
 const M = { left: 6, right: 6, top: 8, bottom: 26 };
@@ -21,7 +23,7 @@ const BAND_PAD = 2;
 const labelWidth = (s) => capsWidth(s) + BAND_PAD * 2;
 const bandLabel = (b, room) => [b.label, b.short].find((s) => s != null && s !== '' && labelWidth(s) <= room) ?? null;
 
-export function columns({ bins, domain, ticks, format, width, height, bands = null }) {
+export function columns({ bins, domain, ticks, format, width, height, bands = null, stagger = false }) {
   const x = scaleLinear().domain(domain).range([M.left, width - M.right]);
   const max = Math.max(...bins.map((b) => b.n), 1);
   const base = height - M.bottom;
@@ -39,8 +41,8 @@ export function columns({ bins, domain, ticks, format, width, height, bands = nu
   }) : [];
   const shades = bands ? html`${bands.map((b, i) => html`<rect class="chart-band${i % 2 ? '' : ' chart-band--tint'}" x="${r2(x(b.x0))}" y="${M.top}" width="${r2(x(b.x1) - x(b.x0))}" height="${r2(base - M.top)}"/>`)}${labels}` : '';
   return frame({
-    kind: 'columns', width, height, body: html`${shades}${cols}
+    kind: 'columns', width, height: stagger ? height + STAGGER_ROW : height, body: html`${shades}${cols}
 <line class="chart-baseline" x1="${M.left}" x2="${width - M.right}" y1="${r2(base)}" y2="${r2(base)}"/>
-<g transform="translate(0 ${r2(base)})">${axis({ scale: x, ticks, format })}</g>`,
+<g transform="translate(0 ${r2(base)})">${axis({ scale: x, ticks, format, stagger })}</g>`,
   });
 }

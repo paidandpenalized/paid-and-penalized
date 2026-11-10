@@ -155,6 +155,26 @@ test('Fig. 2: the columns alternate two tones by peer group, with no key, and ev
   }
 });
 
+test('Fig. 2: every cutoff its note names is labeled on the axis, on one row wide and on two rows on a phone, no two in a row touching', () => {
+  const data = loadHrrpOnce();
+  const { ticks } = dualBins(data.hospitals, data.meta.peerCutoffs);
+  const step3 = between(page(), 'id="step-3"', 'id="step-4"');
+  const named = ticks.map((v) => `${Math.round(v)}%`);
+  const note = /The marks on the axis are CMS’s cutoffs between the groups: ([^<]*)\./.exec(step3)?.[1];
+  assert.deepEqual(note?.split(/, (?:and )?/), named, 'the note names them');
+  const CHAR = 6.6;  // a character of the axis labels' 11px monospace type, in drawing units (charts.css)
+  const [phone, wide] = step3.match(/<svg [^>]*chart--columns[\s\S]*?<\/svg>/g);
+  for (const [svg, rowCount] of [[phone, 2], [wide, 1]]) {
+    const labels = [...svg.matchAll(/<text class="chart-axis__label" x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)</g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]), text: m[3] }));
+    assert.deepEqual(labels.map((l) => l.text), named, 'all of them, left to right');
+    const rows = Map.groupBy(labels, (l) => l.y);
+    assert.equal(rows.size, rowCount);
+    for (const row of rows.values()) {
+      row.forEach((l, i) => { if (i) assert.ok(row[i - 1].x + (row[i - 1].text.length * CHAR) / 2 < l.x - (l.text.length * CHAR) / 2, `"${row[i - 1].text}" and "${l.text}" touch`); });
+    }
+  }
+});
+
 test('figure: a key swatch from the list, and a free class or a bad swatch is refused', () => {
   const FIG = { n: 1, takeaway: 't', source: 's', alt: 'a', table: { columns: [{ name: 'x' }, { name: 'n', numeric: true }], rows: [['r', '1']] }, svg: columns({ bins: [{ x0: 0, x1: 1, n: 1, cls: 'chart-col', tip: 'x' }], domain: [0, 1], ticks: [0], format: String, width: 300, height: 100 }) };
   assert.ok(String(figure({ ...FIG, key: [{ swatch: 'bar-dark', label: 'One' }] })).includes('<li><span class="fig__swatch fig__swatch--bar-dark" aria-hidden="true"></span>One</li>'));
