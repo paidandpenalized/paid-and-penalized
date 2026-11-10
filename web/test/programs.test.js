@@ -49,7 +49,7 @@ test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps
   assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp', 'work-requirement']);
   assert.equal(SITE.sites['work-requirement'].path, programById('work-requirement').path);
   assert.equal(SITE.sites['work-requirement'].released, false, 'the work-requirement site stays unreleased: noindex, out of the sitemap');
-  assert.equal(SITE.sites['work-requirement'].title, 'The Medicaid work requirement, hospital by hospital');
+  assert.equal(SITE.sites['work-requirement'].title, 'Medicaid work requirement', 'the family\'s short name for the site (the page\'s own title is its copy)');
   assert.equal(siteOf('/work-requirement/methods/'), SITE.sites['work-requirement']);
   assert.equal(SITE.sites.hrrp.path, programById('hrrp').path);
   assert.equal(SITE.sites.hacrp.path, programById('hacrp').path);

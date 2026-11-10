@@ -26,8 +26,10 @@ A claim marked `unverified` may not be used in copy.
 - **WR-01.** Paragraph (2) of the new subsection lists the ways to demonstrate community engagement for a month: at least
   80 hours of work, of community service or of a work program, half-time school, a mix of them totaling 80 hours, or
   a monthly income of at least the federal minimum wage times 80 hours (for a seasonal worker, averaged over six
-  months). The requirement starts no later than the first quarter after December 31, 2026, or
-  earlier at a state's option (paragraph (1)).
+  months). The requirement starts no later than the first day of the first quarter after December 31, 2026, or
+  earlier at a state's option (paragraph (1)), except as paragraph (11) provides: the Secretary may exempt a state that
+  shows a good faith effort to comply, and the exemption expires no later than December 31, 2028 (it may end earlier,
+  and may not be renewed past that date).
 - **WR-02.** Paragraph (9)(A) defines an applicable individual: one eligible for (or enrolled in) the group under
   section 1902(a)(10)(A)(i)(VIII), which CMS's reports call the new adult group (the Affordable Care Act's expansion
   group), or under a waiver with equivalent coverage (adults 19 to 64 not otherwise eligible under the plan); specified

@@ -292,7 +292,7 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   }
   // The scenario's figure: its national range of Medicaid revenue lost, low to high, tagged as a scenario in its base
   // year's dollars; not an estimate for the family's fiscal year, so no "Estimated FY2026" before it.
-  assert.ok(foot.includes('<li class="ft__scen"><a href="/work-requirement/">Work requirement <span class="ft__ab">Medicaid</span></a> <span class="ft__v">$4.0–9.0M Medicaid revenue lost a year <span class="scen-tag">SCENARIO · 2023 $</span></span>'), 'the scenario\'s range and tag');
+  assert.ok(foot.includes('<li class="ft__scen"><a href="/work-requirement/">Work requirement <span class="ft__ab">Medicaid</span></a> <span class="ft__v">$4.0–9.0M Medicaid revenue could be lost a year <span class="scen-tag">SCENARIO · 2023 $</span></span>'), 'the scenario\'s range and tag');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(considered.startsWith('Under consideration: '));
   assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),

@@ -5,8 +5,10 @@
 import { copyOf } from '../../../web/render/components.js';
 
 export const COPY = {
-  // The program page: the line above its title, and its description for search results and link previews.
+  // The program page: the line above its title, its title (the family's pages name the site by web/site.js's shorter
+  // title), and its description for search results and link previews.
   kicker: { text: 'Medicaid · a scenario, not a payment', claim: null },
+  title: { text: 'The Medicaid work requirement, hospital by hospital', claim: null },
   description: {
     text: 'A scenario, not a payment: how much Medicaid revenue each hospital could lose under the Medicaid work requirement, from the low case to the high.',
     claim: null,

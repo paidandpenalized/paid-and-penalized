@@ -35,7 +35,7 @@ export const COPY = typesetCopy({
   footMoved: '{amount} moved',
   // A scenario's figure (web/site.js scenario): its national range of Medicaid revenue lost, low to high, and the tag
   // every scenario number carries (the base year of its dollars).
-  footScenario: '{range} Medicaid revenue lost a year',
+  footScenario: '{range} Medicaid revenue could be lost a year',
   scenarioTag: 'SCENARIO · {year} $',
   footConsidered: 'Under consideration:',
   footHospitals: '{n} hospitals',

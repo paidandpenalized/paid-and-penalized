@@ -9,7 +9,7 @@ import { t } from '../copy.js';
 import { PROGRAM_PATH } from '../links.js';
 import { labelOf, shellOf } from './parts.js';
 
-const TITLE = SITE.sites['work-requirement'].title;
+const TITLE = t('title');
 
 // A step: its id (the section menu's anchor) and its heading; its body comes with its figures.
 const step = (id) => html`<section class="step" id="${id}" aria-labelledby="${id}-h">
