@@ -169,6 +169,11 @@ export const COPY = {
   wiEscapeNoWeight: { text: 'CMS counted this one, but its payment weight is not published, so what reaching {median} would save cannot be worked out here.', claim: null },
   wiEscapeNothing: { text: 'Down to {median}, it adds nothing, but the cut does not change.', claim: null },
   wiEscapeNothingCap: { text: 'Down to {median}, it adds nothing, but the other conditions still keep the cut at its maximum.', claim: null },
+  // Under the figure, where the savings above add up to more than the cut: {step} is one step of the factor's last decimal place.
+  wiOverSteps: { text: 'Each saving is for that condition alone. The payment adjustment factor has four decimal places, so the cut moves in steps of {step}, and the savings above add up to more than the cut.', claim: null },
+  wiStepDollars: { text: 'about {dollars}', claim: null },
+  wiStepShare: { text: '{pct} of base payments', claim: null },
+  wiOverRounded: { text: 'Each dollar figure is rounded, so the savings above add up to more than the cut.', claim: null },
   wiColEscape: { text: 'Ratio that reaches the median', claim: null },
   wiColSaveCut: { text: 'Cut saved (percent of base payments)', claim: null },
   wiColSaveDollars: { text: 'Dollars saved (estimate)', claim: null },

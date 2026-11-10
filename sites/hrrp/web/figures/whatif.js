@@ -2,7 +2,8 @@
 // beside them (.wi__result, held in view while the sliders move) the hypothetical cut, factor and dollars beside the actual ones,
 // and under them the waterfall of the parts of the cut at those
 // ratios (figures/waterfall.js, drawn by the same code in the browser as the sliders move: client/hospital.js). Each row says its
-// escape value, the ratio that reaches the median, and what reaching it alone would save. Without the script the sliders are
+// escape value, the ratio that reaches the median, and what reaching it alone would save; where those savings add up to more than
+// the cut, a note under the figure says why (overNote). Without the script the sliders are
 // disabled at the actual ratios and the figure reads as the page was built. Data from figures/whatif-data.js; words in hospital/copy.js.
 import { MIN_DISCHARGES } from '../../../../engine/js/hrrp/formula.js';
 import { figure, num } from '../../../../web/charts/figure.js';
@@ -12,7 +13,7 @@ import { fill, t } from '../hospital/copy.js';
 import { estimateTag } from '../estimate-tag.js';
 import { factor4, fmtMoney, fmtPct, ratio } from '../numbers.js';
 import { waterfallPair } from './waterfall.js';
-import { WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';
+import { FACTOR_STEP, WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';
 
 // The words under a slider about getting its condition to the median.
 export function escapeWords(row) {
@@ -23,6 +24,14 @@ export function escapeWords(row) {
   if (e.saveCut <= 0) return fill(e.atCap ? 'wiEscapeNothingCap' : 'wiEscapeNothing', { median });
   return e.saveDollars === null ? fill('wiEscapeNoDollars', { median, cut: fmtPct(e.saveCut) })
     : fill('wiEscape', { median, cut: fmtPct(e.saveCut), dollars: fmtMoney(e.saveDollars) });
+}
+
+// The note under the figure where the rows' savings add up to more than the cut (whatif-data.js savingsOverCut), else null: one
+// step of the cut in dollars, or in percent of base payments without them.
+export function overNote({ why, step }) {
+  if (why === 'rounded') return t('wiOverRounded');
+  if (why !== 'steps') return null;
+  return fill('wiOverSteps', { step: step === null ? fill('wiStepShare', { pct: fmtPct(FACTOR_STEP * 100) }) : fill('wiStepDollars', { dollars: fmtMoney(step) }) });
 }
 
 const slider = (row) => {
@@ -73,6 +82,7 @@ ${fields}
     claimLevel: 'estimate',
     csvName: `hrrp-${view.ccn.toLowerCase()}-what-if`,
     chart,
+    note: overNote(wi.over),
     table: {
       columns: [{ name: t('colCondition') }, { name: t('colRatio'), numeric: true }, { name: t('wiColEscape'), numeric: true },
         { name: t('wiColSaveCut'), numeric: true }, { name: t('wiColSaveDollars'), numeric: true }],
