@@ -11,7 +11,7 @@
 // ?h=<CCN> (web/client/follow.js) follows that hospital from the start. A followed hospital is ringed at every step, and
 // the last step shows it among its peers, in the group the peer toggle picks, with its card. The worksheet in "Methods, in
 // brief" (story/worksheet.js) fills in for the same hospital.
-import { FOLLOW_EVENT, addressFollowing, followedCcn, replaceAddress, siteAddress } from '../../web/client/follow.js';
+import { followedCcn, setFollowed } from '../../web/client/follow.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { storyFacts } from '../model.js';
 import { shareDomain } from './scale.js';
@@ -60,8 +60,7 @@ function start(root) {
     e.preventDefault();
     const box = form.querySelector('[role="combobox"]');
     if (box) box.value = h.name;
-    replaceAddress(addressFollowing(siteAddress(window.location), h.ccn));
-    document.dispatchEvent(new Event(FOLLOW_EVENT));
+    setFollowed(h.ccn);
   });
 
   // The live layout at once (one sticky stage), so the page does not shift again when the data arrives; until then the

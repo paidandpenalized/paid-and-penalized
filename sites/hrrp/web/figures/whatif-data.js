@@ -8,7 +8,7 @@ import { moneyShown } from '../../../../web/render/format.js';
 import { sliderRange, whatIfPaf } from '../../../../engine/js/hrrp/whatif.js';
 import { conditionShort } from '../derive.js';
 import { fill, t } from '../hospital/copy.js';
-import { factor4, fmtMoney, fmtPct } from '../numbers.js';
+import { FACTOR_STEP, factor4, fmtMoney, fmtPct } from '../numbers.js';
 import { waterfallData, worksheetRows } from '../worksheet.js';
 import { hospitalOf, sheetRow } from './worksheet-data.js';
 
@@ -16,9 +16,8 @@ import { hospitalOf, sheetRow } from './worksheet-data.js';
 export const WI_STEP = 0.001;
 // The page data's script id (the page writes it, figures/whatif.js, and the script reads it).
 export const WHATIF_DATA_ID = 'hrrp-hospital';
-// One step of the payment adjustment factor, which CMS publishes to four decimals (numbers.js factor4): the cut moves by this
-// share of base payments at a time.
-export const FACTOR_STEP = 1e-4;
+// One step of the payment adjustment factor (numbers.js, beside factor4), for the what-if's note.
+export { FACTOR_STEP };
 
 // What a result field reads at a state ({ paf, cut, dollars }); the browser writes the same words.
 export const resultWords = (state) => ({

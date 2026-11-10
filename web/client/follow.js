@@ -73,6 +73,13 @@ export function addressFollowing(href, ccn) {
 // replaceAddress), for the shell (shell.js) to follow that hospital at once, as it does a ?h= it loads with.
 export const FOLLOW_EVENT = 'pp:follow';
 
+// Follows ccn from this page on, as a ?h= link would: writes it into the page's address in place (addressFollowing, the
+// same history entry) and tells the shell (FOLLOW_EVENT), which then follows it as it follows a ?h= it loads with.
+export function setFollowed(ccn) {
+  replaceAddress(addressFollowing(siteAddress(window.location), ccn));
+  document.dispatchEvent(new Event(FOLLOW_EVENT));
+}
+
 // Writes href (an address on this page's site) as the page's address in place, keeping the history entry's state. Some
 // browsers rate-limit replaceState: a refused write is dropped and the page goes on as it was, so a caller that writes
 // again on its next change catches up then.

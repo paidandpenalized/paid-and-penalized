@@ -46,8 +46,12 @@ export const pagesOf = (list, size) => Array.from({ length: Math.ceil(list.lengt
 // The tie-break every sort here ends on: ids (CCNs, codes) in order, 0 only for equal ones.
 export const byId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 
+// The decimals CMS publishes a payment adjustment factor to, and one step of it: the cut moves by FACTOR_STEP of base
+// payments at a time.
+const FACTOR_DP = 4;
+export const FACTOR_STEP = 10 ** -FACTOR_DP;
 // A payment adjustment factor to four decimals, as CMS publishes it: 0.9988, 1.0000.
-export const factor4 = (x) => ratio(x, 4);
+export const factor4 = (x) => ratio(x, FACTOR_DP);
 
 // An excess readmission ratio (or a peer median) to dp decimals; four as CMS publishes it, three on a slider. Rounded as
 // the engine stores it (format.js cmsDecimal: toFixed, not Intl), so it prints CMS's own text.
