@@ -30,7 +30,7 @@ export const cutCounts = ({ cut, cmsCut }) => ({ cut: count(cut), yes: count(cms
 
 // ---------- the likely ranges: the engine's (engine/js/dollars/ranges.js), shared with the hub ----------
 
-export { ALL_STRATUM, nationalRange, netRangeOf, rangeBar, rangeOf, rangeShare, sumRanges } from '../../../engine/js/dollars/ranges.js';
+export { ALL_STRATUM, checkNetBands, nationalRange, netRangeOf, rangeBar, rangeOf, rangeShare, sumRanges } from '../../../engine/js/dollars/ranges.js';
 
 // Whether the hospital's payment includes teaching payments on Medicare Advantage stays: the words that name the payment
 // as what traditional Medicare pays it then say so. m: an estimated hospitalMoney().

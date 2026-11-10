@@ -81,7 +81,8 @@ test('hubHospitals stops on a dollar CCN with no master record, in the hub Range
   const hrrp = { hospitals: new Map() };
   const rows = [{ ccn: '990001', status: 'maryland' }, { ccn: '990009', status: 'estimated' }];
   const error = (fn) => { try { fn(); } catch (e) { return e; } return null; };
-  const e = error(() => hubHospitals({ dollars: { hospitals: rows }, master, hrrp, decided: new Set() }));
+  // The dollar file's own bands, so the gap is the only thing wrong with these inputs.
+  const e = error(() => hubHospitals({ dollars: { hospitals: rows, bands: hub.dollars.bands }, master, hrrp, decided: new Set() }));
   assert.ok(e instanceof RangeError && /^hub: /.test(e.message) && e.message.includes('990009'), String(e));
   // One message from both places that can meet the gap.
   const masterFile = { programYears: { hacrp: 2026, hrrp: 2027 }, hospitals: [{ ccn: '990001' }] };

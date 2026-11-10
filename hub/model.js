@@ -2,7 +2,7 @@
 // file. Pure: data in, facts out (hub/data.js reads the files). Every figure on the home page, the shell and
 // the hospital pages comes from here, so one place defines each count and each total.
 import { builtOn } from '../engine/js/dates.js';
-import { netRangeOf } from '../engine/js/dollars/ranges.js';
+import { checkNetBands, netRangeOf } from '../engine/js/dollars/ranges.js';
 import { SHOWN_STATUSES } from '../engine/js/dollars/status.js';
 import { netShare, pctOf } from '../engine/js/dollars/whatif.js';
 import { bedBand, median } from '../engine/js/peers.js';
@@ -30,25 +30,17 @@ export function masterRecord(master, ccn, from = 'a dollar row') {
   return record;
 }
 
-// The back-test's bands a net's likely range can take (netRangeOf): the net's, and each program's for a net it makes alone.
-const NET_BANDS = ['net', 'hrrp', 'hvbp', 'hac'];
-
-// An estimated row's likely range of its net (netRangeOf: the band of the one program that makes the net, else the
-// back-test's net band for its group, as the HACRP pages give it). bands: the dollar file's, which must hold all of
-// NET_BANDS; a file without one stops the build with a message that says which.
-function netRange(bands, row) {
-  for (const m of NET_BANDS) if (!Array.isArray(bands?.measures?.[m]?.strata)) throw new RangeError(`hub: the dollar estimates have no back-test ${m} band (bands.measures.${m}), which the hospital pages' likely ranges need`);
-  return netRangeOf(bands, row);
-}
-
 // Every hospital in the dollar file, in its order, joined to its master record, to whether the Readmissions site has
 // a page for it and to whether the HACRP pages count it (`decided`, from loadHub's Set: hub/data.js). `est` holds the dollars of a
 // hospital with an estimate and is null for the rest (Maryland's all-payer model, and hospitals with no inputs to
 // estimate from); `cut` is CMS's HAC decision (Yes) for every one of them. A missing bed count, teaching status or location stays null, and a null bed count has no size band.
-// netRange: an estimated hospital's likely range of its net, [low, high] dollars (engine/js/dollars/ranges.js netRangeOf,
-// as the HACRP pages give it), null for a net of $0 and for one without an estimate.
+// netRange: an estimated hospital's likely range of its net, [low, high] dollars (engine/js/dollars/ranges.js netRangeOf:
+// the band of the one program that makes the net, else the back-test's net band, as the HACRP pages give it), null for a
+// net of $0 and for one without an estimate. A dollar file with an estimate but without every band a range can take stops
+// the build, naming the band.
 export function hubHospitals({ dollars, master, hrrp, decided }) {
   if (!(decided instanceof Set)) throw new TypeError('hub: hubHospitals needs the Set of decided CCNs (loadHub().decided)');
+  if (dollars.hospitals.some((row) => row.status === 'estimated')) checkNetBands(dollars.bands, 'hub');
   return dollars.hospitals.map((row) => {
     const m = masterRecord(master, row.ccn);
     if (!SHOWN_STATUSES.includes(row.status)) throw new RangeError(`hub: ${row.ccn} has the dollar status "${row.status}", which no page has words for`);
@@ -57,7 +49,7 @@ export function hubHospitals({ dollars, master, hrrp, decided }) {
       ccn: row.ccn, name: m.name, city: m.city, state: m.state, beds, teach: m.teach ?? null,
       lat: m.lat ?? null, lon: m.lon ?? null, status: row.status, inHrrp: hrrp.hospitals.has(row.ccn),
       cut: row.cut, decided: decided.has(row.ccn), est: row.status === 'estimated' ? estimate(row) : null,
-      netRange: row.status === 'estimated' ? netRange(dollars.bands, row) : null,
+      netRange: row.status === 'estimated' ? netRangeOf(dollars.bands, row) : null,
     };
   });
 }

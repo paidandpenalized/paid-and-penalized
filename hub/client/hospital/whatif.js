@@ -329,8 +329,9 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   const big = $('.hh__big');
   // The net's likely range is the actual net's: a scenario that moves the net hides it.
   const band = $('[data-band]');
-  // The note on a hospital whose Medicare agreement ended speaks of its actual net, as the likely range does.
-  const closed = $('.hh__closed');
+  // The tail of the note on a hospital whose Medicare agreement ended speaks of its actual net, as the likely range does;
+  // the sentence on when the agreement ended stays.
+  const closedTail = $('.hh__closed-tail');
   const netlab = $('.hh__netlab');
   const netTag = node('span', { class: 'hh__htag hh__htag--sm', hidden: '' }, [fill('wiTag')]);
   netlab?.append(netTag);
@@ -430,7 +431,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     }
     netTag.hidden = !on;
     if (band) band.hidden = on && netMoved;
-    if (closed) closed.hidden = on && netMoved;
+    if (closedTail) closedTail.hidden = on && netMoved;
     paintSum(out);
     const head = $('[data-headline]');
     const share = on ? netShare(out.net, h.est.total) : h.est.share;

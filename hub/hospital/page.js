@@ -16,7 +16,7 @@ import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
 import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
 import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
-import { closedNote } from '../../web/render/closed.js';
+import { closedNoteMarkup } from '../../web/render/closed.js';
 import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
@@ -143,10 +143,11 @@ function band(h) {
 }
 
 // The note on a hospital whose Medicare agreement CMS lists as ended by the year's end (web/render/closed.js; its master
-// record's `inactive`), on its net (none for a hospital with no estimate): '' for any other.
+// record's `inactive`), on its net (none for a hospital with no estimate): '' for any other. Its tail, on what the net
+// likely was, is a span of its own: the what-if hides it under a scenario that moves the net, as it hides the likely range.
 function closed(h, master, fy) {
-  const text = closedNote({ ccn: h.ccn, inactive: master?.inactive ?? null, fy: Number(fy), dollars: h.est?.net ?? 0 });
-  return text ? html`<p class="hh__closed">${text}</p>` : '';
+  const note = closedNoteMarkup({ ccn: h.ccn, inactive: master?.inactive ?? null, fy: Number(fy), dollars: h.est?.net ?? 0 }, 'hh__closed-tail');
+  return note ? html`<p class="hh__closed">${note}</p>` : '';
 }
 
 // The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a

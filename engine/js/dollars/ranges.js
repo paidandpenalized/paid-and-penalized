@@ -31,6 +31,18 @@ export function rangeOf(bands, measure, stratum, estimate) {
 // (bands.measures).
 const NET_PARTS = ['hrrp', 'hvbp', 'hac'];
 
+// The back-test's bands a net's likely range can take (netRangeOf): the net's, and each program's for a net it makes
+// alone.
+const NET_BANDS = ['net', ...NET_PARTS];
+
+// Stops a build whose dollar file lacks a band netRangeOf can read, naming the missing one, so the check runs once per
+// file rather than once per row. who: the site whose pages need the ranges, as the message names it.
+export function checkNetBands(bands, who) {
+  for (const m of NET_BANDS) {
+    if (!Array.isArray(bands?.measures?.[m]?.strata)) throw new RangeError(`${who}: the dollar estimates have no back-test ${m} band (bands.measures.${m}), which the hospital pages' likely ranges need`);
+  }
+}
+
 // The one program that makes a dollar row's whole net (the other two move nothing), or null when none does or more than
 // one does.
 export function soleProgram(row) {

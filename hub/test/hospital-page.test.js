@@ -356,12 +356,16 @@ test('a hospital whose Medicare agreement ended before or during the year carrie
   const before = pick((h) => h.est && h.est.net < 0 && ended(h, '0000-01-01', `${fy - 1}-09-30`), 'an estimated net cut whose agreement ended before the year');
   const during = pick((h) => h.est && h.est.net !== 0 && ended(h, `${fy - 1}-10-01`, `${fy}-09-30`), 'an estimated hospital whose agreement ended during the year');
   const none = pick((h) => !h.est && ended(h, '0000-01-01', `${fy}-09-30`), 'a hospital with no estimate whose agreement ended');
-  const closed = (page) => /<p class="hh__closed">([^<]*)<\/p>/.exec(mainOf(page))?.[1] ?? null;
+  const note = (page) => /<p class="hh__closed">(.*?)<\/p>/.exec(mainOf(page))?.[1] ?? null;
+  const closed = (page) => note(page)?.replace(/<[^>]*>/g, '') ?? null;
   assert.match(closed(render(before)), new RegExp(`under CCN ${before.ccn} as ended on .*, before FY${FY} began\\. .*cut is unlikely to have been collected\\. This site keeps it in its totals\\.$`));
+  // The tail on what the net likely was is a span of its own, for the what-if to hide; the sentence on the end date is not.
+  assert.match(note(render(before)), new RegExp(`began\\. It was not paid under this ID in FY${FY}<span class="hh__closed-tail">, so its estimated cut is unlikely to have been collected</span>\\. This site`));
   assert.match(closed(render(during)), new RegExp(`, during FY${FY}\\. It was not paid under this ID after that, so only part of its estimated (cut|bonus) is likely`));
   const page = render(none);
   assert.ok(page.indexOf('class="hh__closed"') > page.indexOf('class="hh__status"'), 'under its status');
   assert.doesNotMatch(closed(page), /estimated/, 'no estimate to qualify');
+  assert.doesNotMatch(note(page), /hh__closed-tail/, 'and no tail to hide');
   assert.ok(HOSPITALS.filter((h) => ended(h, '0000-01-01', `${fy}-09-30`)).every((h) => closed(render(h)) !== null), 'every such hospital');
   assert.equal(closed(render(pick((h) => h.est && !HUB.master.get(h.ccn).inactive, 'an estimated hospital still in Medicare'))), null, 'and no other');
 });

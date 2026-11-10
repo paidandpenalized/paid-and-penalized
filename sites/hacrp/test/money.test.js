@@ -317,6 +317,9 @@ test('dollars without their ranges are refused, in every build; the data carries
   const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
   // Missing as well as null: a file without the field has no ranges, as one that says so.
   for (const bands of [undefined, null]) assert.throws(() => dollarsData({ ...file, bands }, DATA.hospitals), /no ranges/, String(bands));
+  // A file without a band a net's range can take stops here, once, naming it (engine/js/dollars/ranges.js checkNetBands).
+  const { hvbp: _, ...noHvbp } = file.bands.measures;
+  assert.throws(() => dollarsData({ ...file, bands: { ...file.bands, measures: noHvbp } }, DATA.hospitals), /^RangeError: HACRP: .*no back-test hvbp band/);
   assert.deepEqual(DATA.dollars.backtest, { share: file.bands.highPct - file.bands.lowPct, fy: file.bands.fy });
   assert.equal(rangeShare(BANDS), DATA.dollars.backtest.share);
   for (const row of rows) assert.equal('ranges' in row, row.status === 'estimated', row.ccn);

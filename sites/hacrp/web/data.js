@@ -14,7 +14,7 @@ import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest,
 import { masterByCcn } from '../../../pipeline/master.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
-import { netRangeOf, rangeOf, rangeShare } from './money.js';
+import { checkNetBands, netRangeOf, rangeOf, rangeShare } from './money.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -90,11 +90,12 @@ export function checkDollarsYear(dollars, fy) {
 // `bands`): each estimated row carries its two (`ranges`: the dollars at stake, money.js rangeOf, and the net, netRangeOf,
 // which takes the HAC range where the HAC cut is the whole net), and
 // `backtest` what a range means (the `share` of the back-test's misses a range spans, and the `fy` it was run on). A file
-// without `bands` can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
+// without `bands`, or without a band a net's range can take, can't be shown, so it fails here, in every build. The browser never gets the file: each page carries
 // the slice it draws.
 export function dollarsData(dollars, hospitals) {
   const { fy, national, headline, checks, assumptions, bands } = dollars;
   if (bands == null) throw new RangeError('HACRP: the dollar estimates have no ranges (bands is missing or null); no page can show them');
+  checkNetBands(bands, 'HACRP');
   const rows = new Map(dollars.hospitals.map((r) => [r.ccn, r]));
   for (const h of hospitals) if (!rows.has(h.ccn)) throw new RangeError(`HACRP: CCN ${h.ccn} has no row in the dollar estimates`);
   // The cliff and the what-if plot a drop to an estimated hospital's dollars at stake, so they must be above $0.
