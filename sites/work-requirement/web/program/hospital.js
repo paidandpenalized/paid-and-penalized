@@ -20,7 +20,7 @@ import { textWidth } from '../../../../web/charts/text.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { estTag, fillCopy, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { count, dotList, money, pct, placeText, shortIsoDate } from '../../../../web/render/format.js';
-import { Safe, html } from '../../../../web/render/html.js';
+import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
 import { DEFAULT_SCENARIO, DEFAULT_SKIP_STATE, SCENARIOS } from '../constants.js';
@@ -105,7 +105,8 @@ export function subjectOf(row, chunk) {
 // scenario state, or no cost report), or, in a scenario state, what its cost report shows: a filing error screened out
 // (negative, exceeds), no Medicaid revenue, no patient revenue, no expansion share (no_share), or a loss too small to
 // draw (tiny: under TINY_SHARE of patient revenue in the low case, which step 1's 7-place shares round to nothing).
-// Anything else step 1 leaves out has no reason here to give, so it throws.
+// Anything else step 1 leaves out has no reason here to give, so it throws at the build and in tests; the browser sets
+// s.lenient (client/hospital.js) and gets 'unforeseen', a generic reason, rather than a broken step.
 export const TINY_SHARE = 0.5e-7;
 export function reasonOf(s) {
   if (s.away) return `away_${s.away}`;
@@ -117,18 +118,20 @@ export function reasonOf(s) {
   if (!(r.net_patient_revenue > 0)) return 'no_npr';
   if (!(r.share > 0)) return 'no_share';
   if ((r.medicaid_net_revenue * r.share * s.chunk.declines[SCENARIOS[0]]) / r.net_patient_revenue < TINY_SHARE) return 'tiny';
+  if (s.lenient) return 'unforeseen';
   throw new RangeError(`hospital ${s.ccn}: step 1 leaves it out with no reason step 4 can give`);
 }
 // The stamp a reason gets (copy hStamp_<group>).
 const STAMP = {
   away_inactive: 'away', away_kind: 'away', not_expansion: 'none', no_viii_group: 'none', all_payer: 'notModeled', territory: 'notModeled',
   no_cost_report: 'noReport', negative: 'screened', exceeds: 'screened', no_medicaid: 'noLoss', no_npr: 'noLoss', no_share: 'noLoss', tiny: 'noLoss',
+  unforeseen: 'noLoss', // the browser's fallback only (reasonOf)
 };
-export const REASONS = Object.freeze(Object.keys(STAMP));
+export const REASONS = Object.freeze(Object.keys(STAMP).filter((r) => r !== 'unforeseen'));
 // The reason's sentence.
 const WHY_VALUES = {
   away_inactive: () => ({}), away_kind: () => ({}), all_payer: () => ({}), territory: () => ({}),
-  not_expansion: (s) => ({ state: s.stateName }), no_viii_group: (s) => ({ state: s.stateName }), no_share: () => ({}),
+  not_expansion: (s) => ({ state: s.stateName }), no_viii_group: (s) => ({ state: s.stateName }), no_share: () => ({}), unforeseen: () => ({}),
 };
 export const whyOf = (s, reason) => fill(`hWhy_${reason}`, (WHY_VALUES[reason] ?? ((x) => ({ fy: String(x.chunk.fy) })))(s));
 
@@ -523,8 +526,6 @@ const tableOf = (parts) => ({
   ]),
 });
 
-// A figure's markup with its table's fold (and the CSV inside it) hidden when shown is false: a hospital with no figure.
-const withTable = (fig, shown) => (shown ? fig : new Safe(fig.text.replace('<details class="fig__table">', '<details class="fig__table" hidden>')));
 
 // The step. data: loadMedicaid()'s result; rows: hospitalRows(data); label: its heading; hubCcns: the CCNs with a hub
 // page; chunks: hospChunks's (the generator has them; built here when not given).
@@ -543,7 +544,7 @@ export function hospitalStep({ data, rows, label, hubCcns = new Set(), chunks = 
 <div class="wr-hcard" data-h-card data-h-default="${s.ccn}">${cardHtml(s, view)}</div>
 </div>
 <div class="wr-step__stage">
-${withTable(figure({
+${figure({
     n: 4,
     takeaway: parts.cap,
     chart: chartOf(parts),
@@ -552,7 +553,8 @@ ${withTable(figure({
     claimLevel: 'hypothetical',
     table: tableOf(parts),
     csvName: 'work-requirement-hospital',
-  }), parts.table)}
+    tableHidden: !parts.table,
+  })}
 </div>
 </section>`;
 }

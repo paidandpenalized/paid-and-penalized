@@ -27,6 +27,7 @@ import { CONTOURS, DEFAULT_SCENARIO, MOST_EXPOSED, SCENARIOS } from '../constant
 import { fill, t } from '../copy.js';
 import { lineRow, scenTag } from './chain.js';
 import { scenWord } from './ranges.js';
+import { labelKit, overlap } from './labels.js';
 import { fitText } from './strips.js';
 
 const MIDDLE = SCENARIOS.indexOf(DEFAULT_SCENARIO);
@@ -142,10 +143,7 @@ export const LABEL_FONTS = Object.freeze({
   'chart-axis__title': { size: 11, mono: false },
   'chart-note': { size: 11, mono: false },
 });
-const fontOf = (cls, drawing) => {
-  const f = LABEL_FONTS[cls];
-  return { size: typeof f.size === 'number' ? f.size : f.size[drawing], mono: f.mono };
-};
+const { fontOf } = labelKit(LABEL_FONTS);
 const widthOf = (text, cls, drawing) => {
   const { size, mono } = fontOf(cls, drawing);
   return textWidth(text, size, { mono });
@@ -171,7 +169,6 @@ export const floorLost = (model) => scalesOf(model).lostTop * R_FLOOR ** 2;
 // A share at the fewest places that show it (0.25%, 0.5%, 1%).
 const shortPct = (v) => pct(v, [0, 1, 2].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 2);
 
-const overlap = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
 const hitsCircle = (box, c) => {
   const nx = Math.max(box[0], Math.min(c.x, box[0] + box[2]));
   const ny = Math.max(box[1], Math.min(c.y, box[1] + box[3]));

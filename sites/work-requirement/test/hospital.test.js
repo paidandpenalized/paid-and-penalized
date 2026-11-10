@@ -20,6 +20,8 @@ import {
   sayOf, serverPick, subjectOf,
 } from '../web/program/hospital.js';
 import { hospitalRows } from '../web/program/strips.js';
+import { figure } from '../../../web/charts/figure.js';
+import { html } from '../../../web/render/html.js';
 import { textWidth } from '../../../web/charts/text.js';
 
 const data = loadMedicaid();
@@ -260,6 +262,23 @@ test('the page: step 4 drawn whole without a script, its controls hidden, and th
   assert.match(section, /<details class="fig__table">/, 'a drawn hospital\'s table shows');
   for (const [row, j, cell] of parts.cells) assert.ok(section.includes(`data-value="${cell.value}" data-h="${row} ${j}"`), `${row} ${j}`);
   assertClean(section, 'the step');
+});
+
+test('reasonOf: an unforeseen case throws at the build, and gives the generic reason where the browser says it may', () => {
+  const s = subject(rows.find((r) => r.cls === 'scenario' && r.share));
+  const odd = { ...s, rec: { ...s.rec, drawn: false, scored: true, medicaid_net_revenue: 1e9, net_patient_revenue: 1e9, share: 1 } };
+  assert.throws(() => reasonOf(odd), RangeError);
+  const lenient = { ...odd, lenient: true };
+  assert.equal(reasonOf(lenient), 'unforeseen');
+  assert.equal(figureParts(lenient, { k: MIDDLE, use: 1 }).table, false);
+  assert.ok(cardHtml(lenient, { k: MIDDLE, use: 1 }).text.includes('No scenario figure for this hospital.'));
+  assert.ok(!REASONS.includes('unforeseen'));
+});
+
+test('the figure kit hides a table fold only when asked (step 4 asks for a hospital with no figure)', () => {
+  const args = { n: 4, takeaway: 'x', chart: html`<p>x</p>`, source: 's', table: { columns: [{ name: 'a' }], rows: [['b']] } };
+  assert.match(figure(args).text, /<details class="fig__table"><summary>/);
+  assert.match(figure({ ...args, tableHidden: true }).text, /<details class="fig__table" hidden><summary>/);
 });
 
 // Each label's extent as drawn: x, anchor and its font (HB_FONTS), with the kit's width estimate.

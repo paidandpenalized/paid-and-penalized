@@ -330,6 +330,7 @@ export const COPY = {
   hWhy_no_medicaid: { text: 'Its FY{fy} cost report shows no Medicaid revenue, so the scenario has none to take.', claim: null },
   hWhy_no_npr: { text: 'Its FY{fy} cost report shows no patient revenue to measure a loss against.', claim: null },
   hWhy_no_share: { text: 'Its expansion share is zero, so the scenario takes none of its Medicaid revenue.', claim: null },
+  hWhy_unforeseen: { text: 'No scenario figure for this hospital.', claim: null },
   hWhy_tiny: { text: 'Its FY{fy} cost report shows only a few dollars of Medicaid revenue, too little for a loss to draw.', claim: null },
   hScenHead: { text: 'The scenario, a year', claim: null },
   hRowLost: { text: 'Revenue lost', claim: null },

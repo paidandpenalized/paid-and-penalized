@@ -28,6 +28,7 @@ import { fill, t } from '../copy.js';
 import { scenTag } from './chain.js';
 import { serverPick } from './hospital.js';
 import { scenWord } from './ranges.js';
+import { labelKit, overlap } from './labels.js';
 import { axisTop, fitText, inGroup, placeAt } from './strips.js';
 
 const MIDDLE = SCENARIOS.indexOf(DEFAULT_SCENARIO);
@@ -140,21 +141,7 @@ export const LABEL_FONTS = Object.freeze({
   'chart-axis__label': { size: 11, mono: true },
   'chart-axis__title': { size: 11, mono: false },
 });
-const fontOf = (cls, drawing) => {
-  const f = LABEL_FONTS[cls];
-  return { size: typeof f.size === 'number' ? f.size : f.size[drawing], mono: f.mono };
-};
-
-// A label: its class, text, anchor point and box ([x, top, w, h]; a text's box spans its size above the baseline less a
-// fifth, and a fifth below).
-function labelAt(cls, text, x, y, anchor, drawing) {
-  const { size, mono } = fontOf(cls, drawing);
-  const w = textWidth(text, size, { mono });
-  const x0 = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
-  return { cls, text, x, y, anchor, box: [x0, y - size * 0.8, w, size] };
-}
-
-const overlap = (a, b) => a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
+const { fontOf, labelAt } = labelKit(LABEL_FONTS);
 
 // A share at the fewest places that show it (0.5%, 0.25%, 0.01%).
 const shortPct = (v) => pct(v, [0, 1, 2, 3].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 3);
@@ -253,7 +240,11 @@ export function placed(model, layout, ccn) {
   const taken = [fixed.lineLabel.box];
   const ok = (l) => l.box[1] >= plot.y0 + 1 && l.box[1] + l.box[3] <= plot.y1 - 1 && l.box[0] >= plot.x0 + 1 && l.box[0] + l.box[2] <= plot.x1 - 1
     && !covers(l.box, mark, strip) && !taken.some((b) => overlap(b, l.box));
-  const choose = (cands) => cands.find((c) => c.every(ok)) ?? cands[0];
+  const choose = (cands) => {
+    const fit = cands.find((c) => c.every(ok));
+    if (!fit) throw new RangeError(`exposed-on-both: no clear place for a label (${drawing}, case ${k}, use ${use})`);
+    return fit;
+  };
   const countText = fill('bCount', { n: count(n) });
   const subText = use === 1 ? fill('bCountSub', { scenario: caseWord(k) }) : fill('bCountSubUse', { scenario: caseWord(k), use: pct(use, 0) });
   const countY = plot.y0 + (wide ? 20 : 17);
@@ -413,18 +404,18 @@ export const namedCaption = (k) => fill('bNamedCaption', { scenario: caseWord(k)
 // a class the script hides until "Show all".
 export const namedBody = (model, k, use, list = exposed(model, k, use)) => html`${list.map((p, i) => html`<tr${i >= NAMED_FIRST ? html` class="wr-named__more"` : ''} data-ccn="${p.ccn}"><td class="num">${count(i + 1)}</td><th scope="row">${nameOf(p)}<small>${fill('stHitPlace', { place: placeText({ city: p.city, state: p.state }), kind: kindOf(p) })}</small></th><td class="num">${pct(-xOf(p, k, use), 2)}</td><td class="num">${money(-p.lost[k] * use)}</td><td class="num">${money(-p.pen)}</td><td class="num">${pct(-p.y, 3)}</td></tr>`)}`;
 
-function named(model, k, use) {
-  const n = exposed(model, k, use).length;
+function named(model, k, use, list = exposed(model, k, use)) {
+  const n = list.length;
   const pfy = String(model.penaltyFy);
   return html`<details class="wr-named" data-b-named>
-<summary class="wr-named__sum"><span data-b-sum>${namedSummary(model, k, use)}</span></summary>
+<summary class="wr-named__sum"><span data-b-sum>${namedSummary(model, k, use, list)}</span></summary>
 <p class="small muted wr-named__lead">${t('bNamedLead')}</p>
 <div class="wr-named__wrap">
 <table class="gb wr-named__t">
 <caption class="vh" data-b-cap>${namedCaption(k)}</caption>
 <thead><tr><th scope="col" rowspan="2" class="num">${t('bColNo')}</th><th scope="col" rowspan="2">${t('bColHosp')}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${t('bGrpMedicaid')} ${scenTag(model.fy)}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${fill('bGrpMedicare', { pfy })} ${estimate()}</th></tr>
 <tr><th scope="col" class="num">${t('bColShareA')}</th><th scope="col" class="num">${t('bColLostA')}</th><th scope="col" class="num">${t('bColPenA')}</th><th scope="col" class="num">${t('bColShareA')}</th></tr></thead>
-<tbody data-b-rows>${namedBody(model, k, use)}</tbody>
+<tbody data-b-rows>${namedBody(model, k, use, list)}</tbody>
 </table>
 </div>
 <p class="wr-named__all"><button type="button" class="wr-hrand" data-b-all hidden>${fill('bShowAll', { n: count(n) })}</button></p>

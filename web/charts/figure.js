@@ -110,7 +110,7 @@ export const imageOf = (svg, alt, fit) => new Safe(html`<svg ${alt === null ? ht
 export const imagePair = ({ svg, svgWide }, alt) => html`${imageOf(svg, alt, 'narrow')}
 ${imageOf(svgWide, alt, 'wide')}`;
 
-export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
+export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null, tableHidden = false }) {
   checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key });
   const { columns, rows } = table;
   const cells = rows.map((row) => row.map((c, j) => cellOf(c, columns[j].numeric)));
@@ -124,7 +124,7 @@ ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span c
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
-<details class="fig__table"><summary>${COPY.showTable}</summary>
+<details class="fig__table"${tableHidden ? html` hidden` : ''}><summary>${COPY.showTable}</summary>
 ${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap" data-sorted-up="${COPY.sortedUp}" data-sorted-down="${COPY.sortedDown}">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
 <tbody>${cells.map((row) => html`<tr>${row.map((c, j) => tableCell(c, columns[j], j))}</tr>`)}</tbody>

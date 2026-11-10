@@ -106,7 +106,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
       }
     }
     if (mine !== ticket) return;
-    const s = subjectOf(row, chunk);
+    const s = { ...subjectOf(row, chunk), lenient: true };
     render(s, store.get());
     if (speak) say(sayOf(s, view(store.get())));
   }
