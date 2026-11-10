@@ -1,6 +1,7 @@
 // Step 1, the finding: the three strips (one dot per drawn hospital per strip, the medians where the shares put them), the
 // three ranges from the national roll-up, the group chips' readout in the copy's words, and the page's hospital from
-// ?h= (a well-formed CCN in the file, else the random default outside Virginia).
+// ?h= (a well-formed CCN in the file, else the random default outside Virginia). The stage head's controls and step 2:
+// how.test.js.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -16,6 +17,8 @@ import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import { stripWords } from '../web/program/finding.js';
+import { howModel } from '../web/program/how.js';
+import { serverTotals } from '../web/program/model.js';
 import { axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout } from '../web/program/strips.js';
 
 const data = loadMedicaid();
@@ -53,7 +56,10 @@ test('the groups: each chip\'s test counts the hospitals the file\'s roll-up of 
 });
 
 test('the asset round-trips the rows and the axis', () => {
-  const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data) }))));
+  const extra = { totals: serverTotals(data), how: howModel(data) };
+  const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data), ...extra }))));
+  assert.deepEqual(back.totals, extra.totals);
+  assert.deepEqual(back.how, extra.how);
   assert.equal(back.top, top);
   assert.deepEqual(back.rows, rows);
   assert.deepEqual(back.words, stripWords(data));
@@ -165,7 +171,7 @@ test('the random default is drawn and outside Virginia', () => {
 test('the page top: the title and the dek in step 1\'s words column, before the chips', () => {
   const head = section.indexOf('<h1');
   assert.ok(head > 0 && head < section.indexOf('wr-chips'));
-  assert.match(page, /<div class="wr-stage__head" data-stage-head><\/div>/, 'the stage head, empty until the controls arrive');
+  assert.match(page, /<div class="wr-stage__head" data-stage-head hidden>/, 'the stage head, hidden until the script shows its controls');
   assert.match(page, /<form class="omni" id="omni"[^>]* data-src="\/assets\/wr-strips\.test\.json"/, 'the masthead Find over the strips asset');
 });
 

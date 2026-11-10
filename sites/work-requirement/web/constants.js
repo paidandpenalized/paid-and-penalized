@@ -25,3 +25,7 @@ export const REF_SHARE = 0.01;
 
 // The state a page's random hospital is never drawn from (the site's rule for a default hospital: client/find.js).
 export const DEFAULT_SKIP_STATE = 'VA';
+
+// The use-rate what-if's stop (the slider moves in steps of this many hundredths; its ends and default are the file's
+// params.use_min, use_max and use_default). A control's step, not a method constant.
+export const USE_STEP = 0.05;

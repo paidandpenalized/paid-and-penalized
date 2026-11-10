@@ -9,6 +9,8 @@ import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';
 import { programPage } from './pages/program.js';
 import { stripWords } from './program/finding.js';
+import { howModel } from './program/how.js';
+import { baseAsset, serverTotals } from './program/model.js';
 import { axisTop, hospitalRows, stripsAsset } from './program/strips.js';
 
 // ctx: the build's context (pipeline/site/context.js). data: loadMedicaid()'s result (tests pass their own); released:
@@ -18,15 +20,18 @@ export function generateWr(ctx, { data = loadMedicaid(), released = SITE.sites['
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
   const rows = hospitalRows(data);
-  const stripsUrl = ctx.asset('wr-strips', 'json', JSON.stringify(stripsAsset(rows, { top: axisTop(rows, data.params.use_max), words: stripWords(data) })));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl }) });
+  const stripsUrl = ctx.asset('wr-strips', 'json', JSON.stringify(stripsAsset(rows, {
+    top: axisTop(rows, data.params.use_max), words: stripWords(data), totals: serverTotals(data), how: howModel(data),
+  })));
+  const baseUrl = ctx.asset('wr-base', 'json', JSON.stringify(baseAsset(data)));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl }) });
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ data, robots, assets }) });
   log(`Work requirement: 2 pages under ${PROGRAM_PATH}, ${data.hospitals.size} hospitals in the FY${data.meta.fy} file`);
   return { updated: { cmsReleased: data.meta.cmsReleased, changed: data.meta.changed } };
 }
 
 // The work-requirement site's build manifest. One browser script, the program page's (client/page.js: the strips, the
-// chips and the bar's Find).
+// chips, the bar's Find, the scenario switch and the use-rate what-if, and step 2's chain).
 export const WR = {
   id: 'work-requirement',
   entries: { 'wr-page': 'sites/work-requirement/client/page.js' },

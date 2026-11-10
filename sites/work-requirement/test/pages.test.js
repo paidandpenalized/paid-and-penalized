@@ -1,5 +1,6 @@
 // The work-requirement site's skeleton: its data loader, its manifest and generator (two pages, unreleased), the
-// program page's head and five anchored steps under the section menu (step 1's body: finding.test.js), and the Methods
+// program page's head and five anchored steps under the section menu (step 1's body: finding.test.js; step 2's:
+// how.test.js), and the Methods
 // page's shell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -81,13 +82,13 @@ test('the program page: its title and dek, the Work requirement tab current, the
   assert.deepEqual(SECTIONS, ['finding', 'how', 'states', 'hospital', 'both']);
 });
 
-test('the program page: each of the five steps is an anchored section with its heading; those after the finding empty until drawn', () => {
+test('the program page: each of the five steps is an anchored section with its heading; those after the second empty until drawn', () => {
   for (const id of SECTIONS) {
     const section = new RegExp(`<section class="step[^"]*" id="${id}" aria-labelledby="${id}-h">[\\s\\S]*?<h2[^>]* id="${id}-h">([^<]+)<`).exec(program);
     assert.ok(section, id);
     assert.ok(section[1].length > 0, `${id}: a heading`);
   }
-  for (const id of SECTIONS.slice(1)) assert.match(program, new RegExp(`<section class="step" id="${id}" aria-labelledby="${id}-h">\\s*<h2 id="${id}-h">[^<]+</h2>\\s*</section>`), id);
+  for (const id of SECTIONS.slice(2)) assert.match(program, new RegExp(`<section class="step" id="${id}" aria-labelledby="${id}-h">\\s*<h2 id="${id}-h">[^<]+</h2>\\s*</section>`), id);
   // The steps in order.
   const at = SECTIONS.map((id) => program.indexOf(`id="${id}"`));
   assert.deepEqual([...at].sort((a, b) => a - b), at);

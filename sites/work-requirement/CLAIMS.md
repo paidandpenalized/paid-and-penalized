@@ -16,6 +16,11 @@ A claim marked `unverified` may not be used in copy.
 | WR-02 | The requirement applies to adults in Medicaid's expansion group (eligible under section 1902(a)(10)(A)(i)(VIII) of the Social Security Act, or under a waiver giving equivalent coverage), other than the individuals the law excludes. | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "an individual (other than a specified excluded individual" … "who is eligible to enroll (or is enrolled) under the State plan under subsection (a)(10)(A)(i)(VIII)" | 2026-11-10 |
 | WR-03 | The Urban Institute and the Robert Wood Johnson Foundation project that the work requirement alone would cut average monthly Medicaid expansion enrollment in 2028 by 3.0 million under high state mitigation, 4.9 million under medium and 7.0 million under low. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "We project coverage losses of between 3.0 and 7.0 million expansion enrollees because of work requirements alone" … "4.9 million under the medium mitigation scenario" | 2026-11-10 |
 | WR-04 | CMS's rule on the community engagement requirement projects that it will reduce Medicaid enrollment by 2.3 million in fiscal year 2027 and by 3.1 to 3.3 million in each later year. | https://www.federalregister.gov/documents/2026/06/03/2026-11094/medicaid-program-community-engagement-requirement-for-certain-individuals | "enrollment would be reduced by 2.3 million individuals in FY 2027" … "by between 3.1 to 3.3 million individuals in subsequent years" | 2026-11-10 |
+| WR-05 | Urban Institute and RWJF's mitigation scenarios are sets of state implementation and policy choices meant to keep Medicaid coverage for people who meet the work requirement or are exempt from it. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "implementation and policy choices" … "to maintain Medicaid coverage among people who are meeting work requirements or exempt from them" | 2026-11-10 |
+| WR-06 | Urban's high mitigation scenario assumes extensive automatic data matching for redeterminations and for checking compliance, the minimum work the law allows, and broader definitions of the exemptions. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "extensive automatic data-matching for eligibility redeterminations and for assessing compliance with work requirements" … "the minimum allowable work effort and broader definitions of exemptions" | 2026-11-10 |
+| WR-07 | Urban's low mitigation scenario assumes less automatic data matching, so more enrollees must act to keep coverage, with more work required and narrower definitions of the exemptions. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "less automatic data-matching" … "require that more enrollees take action to maintain coverage" … "greater levels of work effort and narrower definitions of exemptions" | 2026-11-10 |
+| WR-08 | In Urban's medium mitigation scenario, the scope and effectiveness of data matching and the exemptions fall between the high and low scenarios. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "the scope and effectiveness of automatic data-matching and definitions of exemptions are between the high and low mitigation scenarios" | 2026-11-10 |
+| WR-09 | Urban assumes every state makes the same implementation choices within a scenario, so its state estimates differ only with the makeup of each state's expansion enrollees. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "uniform implementation choices across states within each scenario" … "differences in the composition of each state's Medicaid expansion enrollees" | 2026-11-10 |
 
 ## Notes on the sources
 
@@ -50,6 +55,12 @@ A claim marked `unverified` may not be used in copy.
   FY2027 is a partial year (the requirement starts in its second quarter). The later years' 3.1 to 3.3 million sit at
   about the low case's 3.0 million (WR-03), which is why the strips' small note sits on the low strip; the page cites
   CMS's count only.
+
+- **WR-05 to WR-09.** The same report (the PDF whose SHA-256 is the manifest's `urban-2026-a2-wr` `derivedFrom.sha256`,
+  downloaded again 2026-11-10 and matched). WR-05 to WR-08: the executive summary's definitions of the three scenarios,
+  page vi (repeated in the methods section, page 20). WR-09: the methods section, page 21, where the one exception is
+  named: states' sharing of SNAP work-requirement data, which Urban models from each state's integration of the two
+  systems. The page's step 2 paraphrases these; it quotes none.
 
 ## Link check (2026-11-10)
 
