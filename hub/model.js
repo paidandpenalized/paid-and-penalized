@@ -120,6 +120,11 @@ export function hacCounts(hospitals) {
   return c;
 }
 
+// Whether a state's line on the map (stateTotals) counts the hospital: every Maryland hospital (its line says how many
+// the all-payer model pays), and elsewhere each with an estimate. The family search's state entries count the same way,
+// so the number under a state in the search is the one its line on the map then says.
+export const countedOnMap = (h) => h.state === 'MD' || Boolean(h.est);
+
 // Each state's totals over its hospitals with an estimate, by postal code in order: `n` hospitals, their pay (`total`),
 // their `net` dollars, `share` = net / total, and `cutN` the hospitals whose net is a cut. Maryland (all-payer model,
 // no estimates) is `{ state: 'MD', notInPrograms: true, n }` with the count of its hospitals. A hospital that cannot be
