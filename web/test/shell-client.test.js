@@ -395,6 +395,38 @@ test('follow again (a pick on the front page): the chip names the new hospital a
   assert.deepEqual(hrefs(p.tabs), ['/hospital/99000a/', ...SITE.programs.map((x) => own[x.id] ?? `${x.path}?h=99000A`)], 'not the first hospital\'s pages');
 });
 
+test('follow a pick the hub can\'t name (FOLLOW_EVENT, picked): the chip is emptied and hidden, every link back at the server\'s address', async () => {
+  const p = page({ hospital: null });
+  const load = async () => ({ fy: 2026, byCcn: ROWS });
+  const d = doc();
+  const at = (search, picked) => follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search, here: `/work-requirement/${search}`, load, doc: d, picked });
+  await at('?h=990001', true);
+  assert.equal(p.chip.hidden, false);
+  assert.notDeepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)]);
+  await at('?h=990002', true);
+  assert.equal(p.chip.hidden, true, 'no chip naming the hospital picked before');
+  assert.deepEqual(p.chip.children, []);
+  assert.deepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)], 'every tab at the server\'s href');
+  assert.equal(p.wordmark.getAttribute('href'), '/');
+  // A known pick after it follows again, and a failed asset on a pick stops the follow too.
+  await at('?h=99000A', true);
+  assert.equal(p.chip.children[1].children[0].textContent, 'Sample Medical');
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990001', here: '/work-requirement/?h=990001', load: async () => { throw new Error('down'); }, doc: d, picked: true });
+  assert.equal(p.chip.hidden, true);
+  assert.deepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)]);
+});
+
+test('follow on arrival (not a pick): an unknown ?h= after a followed hospital leaves the header as it was', async () => {
+  const p = page({ hospital: null });
+  const load = async () => ({ fy: 2026, byCcn: ROWS });
+  const d = doc();
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990001', here: '/?h=990001', load, doc: d });
+  const before = hrefs(p.tabs);
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990002', here: '/?h=990002', load, doc: d });
+  assert.equal(p.chip.hidden, false);
+  assert.deepEqual(hrefs(p.tabs), before);
+});
+
 test('rewriteLinks: only the front page and a program\'s folder are rewritten; another link, an external one and a missing tab are left', () => {
   const tabs = ['/', '/hvbp/', '/hvbp/?h=990001', '/somewhere/else/', 'https://example.org/hvbp/', null].map((href) => {
     const a = el('a');

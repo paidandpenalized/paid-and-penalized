@@ -100,25 +100,40 @@ function serverHref(a) {
   return href;
 }
 
+// Stops following in the header: the chip emptied and hidden, and each link the follow rewrote back at the address the
+// server wrote (data-home; a link never rewritten still has it).
+export function unfollow({ chip, wordmark, tabs }) {
+  chip.replaceChildren();
+  chip.hidden = true;
+  for (const a of [...tabs, wordmark]) {
+    const home = a?.getAttribute('data-home') ?? null;
+    if (home !== null) a.setAttribute('href', home);
+  }
+}
+
 // What the header does about a followed hospital. On a hospital's page (hospital: the CCN its header names) nothing is
 // fetched and a ?h= is ignored; its folder tabs carry it. Elsewhere a ?h= that is a well-formed CCN is looked up in the
-// hub's asset (load(), fetched only then) and, when the asset has it, the chip is filled and the links rewritten. A value
-// that is malformed, unknown or markup, or an asset that will not load, changes nothing and says nothing.
-export async function follow({ hospital, chip, wordmark, tabs, search, here, load, doc }) {
+// hub's asset (load(), fetched only then) and, when the asset has it, the chip is filled and the links rewritten. On
+// arrival, a value that is malformed, unknown or markup, or an asset that will not load, changes nothing and says
+// nothing. picked: the page picked this hospital in place (FOLLOW_EVENT); one the header can't name (the work
+// requirement's file holds hospitals the hub's asset doesn't) then stops the follow (unfollow), so the header never
+// goes on naming the hospital picked before it.
+export async function follow({ hospital, chip, wordmark, tabs, search, here, load, doc, picked = false }) {
   if (hospital) {
     if (CCN.test(hospital)) rewriteLinks({ tabs, wordmark }, hospital);
     return;
   }
+  const drop = () => picked && unfollow({ chip, wordmark, tabs });
   const ccn = followedCcn(search);
-  if (ccn === null) return;
+  if (ccn === null) return drop();
   let asset;
   try {
     asset = await load();
   } catch {
-    return;
+    return drop();
   }
   const row = asset.byCcn.get(ccn);
-  if (!row) return;
+  if (!row) return drop();
   fillChip({ chip, doc, row, fy: asset.fy, stop: withoutFollow(here) });
   rewriteLinks({ tabs, wordmark }, ccn, row);
 }
@@ -214,7 +229,7 @@ function start() {
   if (chip) {
     // The hospital the address follows, now, and again whenever the page writes another into its address (FOLLOW_EVENT:
     // the front page's Find yours), so a pick follows at once what a reload would.
-    const followHere = (search) => follow({
+    const followHere = (search, picked = false) => follow({
       hospital: header.dataset.hospital ?? null,
       chip,
       wordmark: header.querySelector('a.wordmark'),
@@ -223,10 +238,11 @@ function start() {
       here: siteAddress(window.location),
       load: () => loadHubAsset(header.dataset.hubSrc),
       doc: document,
+      picked,
     });
     followHere(window.location.search);
     // The event's CCN, as a ?h= would give it (followedCcn checks it as it checks the address's).
-    document.addEventListener(FOLLOW_EVENT, (e) => followHere(`?h=${encodeURIComponent(String(e.detail?.ccn ?? ''))}`));
+    document.addEventListener(FOLLOW_EVENT, (e) => followHere(`?h=${encodeURIComponent(String(e.detail?.ccn ?? ''))}`, true));
   }
 }
 
