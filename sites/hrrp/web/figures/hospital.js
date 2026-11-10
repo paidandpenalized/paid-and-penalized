@@ -70,8 +70,9 @@ export function rulersFigure(d, { view, n }) {
     const words = rowWords(row);
     const cls = ['rul__row', row.over && 'is-over', !row.measured && 'is-none'].filter(Boolean).join(' ');
     const none = html`<span aria-hidden="true">${t('cellNone')}</span><span class="vh">${t('rowNotCounted')}</span>`;
+    // CMS's ratio wherever its file prints one, as Worksheet R shows it; the gap cell says a condition under 25 cases is not counted.
     const cells = [
-      row.measured ? ratio(row.err) : none,
+      row.published === null ? none : ratio(row.published),
       ratio(row.med),
       html`<span class="${row.over ? 'rul__gap' : ''}">${gapCell(row)}</span>`,
       perWords(row),
@@ -104,7 +105,7 @@ ${rows}
       columns: [{ name: t('colCondition') }, { name: t('colCases'), numeric: true }, { name: t('colRatio'), numeric: true }, { name: t('colMedian'), numeric: true },
         { name: t('colGap'), numeric: true }, { name: fill('colPer', { step: STEP }), numeric: true }, { name: t('colCut'), numeric: true }],
       rows: d.rows.map((row) => [
-        row.short, num(fmtInt(row.n), row.n), num4(row.err), num4(row.med),
+        row.short, num(fmtInt(row.n), row.n), num4(row.published), num4(row.med),
         row.gap === null ? num(t('rowNotCounted'), null) : num(gapText(row.gap), roundTo(row.gap, 6)),
         row.per === null ? num(perWords(row), null) : num(roundedDollars(row.per), r2(row.per)),
         row.cut === null ? num(t('cellNone'), null) : num(roundedDollars(row.cut), r2(row.cut)),
