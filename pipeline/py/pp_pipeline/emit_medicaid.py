@@ -128,7 +128,9 @@ def read_upstream(manifest):
     return year, hcris_doc, master, dollars
 
 
-def build_from_pins(built_at):
+def records_from_pins():
+    """(manifest, HCRIS year, HCRIS file, master, dollars, states, hospital records) from the pins and the upstream
+    emitted files; each state's non-maternity ratio is set on its entry."""
     manifest = read_manifest()
     year, hcris_doc, master, dollars = read_upstream(manifest)
     states = build.state_table(*(inputs.read_csv(p) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
@@ -140,6 +142,11 @@ def build_from_pins(built_at):
     for r in records:  # each state's ratio, as hospital_records set it, on its entry
         if r["state"] in states and r["state_ratio"] is not None:
             states[r["state"]]["nonmaternity_ratio"] = r["state_ratio"]
+    return manifest, year, hcris_doc, master, dollars, states, records
+
+
+def build_from_pins(built_at):
+    manifest, year, hcris_doc, master, dollars, states, records = records_from_pins()
     national, by_state, sensitivities, groups = build.results(records, states)
     # The pins this file depends on: the state inputs, then those the upstream emitted files were built from, so a
     # re-pin of any of them makes this file stale (require_current).
