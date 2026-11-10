@@ -702,6 +702,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__stp:hover { background: var(--paper-2); }
 .hh__fin:focus-visible, .hh__stp:focus-visible, .hh__lnk:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .hh__ctl .hh__lnk { margin-left: 6px; }
+/* A refused typed factor: a line of its own under the controls, ruled in the penalty ink as the program sites' are. */
+.hh__refused { flex-basis: 100%; max-width: none; margin: 0; padding-left: 8px; border-left: 3px solid var(--pen); color: var(--ink); font-size: inherit; font-weight: 600; line-height: 1.4; }
 
 /* Once anything changes: the dashed Hypothetical banner sticks under the peer row (a row of its own; on a phone it takes
    the peer row's place, below), the "Reader-made scenario" line under it scrolls with the page, the stamp reads "What if"

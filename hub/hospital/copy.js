@@ -146,6 +146,8 @@ export const COPY = typesetCopy({
   wiFactorFor: '{program} payment factor, what-if',
   wiLower: 'Lower the {program} factor',
   wiRaise: 'Raise the {program} factor',
+  // Under a factor field whose typed value was refused (the field shows the factor in force again).
+  wiInvalid: 'Enter a factor from {min} to {max}.',
   wiMedian: 'Use peer median',
   wiHacGroup: 'Hospital-acquired conditions, what-if',
   wiHacCut: '{rate} cut',

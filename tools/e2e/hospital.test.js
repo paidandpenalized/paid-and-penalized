@@ -238,6 +238,31 @@ for (const width of [390, 1280]) {
         await page.waitForTimeout(SETTLED_MS);
         assert.equal((await hypo(page)).banner, false, 'Escape in the field resets');
         assert.equal(await field.inputValue(), shown, 'the field shows the actual factor again');
+        // A typed comma: en-US Chrome and WebKit read "0,99" as 99, past the field's end. It is refused, not set to
+        // the end: nothing changes, the field shows the factor in force again, and a line under it says what it takes.
+        const refusal = () => field.evaluate((el) => {
+          const line = document.getElementById(`${el.id}-error`);
+          return { shown: line?.checkVisibility() ?? false, text: line?.textContent ?? '', invalid: el.getAttribute('aria-invalid'), described: el.getAttribute('aria-describedby') };
+        });
+        assert.deepEqual(await refusal().then((s) => s.shown), false, 'no refusal line before an entry');
+        await field.click();
+        await field.press('ControlOrMeta+a');
+        await page.keyboard.type('0,99');
+        await field.press('Tab');
+        await page.waitForTimeout(SETTLED_MS);
+        assert.equal((await hypo(page)).banner, false, 'a refused entry changes nothing');
+        assert.equal(await field.inputValue(), shown, 'the field shows the factor in force');
+        const refused = await refusal();
+        assert.equal(refused.shown, true, 'the refusal line shows');
+        assert.match(refused.text, /^Enter a factor from \d\.\d{4} to \d\.\d{4}\.$/);
+        assert.deepEqual([refused.invalid, refused.described], ['true', await field.evaluate((el) => `${el.id}-error`)]);
+        await field.fill(shown === '0.9800' ? '0.9900' : '0.9800');
+        await field.press('Enter');
+        await page.waitForTimeout(SETTLED_MS);
+        assert.equal((await hypo(page)).banner, true, 'a valid factor after it is taken');
+        assert.deepEqual(await refusal().then((s) => [s.shown, s.invalid]), [false, null], 'and the refusal line goes');
+        await field.press('Escape');
+        await page.waitForTimeout(SETTLED_MS);
       }
       await audit(page, `the hospital page at ${width} px after a what-if`);
       await assertQuiet(seen, 'the hospital page\'s what-if');

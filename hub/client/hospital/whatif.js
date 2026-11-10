@@ -36,7 +36,7 @@ import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
 import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { holdingAxis, stripAxis } from '../scale.js';
-import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash, typedOk } from './whatif-state.js';
 import { node } from './dom.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
@@ -172,7 +172,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     const adjustable = id === 'hacrp' || rng[id];
     if (!row || !adjustable) continue;
     const program = programById(id).name;
-    const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, cuts: [], editing: false };
+    const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, error: null, cuts: [], editing: false };
     const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': ROW_KEY[id] }, [fill('wiMedian')]);
     let kids;
     if (id === 'hacrp') {
@@ -185,10 +185,11 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       const fid = `wi-f-${id}`;
       const [lo, hi] = ends(id);
       r.input = node('input', { id: fid, type: 'number', inputmode: 'decimal', min: factor(lo), max: factor(hi), step: '0.0005', class: 'hh__fin' });
+      r.error = node('p', { class: 'hh__refused', id: `${fid}-error`, hidden: '' }, [fill('wiInvalid', { min: factor(lo), max: factor(hi) })]);
       const step = (dir, label) => node('button', { type: 'button', class: 'hh__stp', 'data-step': dir, 'aria-label': fill(label, { program }), 'aria-controls': fid }, [dir < 0 ? '−' : '+']);
       kids = [
         node('label', { for: fid }, [fill('wiFactor'), node('span', { class: 'vh' }, [`, ${fill('wiFactorFor', { program })}`])]),
-        step(-1, 'wiLower'), r.input, step(1, 'wiRaise'), median,
+        step(-1, 'wiLower'), r.input, step(1, 'wiRaise'), median, r.error,
       ];
     }
     const ctl = node('div', { class: 'hh__ctl' }, kids);
@@ -205,10 +206,16 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     r.input?.addEventListener('input', () => {
       r.editing = true;
     });
+    // A typed factor past the field's ends (or none) is refused: nothing changes, the field shows the factor in force
+    // again, and a line under it says what the field takes until the next change.
     r.input?.addEventListener('change', () => {
       r.editing = false;
-      apply({ type: 'set', id: ROW_KEY[id], value: numberOrNaN(r.input.value) });
-      r.input.value = factor(state[ROW_KEY[id]]);
+      const key = ROW_KEY[id];
+      const value = numberOrNaN(r.input.value);
+      const ok = typedOk(h, { vbpMax }, key, value);
+      if (ok) apply({ type: 'set', id: key, value });
+      r.input.value = factor(state[key]);
+      refuse(r, !ok);
     });
     r.input?.addEventListener('blur', () => {
       r.editing = false;
@@ -397,7 +404,10 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
         r.pill.textContent = rowWord(fill, id, v);
       }
       if (r.rv) was(r.rv, struck(v, h.est[key]));
-      if (r.input && !r.editing) r.input.value = factor(state[key]);
+      if (r.input && !r.editing) {
+        r.input.value = factor(state[key]);
+        refuse(r, false);
+      }
       for (const b of r.cuts) b.setAttribute('aria-pressed', String((b.dataset.cut === '1') === state.hac));
       const handle = strips.handle(id);
       if (handle) {
@@ -467,6 +477,18 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       history.replaceState(null, '', `${location.pathname}${location.search}${next}`);
     } catch {
       // Some browsers rate-limit replaceState; the next change writes the fragment again.
+    }
+  }
+
+  // A factor field's refusal line shown (with the field marked invalid and described by it) or hidden.
+  function refuse(r, refused) {
+    r.error.hidden = !refused;
+    if (refused) {
+      r.input.setAttribute('aria-invalid', 'true');
+      r.input.setAttribute('aria-describedby', r.error.id);
+    } else {
+      r.input.removeAttribute('aria-invalid');
+      r.input.removeAttribute('aria-describedby');
     }
   }
 
