@@ -8,24 +8,30 @@
 //   step 3: the states' figure, the selected state's headline and card, and the state table's numbers (client/states.js);
 //   step 4: the page's hospital's record card and Figure 4 (client/hospital.js);
 //   step 5: Figure 5, the corner's range and dollars, where the page's hospital sits and the named table (client/both.js);
-//   the stage head: the scenario switch and the use-rate what-if (client/whatif.js).
+//   the stage head: the scenario switch and the use-rate what-if (client/whatif.js);
+//   Figure 1's table: its bins' counts and medians at the use rate (rebin).
+// From 900px the steps run as a scroll story (client/stage.js, mounted at once: it needs no data), and once the data has
+// come its field (client/field.js) flies the dots between the dot steps.
 // A later step joins the same way: store.subscribe((state, changed) => …), redrawing when the keys it reads change.
 // Without the script, or without the asset, the page stays as the server drew it (the middle case at the default use
 // rate), and the chips, the Find and the controls stay hidden.
 import { setFollowed } from '../../../web/client/follow.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
+import { count, pct } from '../../../web/render/format.js';
 import { fill } from '../web/copy.js';
 import { bothModel, decodeBoth } from '../web/program/both.js';
 import { awayRows, randomPick } from '../web/program/hospital.js';
 import { byCase, countsText, rangesInner, statusText } from '../web/program/ranges.js';
 import { decodeStates } from '../web/program/states.js';
-import { decodeStrips, drawn, stripsAlt, stripsBody, stripsLayout } from '../web/program/strips.js';
+import { binsOf, decodeStrips, drawn, stripsAlt, stripsBody, stripsLayout } from '../web/program/strips.js';
 import { mountBoth } from './both.js';
 import { mountChips } from './chips.js';
+import { mountField } from './field.js';
 import { defaultPool, mountFind, pageHospital } from './find.js';
 import { mountHospital } from './hospital.js';
 import { mountHow } from './how.js';
 import { createStore } from './state.js';
+import { mountStage } from './stage.js';
 import { mountStates } from './states.js';
 import { mountWhatif } from './whatif.js';
 
@@ -71,8 +77,12 @@ function mountStrips(stage, { data, store }) {
     drawOne(shown());
   };
   wide.addEventListener('change', () => stale.has(shown()) && drawOne(shown()));
+  const bins = [...stage.querySelectorAll('[data-bin]')].map((cell) => [cell, ...cell.dataset.bin.split(' ')]);
   store.subscribe((state, changed) => {
-    if (changed.has('use')) for (const svg of svgs.values()) svg.setAttribute('aria-label', stripsAlt(items, state.use));
+    if (changed.has('use')) {
+      for (const svg of svgs.values()) svg.setAttribute('aria-label', stripsAlt(items, state.use));
+      rebin(bins, binsOf(items, data.top, state.use));
+    }
     if (changed.has('scenario') || changed.has('use')) layouts = new Map();
     if (changed.has('hospital')) sayUndrawn(state.hospital);
     if (changed.has('scenario') || changed.has('use') || changed.has('hospital') || changed.has('totals')) draw();
@@ -82,6 +92,7 @@ function mountStrips(stage, { data, store }) {
     items,
     at,
     draw,
+    only: () => local.group?.test ?? null,
     setGroup(group) {
       local.group = group;
       layouts = new Map();
@@ -92,6 +103,16 @@ function mountStrips(stage, { data, store }) {
       draw();
     },
   };
+}
+
+// Figure 1's table at the use rate: each cell (data-bin "<bin> <case index>", "m" for the median) gets its count or
+// median, its text as the build writes it and its raw value for the sort and the CSV.
+export function rebin(cells, { counts, medians }) {
+  for (const [cell, b, k] of cells) {
+    const v = b === 'm' ? medians[Number(k)] : counts[Number(k)][Number(b)];
+    cell.textContent = b === 'm' ? pct(v, 2) : count(v);
+    cell.dataset.value = String(v);
+  }
 }
 
 // Step 1's ranges and counts line, rewritten when the case or the totals move.
@@ -120,7 +141,7 @@ function liveLine(el) {
   };
 }
 
-async function start(stage) {
+async function start(stage, story) {
   let data;
   let states;
   let both;
@@ -182,7 +203,21 @@ async function start(stage) {
   const head = stage.querySelector('[data-stage-head]');
   if (head && stage.dataset.base) mountWhatif(head, { store, server: data.totals, baseUrl: stage.dataset.base });
   strips.draw();
+  // The field flies the dots between the dot steps, drawn inside the stage's column under its head.
+  if (story) {
+    story.useField(mountField(stage.closest('.wr-scrolly'), {
+      store, items: strips.items, top: data.top, states, both, only: strips.only,
+      clip: () => {
+        const box = stage.getBoundingClientRect();
+        const pin = head && !head.hidden ? head.getBoundingClientRect().bottom : 0;
+        return { left: box.left - 8, top: Math.max(pin, 0), right: box.right + 8, bottom: window.innerHeight };
+      },
+    }));
+  }
 }
 
+// The scroll story's stage comes first (it needs no data); the steps' redraws and the field once the asset arrives.
+const scrolly = typeof document === 'undefined' ? null : document.querySelector('.wr-scrolly');
+const story = scrolly ? mountStage(scrolly) : null;
 const stage = typeof document === 'undefined' ? null : document.querySelector('[data-strips]');
-if (stage) start(stage);
+if (stage) start(stage, story);

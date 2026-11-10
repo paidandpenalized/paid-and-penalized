@@ -14,7 +14,7 @@ import { stageHead } from './controls.js';
 import { serverTotals } from './model.js';
 import { byCase, ranges, scenWord } from './ranges.js';
 import { pageTop } from './top.js';
-import { DRAWINGS, drawn, median, stripsAlt, stripsBody, stripsLayout } from './strips.js';
+import { DRAWINGS, binsOf, drawn, stripsAlt, stripsBody, stripsLayout } from './strips.js';
 
 // ---------- the chips ----------
 
@@ -36,25 +36,18 @@ function chips(states) {
 
 // ---------- Figure 1 ----------
 
-// The table's bins of share lost, up to the axis's top: each bin holds [from, to), the last [from, top].
-const BIN_EDGES = [0, 0.0025, 0.005, 0.01, 0.02, 0.04, 0.08];
 // A share at the fewest places that show it (0.25%, 0.5%, 1%).
 const shareText = (v) => pct(v, [0, 1, 2].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 2);
 
+// The table: each bin's count by case, then the medians. Each number cell carries data-bin ("<bin> <case index>", "m" for
+// the median row), so the page's script rewrites it as the use rate moves (binsOf at that rate).
 function tableOf(items, top) {
-  const edges = [...BIN_EDGES.filter((e) => e < top), top];
-  const binOf = (v) => Math.min(edges.length - 2, edges.findLastIndex((e) => v >= e));
-  const counts = SCENARIOS.map((_, k) => {
-    const c = new Array(edges.length - 1).fill(0);
-    for (const r of items) c[binOf(r.share[k])] += 1;
-    return c;
-  });
-  const medians = SCENARIOS.map((_, k) => median(items.map((r) => r.share[k])));
+  const { edges, counts, medians } = binsOf(items, top);
   return {
     columns: [{ name: t('tableShare') }, ...SCENARIOS.map((s) => ({ name: scenWord(s), numeric: true }))],
     rows: [
-      ...edges.slice(0, -1).map((from, b) => [fill('tableBin', { from: shareText(from), to: shareText(edges[b + 1]) }), ...counts.map((c) => num(count(c[b]), c[b]))]),
-      [t('tableMedian'), ...medians.map((m) => num(pct(m, 2), m))],
+      ...edges.slice(0, -1).map((from, b) => [fill('tableBin', { from: shareText(from), to: shareText(edges[b + 1]) }), ...counts.map((c, k) => ({ ...num(count(c[b]), c[b]), data: { bin: `${b} ${k}` } }))]),
+      [t('tableMedian'), ...medians.map((m, k) => ({ ...num(pct(m, 2), m), data: { bin: `m ${k}` } }))],
     ],
   };
 }

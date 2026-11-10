@@ -213,7 +213,7 @@ export function placeAt(x, w, { gap, span: [lo, hi] }) {
 }
 
 // A strip's dot diameter at pitch d.
-const dotSize = (d) => Math.max(0.9, d * 0.9);
+export const dotSize = (d) => Math.max(0.9, d * 0.9);
 
 // The gray outline of every hospital behind a group's dots: each column's stack as one bar.
 // A column of n dots reaches ceil((n - 1) / 2) pitches above the middle line (offset).
@@ -330,6 +330,28 @@ export const stripsAlt = (items, use = 1) => {
   const [low, middle, high] = SCENARIOS.map((_, k) => pct(median(items.map((r) => r.share[k] * use)), 2));
   return fill('figAlt', { low, middle, high });
 };
+
+// ---------- the figure's table ----------
+
+// The table's bins of share lost, up to the axis's top: each bin holds [from, to), the last [from, top].
+const BIN_EDGES = [0, 0.0025, 0.005, 0.01, 0.02, 0.04, 0.08];
+// Figure 1's table at a use rate: the bins' edges, each case's count of hospitals in each bin, and each case's median.
+// The build writes it at the default rate; client/page.js rewrites the cells (data-bin) as the rate moves.
+export function binsOf(items, top, use = 1) {
+  const edges = [...BIN_EDGES.filter((e) => e < top), top];
+  // The last bin whose start the share reaches (findLastIndex is newer than the bundles' ES2020).
+  const binOf = (v) => {
+    let b = 0;
+    for (let i = 1; i < edges.length - 1; i += 1) if (v >= edges[i]) b = i;
+    return b;
+  };
+  const counts = SCENARIOS.map((_, k) => {
+    const c = new Array(edges.length - 1).fill(0);
+    for (const r of items) c[binOf(r.share[k] * use)] += 1;
+    return c;
+  });
+  return { edges, counts, medians: SCENARIOS.map((_, k) => median(items.map((r) => r.share[k] * use))) };
+}
 
 // ---------- the group's readout ----------
 

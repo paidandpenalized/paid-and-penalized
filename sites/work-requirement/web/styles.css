@@ -5,13 +5,45 @@
 .step { padding: 32px 0; border-bottom: 1px solid var(--line); }
 .wr-step { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .wr-step__words, .wr-step__stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
-.wr-step__words > *, .wr-step__stage > * { min-width: 0; }
+.wr-step__words > *, .wr-step__stage > *, .wr-step__pin > *, .wr-step__fig > * { min-width: 0; }
+/* The words column's width and the gap beside it, which the scroll story's stage starts after. */
+.wr-scrolly { --wr-words: 22rem; --wr-gap: 40px; }
 @media (min-width: 900px) {
-  .wr-step { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); column-gap: 40px; }
+  .wr-step { grid-template-columns: minmax(0, var(--wr-words)) minmax(0, 1fr); column-gap: var(--wr-gap); }
 }
 @media (min-width: 1200px) {
-  .wr-step { grid-template-columns: minmax(0, 28rem) minmax(0, 1fr); column-gap: 44px; }
+  .wr-scrolly { --wr-words: 28rem; --wr-gap: 44px; }
 }
+
+/* The scroll story (client/stage.js), only with the script from 900px: it sets .wr-scrolly--on and wraps each stage's
+   parts in a pin and a figure part, which without it are no boxes at all (display: contents), so the stacked page is the
+   build's. Each stage spans the whole story beside the words and stops above the named table (--wr-tail); its pin sticks
+   under the header, step 1's with the head at its top, the others under the head (--wr-head); only the step in view
+   (data-on) shows its figure, fading in and out (cuts under reduced motion: base.css). No panel: each figure sits on the
+   paper. The field's canvas (client/field.js) lies over the window while dots fly. */
+.wr-step__pin, .wr-step__fig { display: contents; }
+.wr-scrolly--on { position: relative; }
+.wr-scrolly--on > .step { border-bottom: 0; }
+.wr-scrolly--on > .step:last-of-type > .wr-step__words { min-height: calc(100vh - var(--sticky-top, 0px) - 32px); }
+.wr-scrolly--on .wr-step__stage { position: absolute; top: 0; right: 0; bottom: var(--wr-tail, 0px); left: calc(var(--wr-words) + var(--wr-gap)); display: block; pointer-events: none; }
+.page.wr:has(> .wr-scrolly--on) { padding-top: 0; }
+.wr-scrolly--on .wr-step__pin { position: sticky; top: calc(var(--sticky-top, 0px) + var(--wr-head, 0px)); display: grid; gap: 8px; max-height: calc(100vh - var(--sticky-top, 0px) - var(--wr-head, 0px)); padding-top: 10px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.wr-scrolly--on .wr-finding .wr-step__pin { top: var(--sticky-top, 0px); max-height: calc(100vh - var(--sticky-top, 0px)); }
+.wr-scrolly--on .wr-step__fig { display: grid; gap: 12px; align-content: start; visibility: hidden; opacity: 0; transition: opacity 0.3s, visibility 0s 0.3s; }
+.wr-scrolly--on .wr-step__stage[data-on] .wr-step__fig { visibility: visible; opacity: 1; pointer-events: auto; transition: opacity 0.3s; }
+.wr-scrolly--on .wr-step__stage[data-flying] .wr-step__fig { opacity: 0; pointer-events: none; transition: none; }
+.wr-scrolly--on .wr-step__fig :is(.fig__note, .fig__source) { max-width: none; }
+.wr-scrolly--on .wr-step__pin { justify-items: start; }
+.wr-scrolly--on .wr-step__pin > * { justify-self: stretch; }
+.wr-scrolly--on .wr-step__pin > .wr-step__fig[style*="zoom"] { justify-self: start; }
+/* The head, compact: the switch's buttons and the slider's row a little shorter, the label in the small caption size. */
+.wr-scrolly--on .wr-stage__head { gap: 6px 20px; padding: 0 0 6px; pointer-events: auto; }
+.wr-scrolly--on .wr-switch__opt span { padding: 5px 12px; }
+.wr-scrolly--on .wr-use__lab { font-size: var(--fs-xs); line-height: 1.2; }
+.wr-scrolly--on .wr-use__track .wi-range { height: 24px; }
+.wr-field { position: fixed; inset: 0; z-index: 5; display: none; width: 100vw; height: 100vh; pointer-events: none; opacity: 1; transition: opacity 0.3s; }
+.wr-field--on { display: block; }
+.wr-field--out { opacity: 0; }
 .wr-finding { padding-top: 16px; }
 .wr-how { padding-top: 12px; }
 .wr-finding > .wr-step__words { gap: 12px; }
