@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pp_engine.hcris import tidy
 from pp_engine.medicaid import params, shares
-from pp_pipeline import files
+from pp_pipeline import emit_medicaid, files
 from pp_pipeline.medicaid import build, inputs, safety_net
 
 FY2023 = ("09/30/2022", "12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
@@ -138,14 +138,15 @@ class Records(unittest.TestCase):
         self.assertEqual(by["990011"]["safety_net"], ())
         self.assertEqual(by["990012"]["safety_net"], ("miur",))  # the MIUR test doesn't read line 2
 
-    def test_the_explorer_carries_the_floors_day_count(self):
+    def test_the_row_carries_the_floors_day_count(self):
         floor = params.MIN_MEDICAID_DAYS
         m = master({"ccn": "990021", "state": "AK", "kind": "acute"})
         rows = {"990021": hcris("990021", medicaid_days_all=str(floor - 50), days_medicaid_labor_delivery="60")}
         rec = build.hospital_records(m, rows, STATES, {}, {}, fence=(-0.5, 0.5))[0]
         self.assertNotIn("few_medicaid_days", rec["base"]["flags"])  # lines 14 + 2 + 32: above the floor
-        out = build.explorer_record(rec)
-        self.assertEqual((out["md"], out["ma"]), (floor - 50, floor + 10))  # md: lines 14 + 2, the MIUR's
+        out = dict(zip(emit_medicaid.COLUMNS, emit_medicaid.hospital_row(rec)))
+        self.assertEqual((out["medicaid_days_all"], out["medicaid_days_every"]),
+                         (floor - 50, floor + 10))  # lines 14 + 2, the MIUR's; then with line 32
 
     def test_scenarios_run_only_in_scenario_states(self):
         by = {r["ccn"]: r for r in self.records}
@@ -169,18 +170,19 @@ class Records(unittest.TestCase):
         self.assertEqual(groups["critical_access"]["low"]["hospitals"], 1)
         self.assertEqual(groups["safety_net"]["low"]["hospitals"], 1)
         self.assertEqual(set(by_state), {"AK", "WI", "TX"})
-        cols, rows = build.hospital_rows(self.records)
-        self.assertEqual(len(rows), 5)
-        self.assertEqual(len(cols), len(rows[0]))
-        rec = build.explorer_record(self.records[0])
-        self.assertEqual((rec["c"], rec["k"], rec["m2"], rec["st"], rec["mt"], rec["sn"]),
-                         ("990001", "A", 1000000, "as filed", 0.5, ["miur"]))
+        rows = [emit_medicaid.hospital_row(r) for r in self.records]
+        self.assertEqual({len(r) for r in rows}, {len(emit_medicaid.COLUMNS)})
+        rec = dict(zip(emit_medicaid.COLUMNS, rows[0]))
+        self.assertEqual((rec["ccn"], rec["kind"], rec["medicaid_net_revenue"], rec["status"], rec["safety_net"],
+                          rec["hrrp"]), ("990001", "acute", 1000000, "as filed", ["miur"], -10))
+        self.assertIsNotNone(rec["middle_lost"])
+        by = {r["ccn"]: dict(zip(emit_medicaid.COLUMNS, row)) for r, row in zip(self.records, rows)}
+        self.assertIsNone(by["990002"]["middle_lost"])  # not a scenario state: no scenario result
         no_report = build.hospital_records(master({"ccn": "990009", "state": "AK", "kind": "acute"}), {}, STATES, {},
                                            {}, fence=(-0.5, 0.5))[0]
-        self.assertNotIn("m2", build.explorer_record(no_report))
-
-
-class LayerAndPins(unittest.TestCase):
+        row = dict(zip(emit_medicaid.COLUMNS, emit_medicaid.hospital_row(no_report)))
+        self.assertEqual((row["cls"], row["status"], row["medicaid_net_revenue"], row["middle_lost"]),
+                         ("no_cost_report", None, None, None))
     def test_read_hcris_reads_the_layers_year(self):
         cols = [c for c in tidy.WIDE_COLUMNS if c != "year"]
         doc = {"fy": 2023, "columns": cols, "early": True, "settledShare": 0.6, "stillFiling": False,

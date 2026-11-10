@@ -241,16 +241,16 @@ test('the changes and the sources: every changelog entry with its date and items
   const newestFile = (dir, name) => readJson(`${REPO_ROOT}data/emitted/${dir}/fy${newestYear(`data/emitted/${dir}`)}/${name}.json`);
   const shared = new Set([['hospital', 'hospital_master'], ['dollars', 'dollars'], ['hacrp', 'hacrp'], ['hacrp-history', 'hacrp_history']]
     .flatMap(([dir, name]) => newestFile(dir, name).sources));
-  const otherSites = readdirSync(`${REPO_ROOT}sites`)
-    .filter((site) => site !== 'hacrp' && existsSync(`${REPO_ROOT}data/emitted/${site}`))
+  // Another site's emitted file is data/emitted/<site>/fy<YYYY>/<site>.json; the Medicaid scenarios' file has no site of its
+  // own yet (their page is work-requirement) and sits at data/emitted/medicaid/.../medicaid.json.
+  const otherSites = [...readdirSync(`${REPO_ROOT}sites`).filter((site) => site !== 'hacrp'), 'medicaid']
+    .filter((site) => existsSync(`${REPO_ROOT}data/emitted/${site}`))
     .flatMap((site) => newestFile(site, site).sources)
     .filter((id) => !shared.has(id));
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   const listed = new Set([...used, ...otherSites]);
   // The HCRIS layer's pins (data/emitted/hcris/) feed no HACRP page; the site that reads the layer lists them.
-  // The Medicaid work-requirement scenario's four pins (data/pinned/medicaid/) feed no HACRP page either; that site's
-  // Methods page lists them.
-  const layer = /^hcris-fy\d{4}-(cells|g3-line24)$|^hcris-puf-sample$|^(cms64-viii-2026-02|cms64-fmr-fy2023-map|urban-2026-a2-wr|hcris-fy2023-state-miur)$/;
+  const layer = /^hcris-fy\d{4}-(cells|g3-line24)$|^hcris-puf-sample$/;
   assert.deepEqual(manifest.filter((e) => !listed.has(e.id) && !layer.test(e.id)).map((e) => e.id), []);
   // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
   // was built from and is not held to the pages' list.

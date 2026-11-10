@@ -2,10 +2,10 @@
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
-then the dollar estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
-pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
-pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), `hcris <command> ...` (the
-HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see pp_pipeline/hcris/cli.py), and two that call the
+the dollar estimates, the HCRIS layer, then the Medicaid scenarios), `backtest` (prints the dollar estimates' back-test
+against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
+pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid
+work-requirement scenarios; see pp_pipeline/emit_medicaid.py), `hcris <command> ...` (the HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see pp_pipeline/hcris/cli.py), and two that call the
 network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
 `refresh <site> [--pr]` (`make refresh SITE=<site> [PR=1]`), which fetches the site's CMS files from data.cms.gov, pins
 them, rebuilds and checks, and with --pr opens a draft pull request (see pp_pipeline/refresh.py).
@@ -29,11 +29,12 @@ def run_tests():
 def emit():
     """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
     (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
-    emitter first. The HCRIS layer reads only its own pins.)"""
-    from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp
+    emitter first. The HCRIS layer reads only its own pins; the Medicaid scenarios read
+    the layer's, the master's and the dollars' emitted files, so they run last.)"""
+    from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp, emit_medicaid
     from pp_pipeline.hcris import emit as emit_hcris
     # Each has a main() that returns its exit code. Order matters: Readmissions reads the master's committed file.
-    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars, emit_hcris)
+    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars, emit_hcris, emit_medicaid)
     return max([emitter.main() for emitter in EMITTERS])
 
 
@@ -58,6 +59,9 @@ def main(argv):
     if command == "hcris" and args:  # `emit` also runs with the other emitters
         from pp_pipeline.hcris import cli
         return cli.main(args)
+    if command == "medicaid" and args == ["build"]:  # `emit` also runs with the other emitters
+        from pp_pipeline import emit_medicaid
+        return emit_medicaid.main()
     if command == "refresh" and len(args) in (1, 2) and args[1:] in ([], ["--pr"]):
         from pp_pipeline import refresh
         return refresh.main(args[0], pr=len(args) == 2)

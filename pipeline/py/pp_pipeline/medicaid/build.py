@@ -1,31 +1,20 @@
-"""Run the exposure scenarios for every active acute-care and critical access hospital in the hospital master and write
-the results.
-
-    python3 -I pipeline/py/pp_pipeline/medicaid/cli.py build --out <dir>
-        [--hcris <hcris.json>] [--master <hospital_master.json>] [--dollars <dollars.json>]
+"""The Medicaid work-requirement scenarios, step by step: the state table (VIII shares, Urban's declines, each state's
+class), one record per acute-care or critical access hospital (identity, measured base, class, each scenario's result)
+and the roll-ups. `pp_pipeline.emit_medicaid` writes the result as `data/emitted/medicaid/fy2023/medicaid.json`.
 
 Cost reports come from the HCRIS layer's emitted base year (`data/emitted/hcris/fy2023/hcris.json`, read through
-pp_engine.hcris.reader; `--hcris` names another copy). The master and the dollar estimates default to the newest
-emitted years. Writes to `<dir>`: `hospitals.csv` (one row per
-hospital), `hospitals.json` (the same records, with the inputs the explorer recomputes from), and `results.json`
-(state and national roll-ups for each scenario, the sensitivities, the state inputs and their pins).
+pp_engine.hcris.reader); the master and the dollar estimates are the emitted files of the newest years; the state inputs
+are pinned (`pp_pipeline.medicaid.inputs`).
 """
-import argparse
-import csv
 import hashlib
 import json
-import sys
-from collections import Counter
 from pathlib import Path
 
 from pp_engine import geo
 from pp_engine.hcris import reader, tidy
 from pp_engine.medicaid import exposure, params, rollup, safety_net, shares
 from pp_pipeline import emit_dollars, emit_hospital
-from pp_pipeline.files import REPO_ROOT, read_json
 from pp_pipeline.hcris import emit as emit_hcris
-from pp_pipeline.medicaid import inputs
-from pp_pipeline.medicaid.safety_net import read_cuts
 
 MASTER_FY = 2027   # the hospital master's year (names, states, kinds)
 DOLLARS_FY = 2026  # the Medicare penalty estimates' year (the cross-program view)
@@ -197,130 +186,34 @@ def _clean(d, places=6):
     return {k: (round(v, places) if isinstance(v, float) else v) for k, v in d.items()}
 
 
+# The master's ownership field (`own`), mapped to the roll-up groups; Unknown and blank ownership are in no group.
+OWNERSHIP = {"public": "Government", "nonprofit": "Nonprofit", "forprofit": "For-profit"}
+
+
 def results(records, states):
+    """(national, by state, sensitivities, groups) roll-ups, each {scenario id: roll-up}. Maryland's hospitals (class
+    `all_payer`) are out of the national, sensitivity and group roll-ups, as they are out of the ranking; `by_state`
+    still lists the state, with no dollars."""
+    counted = [r for r in records if r["cls"] != ALL_PAYER]
     nat, by_state, sens = {}, {}, {}
     for sid in params.SCENARIO_IDS:
-        nat[sid] = _clean(roll(records, sid))
+        nat[sid] = _clean(roll(counted, sid))
         for code, v in roll_by_state(records, sid).items():
             by_state.setdefault(code, {})[sid] = _clean(v)
         for label, kw in (("line2_5", {"line2_5": True}), ("share_next_year", {"share_key": "share_next_year"}),
                           ("share_net_of_dsh", {"share_key": "share_net_of_dsh"}),
                           (f"use_{params.USE_MIN}", {"use": params.USE_MIN}),
                           (f"use_{params.USE_MAX}", {"use": params.USE_MAX}), ("state_share_only", {"factor": 1.0})):
-            sens.setdefault(label, {})[sid] = _clean(roll(records, sid, states=states, **kw))
+            sens.setdefault(label, {})[sid] = _clean(roll(counted, sid, states=states, **kw))
     groups = {}
     for label, where in (("critical_access", lambda r: r["kind"] == "critical_access"),
                          ("acute", lambda r: r["kind"] == "acute"),
                          ("rural", lambda r: r["kind"] == "critical_access" or r["urban"] is False),
                          ("urban", lambda r: r["kind"] != "critical_access" and r["urban"] is True),
                          ("expansion_states", lambda r: r["cls"] == SCENARIO),
-                         ("safety_net", lambda r: bool(r["safety_net"]))):
-        groups[label] = {sid: _clean(roll(records, sid, where=where)) for sid in params.SCENARIO_IDS}
+                         ("safety_net", lambda r: bool(r["safety_net"])),
+                         *((label, lambda r, own=own: r["own"] == own) for label, own in OWNERSHIP.items()),
+                         ("beds_lt50", lambda r: r["beds"] is not None and r["beds"] < 50),
+                         ("beds_300plus", lambda r: r["beds"] is not None and r["beds"] >= 300)):
+        groups[label] = {sid: _clean(roll(counted, sid, where=where)) for sid in params.SCENARIO_IDS}
     return nat, by_state, sens, groups
-
-
-SCENARIO_COLUMNS = ("lost", "added_uncompensated", "uncompensated_change", "operating_margin_after",
-                    "total_margin_after")
-HOSPITAL_COLUMNS = ("ccn", "name", "city", "state", "kind", "cls", "status", "period_begin", "period_end",
-                    "period_days", "flags", "safety_net", "state_share", "share_factor", "share",
-                    "medicaid_net_revenue", "medicaid_supplemental", "medicaid_cost", "cost_ratio",
-                    "net_patient_revenue", "net_income_patients", "other_operating_income", "net_income",
-                    "other_income", "uncompensated_cost")
-
-
-def hospital_rows(records):
-    """Flat rows for hospitals.csv: identity, base, the margins as filed and, per scenario, SCENARIO_COLUMNS."""
-    cols = list(HOSPITAL_COLUMNS) + ["patient_margin", "operating_margin", "total_margin"] + [
-        f"{sid}_{k}" for sid in params.SCENARIO_IDS for k in SCENARIO_COLUMNS]
-    rows = []
-    for r in records:
-        b, res = r["base"] or {}, r["results"] or {}
-        flat = {**b, **{k: r[k] for k in ("ccn", "name", "city", "state", "kind", "cls", "share", "share_factor")},
-                "flags": " ".join(b.get("flags", [])), "safety_net": " ".join(r["safety_net"] or ()),
-                "state_share": r["state_share"]}
-        if res:
-            flat["operating_margin"] = res["middle"]["operating_margin"]
-            flat["total_margin"] = res["middle"]["total_margin"]
-            flat.update({f"{sid}_{k}": v[k] for sid, v in res.items() for k in SCENARIO_COLUMNS})
-        rows.append([("" if flat.get(c) is None else (round(flat[c], 6) if isinstance(flat[c], float) else flat[c]))
-                     for c in cols])
-    return cols, rows
-
-
-def explorer_record(r):
-    """The compact record the explorer recomputes from: its inputs, not its results (the page reruns steps 1 to 4).
-    Days: `md` and `dt` are the MIUR's (S-3 I lines 14 + 2 col 7, line 14 col 8); `ma` is the day-count floor's and
-    the maternity share's (exposure.medicaid_days: lines 14 + 2 + 32 col 7; null when the hospital keeps its state's
-    share for want of days), so few_medicaid_days is `ma` below params.MIN_MEDICAID_DAYS."""
-    b = r["base"]
-    out = {"c": r["ccn"], "n": r["name"], "ci": r["city"], "s": r["state"], "k": "C" if r["kind"] == "critical_access"
-           else "A", "u": r["urban"], "bd": r["beds"], "o": r["own"], "cl": r["cls"],
-           "la": r["lat"], "lo": r["lon"], "p": r["programs"]}
-    if b is not None:
-        days = b["medicaid_days"]
-        out.update(st=b["status"], pb=b["period_begin"], pe=b["period_end"], pd=b["period_days"],
-                   fl=b["flags"], m2=_r(b["medicaid_net_revenue"]), m5=_r(b["medicaid_supplemental"]),
-                   mc=_r(b["medicaid_cost"]), cr=_r(b["cost_ratio"], 4), cr5=_r(b["cost_ratio_line2_5"], 4),
-                   npr=_r(b["net_patient_revenue"]), nip=_r(b["net_income_patients"]),
-                   oo=_r(b["other_operating_income"]), ni=_r(b["net_income"]), oi=_r(b["other_income"]),
-                   uc=_r(b["uncompensated_cost"]), md=_r(b["medicaid_days_all"]), dt=_r(b["days_total"]),
-                   ma=None if days is None else _r(days[0]),
-                   mt=None if days is None else _r(1 - days[1] / days[0], 4), af=_r(r["share_factor"], 6),
-                   sn=list(r["safety_net"]), hm=b["has_margin"], sc=b["scored"], mo=b["margin_outlier"])
-    return out
-
-
-def _shown(path):
-    """A path as the results record it: repo-relative when inside the repo, else its file name."""
-    p = Path(path).resolve()
-    return str(p.relative_to(REPO_ROOT)) if REPO_ROOT in p.parents else p.name
-
-
-def main(argv):
-    ap = argparse.ArgumentParser(prog="medicaid build")
-    ap.add_argument("--hcris", default=str(emit_hcris.emitted_path(params.BASE_YEAR)),
-                    help="the HCRIS layer's base-year file (default: data/emitted/hcris/fy<base year>/hcris.json)")
-    ap.add_argument("--out", required=True)
-    ap.add_argument("--master", default=str(MASTER))
-    ap.add_argument("--dollars", default=str(DOLLARS))
-    a = ap.parse_args(argv)
-    states = state_table(*(inputs.read_csv(p) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
-    master, dollars = read_json(a.master), read_json(a.dollars)
-    year, hcris_sha256 = read_hcris(a.hcris)
-    hcris = {r["ccn"]: r for r in year.rows}
-    if not hcris:
-        print(f"medicaid: no FY{params.BASE_YEAR} rows in the HCRIS layer", file=sys.stderr)
-        return 1
-    records = hospital_records(master, hcris, states, program_dollars(dollars),
-                               read_cuts(inputs.read_csv(inputs.STATE_MIUR)))
-    for r in records:  # each state's ratio, as hospital_records set it, on its existing entry
-        if r["state"] in states and r["state_ratio"] is not None:
-            states[r["state"]]["nonmaternity_ratio"] = r["state_ratio"]
-    nat, by_state, sens, groups = results(records, states)
-    counts = dict(Counter(r["cls"] for r in records))
-    flags = dict(Counter(fl for r in records if r["base"] for fl in r["base"]["flags"]))
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
-    cols, rows = hospital_rows(records)
-    with open(out / "hospitals.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, lineterminator="\n")
-        w.writerow(cols)
-        w.writerows(rows)
-    (out / "hospitals.json").write_text(json.dumps([explorer_record(r) for r in records], separators=(",", ":")),
-                                        encoding="utf-8")
-    meta = {"base_year": params.BASE_YEAR, "settled_share": year.settled_share, "early": year.early,
-            "params": {"uninsured_share": params.UNINSURED_SHARE, "care_still_used": params.CARE_STILL_USED,
-                       "use_min": params.USE_MIN, "use_default": params.USE_DEFAULT, "use_max": params.USE_MAX,
-                       "max_cost_ratio": params.MAX_COST_RATIO, "min_medicaid_days": params.MIN_MEDICAID_DAYS,
-                       "scenarios": dict(params.SCENARIOS)},
-            "counts": counts, "flags": flags,
-            "inputs": {"pinned": pins,
-                       "hcris": {"path": _shown(a.hcris), "sha256": hcris_sha256,
-                                 "methods_version": year.methods_version},
-                       "master": {"path": _shown(a.master), "fy": master["fy"], "built_at": master["built_at"]},
-                       "dollars": {"path": _shown(a.dollars), "fy": dollars["fy"], "built_at": dollars["built_at"]}}}
-    (out / "results.json").write_text(json.dumps({"meta": meta, "states": states, "national": nat,
-                                                  "by_state": by_state, "sensitivities": sens, "groups": groups},
-                                                 indent=1, sort_keys=True), encoding="utf-8")
-    print(f"medicaid: {len(records)} hospitals ({counts}); wrote {out}")
-    return 0

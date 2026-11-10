@@ -44,6 +44,8 @@ export const hacrpPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;
 export const hrrpPath = (fy) => `data/emitted/hrrp/fy${fy}/hrrp.json`;
 // The dollar estimates for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/dollars.py).
 export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
+// The Medicaid work-requirement scenario file for a base fiscal year (the HCRIS year), repo-relative (written by `run.py emit`).
+export const medicaidPath = (fy) => `data/emitted/medicaid/fy${fy}/medicaid.json`;
 
 export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');
