@@ -142,6 +142,35 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
       assert.equal((await headerFacts(page)).more, true, 'and comes back');
     });
   });
+
+  // The Readmissions program page's menu runs past a phone's width by its third item, so opening there scrolls the menu.
+  it('a program page opened at its third section: the section menu marks that item and scrolls it whole into view, and the page stays at the section', async () => {
+    const path = programById('hrrp').path;
+    await withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+      const third = await page.evaluate(() => document.querySelectorAll('.topbar .nav a[data-nav]')[2]?.dataset.nav);
+      assert.ok(third, 'the menu has a third item');
+      await page.goto('about:blank');
+      await visit(page, tabs.base, `${path}#${third}`);
+      await settle(page);
+      const facts = () => page.evaluate((id) => {
+        const nav = document.querySelector('.topbar .nav');
+        const marked = nav.querySelector('a[aria-current="true"]');
+        const n = nav.getBoundingClientRect();
+        const m = marked.getBoundingClientRect();
+        const sticky = parseFloat(document.documentElement.style.getPropertyValue('--sticky-top'));
+        return { marked: marked.dataset.nav, left: m.left - n.left, right: n.right - m.right, scrollLeft: nav.scrollLeft, y: window.scrollY, top: document.getElementById(id).getBoundingClientRect().top - sticky };
+      }, third);
+      const f = await facts();
+      assert.equal(f.marked, third, 'the third item is marked');
+      assert.ok(f.scrollLeft > 0, 'the menu scrolled sideways to it');
+      assert.ok(f.left >= -0.5 && f.right >= -0.5, `the marked item is whole in the menu (${Math.round(f.left)} px from its left, ${Math.round(f.right)} px from its right)`);
+      assert.ok(Math.abs(f.top) <= 2, `the section's top stays under the header (${f.top.toFixed(1)} px off)`);
+      await settle(page);
+      await settle(page);
+      assert.equal((await facts()).y, f.y, 'the menu\'s scroll leaves the page where it was');
+      await assertQuiet(seen, 'a program page opened at its third section');
+    });
+  });
 });
 
 // A keyboard in the rows that scroll sideways on a phone (the program tabs, a program's numbered section menu): each item
