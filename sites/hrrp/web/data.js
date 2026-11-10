@@ -6,6 +6,7 @@ import { builtOn } from '../../../engine/js/dates.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hrrpPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { masterByCcn } from '../../../pipeline/master.js';
+import { METHODS_LOG, siteVersions } from '../../../pipeline/methods-log.js';
 import { hospitalRecord } from '../../../web/render/format.js';
 import { scopeYears } from './figures/history-data.js';
 
@@ -86,6 +87,8 @@ export function loadHrrp({ exists = existsSync, newest = newestYear } = {}) {
     // The fiscal years whose file lists each group the history leaves out (history-data.js scopeYears), for Methods.
     historyScope: scopeYears(parseCsv(readPinned(HISTORY_PIN_ID))),
     dictionary: readFileSync(REPO_ROOT + DICTIONARY_FILE, 'utf8'),
+    // This site's methods versions and the day each took effect (docs/METHODS-LOG.md), for Methods' What changed.
+    methodsLog: siteVersions(readFileSync(REPO_ROOT + METHODS_LOG, 'utf8'), 'hrrp'),
     whatsNew: whatsNew.items,
     // The fiscal year the notes are for: the program page shows them only in that year's edition.
     whatsNewFy: whatsNew.fy,

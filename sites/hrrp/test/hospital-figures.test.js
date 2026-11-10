@@ -33,7 +33,7 @@ test('rulers: one row for each condition in the data\'s order, with the gap, its
   assert.equal(d.capNote, false);
   const fig = figureOf(pageOf(CUT, ctx), 1);
   assert.equal(rowsOf(fig).length, CONDS.length);
-  assert.match(fig, /Heart failure costs the most: \+0\.1000 over its peer median, \$100,000 of the modeled cut, because each 0\.01 of its ratio is worth \$10,000\./);
+  assert.match(fig, /Heart failure costs the most: \+0\.1000 over its peer median and \$100,000 of the modeled cut\. Each 0\.01 of its ratio is worth \$10,000 before the cut is rounded\./);
   assert.equal((fig.match(/>Median 1\.0000<\/text>/g) ?? []).length, 2 * CONDS.length, 'the median is labeled on every ruler, narrow and wide');
   assert.ok(fig.includes('+0.1000 over'));
 });
@@ -49,8 +49,16 @@ test('rulers: a condition under 25 cases is not counted: no triangle, no gap, no
   const h = hospital({ id: '990020', c: { HF: { n: 40, err: 1.1, flag: 1, ratio: 0.1 }, AMI: { n: 10, err: 1.4, flag: 0, ratio: 0.1 } } });
   const row = hospitalView(h, ctx).figures.rulers.rows.find((r) => r.cond === 'AMI');
   assert.deepEqual([row.measured, row.err, row.gap, row.per, row.cut, row.over], [false, null, null, null, null, false]);
+  assert.equal(row.published, 1.4, 'CMS\'s ratio, as its file prints it under 25 cases too');
   const fig = figureOf(pageOf(h, ctx), 1);
   assert.ok(fig.includes(`10 cases, under ${MIN_DISCHARGES}: not counted`));
+  // The ratio cell and the table's Ratio column give CMS's ratio, as Worksheet R does; the gap cell says it is not counted.
+  const ami = rowsOf(fig)[CONDS.indexOf('AMI')];
+  assert.ok(ami.includes('<span class="vh">Ratio: </span>1.4000'), ami);
+  assert.ok(ami.includes('<span class="vh">Gap: </span><span class="">not counted</span>'), ami);
+  assert.ok(fig.includes('<th scope="row">Heart attack</th><td class="num" data-value="10">10</td><td class="num" data-value="1.4">1.4000</td>'), 'the table too');
+  const none = rowsOf(fig)[CONDS.indexOf('PN')];
+  assert.ok(none.includes('<span class="vh">Ratio: </span><span aria-hidden="true">—</span>'), 'no cases: no ratio');
   assert.ok(fig.includes('No cases: not counted'), 'a condition with no row at all');
 });
 
@@ -61,7 +69,7 @@ test('rulers: a condition with exactly one case reads "1 case", never "1 cases"'
   assert.ok(!fig.includes('1 cases'));
 });
 
-test('the dual-eligible share rounds half up from CMS\'s four decimals: 0.2065 is "20.7%", on the card and in Worksheet R', () => {
+test('the dual-eligible share prints to one decimal, an exact half rounded up: 0.2065 is "20.7%", on the card and in Worksheet R (the data keeps enough decimals that a share is never a half by rounding)', () => {
   const h = hospital({ id: '990023', dual: 0.2065 });
   const text = textOf(pageOf(h, ctxFor([h, ...OTHERS])));
   assert.ok(text.includes('20.7% of stays dual-eligible'));

@@ -5,8 +5,9 @@
 // entries; a failure says so, and the next focus tries again); a list it was typed for while loading opens only if the
 // reader is still in the box. A press anywhere on the list (an option, its scrollbar, its "No matches" row) keeps the
 // focus in the box. A polite status says how many matched. Without JavaScript the form stays hidden.
-// words: { empty, kind: { [type]: label }, count(n), failed, more(total) } — the site's own words (more: the label
-//        of a last option that hands every match on, or null; onMore(query) acts on it)
+// words: { empty, kind: { [type]: label }, count(n, query), failed, more(total) } — the site's own words (empty: text, or a
+//        function of the query, so a site can say why a query finds nothing; more: the label of a last option that hands
+//        every match on, or null; onMore(query) acts on it)
 import { LIMIT, search } from './search.js';
 
 export function mountOmnibox(form, { load, words, open = (href) => window.location.assign(href), onMore = null, types, moreTypes = null }) {
@@ -71,7 +72,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     if (!items.length) {
       const empty = document.createElement('li');
       empty.className = 'omni__empty';
-      empty.textContent = words.empty;
+      empty.textContent = typeof words.empty === 'function' ? words.empty(input.value) : words.empty;
       items.push(empty);
     }
     list.replaceChildren(...items);
@@ -105,7 +106,7 @@ export function mountOmnibox(form, { load, words, open = (href) => window.locati
     results = found.results.slice(0, LIMIT);
     handOn = handing ? found.results.filter((r) => moreTypes.includes(r.type)) : [];
     active = results.length ? 0 : -1;
-    status.textContent = words.count(total);
+    status.textContent = words.count(total, query);
     paint();
   }
 

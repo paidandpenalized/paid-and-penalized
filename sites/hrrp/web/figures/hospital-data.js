@@ -73,8 +73,10 @@ function axisOf(scale, med, value) {
   return { domain: [lo, hi], counts: countBins(scale.values, lo, hi) };
 }
 
-// The rulers' rows for hospital h, one per condition in the data's order: { cond, short, n, measured, state, err, med, gap, over,
-// part, weight, per (modeled dollars per PER_STEP of ratio, null where unknown), cut (this part of the modeled cut), domain, counts }.
+// The rulers' rows for hospital h, one per condition in the data's order: { cond, short, n, measured, state, err (the ratio the
+// ruler draws: a counted condition's only), published (CMS's ratio as its file prints it, under 25 cases too; null where CMS gives
+// none), med, gap, over, part, weight, per (modeled dollars per PER_STEP of ratio, null where unknown), cut (this part of the
+// modeled cut), domain, counts }.
 // Also: top (the row that adds the most, null when none adds), sum (line 7), capped (past the cap), counted (conditions counted).
 // ctx: hospitalContext()'s result.
 export function rulersData(h, ctx) {
@@ -97,6 +99,7 @@ export function rulersData(h, ctx) {
       measured,
       state: condState(h, cond, meta, r.byCond),
       err: measured ? c.err : null,
+      published: c?.err ?? null,
       med,
       gap,
       over: gap !== null && gap > 0,

@@ -8,7 +8,7 @@ import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
-import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
+import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, MDH_ADDON_SHARE, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
 import { PER_STEP, historyData, rulerScales, rulersData, yearRanks } from './figures/hospital-data.js';
 import { areaGroups, areaKeyOf, inMetro } from './figures/neighbors-data.js';
@@ -16,7 +16,7 @@ import { childTable, hospitalsTable } from './figures/place-table-data.js';
 import { whatIfData } from './figures/whatif-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
-import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
+import { familyTotalText, noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
 import { MIN_BAND, dollarsPerStep, drawsBands, drawsFlips, drawsWorth, peerFlips, pictureData, sizeBands } from './figures/picture-data.js';
@@ -24,7 +24,7 @@ import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
 import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, fmtShare, ratio } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
-import { fill as methodsFill, t as methodsT } from './methods/copy.js';
+import { COPY as METHODS_COPY, fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
 import { fyLabel } from './copy.js';
 import { worksheetRows } from './worksheet.js';
@@ -226,7 +226,10 @@ export function programView(ctx) {
     how: howData(ctx),
     picture: pictureData(ctx),
     map: mapData(ctx),
-    history: { lines: ctx.lines, windows: windowRows(ctx), escapes: () => yearsCut(rollCall(ctx)), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
+    history: {
+      lines: ctx.lines, windows: windowRows(ctx), escapes: () => yearsCut(rollCall(ctx)), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }),
+      family: familyTotalText(ctx.lines.noTotal, ctx.family),
+    },
     explore: exploreControls(ctx.hospitals, edition.conditions, meta.fy),
     research: researchData(ctx.research),
   };
@@ -341,11 +344,33 @@ function checkPhrase(asOf) {
   return `${/^[AEIOU]/.test(month) ? 'an' : 'a'} ${month} ${year} check`;
 }
 
-// How the estimates compare with hospitals' cost reports; null when the data has no dollar check.
-function accuracyLine(dc, edition) {
+// The methods version a check of `asOf` (YYYY-MM-DD) was run on: the newest the log dates on or before it, else the first (a
+// check older than the log ran on the method version 1 carried over). log: [{ version, date }]; null when the log is empty.
+export function versionOn(log, asOf) {
+  if (!log.length) return null;
+  const by = log.filter((v) => v.date <= asOf).map((v) => v.version);
+  return by.length ? Math.max(...by) : Math.min(...log.map((v) => v.version));
+}
+
+// How the estimates compare with hospitals' cost reports; null when the data has no dollar check. When the check ran on an
+// older methods version than the newest in the log, a sentence says which.
+function accuracyLine(dc, edition, log = []) {
   if (dc?.within15 == null) return null;
   const small = dc.within15Small == null ? '' : methodsFill('accuracySmall', { share: fmtPct(dc.within15Small, 0), beds: String(SMALL_HOSPITAL_BEDS) });
-  return methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: fyLabel(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: fyLabel(edition.fy), small });
+  const line = methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: fyLabel(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: fyLabel(edition.fy), small });
+  const ran = dc.asOf ? versionOn(log, dc.asOf) : null;
+  const now = log.length ? Math.max(...log.map((v) => v.version)) : null;
+  return ran !== null && ran < now ? `${line} ${methodsFill('accuracyVersion', { check: String(ran) })}` : line;
+}
+
+// Methods' What changed: each version in the log, newest first, as { head, text }; a version with no line in the copy stops
+// the build.
+export function changesOf(log) {
+  return [...log].sort((a, b) => b.version - a.version).map(({ version, date }) => {
+    const key = `changedV${version}`;
+    if (!(key in METHODS_COPY)) throw new RangeError(`HRRP Methods: docs/METHODS-LOG.md has hrrp methods_version ${version} but methods/copy.js has no ${key}`);
+    return { head: methodsFill('changedVersion', { n: String(version), date: fmtDate(date, 'long') }), text: methodsT(key) };
+  });
 }
 
 // The assumptions as [assumption, effect] rows of words: the fixed ones, then those the data calls for (the Medicare-dependent
@@ -404,16 +429,17 @@ function historyListed(scope) {
 }
 
 // The history's annual totals as table rows with their sources, and the sentence about where they come from.
-function historyTotals(history) {
+function historyTotals(history, family = null) {
   const rows = history.national.map((r) => ({
     fy: fyLabel(r.fy),
     total: r.totalEst == null ? null : money(r.totalEst),
     source: r.totalEst == null ? null : { name: r.totalSrc?.label ?? null, url: httpsUrl(r.totalSrc?.url) },
   }));
   const simulated = history.national.filter((r) => r.totalEst != null && HISTORY_SIMULATED_FYS.includes(r.fy)).map((r) => fyLabel(r.fy));
+  const noTotal = history.national.filter((r) => r.totalEst == null).map((r) => r.fy);
   return {
     text: simulated.length ? methodsFill('historyTotalsSim', { simulated: listText(simulated) }) : methodsT('historyTotals'),
-    noTotal: noTotalText(history.national.filter((r) => r.totalEst == null).map((r) => r.fy)),
+    noTotal: [noTotalText(noTotal), familyTotalText(noTotal, family)].filter(Boolean).join(' ') || null,
     rows,
   };
 }
@@ -460,12 +486,14 @@ export function methodsView(ctx) {
     },
     meta,
     conditions: edition.conditions,
-    dollars: methodsFill('dollarsInputs', { edition: edition.label }),
+    dollars: [methodsFill('dollarsInputs', { edition: edition.label }), methodsT('dollarsInputsMdh'), methodsT('dollarsRates')].join(' '),
+    dollarsMdh: methodsFill('dollarsFormulaMdh', { share: `${MDH_ADDON_SHARE * 100}%` }),
     totals: totals?.modelBase == null ? null : {
       text: methodsFill('dollarsTotals', { base: fmtMoney(totals.modelBase), pen: fmtMoney(totals.modelPen), cms: fmtMoney(totals.cmsEst), source: cmsLabel ?? methodsT('cmsSourceNone') }),
       url: httpsUrl(totals.cmsSrc?.url),
     },
-    accuracy: accuracyLine(meta.dollarCheck, edition),
+    accuracy: accuracyLine(meta.dollarCheck, edition, ctx.methodsLog ?? []),
+    changes: changesOf(ctx.methodsLog ?? []),
     assumptions: assumptionRows(ctx),
     figures: figureLimits(ctx),
     read: {
@@ -480,7 +508,7 @@ export function methodsView(ctx) {
       : null,
     history: methodsFill('historyText', span),
     historyListed: historyListed(ctx.historyScope),
-    historyTotals: historyTotals(ctx.history),
+    historyTotals: historyTotals(ctx.history, ctx.family),
     feedback: methodsT('feedbackText'),
     reuse: methodsFill('reuseText', { minCases: String(MIN_DISCHARGES) }),
     pins: ctx.pinsUsed.map((p) => ({ title: p.title, url: httpsUrl(p.landingPage || p.downloadUrl), bytes: fmtInt(p.bytes), hash: `${p.sha256.slice(0, 16)}…`, retrieved: fmtDate(p.retrieved, 'long') })),

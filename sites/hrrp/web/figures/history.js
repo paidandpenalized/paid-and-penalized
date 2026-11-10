@@ -96,12 +96,13 @@ export function escapesFigure(e, { n, base = null }) {
 }
 
 // The small multiples' figure [HI-09]. lines: history-data.js smallLines(); n: the figure counter, called only when the figure draws. Its takeaway is the latest year's
-// share of hospitals cut; the pandemic note and the years with no total are said under it; the table has every plotted value.
-export function historyFigure(lines, { n }) {
+// share of hospitals cut; the pandemic note and, for a year with no total that is the family's estimate year, the front page's figure
+// (family: history-data.js familyTotalText) are said under it; the table has every plotted value.
+export function historyFigure(lines, { n, family = null }) {
   const known = lines.share.filter((s) => s.value !== null);
   if (!known.length) return '';
   const latest = known[known.length - 1];
-  const note = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null].filter(Boolean).join(' ');
+  const note = [t('histBasis'), lines.covid.fys.length ? lines.covid.note : null, family].filter(Boolean).join(' ');
   const sourceOf = (r) => r.total && (r.total.label ?? t(r.total.kind === 'KFF' ? 'histSourceKff' : 'histSourceCms'));
   return figure({
     n: n(), takeaway: fill('histTakeaway', { share: fmtPct(latest.value, 1), fy: fyLabel(latest.fy) }), source: t('histSource'), claimLevel: 'estimate', csvName: 'hrrp-history',
@@ -128,7 +129,7 @@ export function historyPart(history, { figure: nextFigure }) {
   const steady = history.lines.steady;
   const lede = steady ? `${fill('historyLede', { share: fmtPct(steady.share, 0), cap: String(steady.cap), fy: fyLabel(steady.fy) })} ` : '';
   return html`<p class="part__intro">${lede}${t('historyIntro')}</p>
-${pic(historyFigure(history.lines, { n: nextFigure }))}
+${pic(historyFigure(history.lines, { n: nextFigure, family: history.family ?? null }))}
 ${pair(pic(escapesFigure(history.escapes?.(), { n: nextFigure, base: winBase })), pic(windowsFigure(history.windows, { n: nextFigure })), { rows: true })}
 ${timeline(history.timeline)}`;
 }

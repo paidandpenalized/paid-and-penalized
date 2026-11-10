@@ -528,6 +528,8 @@
 @media (max-width: 899px) {
   .rul__head { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 6px; padding: 0 6px 4px; font-size: 0.5625rem; letter-spacing: 0.02em; }
   .rul__head > :nth-child(-n+2) { display: none; }
+  /* The numbers sit at the left of their columns here, so their heads do too. */
+  .rul__head .num { text-align: left; }
   .rul__row { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 6px; padding: 5px 6px 4px; }
   .rul__name, .rul__ruler { grid-column: 1 / -1; }
   .rul__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
@@ -593,7 +595,8 @@
   .wi__out .field__label { font-size: 0.5625rem; letter-spacing: 0; }
   .wi__out .field__value { font-size: var(--fs-base); }
   .wi__out .field__note { font-size: 0.625rem; line-height: 1.3; }
-  .wi__out .est-tag { margin-left: 3px; padding: 1px 3px 0; font-size: 0.5rem; }
+  /* 9px: the labels stay 9px, since 10px wraps "Payment adjustment factor" to a third line at 390 px and grows the held box. */
+  .wi__out .est-tag { margin-left: 3px; padding: 1px 3px 0; font-size: 0.5625rem; }
 }
 .wi__big { font-size: var(--fs-xl, 1.75rem); }
 .wi__title { margin: 0; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }

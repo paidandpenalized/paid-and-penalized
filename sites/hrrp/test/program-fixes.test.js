@@ -7,7 +7,7 @@ import { columns } from '../../../web/charts/columns.js';
 import { figure } from '../../../web/charts/figure.js';
 import { dualBins } from '../web/figures/how-data.js';
 import { hospitalsAsset } from '../web/figures/explore-data.js';
-import { hospitalOf, sheetRow, worksheetAsset } from '../web/figures/worksheet-data.js';
+import { hospitalOf, pickFromHash, sheetRow, withPick, worksheetAsset } from '../web/figures/worksheet-data.js';
 import { programPage } from '../web/pages/program.js';
 import { buildPlaces } from '../web/places.js';
 import { areaContext, programView } from '../web/view.js';
@@ -178,4 +178,14 @@ test('a table beside a visible title is named by it (aria-labelledby), not by a 
     for (const id of ['wsr-title', 'meds-title']) assert.ok(text.includes(`id="${id}"`) && text.includes(`aria-labelledby="${id}"`), `${what}: ${id} names its table`);
     assert.ok(!/<caption class="vh" id="(?:wsr|meds)-cap"/.test(text), 'no second caption');
   }
+});
+
+test('Worksheet R\'s pick in the URL: "ws=<CCN>" beside any other part of the fragment, read back as the CCN', () => {
+  assert.equal(withPick('', '99000a'), '#ws=99000A');
+  assert.equal(withPick('#how', '990001'), '#how&ws=990001', 'another part is kept');
+  assert.equal(withPick('#ws=990001&how', '990002'), '#how&ws=990002', 'one pick at a time');
+  assert.equal(withPick('#ws=990001', null), '', 'no pick, no fragment');
+  assert.equal(pickFromHash('#how&ws=99000a'), '99000A');
+  assert.equal(pickFromHash(withPick('#how', '990001')), '990001');
+  for (const bad of ['', '#', '#ws=', '#ws=12345', '#ws=1234567', '#ws=99-001', '#xws=990001', '#ws=<b>01']) assert.equal(pickFromHash(bad), null, bad);
 });

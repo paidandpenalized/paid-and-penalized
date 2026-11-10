@@ -36,7 +36,7 @@ schema_version: 1
 | `Payment reduction (%)` | number | The cut the factor makes, in percent: 100 minus 100 times the factor. | Two decimals. 0 is no cut. |
 | `Estimated penalty ($, modeled)` | number | This site's estimate of the dollars the cut takes, in whole dollars. | An estimate, not CMS's number; the Methods page gives the assumptions. Blank when the hospital has no estimate. |
 | `Peer group` | number | The hospital's peer group, 1 to 5, by the share of its patients who are dually eligible for Medicare and full Medicaid. | Group 1 has the lowest share. |
-| `Dual proportion` | number | The share of the hospital's patients who are dually eligible, as a fraction. | Four decimals. 0.2351 is 23.51%. |
+| `Dual proportion` | number | The share of the hospital's patients who are dually eligible, as a fraction. | Up to eight decimals, from CMS's Excel file; rounded to four, it is the value in CMS's text file. 0.2351 is 23.51%. |
 | `AMI discharges` | number | The hospital's cases for heart attack (acute myocardial infarction) in the {edition} data window. | Cases are counted whether or not the hospital had enough to be measured. |
 | `AMI ERR` | number | The hospital's excess readmission ratio for heart attack (acute myocardial infarction): its readmissions against what its patients' mix would predict. | Above 1 is more readmissions than predicted. Blank when CMS gave none. |
 | `AMI penalized (Y/N)` | text | `Y` when the hospital's ratio for heart attack (acute myocardial infarction) was above its peer group's median, so the condition counted toward its cut; `N` when it was measured and was not. | Blank, not `0`, when the hospital was not measured on the condition: fewer than {minCases} cases, or no ratio published by CMS. |

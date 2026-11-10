@@ -19,6 +19,11 @@ export function latestMethodsVersion(log, site) {
   return v ? Math.max(...v) : null;
 }
 
+// [{ version, date }] for each of a site's headings, in the log's order.
+export function siteVersions(log, site) {
+  return log.split('\n').map((line) => HEADING.exec(line)).filter((m) => m && m[1] === site).map((m) => ({ version: Number(m[2]), date: m[3] }));
+}
+
 export function hasMethodsVersion(log, site, version) {
   return (versionsBySite(log)[site] ?? []).includes(version);
 }

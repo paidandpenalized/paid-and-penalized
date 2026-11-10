@@ -42,8 +42,21 @@ export const COPY = {
     claim: null,
   },
   dollarsFormula: { text: 'cases × case-mix index × (labor amount × wage index + non-labor amount × cost-of-living adjustment)', claim: null },
+  // The formula's second line: a Medicare-dependent hospital's add-on (the engine's est_mdh_addon).
+  dollarsFormulaMdh: {
+    text: '+ for a Medicare-dependent hospital: {share} × (cases × case-mix index for the hospital-specific rate × hospital-specific rate − the line above, if more than zero) × the part of the year it keeps the status',
+    claim: ['HRRP-25', 'HRRP-29'],
+  },
   dollarsInputs: {
-    text: 'Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the {edition} IPPS impact file, which uses claims from two years earlier. The standardized amounts come from the final rule’s standardized-amount tables (correction notice), choosing the column that matches each hospital’s quality-reporting and EHR status as CMS flags it in the impact file.',
+    text: 'Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the {edition} IPPS impact file, which uses claims from two years earlier.',
+    claim: null,
+  },
+  dollarsInputsMdh: {
+    text: 'A Medicare-dependent hospital’s second line takes the same cases but the file’s other case-mix index, the one it gives for hospitals paid under their hospital-specific rate.',
+    claim: 'HRRP-30',
+  },
+  dollarsRates: {
+    text: 'The standardized amounts come from the final rule’s standardized-amount tables (correction notice), choosing the column that matches each hospital’s quality-reporting and EHR status as CMS flags it in the impact file.',
     claim: null,
   },
 
@@ -60,6 +73,7 @@ export const COPY = {
     claim: null,
   },
   accuracySmall: { text: ' ({share} for hospitals under {beds} beds)', claim: null },
+  accuracyVersion: { text: 'The check was run on version {check} of the method, before the changes under What changed.', claim: null },
   assumeHeading: { text: 'Assumptions', claim: null },
   assumeIntro: { text: 'Where the files leave a choice, this site makes one. Each choice and what it does to the estimate:', claim: null },
   assumeColA: { text: 'Assumption', claim: null },
@@ -201,7 +215,7 @@ export const COPY = {
 
   accessHeading: { text: 'Accessibility', claim: null },
   accessText: {
-    text: 'Every chart has a text description, and its numbers are also in a table on the same page. Selecting individual dots or map areas needs a mouse or touch; the tables, search and links reach the same pages by keyboard.',
+    text: 'On these Readmissions pages, every chart has a text description, and its numbers are also in a table on the same page. Selecting individual dots or map areas needs a mouse or touch; the tables, search and links reach the same pages by keyboard.',
     claim: null,
   },
   pinsHeading: { text: 'Pinned files', claim: null },
@@ -213,6 +227,18 @@ export const COPY = {
   pinColBytes: { text: 'Bytes', claim: null },
   pinColHash: { text: 'Checksum (start)', claim: null },
   pinColGot: { text: 'Retrieved', claim: null },
+  // What changed: one line for each heading of docs/METHODS-LOG.md's hrrp versions (changedV<n>), newest first; a version with
+  // no line here stops the build.
+  changedHeading: { text: 'What changed', claim: null },
+  changedText: { text: 'Each version of how this site works out its numbers, newest first, with the day it took effect.', claim: null },
+  changedVersion: { text: 'Version {n}, {date}.', claim: null },
+  changedV1: { text: 'The first version: the method Thirty Day Readmissions used, carried over unchanged.', claim: null },
+  changedV2: {
+    text: 'A Medicare-dependent hospital’s second line in the dollar formula prices its hospital-specific payment with the case-mix index the impact file gives for hospitals paid under that rate, not the transfer-adjusted one. Only those hospitals’ estimates moved.',
+    claim: 'HRRP-30',
+  },
+  changedCorrections: { text: 'Corrections of errors are in the family’s dated {log}.', claim: null },
+  changedLogLink: { text: 'corrections log', claim: null },
   reuseHeading: { text: 'Reuse', claim: null },
   reuseText: {
     text: 'This site’s text, charts and derived data may be reused with credit to Paid & Penalized (CC BY); its code is MIT-licensed. CMS’s data are U.S. government works. Every table with a download is a CSV file. In those files the CCN is plain text, so open its column as text in a spreadsheet to keep the leading zero; headers name their units; and a condition’s penalized column is blank when the hospital was not measured on it (fewer than {minCases} cases, or no ratio published).',

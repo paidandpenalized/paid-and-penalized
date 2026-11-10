@@ -496,6 +496,8 @@ export const COPY = {
   histSourceCms: { text: 'CMS', claim: null },
   histSourceKff: { text: 'KFF', claim: null },
   histNoTotal: { text: 'No total for {years}.', claim: null },
+  // A year with no published total that is the family's estimate year: the front page's figure for it (the shell's facts).
+  histFamilyTotal: { text: 'For {fy}, this family’s front page gives its own estimate of the Readmissions cuts, about {total}, from its dollar model.', claim: null },
   histBasis: { text: 'Each year counts the hospitals in its CMS file, less the groups only the early files list (Methods names them); the rest of this page counts only hospitals measured on a condition.', claim: null },
   histNa: { text: 'n/a', claim: null },
   histTitleShare: { text: 'Share of hospitals cut, by fiscal year', claim: null },

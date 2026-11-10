@@ -6,10 +6,10 @@ import assert from 'node:assert/strict';
 import { textOf } from '../../../pipeline/site/html.js';
 import { ASSETS } from '../../../pipeline/test/helpers.js';
 import { methodsPage } from '../web/pages/methods.js';
-import { NTAP_AMOUNT } from '../web/constants.js';
+import { MDH_ADDON_SHARE, NTAP_AMOUNT } from '../web/constants.js';
 import { verdict } from '../../../engine/js/hrrp/formula.js';
 import { buildPlaces } from '../web/places.js';
-import { areaContext, methodsView } from '../web/view.js';
+import { areaContext, changesOf, methodsView, versionOn } from '../web/view.js';
 import { ALL, CONDITIONS, CUT, HISTORY, META, hospital, loadHrrpOnce } from './fixtures.js';
 
 const DOLLAR_META = {
@@ -25,7 +25,7 @@ const PINS = [
 ];
 // The years the early files list each group the history leaves out (history-data.js scopeYears), as the pinned file has them.
 const SCOPE = { maryland: [2013, 2014, 2015], puertoRico: [2013, 2014, 2015], noData: [2013, 2014, 2015, 2016, 2017, 2018] };
-const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS, historyScope = SCOPE } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed, historyScope });
+const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS, historyScope = SCOPE, methodsLog, family } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed, historyScope, methodsLog, family });
 const page = (ctx = ctxOf()) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const rowsOf = (text) => [...text.matchAll(/<tr><th scope="row">([^<]*(?:<[^>]+>[^<]*)*?)<\/th><td>(.*?)<\/td><\/tr>/gs)].map(([, a, e]) => [textOf(a), textOf(e)]);
 const assumptions = (text) => rowsOf(text.slice(text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'), text.indexOf('</table>', text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'))));
@@ -36,6 +36,18 @@ test('the accuracy line states the check against cost reports, and is dropped wi
   const bare = textOf(page(ctxOf({ meta: { ...DOLLAR_META, dollarCheck: undefined } })));
   assert.ok(!bare.includes('cost reports,') && !bare.includes('Accuracy'));
   assert.ok(bare.includes('Assumptions'), 'the assumptions stay');
+});
+
+test('the dollar formula has the Medicare-dependent add-on as its second line, its share the method constant; the case mix is said per side', () => {
+  const text = page();
+  const [federal, mdh, ...rest] = [...text.matchAll(/<pre class="formula">([\s\S]*?)<\/pre>/g)][1][1].split('\n').map(textOf);
+  assert.equal(rest.length, 0, 'two lines');
+  assert.equal(federal, 'cases × case-mix index × (labor amount × wage index + non-labor amount × cost-of-living adjustment)');
+  assert.ok(mdh.startsWith(`+ for a Medicare-dependent hospital: ${MDH_ADDON_SHARE * 100}% × (cases × case-mix index for the hospital-specific rate`), mdh);
+  const words = textOf(text);
+  assert.ok(words.includes('Cases and case-mix index are each hospital’s transfer-adjusted traditional-Medicare figures from the FY2027 IPPS impact file'));
+  assert.ok(words.includes('A Medicare-dependent hospital’s second line takes the same cases but the file’s other case-mix index'));
+  assert.ok(words.includes('The standardized amounts come from the final rule’s standardized-amount tables'));
 });
 
 test('the assumptions: the fixed rows, the Medicare-dependent row with its end date and largest shortfall', () => {
@@ -167,6 +179,45 @@ test('the formula says a condition at or below its median adds nothing, and does
   assert.ok(!/not less than/i.test(t));
 });
 
+test('history: a year with no total that is the family\'s estimate year points to the front page\'s figure', () => {
+  const noTotal = HISTORY.national.filter((r) => r.totalEst == null).map((r) => r.fy);
+  assert.ok(noTotal.length > 0, 'the fixture has a year with no total');
+  const text = textOf(page(ctxOf({ family: { fy: noTotal[0], hrrp: -337123456 } })));
+  assert.ok(text.includes(`For FY${noTotal[0]}, this family’s front page gives its own estimate of the Readmissions cuts, about $337M, from its dollar model.`));
+  assert.ok(!textOf(page()).includes('front page gives'));
+});
+
+test('the version a check ran on: the newest the log dates on or before it, else the first', () => {
+  const log = [{ version: 1, date: '2026-11-04' }, { version: 2, date: '2026-11-04' }, { version: 3, date: '2026-12-01' }];
+  assert.equal(versionOn(log, '2026-10-11'), 1, 'older than the log: the version carried over');
+  assert.equal(versionOn(log, '2026-11-04'), 2);
+  assert.equal(versionOn(log, '2026-11-20'), 2);
+  assert.equal(versionOn(log, '2027-01-01'), 3);
+  assert.equal(versionOn([], '2026-10-11'), null);
+});
+
+test('the accuracy line says which methods version the check ran on, only when a newer one is in the log', () => {
+  const log = [{ version: 1, date: '2026-11-04' }, { version: 2, date: '2026-11-04' }];
+  const said = 'The check was run on version 1 of the method, before the changes under What changed.';
+  assert.ok(textOf(page(ctxOf({ methodsLog: log }))).includes(said));
+  const rechecked = { ...DOLLAR_META, dollarCheck: { ...DOLLAR_META.dollarCheck, asOf: '2026-11-05' } };
+  assert.ok(!textOf(page(ctxOf({ meta: rechecked, methodsLog: log }))).includes('The check was run on version'));
+  assert.ok(!textOf(page()).includes('The check was run on version'), 'no log, no sentence');
+});
+
+test('What changed: one line for each methods version, newest first, with its date; a version with no line stops the build', () => {
+  const log = [{ version: 1, date: '2026-11-04' }, { version: 2, date: '2026-11-05' }];
+  const text = page(ctxOf({ methodsLog: log }));
+  const sec = text.slice(text.indexOf('<section class="meth__sec" id="changed"'), text.indexOf('</section>', text.indexOf('id="changed"')));
+  const items = [...sec.matchAll(/<li>([\s\S]*?)<\/li>/g)].map((m) => textOf(m[1]).trim());
+  assert.equal(items.length, 2);
+  assert.ok(items[0].startsWith('Version 2, November 5, 2026. A Medicare-dependent hospital’s second line'), items[0]);
+  assert.ok(items[1].startsWith('Version 1, November 4, 2026. The first version'), items[1]);
+  assert.match(sec, /<a href="\/corrections\/">corrections log<\/a>/);
+  assert.ok(!page().includes('id="changed"'), 'no log, no section');
+  assert.throws(() => changesOf([{ version: 99, date: '2026-12-01' }]), /methods_version 99 but methods\/copy\.js has no changedV99/);
+});
+
 test('on the data: Methods holds every pin the data read, each claim sentence reads as words', () => {
   const data = loadHrrpOnce();
   const places = buildPlaces(data.hospitals, data.meta);
@@ -178,6 +229,10 @@ test('on the data: Methods holds every pin the data read, each claim sentence re
   const t = textOf(html);
   assert.match(t, /\d+% of estimates land within 15%/);
   assert.match(t, /about \d\.\d% low overall/);
+  // What changed has a line for every hrrp heading of docs/METHODS-LOG.md, the newest first.
+  assert.ok(data.methodsLog.length > 0);
+  const versions = [...html.matchAll(/<li><strong>Version (\d+), /g)].map((m) => Number(m[1]));
+  assert.deepEqual(versions, data.methodsLog.map((v) => v.version).sort((a, b) => b - a));
   assert.ok(html.length < 200000);
 });
 

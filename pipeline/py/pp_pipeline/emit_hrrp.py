@@ -5,10 +5,12 @@ reads (names, locations, beds, teaching, ownership, provider types and Medicare 
 A rebuild that changes nothing keeps the committed built_at, so git stays clean. Ported from Thirty Day Readmissions
 (pipeline/build_data.py at 33d1959): the same gates, in the same order, and the same body under the same keys, so the
 emitted file equals that site's own output (`data/pinned/tdr/hrrp.json`) on meta (less sources and whatsNew),
-conditions, hospitals and history. Fails, writing nothing, on: a Table 15 disagreement, a payment adjustment factor
-out of range, a workbook value that does not round to the tab export's, a value shared by a peer group that is not
-shared, stored values that no longer reproduce every factor, a malformed dollar check, a hospital the master lacks,
-or a master built from older pins.
+conditions, hospitals and history (since methods_version 2 but for the MDHs' base and pen, and since 2026-11-09 the
+dual proportion, stored to more decimals; corrections/2026-11-09-dual-eligible-share.md). Fails, writing nothing, on: a
+Table 15 disagreement, a payment adjustment factor out of range, a workbook value that does not round to the tab export's,
+a dual proportion that would print or round differently from CMS's, a value shared by a peer group that is not shared,
+stored values that no longer reproduce every factor, a malformed dollar check, a hospital the master lacks, or a master
+built from older pins.
 """
 import json
 import sys
@@ -96,7 +98,8 @@ def read_inputs():
 
 
 def gates(supp, pub, t15):
-    """TDR's input gates, in its order: Table 15 agrees, every factor in range, the workbook rounds to the export."""
+    """TDR's input gates, in its order: Table 15 agrees, every factor in range, the workbook rounds to the export; then
+    the stored dual proportions print and round as CMS's do."""
     mismatch = hrrp.table15_mismatches(t15, supp)
     if mismatch:
         raise hrrp.HrrpError(f"Table 15 and the supplemental file disagree for {len(mismatch)} hospitals: {mismatch[:10]}")
@@ -106,6 +109,11 @@ def gates(supp, pub, t15):
     drift = hrrp.precision_mismatches(supp, pub)
     if drift:
         raise hrrp.HrrpError(f"Excel workbook and tab-delimited file disagree on {len(drift)} values: {drift[:10]}")
+    dual = hrrp.dual_mismatches(supp, pub)
+    if dual:
+        raise hrrp.HrrpError(f"{len(dual)} dual proportions stored to {hrrp.DUAL_DECIMALS} decimals print a different "
+                             f"one-decimal percent, or round to a different 4-decimal value, than CMS's: {dual[:10]}; "
+                             "raise DUAL_DECIMALS")
 
 
 def stored_values(supp, pub, ties):

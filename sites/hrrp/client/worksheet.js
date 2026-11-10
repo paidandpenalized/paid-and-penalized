@@ -2,13 +2,15 @@
 // same code as the server's (worksheet.js), from the worksheet asset (figures/worksheet-data.js), which is fetched when
 // the first hospital is picked; Step 5's waterfall, beside the step's words above the sheet (figures/waterfall.js), is drawn again
 // from the same rows.
+// The pick is kept in the page's URL (#ws=<CCN>, figures/worksheet-data.js withPick), so a page loaded again, as Back does when the
+// browser kept no copy of it, shows that hospital again.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
 import { mountFigure, mountScroll, unmountScroll } from '../../../web/client/figure.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { CCN } from '../../../engine/js/ccn.js';
 import { fill, t } from '../web/program/copy.js';
-import { hospitalOf } from '../web/figures/worksheet-data.js';
+import { hospitalOf, pickFromHash, withPick } from '../web/figures/worksheet-data.js';
 import { estimateTag } from '../web/estimate-tag.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
 import { worksheetHtml, worksheetRows } from '../web/worksheet.js';
@@ -46,8 +48,8 @@ export function mountWorksheet() {
   // Cleared first, so the same words said again are announced again.
   const say = (words) => { status.textContent = ''; status.textContent = words; };
   let latest = 0;
-  const pick = async (href) => {
-    const ccn = href.replace(/\/$/, '').split('/').pop();
+  // quiet: a pick restored from the URL as the page loads, which is not announced.
+  const show = async (ccn, { quiet = false } = {}) => {
     const mine = ++latest;
     try {
       const data = await loadSheets(holder.dataset.src);
@@ -63,14 +65,21 @@ export function mountWorksheet() {
           for (const fig of waterfall.querySelectorAll('figure[data-figure]')) mountFigure(fig);
         }
         for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(mountScroll);
-        say(t('wsPickDone'));
-      } else {
+        const { pathname, search, hash } = window.location;
+        const fragment = withPick(hash, ccn);
+        if (fragment !== hash) window.history.replaceState(window.history.state, '', pathname + search + fragment);
+        if (!quiet) say(t('wsPickDone'));
+      } else if (!quiet) {
         // A CCN the asset does not hold: the example stays, and the status says so (a stale failure message is replaced).
         say(t('wsPickMissing'));
       }
     } catch {
-      if (mine === latest) say(fill('wsPickFailed'));
+      if (mine === latest && !quiet) say(fill('wsPickFailed'));
     }
   };
+  const pick = (href) => show(href.replace(/\/$/, '').split('/').pop());
   mountOmnibox(form, { load: () => loadIndex(form.dataset.src), words: searchWords(), open: pick, types: ['hospital'] });
+  // A pick the URL keeps (a reload, or Back to a page the browser kept no copy of): the same hospital again, unannounced.
+  const kept = pickFromHash(window.location.hash);
+  if (kept) show(kept, { quiet: true });
 }
