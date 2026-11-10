@@ -300,3 +300,14 @@ test('policyPage refuses an empty brief, no sections, a section id that is not a
   assert.throws(() => policyPage(ARGS({ sections: [{ id: 'a', heading: 'A', body: html`<p>a</p>` }, { id: 'a', heading: 'B', body: html`<p>b</p>` }] })), RangeError);
   assert.throws(() => policyPage(ARGS({ sections: [{ id: 'a', heading: 'A', body: '<p>a</p>' }] })), TypeError);
 });
+
+// The hub's statements about the site that wait on the work-requirement site (a verdict still "pending" in the register's
+// last section) must be true before that site is released: releasing it fails here until each one is.
+test('the work-requirement site is not released while any hub statement about the site is still pending', () => {
+  const register = readFileSync(new URL('../CLAIMS.md', import.meta.url), 'utf8');
+  const section = register.slice(register.indexOf('## Statements about this site'));
+  const rows = section.split('\n').filter((line) => line.startsWith('| ') && !line.startsWith('| statement |'));
+  assert.ok(rows.length > 10, `${rows.length} statements`);
+  const pending = rows.filter((line) => /pending/i.test(line.split(' | ').at(-1)));
+  if (SITE.sites['work-requirement'].released) assert.deepEqual(pending, [], 'statements still pending at release');
+});

@@ -139,7 +139,7 @@ export const COPY = typesetCopy({
   aboutBrief3: "Every number comes from public data, CMS's above all, and is checked against CMS's own figures wherever CMS publishes them.",
   aboutBrief4: 'AI tools help write the code and draft the text, and Dalton reviews the work.',
   aboutWhatHeading: 'What this is',
-  aboutWhat: "Paid & Penalized explains how Medicare's payment programs reward, penalize and adjust what hospitals are paid, one program at a time, from the data CMS publishes. Each site reproduces CMS's published results, shows the arithmetic, and lets you look up any hospital.",
+  aboutWhat: "Paid & Penalized explains how Medicare's payment programs reward, penalize and adjust what hospitals are paid, one program at a time, from the data CMS publishes. Each Medicare program's site reproduces CMS's published results, shows the arithmetic, and lets you look up any hospital. The Medicaid work-requirement site is a scenario, not a payment: it models what the requirement could cost each hospital and shows that arithmetic too.",
   aboutWhoHeading: 'Who builds it',
   aboutWho: 'Dalton Haslam, MD, MBA, builds and maintains it in his own time. {linkedin}.',
   aboutCoiHeading: 'Conflicts of interest',
