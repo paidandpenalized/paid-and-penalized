@@ -2,7 +2,7 @@
 // `run.py emit`) and the pinned CMS-64 file's entry in the manifest (the date CMS last changed the newest CMS input).
 // File reads live here; the pages stay pure.
 import { builtOn } from '../../../engine/js/dates.js';
-import { REPO_ROOT, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
+import { REPO_ROOT, medicaidPath, newestYear, pinnedEntry, readJson } from '../../../pipeline/files.js';
 
 // The pinned CMS-64 new adult group expenditures (data.medicaid.gov): the scenario's newest CMS input, whose
 // datasetModified is the date the corrections page gives as CMS's release.
@@ -23,7 +23,7 @@ export function loadMedicaid() {
   const changed = builtOn(file.built_at);
   if (!changed) throw new RangeError(`work requirement: ${path}: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(file.built_at)}`);
   if (!file.sources.includes(CMS64_PIN_ID)) throw new RangeError(`work requirement: ${path} is not built from ${CMS64_PIN_ID}: update CMS64_PIN_ID`);
-  const cms64 = readManifest().find((e) => e.id === CMS64_PIN_ID);
+  const cms64 = pinnedEntry(CMS64_PIN_ID);
   const ccn = file.columns.indexOf('ccn');
   loaded = {
     meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: cms64.datasetModified, methodsVersion: file.methods_version, sources: file.sources },

@@ -1,6 +1,7 @@
 // What the hub reads at build time: the newest dollar estimates, the newest hospital master, the HACRP site's emitted
 // file for the same year (which hospitals CMS scored and decided), the Readmissions site's newest emitted file, the
-// work-requirement scenario's newest emitted file (its national roll-ups, the footer's figure) and the US atlas. File reads live here; the model, the asset and the pages stay pure.
+// work-requirement scenario's newest emitted file (its national roll-ups, the footer's figure) and the US atlas. File
+// reads live here; the model, the asset and the pages stay pure.
 import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';

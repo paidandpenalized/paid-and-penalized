@@ -221,7 +221,8 @@ test('every computed worksheet line carries the scenario tag; line 1, from the c
 });
 
 // Each label's extent as drawn, from its x, anchor and type (the kit's width estimate, an upper bound).
-const LABEL = /<text class="([^"]+)" x="([\d.-]+)"([^>]*)>([\s\S]*?)<\/text>/g;
+const LABEL = /<text\b([^>]*)>([\s\S]*?)<\/text>/g;
+const attr = (attrs, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(` ${attrs}`)?.[1];
 const plainText = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, '\'').replace(/&quot;/g, '"');
 function extent(cls, x, anchor, inner, drawing) {
   let w;
@@ -247,9 +248,9 @@ test('every label in the chain stays inside its drawing, in every case at every 
         for (const svg of markup.match(/<svg [\s\S]*?<\/svg>/g)) {
           const drawing = /data-fit="(\w+)"/.exec(svg)[1];
           const width = Number(/viewBox="0 0 ([\d.]+) /.exec(svg)[1]);
-          for (const [, cls, x, attrs, inner] of svg.matchAll(LABEL)) {
-            const anchor = /text-anchor="(\w+)"/.exec(attrs)?.[1] ?? 'start';
-            const [left, right] = extent(cls, Number(x), anchor, inner, drawing);
+          for (const [, attrs, inner] of svg.matchAll(LABEL)) {
+            const anchor = attr(attrs, 'text-anchor') ?? 'start';
+            const [left, right] = extent(attr(attrs, 'class'), Number(attr(attrs, 'x')), anchor, inner, drawing);
             const where = `${name} ${drawing}, ${scenario} at ${use}: "${plainText(inner)}" spans ${left.toFixed(1)} to ${right.toFixed(1)} of ${width}`;
             assert.ok(left >= 0 && right <= width, where);
             checked += 1;

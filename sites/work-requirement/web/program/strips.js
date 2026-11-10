@@ -65,13 +65,13 @@ export const stripsAsset = (rows, { top, words, totals, how }) => ({
   words,
   totals,
   how,
-  rows: rows.map((r) => [r.ccn, r.name, r.city, r.state, r.cls, r.groups, ...(r.share ?? [null, null, null])]),
+  rows: rows.map((r) => [r.ccn, r.name, r.city, r.state, r.cls, r.groups, ...(r.share ?? [])]), // an undrawn row ends at its groups: no three nulls
 });
 export function decodeStrips(asset) {
   if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how) {
     throw new TypeError('strips asset: not what the build wrote');
   }
-  const rows = asset.rows.map(([ccn, name, city, state, cls, groups, lo, mid, hi]) => ({ ccn, name, city, state, cls, groups, share: lo === null ? null : [lo, mid, hi] }));
+  const rows = asset.rows.map(([ccn, name, city, state, cls, groups, lo, mid, hi]) => ({ ccn, name, city, state, cls, groups, share: lo === undefined ? null : [lo, mid, hi] }));
   return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, rows };
 }
 

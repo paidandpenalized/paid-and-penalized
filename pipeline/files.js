@@ -51,9 +51,15 @@ export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');
 }
 
-export function readPinned(id, encoding = 'utf8') {
+// The manifest's entry for a pinned input.
+export function pinnedEntry(id) {
   const entry = readManifest().find((e) => e.id === id);
   if (!entry) throw new RangeError(`no pinned input "${id}" in the manifest`);
+  return entry;
+}
+
+export function readPinned(id, encoding = 'utf8') {
+  const entry = pinnedEntry(id);
   return readFileSync(PINNED_DIR + entry.path, encoding);
 }
 
