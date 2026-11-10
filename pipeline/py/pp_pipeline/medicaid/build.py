@@ -284,8 +284,7 @@ def main(argv):
     ap.add_argument("--master", default=str(MASTER))
     ap.add_argument("--dollars", default=str(DOLLARS))
     a = ap.parse_args(argv)
-    pins = inputs.sources()  # sources.json, read once
-    states = state_table(*(inputs.read_csv(p, pins=pins) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
+    states = state_table(*(inputs.read_csv(p) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
     master, dollars = read_json(a.master), read_json(a.dollars)
     year, hcris_sha256 = read_hcris(a.hcris)
     hcris = {r["ccn"]: r for r in year.rows}
@@ -293,7 +292,7 @@ def main(argv):
         print(f"medicaid: no FY{params.BASE_YEAR} rows in the HCRIS layer", file=sys.stderr)
         return 1
     records = hospital_records(master, hcris, states, program_dollars(dollars),
-                               read_cuts(inputs.read_csv(inputs.STATE_MIUR, pins=pins)))
+                               read_cuts(inputs.read_csv(inputs.STATE_MIUR)))
     for r in records:  # each state's ratio, as hospital_records set it, on its existing entry
         if r["state"] in states and r["state_ratio"] is not None:
             states[r["state"]]["nonmaternity_ratio"] = r["state_ratio"]

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from pp_engine.hcris import tidy
 from pp_engine.medicaid import params, shares
+from pp_pipeline import files
 from pp_pipeline.medicaid import build, inputs, safety_net
 
 FY2023 = ("09/30/2022", "12/31/2022", "03/31/2023", "06/30/2023", "09/30/2023")
@@ -35,31 +36,19 @@ STATES = build.state_table(
 
 
 class Inputs(unittest.TestCase):
-    def test_every_pinned_input_matches_sources_json(self):
-        for e in inputs.sources():
-            with self.subTest(e["id"]):
-                inputs.read_bytes(e["id"])
+    def test_every_state_input_is_a_manifest_pin(self):
+        for pin_id in (inputs.VIII, inputs.FMR, inputs.URBAN, inputs.STATE_MIUR):
+            with self.subTest(pin_id):
+                self.assertTrue(inputs.read_bytes(pin_id))  # raises on a size or SHA-256 mismatch
 
-    def test_no_unlisted_inputs(self):
-        listed = {e["path"] for e in inputs.sources()} | {"sources.json"}
-        self.assertEqual({p.name for p in inputs.INPUTS_DIR.iterdir()}, listed)
-
-    def test_a_changed_pin_is_refused(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            data = b"a,b\n1,2\n"
-            (Path(tmp) / "x.csv").write_bytes(data + b"3,4\n")
-            (Path(tmp) / "sources.json").write_text(json.dumps({"files": [
-                {"id": "x", "path": "x.csv", "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}]}))
-            with self.assertRaises(inputs.PinError):
-                inputs.read_bytes("x", tmp)
+    def test_the_hcris_pin_names_its_source(self):
+        derived = files.manifest_entry(inputs.STATE_MIUR)["derivedFrom"]
+        self.assertEqual(derived["file"], "HOSP10FY2023.ZIP")
+        self.assertEqual(len(derived["sha256"]), 64)
 
     def test_headers_are_cleaned(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            data = b'State," ""Total"""\nAlaska,1\n'  # CMS's file quotes one header like this
-            (Path(tmp) / "x.csv").write_bytes(data)
-            (Path(tmp) / "sources.json").write_text(json.dumps({"files": [
-                {"id": "x", "path": "x.csv", "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}]}))
-            self.assertEqual(inputs.read_csv("x", tmp), [{"State": "Alaska", "Total": "1"}])
+        data = b'State," ""Total"""\nAlaska,1\n'  # CMS's file quotes one header like this
+        self.assertEqual(inputs.parse_csv(data), [{"State": "Alaska", "Total": "1"}])
 
 
 class StateTable(unittest.TestCase):

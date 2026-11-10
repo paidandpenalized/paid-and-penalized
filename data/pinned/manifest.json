@@ -1506,5 +1506,83 @@
     "derivedBy": "pipeline/py/pp_pipeline/hcris/puf.py",
     "landingPage": "https://data.cms.gov/provider-compliance/cost-reports/hospital-provider-cost-report",
     "retrieved": "2026-11-04"
+  },
+  {
+    "id": "cms64-viii-2026-02",
+    "title": "Medicaid CMS-64 New Adult Group Expenditures (data.medicaid.gov dataset 00505e90-f8ac-5921-b12f-5e23ba7ffcf3), CSV distribution",
+    "path": "medicaid/cms64-new-adult-group-expenditures-02172026.csv",
+    "bytes": 374311,
+    "sha256": "1b9232bac8abcb92f74963962b0d31d9ea299176120d657b22eae680810377e5",
+    "downloadUrl": "https://download.medicaid.gov/data/medicaid-cms-64-new-adult-group-expenditures-dataset-02172026.csv",
+    "landingPage": "https://data.medicaid.gov/dataset/00505e90-f8ac-5921-b12f-5e23ba7ffcf3",
+    "datasetModified": "2026-02-17",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "cms64-fmr-fy2023-map",
+    "title": "Medicaid Financial Management Report, FY 2023: each state's MAP tab, Total Net Expenditures and the two DSH rows (Inpatient Hospital - DSH, Mental Health Facility - DSH), total computable, rounded to the dollar",
+    "path": "medicaid/cms64-fmr-fy2023-map-totals.csv",
+    "bytes": 2139,
+    "sha256": "6da9525d06303e5639e1808797126a28ad6114baa60fa0226f5a7912de836f8a",
+    "downloadUrl": "https://www.medicaid.gov/medicaid/financial-management/downloads/financial-management-report-fy2023.zip",
+    "landingPage": "https://www.medicaid.gov/medicaid/financial-management/state-expenditure-reporting-for-medicaid-chip/expenditure-reports-mbescbes",
+    "derivedFrom": {
+      "file": "financial-management-report-fy2023.zip",
+      "members": [
+        "FY 2023 FMR NET EXPENDITURES.xlsx"
+      ],
+      "sha256": "23242828ff7193bcda7e20a4d12ed077ca9ac8f8669c3d4d4b08cd55340fe903",
+      "downloadUrl": "https://www.medicaid.gov/medicaid/financial-management/downloads/financial-management-report-fy2023.zip",
+      "lastModified": "2024-05-31",
+      "note": "sha256 is of the extracted member FY 2023 FMR NET EXPENDITURES.xlsx as read on the retrieval date; the zip's own size and hash were not recorded."
+    },
+    "derivedBy": "hand extraction of the MAP tab rows (Total Net Expenditures and the two DSH rows) for each state",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "urban-2026-a2-wr",
+    "title": "Buettgens, Karpman, Haley, Carter, Kenney, Projected Reductions in Medicaid Expansion Enrollment Under OBBBA's Work Requirements and Six-Month Redeterminations: National and State Estimates for 2028 (Urban Institute / RWJF, March 2026), Appendix Table A.2, the three work-requirement-only columns (incremental after six-month redeterminations): thousands of average monthly enrollees and percent of the state's no-policy expansion enrollment",
+    "path": "medicaid/urban-2026-table-a2-work-requirement.csv",
+    "bytes": 1733,
+    "sha256": "279fad9416f0decd3f524ccf9b6af4d7378ab04887e7c19ea3a8550889248743",
+    "downloadUrl": "https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284",
+    "landingPage": "https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284",
+    "derivedFrom": {
+      "file": "Urban Institute / RWJF report PDF (rwjf485284)",
+      "sha256": "fff0a8ee790b80f7dc267dc66bfbed4aa3d1f20b65da41c1bc78b518eb7cba36",
+      "downloadUrl": "https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284",
+      "note": "Appendix Table A.2 transcribed by hand (42 state rows; see the CSV); the report PDF is not stored in the repo. Cite, do not republish."
+    },
+    "derivedBy": "transcription of Appendix Table A.2",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2023-state-miur",
+    "title": "The safety-net flag's state pools: for each state, the hospitals in the HCRIS FY2023 hospital file of every facility type with Medicaid days (states from CMS's HCRIS provider file, HOSP10_PRVDR_ID_INFO.CSV), and the mean, sample standard deviation and mean + 1 SD of their Medicaid inpatient utilization rate (S-3 I line 14 col 7 + line 2 col 7, over line 14 col 8)",
+    "path": "medicaid/hcris-fy2023-state-miur.csv",
+    "bytes": 1832,
+    "sha256": "8b16d35614ceeb269cc238453d96f2bb44bf654cc4b51c5cdcab456b6e33cc63",
+    "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2010-form",
+    "derivedFrom": {
+      "file": "HOSP10FY2023.ZIP",
+      "bytes": 136799140,
+      "sha256": "fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "members": [
+        "HOSP10_2023_rpt.csv",
+        "HOSP10_2023_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
+      "lastModified": "2026-10-05",
+      "alsoRead": {
+        "file": "hosp10-reports.zip",
+        "member": "HOSP10_PRVDR_ID_INFO.CSV",
+        "bytes": 10865019,
+        "sha256": "307feaf283c7796fe6bde2f6f86ef4e47a20d95e751c13bb109e1fcd062a7d06"
+      },
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL will differ. The raw zips are archived by SHA-256 in a private R2 bucket (pp-sources); they are not in git."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/medicaid/safety_net.py",
+    "retrieved": "2026-11-04"
   }
 ]
