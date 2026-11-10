@@ -11,6 +11,7 @@ import { EXAMPLE_CCN } from '../../hub/model.js';
 import { HRRP, generateHrrp } from '../../sites/hrrp/web/generate.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { loadMedicaid } from '../../sites/work-requirement/web/data.js';
 import { WR } from '../../sites/work-requirement/web/generate.js';
 import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../sites/work-requirement/web/links.js';
 import { checkLinks } from '../../tools/ci/link-check.js';
@@ -336,7 +337,7 @@ test('the work-requirement site builds its program page and Methods, unreleased:
   assert.ok(!sitemap.includes(WR_PROGRAM), 'no work-requirement page in the sitemap');
   assert.ok(sitemap.includes('/hacrp/'), 'the released sites\' pages are');
   const corrections = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
-  assert.ok(corrections.includes('<time datetime="2026-02-17">'), 'the CMS-64 file\'s date');
+  assert.ok(corrections.includes(`<time datetime="${loadMedicaid().meta.cmsReleased}">`), 'the newest date CMS gives one of its inputs');
 });
 
 test('HACRP gives the build its two dates, which /corrections/ shows', async () => {
