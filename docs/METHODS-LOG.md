@@ -459,13 +459,14 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Scenarios: low, middle and high losses are Urban Institute and RWJF's (March 2026, Appendix Table A.2) work-requirement
   declines under high, medium and low state mitigation. Middle is the default. The official federal estimates (CMS's
   interim final rule, CBO) line up with the low case.
-- Decisions that shape the numbers: method and scenario design (DES-47, decided 2026-11-04); cost reports through the
-  HCRIS layer as filed, nothing annualized, the hospital-specific share and its 200-day floor, and line 24's operating
-  entries in the operating margin (DATA-B-03, decided 2026-11-05; the early flag, DATA-B-04, decided 2026-11-05); Maryland
-  not modeled because of all-payer rates (decided 2026-11-06), its hospitals out of the national, group and sensitivity
-  roll-ups (class `all_payer`). A state's roll-up is null unless the state has a scenario, so no state without one shows
-  a dollar figure. Non-expansion states and Wisconsin (no VIII group) have no scenario; a hospital without a base-year
-  cost report has none either.
+- Decisions that shape the numbers: the method (FY2023 base, S-10 line 2, the scenario inputs, no projection, the
+  use-rate what-if; DATA-B-03, decided 2026-11-04); cost reports through the HCRIS layer as filed, nothing annualized,
+  the hospital-specific share and its 200-day floor, and line 24's operating entries in the operating margin (DATA-B-03,
+  decided 2026-11-05); "as filed" and "settled" labels on measured cost-report numbers (DATA-B-04, decided 2026-11-04);
+  Maryland not modeled because of all-payer rates (DATA-B-03, decided 2026-11-06), its hospitals out of the national,
+  group and sensitivity roll-ups (class `all_payer`). A state's roll-up is null unless the state has a scenario, so no
+  state without one shows a dollar figure. Non-expansion states and Wisconsin (no VIII group) have no scenario; a
+  hospital without a base-year cost report has none either.
 - Groups: critical access, acute, rural (critical access or non-urban), urban, expansion states, our safety-net flag (the
   Medicaid DSH deeming tests read from the cost report; not an official list), and (added in this version) public,
   nonprofit and for-profit from the master's ownership field (Government, Nonprofit, For-profit; Unknown and blank are
