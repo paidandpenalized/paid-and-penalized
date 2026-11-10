@@ -231,6 +231,9 @@ export const COPY = {
   acrossColSide: { text: 'Side of the line', claim: null },
   acrossColHospitals: { text: 'Hospitals', claim: null },
   acrossColMoney: { text: 'Estimated cut, taken or not (whole dollars)', claim: null },
+  // A place's page adds its own hospitals on each side, beside the nation's.
+  acrossColHereHospitals: { text: 'Here', claim: null },
+  acrossColHereMoney: { text: 'Here (whole dollars)', claim: null },
   acrossSideUnder: { text: 'Under the line: not cut', claim: null },
   acrossSideOver: { text: 'Over the line: cut', claim: null },
   // Shares.
