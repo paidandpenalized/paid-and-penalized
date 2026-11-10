@@ -66,6 +66,22 @@ class Golden(unittest.TestCase):
         for group in doc["groups"].values():
             self.assertLessEqual(group["middle"]["hospitals"], in_totals)
 
+    def test_every_hospital_state_has_an_entry_and_territories_are_not_modeled(self):
+        doc = fresh()
+        c = doc["columns"]
+        state, cls, factor = c.index("state"), c.index("cls"), c.index("share_factor")
+        self.assertEqual({r[state] for r in doc["hospitals"]} - set(doc["states"]), set())
+        for code in ("PR", "GU", "VI", "AS", "MP"):
+            self.assertEqual(doc["states"][code]["cls"], "territory", code)
+            self.assertIsNone(doc["states"][code]["rollup"], code)
+        territory_rows = [r for r in doc["hospitals"] if r[state] in ("PR", "GU", "VI", "AS", "MP")]
+        self.assertTrue(territory_rows)
+        self.assertTrue(all(r[cls] in ("territory", "no_cost_report") for r in territory_rows))
+        self.assertTrue(any(r[cls] == "territory" for r in territory_rows))
+        # `share_factor` exists only where a share does.
+        self.assertTrue(all((r[factor] is not None) == (r[cls] == "scenario") for r in doc["hospitals"]
+                            if r[cls] != "no_cost_report"))
+
     def test_every_group_and_row_is_whole(self):
         doc = fresh()
         self.assertEqual(set(doc["groups"]), {"critical_access", "acute", "rural", "urban", "expansion_states",

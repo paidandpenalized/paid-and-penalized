@@ -3,7 +3,7 @@ from the Python engine, and cover every class and edge the port must match."""
 import functools
 import unittest
 
-from pp_engine.medicaid import params
+from pp_engine.medicaid import params, rollup
 from pp_pipeline.files import read_json
 from pp_pipeline.medicaid import build, conformance
 
@@ -28,9 +28,17 @@ class Vectors(unittest.TestCase):
     def test_every_class_and_edge_is_covered(self):
         hospitals = fresh()["hospitals"]
         bases = [h["base"] for h in hospitals]
-        self.assertEqual({h["cls"] for h in hospitals} & {build.SCENARIO, build.NOT_EXPANSION, build.NO_VIII,
-                                                          build.ALL_PAYER}, {build.SCENARIO, build.NOT_EXPANSION,
-                                                                             build.NO_VIII, build.ALL_PAYER})
+        classes = {build.SCENARIO, build.NOT_EXPANSION, build.NO_VIII, build.ALL_PAYER, build.TERRITORY}
+        self.assertEqual({h["cls"] for h in hospitals} & classes, classes)
+        picked = conformance.pick_hospitals(self.records())
+        # A refresh that drops these properties from the data must fail here, not quietly thin the vectors.
+        for label, pick in (
+                ("cost ratio at the cap", lambda r: r["base"]["cost_ratio"] == params.MAX_COST_RATIO),
+                ("falls 1 point", conformance._falls_1pp), ("into the red", conformance._into_red)):
+            with self.subTest(label):
+                self.assertTrue(any(pick(r) for r in picked))
+        self.assertGreater(rollup.roll_up([(r["base"], r["results"]["middle"]) for r in picked
+                                           if r["cls"] == build.SCENARIO])["into_red"], 0)
         for label, found in (
                 ("unscored", any(not b["scored"] for b in bases)),
                 ("scored but not lines 2 + 5", any(b["scored"] and not b["scored_line2_5"] for b in bases)),
@@ -50,6 +58,10 @@ class Vectors(unittest.TestCase):
         self.assertGreaterEqual(days[1], params.MIN_MEDICAID_DAYS)
         chosen = {r["ccn"] for r in conformance.pick_hospitals(self.records())}
         self.assertTrue({r["ccn"] for r in edges} <= chosen)
+        below, above = sorted(edges, key=lambda r: r["base"]["medicaid_days"][0])
+        self.assertEqual(below["share"], below["state_share"])  # under the floor: the state's share unchanged
+        self.assertEqual(below["share_factor"], 1.0)
+        self.assertNotEqual(above["share_factor"], 1.0)  # at the floor: its own factor applies
 
     def test_no_hospital_is_named(self):
         text = conformance.PATH.read_text(encoding="utf-8")

@@ -3,8 +3,8 @@ class), one record per acute-care or critical access hospital (identity, measure
 and the roll-ups. `pp_pipeline.emit_medicaid` writes the result as `data/emitted/medicaid/fy2023/medicaid.json`.
 
 Cost reports come from the HCRIS layer's emitted base year (`data/emitted/hcris/fy2023/hcris.json`, read through
-pp_engine.hcris.reader); the master and the dollar estimates are the emitted files of the newest years; the state inputs
-are pinned (`pp_pipeline.medicaid.inputs`).
+pp_engine.hcris.reader); the master (FY2027) and the dollar estimates (FY2026) are those years' emitted files, fixed
+constants below, not the newest; the state inputs are pinned (`pp_pipeline.medicaid.inputs`).
 """
 import hashlib
 import json
@@ -28,7 +28,10 @@ CODE_OF_NAME = {name: code for code, _, name in geo.STATES}
 # A state's class, which every hospital in it carries.
 SCENARIO = "scenario"            # in Urban's table, with a VIII group in CMS-64
 NO_VIII = "no_viii_group"        # in Urban's table, without a VIII group (Wisconsin's waiver adults)
-NOT_EXPANSION = "not_expansion"  # not in Urban's table: did not expand Medicaid (or a territory)
+NOT_EXPANSION = "not_expansion"  # not in Urban's table: did not expand Medicaid
+TERRITORY = "territory"          # not in Urban's table, not modeled: PR, GU, VI, AS, MP (no roll-up, no scenario)
+TERRITORIES = {"PR": "Puerto Rico", "GU": "Guam", "VI": "U.S. Virgin Islands", "AS": "American Samoa",
+               "MP": "Northern Mariana Islands"}
 ALL_PAYER = "all_payer"          # in Urban's table, but HSCRC sets every payer's hospital rates and builds
 #                                  uncompensated care into them, so a lost Medicaid dollar isn't the hospital's loss
 ALL_PAYER_STATES = ("MD",)
@@ -39,18 +42,20 @@ def code_of(cms64_name):
     return CMS64_NAMES.get(cms64_name) or CODE_OF_NAME.get(cms64_name)
 
 
-def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
+def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR, codes=()):
     """{state code: inputs}: the VIII share for the base year (and the next year, and net of DSH, as sensitivities),
-    Urban's three declines as fractions and their enrollment counts, and the state's class."""
+    Urban's three declines as fractions and their enrollment counts, and the state's class. Every code in `codes`
+    (the hospital master's states) gets an entry too, so no hospital's state is missing; a territory's class is
+    `territory` whatever CMS-64 holds for it (its VIII share, if any, is informational)."""
     both = {code_of(n): s for n, s in shares.state_shares(viii_rows, fy, fy + 1).items() if code_of(n)}
     base = {code: s[0] for code, s in both.items()}
     later = {code: s[1] for code, s in both.items()}
     fmr = {r["state"]: r for r in fmr_rows}
     urban = {r["state"]: r for r in urban_rows}
     out = {}
-    for code in sorted(set(base) | set(urban)):
+    for code in sorted(set(base) | set(urban) | set(codes) | set(TERRITORIES)):
         s, u = base.get(code), urban.get(code)
-        entry = {"name": geo.STATE_NAMES.get(code, code), "share": None, "basis": None}
+        entry = {"name": geo.STATE_NAMES.get(code) or TERRITORIES.get(code, code), "share": None, "basis": None}
         if s is not None:
             entry.update(share=s.share, basis=s.basis, first=s.first, last=s.last, viii=s.viii, total=s.total)
             nxt = later.get(code)
@@ -64,7 +69,9 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
                 # The CMS-64 file's total over the FMR's, a vintage check (states revise for about two years).
                 entry["total_vs_fmr"] = (s.total / float(f["map_total_net_expenditures"]) if s.basis == f"ffy{fy}"
                                          else None)
-        if u is None:
+        if code in TERRITORIES:
+            entry["class"] = TERRITORY
+        elif u is None:
             entry["class"] = NOT_EXPANSION
         else:
             entry["declines"] = {sid: -int(u[col + "_pct"]) / 100 for sid, col in params.SCENARIOS}
@@ -132,7 +139,7 @@ def hospital_records(master, hcris, states, programs, cuts, fence=None):
                "urban": h["urban"], "beds": h["beds"], "own": h["own"], "lat": h["lat"], "lon": h["lon"],
                "programs": programs.get(h["ccn"]), "base": None, "results": None, "share": None,
                "state_share": None, "state_ratio": None, "share_factor": None, "safety_net": None,
-               "cls": NO_REPORT if row is None else states.get(h["state"], {}).get("class", NOT_EXPANSION)}
+               "cls": NO_REPORT if row is None else states[h["state"]]["class"]}
         if row is not None:
             b = rec["base"] = exposure.hospital_base(row)
             rec["safety_net"] = safety_net.reasons(b["miur"], cuts.get(h["state"]), safety_net.low_income_share(b))

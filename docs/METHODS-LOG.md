@@ -467,6 +467,21 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   group and sensitivity roll-ups (class `all_payer`). A state's roll-up is null unless the state has a scenario, so no
   state without one shows a dollar figure. Non-expansion states and Wisconsin (no VIII group) have no scenario; a
   hospital without a base-year cost report has none either.
+- State classes: every state or territory in the hospital master has an entry in `states`. Classes: `scenario`,
+  `no_viii_group` (Wisconsin), `not_expansion`, `all_payer` (Maryland) and `territory` (Puerto Rico, Guam, the U.S.
+  Virgin Islands, American Samoa, the Northern Mariana Islands: not in Urban's table, not modeled, roll-up null; Puerto
+  Rico's CMS-64 VIII share is kept as information only). Their hospitals carry the same class (55 `territory` rows) and
+  no `share_factor`. Territories had no loss, so no total moved. `viii_basis` is `ffy2023` for all but North Carolina and
+  South Dakota, which are `latest4`: CMS-64 has no complete FFY2023 for them, so their latest four quarters stand in,
+  and their next-year and net-of-DSH sensitivities equal the base share.
+- Which roll-up to quote: `national` and the groups cover every hospital with a cost report outside Maryland, including
+  the ones in states with no scenario (`national.hospitals` counts them all, 4,327). Dollar totals and counts come from
+  `national`. Any percent or margin headline comes from `groups.expansion_states`: added uncompensated care is +24.8%
+  of those hospitals' uncompensated cost, but +13.4% over `national`, because `national` spreads it over hospitals with
+  no loss. 21 acute hospitals with a cost report have no urban/rural flag (`urban` null) and are in neither the `rural`
+  nor the `urban` group.
+- `middle_lost` is 0 for a hospital scored out as a filing error and for one with no Medicaid revenue; the reason is in
+  its `flags`. A page shows the reason, never "$0".
 - Groups: critical access, acute, rural (critical access or non-urban), urban, expansion states, our safety-net flag (the
   Medicaid DSH deeming tests read from the cost report; not an official list), and (added in this version) public,
   nonprofit and for-profit from the master's ownership field (Government, Nonprofit, For-profit; Unknown and blank are

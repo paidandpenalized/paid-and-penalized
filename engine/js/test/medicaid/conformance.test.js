@@ -34,7 +34,7 @@ test('vectors: every hospital and class is present, with the case counts', () =>
   assert.ok(vectors.hospitals.length >= 60);
   assert.equal(vectors.cases.length, vectors.hospitals.length * 12);
   assert.equal(vectors.rollups.length, 12);
-  assert.deepEqual(new Set(vectors.hospitals.map((h) => h.cls)), new Set(['scenario', 'not_expansion', 'no_viii_group', 'all_payer']));
+  assert.deepEqual(new Set(vectors.hospitals.map((h) => h.cls)), new Set(['scenario', 'not_expansion', 'no_viii_group', 'all_payer', 'territory']));
 });
 
 test('scenario() matches Python for every hospital, scenario, use rate and revenue base', () => {
@@ -96,6 +96,10 @@ test('rowToBase on a real emitted row, and the page-side national equals the emi
     const want = emitted.national[sid];
     // Inputs in the file are rounded to whole dollars and 6 places, so this is looser than the conformance bound.
     assertMatches(got, want, `emitted national ${sid}`, 1e-4);
+    // Counts are integers of the same hospitals: exact, not within a tolerance.
+    for (const k of ['hospitals', 'exposed', 'margin_hospitals', 'into_red', 'falls_1pp']) {
+      assert.equal(got[camel(k)], want[k], `emitted national ${sid}.${k}`);
+    }
     for (const k of Object.keys(want)) if (want[k]) emittedWorst = Math.max(emittedWorst, Math.abs(got[camel(k)] - want[k]) / Math.abs(want[k]));
   }
 });

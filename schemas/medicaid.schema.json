@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "medicaid.schema.json",
   "title": "Medicaid work-requirement scenarios: modeled exposure of each acute and critical access hospital, FY2023 cost reports",
-  "description": "MODELED, not reported. Three scenarios (Urban Institute's high, medium and low state mitigation, as low, middle and high losses) applied to each hospital's FY2023 Medicaid revenue (HCRIS S-10 line 2) through its state's CMS-64 VIII share, in 2023 dollars (method: docs/METHODS-LOG.md, `medicaid`). `fy` is the HCRIS base year. Per-hospital values are rounded: dollars to whole dollars, ratios and shares to 6 places; roll-ups are computed from unrounded values and rounded to 6 places. A hospital row is an array in `columns` order; the browser reruns steps 1 to 4 from the base fields, and the `middle_*` columns are the middle scenario's results at the default use rate, for figures drawn at build time. Maryland (class all_payer) and hospitals without a scenario carry no `middle_*` values and are left out of the national, group and sensitivity roll-ups.",
+  "description": "MODELED, not reported. Three scenarios (Urban Institute's high, medium and low state mitigation, as low, middle and high losses) applied to each hospital's FY2023 Medicaid revenue (HCRIS S-10 line 2) through its state's CMS-64 VIII share, in 2023 dollars (method: docs/METHODS-LOG.md, `medicaid`). `fy` is the HCRIS base year. Per-hospital values are rounded: dollars to whole dollars, ratios and shares to 6 places; roll-ups are computed from unrounded values and rounded to 6 places. A hospital row is an array in `columns` order; the browser reruns steps 1 to 4 from the base fields, and the `middle_*` columns are the middle scenario's results at the default use rate, for figures drawn at build time. Hospitals outside the scenario states (classes not_expansion, no_viii_group, all_payer, territory, no_cost_report) carry no `middle_*` values and no `share_factor`. Maryland (class all_payer) alone is left out of the national, group and sensitivity roll-ups, which cover every other hospital with a cost report, including those with no loss (`national.hospitals` counts them all). Which roll-up to quote: dollar totals and counts come from `national`; any percent or margin headline comes from `groups.expansion_states` (the states where the loss falls; a percent over `national` dilutes it across hospitals with none, e.g. added uncompensated care is +24.8% in expansion states against +13.4% over `national`). `middle_lost` is 0 for hospitals scored out as filing errors and for hospitals with no Medicaid revenue (the reason is in `flags`): a page shows the reason, never \"$0\".",
   "type": "object",
   "required": [
     "schema_version",
@@ -43,7 +43,7 @@
       "const": 2023
     },
     "scenarios": {
-      "description": "The three scenarios, low to high losses. `urban`: the Urban Institute / RWJF (March 2026) Appendix Table A.2 column each reads; `decline_enrollment`: Urban's national total decline in expansion enrollment (all 42 rows of Table A.2), in thousands of people; `decline_enrollment_scenario_states`: the part in states with a scenario, same unit.",
+      "description": "The three scenarios, low to high losses. `urban`: the Urban Institute / RWJF (March 2026) Appendix Table A.2 column each reads; `decline_enrollment`: the sum of Urban's 42 state rows (Table A.2), in thousands of people (Urban's text rounds the totals to 3.0M / 4.9M / 7.0M); `decline_enrollment_scenario_states`: the part in states with a scenario, same unit.",
       "type": "array",
       "minItems": 3,
       "items": {
@@ -173,7 +173,7 @@
       }
     },
     "states": {
-      "description": "Every state in CMS-64's VIII file or Urban's table, by postal code. `cls`: scenario (modeled), no_viii_group (Wisconsin: in Urban's table, no VIII group), not_expansion (not in Urban's table), all_payer (Maryland: not modeled, HSCRC sets all payers' rates). `viii_share`: the VIII group's share of the state's Medicaid spending for the base year, null if CMS-64 has none; `declines`: Urban's decline in expansion enrollment as a fraction, null outside Urban's table; `rollup`: the roll-up of the state's hospitals with a cost report, null unless `cls` is scenario.",
+      "description": "Every state or territory in CMS-64's VIII file, Urban's table or the hospital master's states, by postal code (so every hospital row's state has an entry). `cls`: scenario (modeled), no_viii_group (Wisconsin: in Urban's table, no VIII group), not_expansion (not in Urban's table: did not expand Medicaid), all_payer (Maryland: not modeled, HSCRC sets all payers' rates), territory (PR, GU, VI, AS, MP: not in Urban's table, not modeled; PR's `viii_share` from CMS-64 is informational). `viii_basis`: ffy2023 (the federal fiscal year 2023 quarters), or latest4 (NC and SD: CMS-64 has no complete FFY2023, so the latest four quarters stand in; their next-year and net-of-DSH sensitivity shares equal the base share), null if CMS-64 has no VIII group. `viii_share`: the VIII group's share of the state's Medicaid spending for the base year, null if CMS-64 has none; `declines`: Urban's decline in expansion enrollment as a fraction, null outside Urban's table; `rollup`: the roll-up of the state's hospitals with a cost report, null unless `cls` is scenario.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/state"
@@ -201,7 +201,7 @@
       }
     },
     "groups": {
-      "description": "Roll-ups for each group of hospitals, over the same hospitals as `national`. Ownership groups read the master's `own` (public: Government; nonprofit: Nonprofit; forprofit: For-profit; Unknown and blank are in none); beds_lt50: fewer than 50 beds; beds_300plus: 300 or more; rural: critical access or non-urban; safety_net: our flag (not an official list).",
+      "description": "Roll-ups for each group of hospitals, over the same hospitals as `national` (hospitals with a cost report outside all-payer states). 21 acute hospitals with a cost report have `urban: null` and are in neither `rural` nor `urban`. Ownership groups read the master's `own` (public: Government; nonprofit: Nonprofit; forprofit: For-profit; Unknown and blank are in none); beds_lt50: fewer than 50 beds; beds_300plus: 300 or more; rural: critical access or non-urban; safety_net: our flag (not an official list).",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -648,7 +648,7 @@
       ]
     },
     "hospitals": {
-      "description": "One array per active acute or critical access hospital in the master, in `columns` order. Identity from the master; `cls`: its state's class, or no_cost_report; `flags`: the filing and method flags of exposure.hospital_base; `medicaid_days_every`, `medicaid_days_nonmaternity`: Medicaid inpatient days with and without maternity (S-3 I), null without days; `share`, `state_share`, `share_factor`: the hospital's expansion share, its state's, and their ratio (null outside scenario states); `safety_net`: reasons for our safety-net flag; `hrrp`, `hac`, `net`: the FY2026 Medicare penalty estimates in dollars (negative is a cut), null without an estimate; `middle_*`: see the file description.",
+      "description": "One array per active acute or critical access hospital in the master, in `columns` order. Identity from the master; `cls`: its state's class, or no_cost_report; `flags`: the filing and method flags of exposure.hospital_base; `medicaid_days_every`, `medicaid_days_nonmaternity`: Medicaid inpatient days with and without maternity (S-3 I), null without days; `share`, `state_share`, `share_factor`: the hospital's expansion share, its state's, and their ratio (all three null outside scenario states); `safety_net`: reasons for our safety-net flag; `hrrp`, `hac`, `net`: the FY2026 Medicare penalty estimates in dollars (negative is a cut), null without an estimate; `middle_*`: see the file description.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/row"
@@ -812,7 +812,8 @@
             "scenario",
             "no_viii_group",
             "not_expansion",
-            "all_payer"
+            "all_payer",
+            "territory"
           ]
         },
         "viii_share": {

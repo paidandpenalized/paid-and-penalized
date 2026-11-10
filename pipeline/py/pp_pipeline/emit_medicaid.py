@@ -13,6 +13,11 @@ for the figures drawn at build time. Rounding: dollars to whole dollars, ratios 
 computed from the unrounded values and rounded to 6 places.
 
 `fy` is the HCRIS base year (the cost reports the scenario is built on), not the program year.
+
+Upstream changes re-emit this file: a new pin or methods version in the HCRIS layer, the hospital master or the dollar
+estimates makes it stale (`require_current`), and the rebuild needs a `medicaid` heading in docs/METHODS-LOG.md under
+the change gate, even though this module is untouched. Re-pinning the FY2023 HCRIS cells also means re-deriving the
+state MIUR pin (`pipeline/py/pp_pipeline/medicaid/cli.py safety-net-pin`); a test compares the two pins' source zips.
 """
 import sys
 from datetime import datetime, timezone
@@ -60,7 +65,7 @@ def hospital_row(rec):
     b, res = rec["base"], rec["results"]
     row = {k: rec[k] for k in IDENTITY}
     row.update(cls=rec["cls"], share=_round(rec["share"], 6), state_share=_round(rec["state_share"], 6),
-               share_factor=_round(rec["share_factor"], 6))
+               share_factor=_round(rec["share_factor"], 6) if rec["cls"] == build.SCENARIO else None)
     programs = rec["programs"] or {}
     row.update(hrrp=_round(programs.get("hrrp"), 0), hac=_round(programs.get("hac"), 0),
                net=_round(programs.get("net"), 0))
@@ -132,7 +137,8 @@ def records_from_pins():
     emitted files; each state's non-maternity ratio is set on its entry."""
     manifest = read_manifest()
     year, hcris_doc, master, dollars = read_upstream(manifest)
-    states = build.state_table(*(inputs.read_csv(p) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)))
+    states = build.state_table(*(inputs.read_csv(p) for p in (inputs.VIII, inputs.URBAN, inputs.FMR)),
+                               codes={h["state"] for h in master["hospitals"]})
     hcris = {r["ccn"]: r for r in year.rows}
     if not hcris:
         raise ValueError(f"no FY{FY} rows in the HCRIS layer")

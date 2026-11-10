@@ -41,10 +41,20 @@ class Inputs(unittest.TestCase):
             with self.subTest(pin_id):
                 self.assertTrue(inputs.read_bytes(pin_id))  # raises on a size or SHA-256 mismatch
 
-    def test_the_hcris_pin_names_its_source(self):
-        derived = files.manifest_entry(inputs.STATE_MIUR)["derivedFrom"]
-        self.assertEqual(derived["file"], "HOSP10FY2023.ZIP")
-        self.assertEqual(len(derived["sha256"]), 64)
+    def test_the_state_miur_pin_comes_from_the_same_zip_as_the_hcris_cells(self):
+        """The safety-net MIUR pools are derived from HOSP10FY2023.ZIP, as are the HCRIS layer's FY2023 pins; nothing
+        else ties them, so this does."""
+        miur = files.manifest_entry(inputs.STATE_MIUR)["derivedFrom"]
+        self.assertEqual(miur["file"], "HOSP10FY2023.ZIP")
+        self.assertEqual(len(miur["sha256"]), 64)
+        for pin_id in ("hcris-fy2023-cells", "hcris-fy2023-g3-line24"):
+            with self.subTest(pin_id):
+                self.assertEqual(
+                    files.manifest_entry(pin_id)["derivedFrom"]["sha256"], miur["sha256"],
+                    f"{pin_id} and {inputs.STATE_MIUR} must derive from the same HOSP10FY2023.ZIP. If FY2023 cells "
+                    "were re-pinned, re-derive the state MIUR pin too: python3 -I "
+                    "pipeline/py/pp_pipeline/medicaid/cli.py safety-net-pin <HOSP10FY2023.ZIP> <hosp10-reports.zip> "
+                    "<out.csv>, then re-pin it and re-run `run.py medicaid build`.")
 
     def test_headers_are_cleaned(self):
         data = b'State," ""Total"""\nAlaska,1\n'  # CMS's file quotes one header like this
@@ -55,6 +65,14 @@ class StateTable(unittest.TestCase):
     def test_classes(self):
         self.assertEqual((STATES["AK"]["class"], STATES["WI"]["class"], STATES["TX"]["class"]),
                          (build.SCENARIO, build.NO_VIII, build.NOT_EXPANSION))
+
+    def test_territories_are_their_own_class_and_in_every_table(self):
+        for code in build.TERRITORIES:
+            self.assertEqual(STATES[code]["class"], build.TERRITORY, code)
+            self.assertIsNone(STATES[code].get("declines"))
+        # A code the inputs never mention, from the master, still gets an entry.
+        table = build.state_table([], [], [], codes={"ZZ"})
+        self.assertEqual(table["ZZ"]["class"], build.NOT_EXPANSION)
 
     def test_maryland_is_all_payer_but_keeps_its_inputs(self):
         md = STATES["MD"]

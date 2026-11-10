@@ -90,7 +90,7 @@ def pick_hospitals(records):
             (_into_red, 3), (_falls_1pp, 2),
             (lambda r: _scenario(r) and r["kind"] == "critical_access", 2),
             (lambda r: r["cls"] == build.NOT_EXPANSION, 2), (lambda r: r["cls"] == build.NO_VIII, 2),
-            (lambda r: r["cls"] == build.ALL_PAYER, 2)):
+            (lambda r: r["cls"] == build.ALL_PAYER, 2), (lambda r: r["cls"] == build.TERRITORY, 2)):
         take(_picks([r for r in records if pred(r)], k))
     take(_floor_edges(records))
     rest = [r for r in records if r["ccn"] not in chosen and _scenario(r)]
