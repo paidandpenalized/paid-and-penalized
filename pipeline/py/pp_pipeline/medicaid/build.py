@@ -75,14 +75,14 @@ def state_table(viii_rows, urban_rows, fmr_rows, fy=params.BASE_YEAR):
 
 
 def read_hcris(path=None, year=params.BASE_YEAR):
-    """(the HCRIS layer's year as a reader.Year: its rows, settled share and early flag; the file's SHA-256), from the
+    """(the HCRIS layer's year as a reader.Year: its rows, settled share and early flag; the parsed file), from the
     emitted file, read once."""
     path = Path(path) if path else emit_hcris.emitted_path(year)
-    data = path.read_bytes()
-    y = reader.Year(json.loads(data))
+    doc = json.loads(path.read_bytes())
+    y = reader.Year(doc)
     if y.year != year:
         raise ValueError(f"{path}: FY{y.year}, not the base year FY{year}")
-    return y, hashlib.sha256(data).hexdigest()
+    return y, doc
 
 
 def program_dollars(dollars):

@@ -3,10 +3,12 @@
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
 the dollar estimates, the HCRIS layer, then the Medicaid scenarios), `backtest` (prints the dollar estimates' back-test
-against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
-pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid
-work-requirement scenarios; see pp_pipeline/emit_medicaid.py), `medicaid conformance` (the JS port's cases; see pp_pipeline/medicaid/conformance.py), `hcris <command> ...` (the HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see pp_pipeline/hcris/cli.py), and two that call the
-network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
+against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`,
+`extract-hai <zip> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
+pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid work-requirement scenarios; see
+pp_pipeline/emit_medicaid.py), `medicaid conformance` (the JS port's cases; see pp_pipeline/medicaid/conformance.py),
+`hcris <command> ...` (the HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see
+pp_pipeline/hcris/cli.py), and two that call the network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
 `refresh <site> [--pr]` (`make refresh SITE=<site> [PR=1]`), which fetches the site's CMS files from data.cms.gov, pins
 them, rebuilds and checks, and with --pr opens a draft pull request (see pp_pipeline/refresh.py).
 """
@@ -62,7 +64,7 @@ def main(argv):
     if command == "medicaid" and args == ["build"]:  # `emit` also runs with the other emitters
         from pp_pipeline import emit_medicaid
         return emit_medicaid.main()
-    if command == "medicaid" and args == ["conformance"]:  # the JS port's shared cases; see pp_pipeline/medicaid/conformance.py
+    if command == "medicaid" and args == ["conformance"]:  # the JS port's shared cases
         from pp_pipeline.medicaid import conformance
         return conformance.main()
     if command == "refresh" and len(args) in (1, 2) and args[1:] in ([], ["--pr"]):

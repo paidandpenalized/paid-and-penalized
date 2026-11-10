@@ -19,7 +19,6 @@ from datetime import datetime, timezone
 
 from pp_engine.contract import envelope
 from pp_engine.medicaid import params
-from pp_pipeline import files
 from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, require_current, write_emitted
 from pp_pipeline.hcris import emit as emit_hcris
 from pp_pipeline.medicaid import build, inputs
@@ -118,9 +117,9 @@ def _unique(ids):
 
 
 def read_upstream(manifest):
-    """(HCRIS base year, master, dollars) as the repo's emitted files, each refused unless built from the current pins."""
-    year, _ = build.read_hcris(emit_hcris.emitted_path(FY))
-    hcris_doc = read_json(emit_hcris.emitted_path(FY))
+    """(HCRIS base year, its file, master, dollars) as the repo's emitted files, each refused unless built from the
+    current pins."""
+    year, hcris_doc = build.read_hcris(emit_hcris.emitted_path(FY))
     master, dollars = read_json(build.MASTER), read_json(build.DOLLARS)
     for doc, label in ((hcris_doc, "the HCRIS layer's FY2023 file"), (master, "the hospital master"),
                        (dollars, "the dollar estimates")):

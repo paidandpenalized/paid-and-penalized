@@ -183,6 +183,9 @@ class Records(unittest.TestCase):
         row = dict(zip(emit_medicaid.COLUMNS, emit_medicaid.hospital_row(no_report)))
         self.assertEqual((row["cls"], row["status"], row["medicaid_net_revenue"], row["middle_lost"]),
                          ("no_cost_report", None, None, None))
+
+
+class LayerAndPins(unittest.TestCase):
     def test_read_hcris_reads_the_layers_year(self):
         cols = [c for c in tidy.WIDE_COLUMNS if c != "year"]
         doc = {"fy": 2023, "columns": cols, "early": True, "settledShare": 0.6, "stillFiling": False,
@@ -190,9 +193,9 @@ class Records(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "hcris.json"
             path.write_text(json.dumps(doc))
-            y, digest = build.read_hcris(path)
+            y, parsed = build.read_hcris(path)
             self.assertEqual((y.early, y.settled_share, y.rows[0]["ccn"]), (True, 0.6, "990001"))
-            self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest())
+            self.assertEqual(parsed, doc)
             path.write_text(json.dumps({**doc, "fy": 2024}))
             with self.assertRaises(ValueError):
                 build.read_hcris(path)

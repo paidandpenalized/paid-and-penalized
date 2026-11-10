@@ -7,8 +7,8 @@ and the HCRIS layer keeps only acute and critical access hospitals, so this read
 the file, any facility type, made into hospital-years by the layer's own rules (pp_engine.hcris.tidy), grouped by
 state: each CCN's state in CMS's provider file (HOSP10_PRVDR_ID_INFO.CSV, in the HCRIS reports zip), so a state with
 two CMS state codes (Texas: 45, 67, 74) is one pool. One row per state: hospitals with Medicaid days, the mean and
-sample standard deviation of their MIUR, and the cut. The CSV goes in `data/pinned/medicaid/` with a manifest entry naming both
-zips.
+sample standard deviation of their MIUR, and the cut. The CSV goes in `data/pinned/medicaid/` with a manifest entry
+naming both zips.
 """
 import csv
 import io

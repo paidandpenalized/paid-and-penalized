@@ -48,8 +48,10 @@ def _into_red(r):
 
 
 def _falls_1pp(r):
-    change = _scenario(r) and exposure.margin_change(r["results"]["middle"])
-    return change is not None and change is not False and change <= -1
+    if not _scenario(r):
+        return False
+    change = exposure.margin_change(r["results"]["middle"])
+    return change is not None and change <= -1
 
 
 def _floor_edges(records):
