@@ -83,23 +83,25 @@ def hospital_row(rec):
 
 def state_json(code, entry, by_state):
     """A state's inputs and roll-ups. `declines`: Urban's three declines as fractions, and `rollup`, the roll-up of its
-    hospitals' stored results, each by scenario id; null where the state has none."""
+    hospitals' stored results, each by scenario id; null unless the state has a scenario (no dollars for the others)."""
     out = {"name": entry["name"], "cls": entry["class"], "viii_share": _round(entry["share"], 6),
            "viii_basis": entry["basis"],
            "viii_share_next_year": _round(entry.get("share_next_year"), 6),
            "viii_share_net_of_dsh": _round(entry.get("share_net_of_dsh"), 6),
            "nonmaternity_ratio": _round(entry.get("nonmaternity_ratio"), 6),
            "declines": entry.get("declines"), "urban_thousands": entry.get("urban_thousands"),
-           "rollup": by_state.get(code)}
+           "rollup": by_state.get(code) if entry["class"] == build.SCENARIO else None}
     return out
 
 
 def scenarios_json(states):
-    """The three scenarios (low to high losses): the Urban column each reads and its total decline in expansion
-    enrollment, in thousands of people, over the states with a scenario."""
-    modeled = [s for s in states.values() if s["class"] == build.SCENARIO]
-    return [{"id": sid, "urban": col, "decline_enrollment": sum(s["urban_thousands"][sid] for s in modeled)}
-            for sid, col in params.SCENARIOS]
+    """The three scenarios (low to high losses): the Urban column each reads, `decline_enrollment`, Urban's national
+    total decline in expansion enrollment (every row of its Table A.2), and `decline_enrollment_scenario_states`, the
+    part in the states with a scenario, both in thousands of people."""
+    rows = [s["urban_thousands"] for s in states.values() if s.get("urban_thousands")]
+    modeled = [s["urban_thousands"] for s in states.values() if s["class"] == build.SCENARIO]
+    return [{"id": sid, "urban": col, "decline_enrollment": sum(r[sid] for r in rows),
+             "decline_enrollment_scenario_states": sum(r[sid] for r in modeled)} for sid, col in params.SCENARIOS]
 
 
 def params_json():

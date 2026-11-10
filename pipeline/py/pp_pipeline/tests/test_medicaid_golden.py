@@ -42,6 +42,9 @@ class Golden(unittest.TestCase):
         cls = doc["columns"].index("cls")
         self.assertEqual(sum(1 for r in doc["hospitals"] if r[cls] == "scenario"), 3044)
 
+    def test_urbans_national_enrollment_declines(self):
+        self.assertEqual([s["decline_enrollment"] for s in fresh()["scenarios"]], [2977, 4888, 7045])
+
     def test_scenarios_are_ordered_low_to_high(self):
         doc = fresh()
         self.assertEqual([s["id"] for s in doc["scenarios"]], ["low", "middle", "high"])
@@ -52,7 +55,9 @@ class Golden(unittest.TestCase):
     def test_maryland_is_starred_and_out_of_the_totals(self):
         doc = fresh()
         self.assertEqual(doc["states"]["MD"]["cls"], "all_payer")
-        self.assertEqual(doc["states"]["MD"]["rollup"]["middle"]["lost"], 0)
+        for code, st in doc["states"].items():
+            self.assertEqual(st["rollup"] is None, st["cls"] != "scenario", code)
+        self.assertIsNone(doc["states"]["MD"]["rollup"])
         cols = doc["columns"]
         state, cls, base = cols.index("state"), cols.index("cls"), cols.index("status")
         in_totals = sum(1 for r in doc["hospitals"] if r[base] is not None and r[cls] != "all_payer")

@@ -43,7 +43,7 @@
       "const": 2023
     },
     "scenarios": {
-      "description": "The three scenarios, low to high losses. `urban`: the Urban Institute / RWJF (March 2026) Appendix Table A.2 column each reads; `decline_enrollment`: its total decline in expansion enrollment over the states with a scenario, in thousands of people.",
+      "description": "The three scenarios, low to high losses. `urban`: the Urban Institute / RWJF (March 2026) Appendix Table A.2 column each reads; `decline_enrollment`: Urban's national total decline in expansion enrollment (all 42 rows of Table A.2), in thousands of people; `decline_enrollment_scenario_states`: the part in states with a scenario, same unit.",
       "type": "array",
       "minItems": 3,
       "items": {
@@ -51,7 +51,8 @@
         "required": [
           "id",
           "urban",
-          "decline_enrollment"
+          "decline_enrollment",
+          "decline_enrollment_scenario_states"
         ],
         "additionalProperties": false,
         "properties": {
@@ -70,6 +71,10 @@
             ]
           },
           "decline_enrollment": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "decline_enrollment_scenario_states": {
             "type": "integer",
             "minimum": 0
           }
@@ -168,7 +173,7 @@
       }
     },
     "states": {
-      "description": "Every state in CMS-64's VIII file or Urban's table, by postal code. `cls`: scenario (modeled), no_viii_group (Wisconsin: in Urban's table, no VIII group), not_expansion (not in Urban's table), all_payer (Maryland: not modeled, HSCRC sets all payers' rates). `viii_share`: the VIII group's share of the state's Medicaid spending for the base year, null if CMS-64 has none; `declines`: Urban's decline in expansion enrollment as a fraction, null outside Urban's table; `rollup`: the roll-up of the state's hospitals with a cost report (Maryland's have no dollars).",
+      "description": "Every state in CMS-64's VIII file or Urban's table, by postal code. `cls`: scenario (modeled), no_viii_group (Wisconsin: in Urban's table, no VIII group), not_expansion (not in Urban's table), all_payer (Maryland: not modeled, HSCRC sets all payers' rates). `viii_share`: the VIII group's share of the state's Medicaid spending for the base year, null if CMS-64 has none; `declines`: Urban's decline in expansion enrollment as a fraction, null outside Urban's table; `rollup`: the roll-up of the state's hospitals with a cost report, null unless `cls` is scenario.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/state"
