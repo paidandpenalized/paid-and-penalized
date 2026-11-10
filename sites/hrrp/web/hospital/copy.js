@@ -62,7 +62,9 @@ export const COPY = {
   rulersNone: { text: 'No condition has {minCases} or more cases, so none is counted and none can add to a cut.', claim: null },
   rulersBelowOne: { text: '{short}, the one counted condition, sits at or under its peer median, so it adds nothing to a cut.', claim: null },
   rulersBelowMany: { text: 'All {n} counted conditions sit at or under their peer medians, so none adds to a cut.', claim: null },
-  rulersOver: { text: '{short} costs the most: {gap} over its peer median, {cut} of the modeled cut, because each {step} of its ratio is worth {per}.', claim: null },
+  // Two facts, not a cause: {cut} is the hospital's share of dollars after the factor is rounded, {per} the slope before it, so on
+  // a hospital whose cut rounds a long way, gap x per does not give {cut}.
+  rulersOver: { text: '{short} costs the most: {gap} over its peer median and {cut} of the modeled cut. Each {step} of its ratio is worth {per} before the cut is rounded.', claim: null },
   rulersOverCapped: { text: '{short} adds the most: {gap} over its peer median, {cut} of the modeled cut. The cut is at its maximum, so more ratio would add nothing.', claim: 'HRRP-09' },
   rulersOverNoDollars: { text: '{short} adds the most: {gap} over its peer median.', claim: null },
   rulersNoParts: { text: 'A condition sits over its peer median, but none adds enough to show in the payment factor.', claim: null },

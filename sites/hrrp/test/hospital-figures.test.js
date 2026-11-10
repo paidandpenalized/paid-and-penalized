@@ -33,7 +33,7 @@ test('rulers: one row for each condition in the data\'s order, with the gap, its
   assert.equal(d.capNote, false);
   const fig = figureOf(pageOf(CUT, ctx), 1);
   assert.equal(rowsOf(fig).length, CONDS.length);
-  assert.match(fig, /Heart failure costs the most: \+0\.1000 over its peer median, \$100,000 of the modeled cut, because each 0\.01 of its ratio is worth \$10,000\./);
+  assert.match(fig, /Heart failure costs the most: \+0\.1000 over its peer median and \$100,000 of the modeled cut\. Each 0\.01 of its ratio is worth \$10,000 before the cut is rounded\./);
   assert.equal((fig.match(/>Median 1\.0000<\/text>/g) ?? []).length, 2 * CONDS.length, 'the median is labeled on every ruler, narrow and wide');
   assert.ok(fig.includes('+0.1000 over'));
 });
