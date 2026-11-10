@@ -41,7 +41,10 @@ export function generateHrrp(ctx, { data = loadHrrp(), released = SITE.sites.hrr
   const { assets } = ctx;
   const shared = hospitalContext(data);  // data.shapes and data.counties: the outlines the nearby map draws
   const places = buildPlaces(hospitals, meta);
-  const area = areaContext({ ...data, places, side: shared.side, lines: shared.lines });  // data.shapes: the state outlines the map draws
+  // The family's estimate year and its Readmissions dollars (the shell's facts), which the history's notes point to for a year
+  // with no published total.
+  const family = ctx.assets.shell ? { fy: ctx.assets.shell.fy, hrrp: ctx.assets.shell.programs?.hrrp?.dollars } : null;
+  const area = areaContext({ ...data, places, side: shared.side, lines: shared.lines, family });  // data.shapes: the state outlines the map draws
   const program = programView(area);
   // The search asset (one short row for each hospital and the site's places) is what the pages that only search read: a hospital page,
   // Methods and the dictionary.

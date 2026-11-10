@@ -25,7 +25,7 @@ const PINS = [
 ];
 // The years the early files list each group the history leaves out (history-data.js scopeYears), as the pinned file has them.
 const SCOPE = { maryland: [2013, 2014, 2015], puertoRico: [2013, 2014, 2015], noData: [2013, 2014, 2015, 2016, 2017, 2018] };
-const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS, historyScope = SCOPE, methodsLog } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed, historyScope, methodsLog });
+const ctxOf = ({ hospitals = ALL, meta = DOLLAR_META, history = HISTORY, pinsUsed = PINS, historyScope = SCOPE, methodsLog, family } = {}) => areaContext({ hospitals, meta, history, conditions: CONDITIONS, places: buildPlaces(hospitals, meta), pinsUsed, historyScope, methodsLog, family });
 const page = (ctx = ctxOf()) => methodsPage({ view: methodsView(ctx), robots: null, assets: ASSETS });
 const rowsOf = (text) => [...text.matchAll(/<tr><th scope="row">([^<]*(?:<[^>]+>[^<]*)*?)<\/th><td>(.*?)<\/td><\/tr>/gs)].map(([, a, e]) => [textOf(a), textOf(e)]);
 const assumptions = (text) => rowsOf(text.slice(text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'), text.indexOf('</table>', text.indexOf('<table class="gb assume" aria-labelledby="assume-h">'))));
@@ -177,6 +177,14 @@ test('the formula says a condition at or below its median adds nothing, and does
   const t = textOf(page());
   assert.ok(t.includes('A condition at or below its peer group’s median adds nothing.'));
   assert.ok(!/not less than/i.test(t));
+});
+
+test('history: a year with no total that is the family\'s estimate year points to the front page\'s figure', () => {
+  const noTotal = HISTORY.national.filter((r) => r.totalEst == null).map((r) => r.fy);
+  assert.ok(noTotal.length > 0, 'the fixture has a year with no total');
+  const text = textOf(page(ctxOf({ family: { fy: noTotal[0], hrrp: -337123456 } })));
+  assert.ok(text.includes(`For FY${noTotal[0]}, this family’s front page gives its own estimate of the Readmissions cuts, about $337M, from its dollar model.`));
+  assert.ok(!textOf(page()).includes('front page gives'));
 });
 
 test('the version a check ran on: the newest the log dates on or before it, else the first', () => {

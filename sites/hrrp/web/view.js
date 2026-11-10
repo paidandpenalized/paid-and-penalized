@@ -16,7 +16,7 @@ import { childTable, hospitalsTable } from './figures/place-table-data.js';
 import { whatIfData } from './figures/whatif-data.js';
 import { howData } from './figures/how-data.js';
 import { exploreControls } from './figures/explore-data.js';
-import { noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
+import { familyTotalText, noTotalText, researchData, rollCall, smallLines, timelineData, windowRows, yearsCut } from './figures/history-data.js';
 import { mapData } from './figures/map-data.js';
 import { mapData as placeMapData, conditionsData, nationalSide, peersData, sizeData, trendData } from './figures/place-data.js';
 import { MIN_BAND, dollarsPerStep, drawsBands, drawsFlips, drawsWorth, peerFlips, pictureData, sizeBands } from './figures/picture-data.js';
@@ -226,7 +226,10 @@ export function programView(ctx) {
     how: howData(ctx),
     picture: pictureData(ctx),
     map: mapData(ctx),
-    history: { lines: ctx.lines, windows: windowRows(ctx), escapes: () => yearsCut(rollCall(ctx)), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }) },
+    history: {
+      lines: ctx.lines, windows: windowRows(ctx), escapes: () => yearsCut(rollCall(ctx)), timeline: timelineData(ctx.timeline, { edition: ctx.edition, today: meta.fileDate }),
+      family: familyTotalText(ctx.lines.noTotal, ctx.family),
+    },
     explore: exploreControls(ctx.hospitals, edition.conditions, meta.fy),
     research: researchData(ctx.research),
   };
@@ -426,16 +429,17 @@ function historyListed(scope) {
 }
 
 // The history's annual totals as table rows with their sources, and the sentence about where they come from.
-function historyTotals(history) {
+function historyTotals(history, family = null) {
   const rows = history.national.map((r) => ({
     fy: fyLabel(r.fy),
     total: r.totalEst == null ? null : money(r.totalEst),
     source: r.totalEst == null ? null : { name: r.totalSrc?.label ?? null, url: httpsUrl(r.totalSrc?.url) },
   }));
   const simulated = history.national.filter((r) => r.totalEst != null && HISTORY_SIMULATED_FYS.includes(r.fy)).map((r) => fyLabel(r.fy));
+  const noTotal = history.national.filter((r) => r.totalEst == null).map((r) => r.fy);
   return {
     text: simulated.length ? methodsFill('historyTotalsSim', { simulated: listText(simulated) }) : methodsT('historyTotals'),
-    noTotal: noTotalText(history.national.filter((r) => r.totalEst == null).map((r) => r.fy)),
+    noTotal: [noTotalText(noTotal), familyTotalText(noTotal, family)].filter(Boolean).join(' ') || null,
     rows,
   };
 }
@@ -504,7 +508,7 @@ export function methodsView(ctx) {
       : null,
     history: methodsFill('historyText', span),
     historyListed: historyListed(ctx.historyScope),
-    historyTotals: historyTotals(ctx.history),
+    historyTotals: historyTotals(ctx.history, ctx.family),
     feedback: methodsT('feedbackText'),
     reuse: methodsFill('reuseText', { minCases: String(MIN_DISCHARGES) }),
     pins: ctx.pinsUsed.map((p) => ({ title: p.title, url: httpsUrl(p.landingPage || p.downloadUrl), bytes: fmtInt(p.bytes), hash: `${p.sha256.slice(0, 16)}…`, retrieved: fmtDate(p.retrieved, 'long') })),

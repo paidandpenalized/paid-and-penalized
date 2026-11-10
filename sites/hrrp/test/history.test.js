@@ -6,7 +6,7 @@ import { COVID_FYS } from '../web/constants.js';
 import { capMarks } from '../web/derive.js';
 import { escapesFigure, historyFigure, historyPart, timeline, windowsFigure } from '../web/figures/history.js';
 import { drawHistory } from '../web/figures/history-draw.js';
-import { ROLL, noTotalText, researchData, rollCall, scopeYears, smallLines, timelineData, windowPieces, windowRows, yearsCut } from '../web/figures/history-data.js';
+import { ROLL, familyTotalText, noTotalText, researchData, rollCall, scopeYears, smallLines, timelineData, windowPieces, windowRows, yearsCut } from '../web/figures/history-data.js';
 import { researchPart } from '../web/figures/research.js';
 import { httpsUrl } from '../web/links.js';
 import { FUTURE_WORDS } from '../../../pipeline/test/helpers.js';
@@ -45,6 +45,19 @@ test('the estimated totals carry their source kind; years with none are named in
   assert.equal(s.table.find((r) => r.fy === 2016).total, null);
   assert.equal(noTotalText([]), null);
   assert.equal(noTotalText([2026]), 'No total for FY2026.');
+});
+
+test('a year with no total that is the family\'s estimate year points to the front page\'s figure; any other year does not', () => {
+  const lines = smallLines({ history: HISTORY });
+  const family = { fy: 2024, hrrp: -337123456 };
+  const said = 'For FY2024, this family’s front page gives its own estimate of the Readmissions cuts, about $337M, from its dollar model.';
+  assert.equal(familyTotalText(lines.noTotal, family), said);
+  assert.equal(familyTotalText(lines.noTotal, { fy: 2025, hrrp: -1 }), null, 'a year with a published total');
+  assert.equal(familyTotalText(lines.noTotal, { fy: 2024, hrrp: undefined }), null);
+  assert.equal(familyTotalText(lines.noTotal, null), null);
+  const text = historyFigure(lines, { n: () => 1, family: familyTotalText(lines.noTotal, family) }).text;
+  assert.ok(text.includes(said), 'the figure\'s note says it');
+  assert.ok(!historyFigure(lines, { n: () => 1 }).text.includes('front page'));
 });
 
 test('a total\'s source address that is not https is dropped, the label kept', () => {
