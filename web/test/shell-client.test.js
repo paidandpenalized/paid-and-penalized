@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { CHIP } from '../chip-copy.js';
-import { followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
+import { addressFollowing, followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
 import * as shell from '../client/shell.js';
 import { follow, keepFocusInRow, moreTabs, rewriteLinks, tabScroll, wireFind, wireTabs, wireTheme } from '../client/shell.js';
 import { THEME_KEY, applySavedTheme, saveTheme, savedTheme, sessionStore } from '../client/theme-store.js';
@@ -77,6 +77,15 @@ test('withoutFollow: every h is dropped, everything else stays exactly as it was
   assert.equal(withoutFollow('/?h'), '/');
   assert.equal(withoutFollow('/?hh=1&xh=2'), '/?hh=1&xh=2');
   for (const same of ['/', '/hacrp/#h=990001', '/a/?x=1', '/a/?x=1&&y=2#z', '']) assert.equal(withoutFollow(same), same, `${same} is returned untouched`);
+});
+
+test('addressFollowing: one h, the CCN given, at the end of the query; the path, the rest of the query and the fragment as written', () => {
+  assert.equal(addressFollowing('/', '990001'), '/?h=990001');
+  assert.equal(addressFollowing('/?h=990002', '990001'), '/?h=990001', 'the pick replaces the one before');
+  assert.equal(addressFollowing('/?x=1&h=990002&y=a%20b#state=OH', '99000A'), '/?x=1&y=a%20b&h=99000A#state=OH');
+  assert.equal(addressFollowing('/#state=OH', '990001'), '/?h=990001#state=OH');
+  assert.equal(addressFollowing('/?', '990001'), '/?h=990001');
+  assert.equal(followedCcn(new URL(addressFollowing('/?x=1#a', '99000a'), 'https://example.invalid').search), '99000A', 'the follow reads it back');
 });
 
 test('shell.js offers the follow\'s pure parts, the very functions follow.js holds', () => {
@@ -362,6 +371,18 @@ test('follow: a hospital whose name holds "$&" or "$1" is printed as it is', asy
   await r.done;
   assert.equal(r.chip.children[1].children[0].textContent, 'A $& B $1 $$ C');
   assert.equal(r.chip.children[2].getAttribute('aria-label'), 'Stop following A $& B $1 $$ C');
+});
+
+test('follow again (a pick on the front page): the chip names the new hospital and the links are rewritten from the server\'s addresses', async () => {
+  const p = page({ hospital: null });
+  const load = async () => ({ fy: 2026, byCcn: ROWS });
+  const d = doc();
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990001', here: '/?h=990001', load, doc: d });
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=99000A', here: '/?h=99000A', load, doc: d });
+  assert.equal(p.chip.children[1].children[0].textContent, 'Sample Medical');
+  assert.equal(p.wordmark.getAttribute('href'), '/?h=99000A');
+  const own = { hrrp: '/hrrp/?h=99000A', hacrp: '/hacrp/hospital/99000a/' };
+  assert.deepEqual(hrefs(p.tabs), ['/hospital/99000a/', ...SITE.programs.map((x) => own[x.id] ?? `${x.path}?h=99000A`)], 'not the first hospital\'s pages');
 });
 
 test('rewriteLinks: only the front page and a program\'s folder are rewritten; another link, an external one and a missing tab are left', () => {
