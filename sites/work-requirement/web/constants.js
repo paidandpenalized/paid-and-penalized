@@ -29,3 +29,8 @@ export const DEFAULT_SKIP_STATE = 'VA';
 // The use-rate what-if's stop (the slider moves in steps of this many hundredths; its ends and default are the file's
 // params.use_min, use_max and use_default). A control's step, not a method constant.
 export const USE_STEP = 0.05;
+
+// Step 3's figure (web/program/states.js): the contours of the share of patient revenue lost drawn behind the states, a
+// reading aid like REF_SHARE, not a method constant; and how many of a state's most exposed hospitals its card names.
+export const CONTOURS = Object.freeze([0.0025, 0.005, 0.01, 0.02]);
+export const MOST_EXPOSED = 4;

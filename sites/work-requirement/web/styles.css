@@ -195,6 +195,59 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-mitcase[aria-current="true"] { background: var(--pen-tint); box-shadow: inset 3px 0 0 var(--pen); }
 .wr-mitcase b { font-family: var(--font-body); }
 
+/* Step 3 (program/states.js): the selected state's headline, its worksheet card (the worksheets' lines, .wr-wl) and its most
+   exposed hospitals; the list of states takes the name's place once the script runs. Figure 3: the contours deepen in
+   pen with the share of patient revenue lost; the states' dots in pen, those without a scenario hollow in the hatched
+   gutter. The labels' sizes are states.js LABEL_FONTS's. */
+.wr-states { padding-top: 12px; }
+.wr-sthead { display: grid; gap: 8px; }
+.wr-sthead__big { font: 400 clamp(1.6rem, 4vw, 2rem)/1.08 var(--font-display); letter-spacing: -0.005em; max-width: 20ch; }
+.wr-sthead__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-stcard { border: 3px solid var(--pen); background: var(--paper); }
+.wr-stcard__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 8px 12px; border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); }
+.wr-stcard__h { color: var(--pen-ink); }
+.wr-stcard__name { font: 400 1.25rem/1.15 var(--font-display); }
+.wr-stcard__name[hidden], .wr-stcard__pick[hidden] { display: none; }
+.wr-stcard__pick { max-width: 100%; min-height: var(--target-min); padding: 2px 6px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 1.125rem/1.15 var(--font-display); cursor: pointer; }
+.wr-stcard__body { display: grid; gap: 8px; padding-bottom: 10px; }
+.wr-stcard__body > p, .wr-stcard__body > .wr-hits { margin: 0; padding: 0 12px; }
+.wr-stcard__body > p:first-child { padding-top: 10px; }
+.wr-stcard__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-stcard__lines .wr-wl > * { padding-block: 5px; }
+.wr-stcard__lines .wr-wl__d > :is(.scen-tag, .wr-tag) { margin: 0 0 0 6px; vertical-align: 1px; white-space: normal; }
+.wr-stcard__body > * { min-width: 0; }
+.wr-hits__h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.wr-hits__sub { color: var(--ink-2); font-size: var(--fs-xs); }
+.wr-hits__list { display: grid; margin: 4px 0 0; padding: 0; list-style: none; }
+.wr-hit { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem; gap: 8px; align-items: center; max-width: none; padding: 5px 0; border-top: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.3; }
+.wr-hit__name small { display: block; color: var(--ink-2); font-size: var(--fs-xs); }
+.wr-hit__bar { display: block; height: 8px; }
+.wr-hit__bar i { display: block; height: 100%; background: var(--pen); }
+.wr-hit__v { font: 700 var(--fs-sm)/1.2 var(--font-type); font-variant-numeric: tabular-nums; text-align: right; }
+.chart--states { max-width: calc(var(--vb) * 1.1px); }
+.wr-states .fig__note { max-width: none; }
+.wr-iso { fill: var(--pen); fill-opacity: 0.07; }
+.wr-iso__line { fill: none; stroke: var(--pen-ink); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.wr-iso__label { fill: var(--pen-ink); font: 700 10.5px var(--font-type); }
+.wr-iso__title { fill: var(--pen-ink); font: 600 11px var(--font-body); }
+.wr-gutter { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st__head { fill: var(--ink); font: 600 11px var(--font-body); }
+.wr-st__whisker { fill: none; stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st { cursor: pointer; }
+.wr-st__dot { fill: var(--pen); fill-opacity: 0.9; stroke: var(--paper); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st:hover .wr-st__dot { fill-opacity: 1; stroke: var(--ink); }
+.wr-st__ring { fill: none; stroke: var(--ink); stroke-width: 2.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.wr-st__hollow { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-st:hover .wr-st__hollow { stroke: var(--ink); }
+.wr-st--on .wr-st__hollow { stroke: var(--ink); stroke-width: 2.5px; }
+.wr-st__code, .wr-st__name, .wr-st__gut, .wr-st__fn, .wr-iso__label, .wr-iso__title, .wr-st__head { pointer-events: none; }
+.wr-st__code { fill: var(--ink); font: 700 10px var(--font-type); }
+.wr-st__name { fill: var(--ink); font: 600 13px var(--font-body); }
+.wr-st__gut, .wr-st__fn { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.wr-st__leader { stroke: var(--ink-2); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+.chart--states[data-fit="narrow"] :is(.wr-st__code, .wr-st__gut, .wr-st__fn) { font-size: 9.5px; }
+.chart--states[data-fit="narrow"] .wr-st__name { font-size: 12px; }
+
 @media (forced-colors: active) {
   .wr-bar--ink, .wr-bar--pen, .wr-bar--rew, .wr-bar--scar, .wr-bar--net { fill: CanvasText; }
   .wr-band { fill: Canvas; stroke: GrayText; }
@@ -208,4 +261,8 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
   .wr-strip__edge, .wr-thread__dot, .wr-range__dot { fill: CanvasText; }
   .wr-outline { fill: GrayText; }
   .wr-chip[aria-pressed="true"], .wr-chip--on { background: Highlight; color: HighlightText; }
+  .wr-iso { fill: Canvas; }
+  .wr-iso__line, .wr-st__whisker, .wr-st__leader, .wr-gutter { stroke: GrayText; }
+  .wr-st__dot, .wr-hit__bar i { fill: CanvasText; background: CanvasText; }
+  .wr-st__ring, .wr-st__hollow { stroke: CanvasText; }
 }

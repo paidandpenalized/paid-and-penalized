@@ -255,12 +255,13 @@ export const chainHtml = (view) => html`<div class="wr-chain">
 // ---------- the worksheets ----------
 
 // One line: its number, operator and words, its note(s), its tags, and its amount or factor; data-v holds the raw value.
-const lineRow = ({ n, op = '', key, note = null, range = null, tags = '', value, raw, cls = '' }) => html`<tr class="wr-wl${cls}" data-line="${n}" data-v="${raw}"><td class="wr-wl__n"><span class="field__no">${count(n)}</span></td><th scope="row" class="wr-wl__d">${op ? html`<span class="wr-wl__op">${op}</span> ` : ''}${t(key)}${note ? html`<small>${note}</small>` : ''}${range ? html`<small class="wr-wl__rg">${range}</small>` : ''}${tags}</th><td class="wr-wl__v">${value}</td></tr>`;
+// inline: the tags beside the words rather than under the notes (step 3's card, where a line should stay short).
+export const lineRow = ({ n, op = '', key, note = null, range = null, tags = '', value, raw, cls = '', inline = false }) => html`<tr class="wr-wl${cls}" data-line="${n}" data-v="${raw}"><td class="wr-wl__n"><span class="field__no">${count(n)}</span></td><th scope="row" class="wr-wl__d">${op ? html`<span class="wr-wl__op">${op}</span> ` : ''}${t(key)}${inline ? tags : ''}${note ? html`<small>${note}</small>` : ''}${range ? html`<small class="wr-wl__rg">${range}</small>` : ''}${inline ? '' : tags}</th><td class="wr-wl__v">${value}</td></tr>`;
 // A part of a line (link 3's split, link 4's steps): no number; data-<kind> names it.
 const partRow = ({ kind, name, label, value, raw }) => html`<tr class="wr-wl wr-wl--part" data-${kind}="${name}" data-v="${raw}"><td class="wr-wl__n"></td><th scope="row" class="wr-wl__d">${label}</th><td class="wr-wl__v">${value}</td></tr>`;
 const headRow = (text) => html`<tr class="wr-wl wr-wl--head"><td class="wr-wl__n"></td><th scope="row" colspan="2" class="wr-wl__d">${text}</th></tr>`;
 
-const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
+export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
 const rangeOf = (totals, key, sign = 1) => fill('wsRange', { low: money(sign * totals.low[key]), high: money(sign * totals.high[key]) });
 
 // The lines of link n's worksheet (the inside of its tbody), for a view.

@@ -6,13 +6,14 @@
 //   hospital  the page's hospital: a row of the strips' asset ({ ccn, name, city, state, cls, groups, share }), or null
 //   totals    the national totals by case at that use rate (web/program/model.js: the file's own at 1, the engine's
 //             roll-up otherwise)
+//   stateCode step 3's selected state or territory, a postal code (web/program/states.js; the most exposed state at first)
 //
 // store.get() gives the state (frozen); store.set(patch) changes some keys and calls each subscriber with
 // (state, changed), changed being the Set of keys whose values changed (nothing is called when none did);
 // store.subscribe(fn) adds a subscriber and returns the function that removes it.
 import { SCENARIOS } from '../web/constants.js';
 
-const KEYS = ['scenario', 'use', 'hospital', 'totals'];
+const KEYS = ['scenario', 'use', 'hospital', 'totals', 'stateCode'];
 
 export function createStore(initial) {
   const check = (patch) => {

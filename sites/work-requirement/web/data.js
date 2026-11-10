@@ -2,7 +2,7 @@
 // `run.py emit`) and the manifest's entries for its inputs (for the newest date CMS gives any of them). File reads live
 // here; the pages stay pure.
 import { builtOn } from '../../../engine/js/dates.js';
-import { REPO_ROOT, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
 
 // A pinned input is CMS's when CMS serves it: its download, or the download of the file it was cut from or is a member
 // of, is on a cms.gov or medicaid.gov host.
@@ -51,4 +51,13 @@ export function loadMedicaid() {
     params: file.params,
   };
   return loaded;
+}
+
+// The CCNs with a hospital page across the programs (/hospital/<ccn>/): the hub writes one for every hospital in the newest
+// dollar estimates (hub/model.js hubHospitals), so the work requirement links a hospital there only when it is in that
+// file, as the Readmissions site does (sites/hrrp/web/view.js inHubOf).
+let hub = null;
+export function loadHubCcns() {
+  hub ??= new Set(readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars'))).hospitals.map((r) => r.ccn));
+  return hub;
 }

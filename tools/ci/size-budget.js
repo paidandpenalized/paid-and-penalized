@@ -61,7 +61,8 @@ export const PROGRAM_BUDGETS = {
   // The work requirement (a program page and Methods only), set 2026-11-10 by the rule above from the pages as built then
   // (steps 1 and 2 of five): the program page 61.2 KB + 15% (70.4 KB) and Methods 24.4 KB + 15% (28.1 KB), rounded up.
   // Steps 3 to 5 will weigh more: each raises the program budget as it lands, a decision recorded here.
-  'work-requirement': { program: 80 * KB, methods: 30 * KB },
+  // Step 3 (states), 2026-11-10: the program page 82.0 KB + 15% (94.3 KB), rounded up to 100 KB.
+  'work-requirement': { program: 100 * KB, methods: 30 * KB },
 };
 // The budget in bytes of a page of this type (and, for a program-keyed type, this program).
 export function budgetOf({ type, program }, budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS) {

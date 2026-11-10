@@ -5,6 +5,7 @@
 //           lit, a group from the chips over the gray outline of every hospital, the ranges and the counts line
 //           (web/program/ranges.js), the chips' readout, and the live line a screen reader hears;
 //   step 2: the chain and its worksheets (client/how.js);
+//   step 3: the states' figure, the selected state's headline and card, and the state table's numbers (client/states.js);
 //   the stage head: the scenario switch and the use-rate what-if (client/whatif.js).
 // A later step joins the same way: store.subscribe((state, changed) => …), redrawing when the keys it reads change.
 // Without the script, or without the asset, the page stays as the server drew it (the middle case at the default use
@@ -12,11 +13,13 @@
 import { setFollowed } from '../../../web/client/follow.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
 import { byCase, countsText, rangesInner, statusText } from '../web/program/ranges.js';
+import { decodeStates } from '../web/program/states.js';
 import { decodeStrips, drawn, stripsBody, stripsLayout } from '../web/program/strips.js';
 import { mountChips } from './chips.js';
 import { defaultPool, mountFind, pageHospital } from './find.js';
 import { mountHow } from './how.js';
 import { createStore } from './state.js';
+import { mountStates } from './states.js';
 import { mountWhatif } from './whatif.js';
 
 const DRAWINGS = ['narrow', 'wide'];
@@ -101,10 +104,12 @@ function liveLine(el) {
 
 async function start(stage) {
   let data;
+  let states;
   try {
     const res = await fetch(stage.dataset.strips);
     if (!res.ok) return;
     data = decodeStrips(await res.json());
+    states = decodeStates(data.states);
   } catch {
     return;
   }
@@ -115,6 +120,7 @@ async function start(stage) {
     use: 1,
     hospital: pageHospital(window.location.search, byCcn) ?? pool[Math.floor(Math.random() * pool.length)],
     totals: data.totals,
+    stateCode: states.selected,
   });
 
   const section = stage.closest('section');
@@ -146,6 +152,8 @@ async function start(stage) {
   }
   const howSection = document.getElementById('how');
   if (howSection) mountHow(howSection, { store, how: data.how });
+  const statesSection = document.getElementById('states');
+  if (statesSection) mountStates(statesSection, { store, model: states, wide: window.matchMedia(WIDE_MEDIA), say });
   const head = stage.querySelector('[data-stage-head]');
   if (head && stage.dataset.base) mountWhatif(head, { store, server: data.totals, baseUrl: stage.dataset.base });
   strips.draw();

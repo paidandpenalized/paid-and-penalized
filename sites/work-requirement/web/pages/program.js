@@ -1,6 +1,6 @@
 // The work-requirement program page: step 1 (the page's top, the finding and Figure 1, web/program/finding.js), step 2
-// (how the scenario works and Figure 2, web/program/how.js), then the other three steps the section menu opens, each an
-// anchored section with its heading until its figures are drawn. The
+// (how the scenario works and Figure 2, web/program/how.js), step 3 (state by state and Figure 3, web/program/states.js),
+// then the other two steps the section menu opens, each an anchored section with its heading until its figures are drawn. The
 // masthead's Find searches this page's hospitals (client/find.js): a pick becomes the page's hospital.
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
@@ -10,6 +10,7 @@ import { t } from '../copy.js';
 import { PROGRAM_PATH } from '../links.js';
 import { findingStep } from '../program/finding.js';
 import { howStep } from '../program/how.js';
+import { statesStep } from '../program/states.js';
 import { axisTop, hospitalRows } from '../program/strips.js';
 import { labelOf, searchBox, shellOf } from './parts.js';
 
@@ -24,13 +25,16 @@ const step = (id) => html`<section class="step" id="${id}" aria-labelledby="${id
 // result; rows: its hospitals as the strips draw them (hospitalRows(data), which the generator has already); stripsUrl:
 // the browser's copy of those rows (web/program/strips.js stripsAsset), which the page's script and the masthead's Find
 // read (null: a page without them, as it is without JavaScript); baseUrl: the what-if's copy of the scenario hospitals
-// (web/program/model.js baseAsset).
-export function programPage({ data, rows = hospitalRows(data), robots, assets, stripsUrl = null, baseUrl = null }) {
+// (web/program/model.js baseAsset); hubCcns: the CCNs with a hospital page across the programs (data.js loadHubCcns; none:
+// no hospital is linked); statesModel: step 3's model (states.js statesModel, which the generator has already; built here
+// when not given).
+export function programPage({ data, rows = hospitalRows(data), robots, assets, stripsUrl = null, baseUrl = null, hubCcns = new Set(), statesModel = undefined }) {
   const body = html`<article class="wrap page wr">
 <div class="wr-scrolly">
 ${findingStep({ data, rows, top: axisTop(rows, data.params.use_max), label: labelOf('finding'), stripsUrl, baseUrl })}
 ${howStep({ data, label: labelOf('how') })}
-${SECTIONS.slice(2).map(step)}
+${statesStep({ data, rows, label: labelOf('states'), hubCcns, model: statesModel })}
+${SECTIONS.slice(3).map(step)}
 </div>
 </article>`;
   return page({

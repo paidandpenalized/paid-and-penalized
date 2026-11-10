@@ -21,6 +21,7 @@ A claim marked `unverified` may not be used in copy.
 | WR-07 | Urban's low mitigation scenario assumes less automatic data matching, so more enrollees must act to keep coverage, with more work required and narrower definitions of the exemptions. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "less automatic data-matching" … "require that more enrollees take action to maintain coverage" … "greater levels of work effort and narrower definitions of exemptions" | 2026-11-10 |
 | WR-08 | In Urban's medium mitigation scenario, the scope and effectiveness of data matching and the exemptions fall between the high and low scenarios. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "the scope and effectiveness of automatic data-matching and definitions of exemptions are between the high and low mitigation scenarios" | 2026-11-10 |
 | WR-09 | Urban assumes every state makes the same implementation choices within a scenario, so its state estimates differ only with the makeup of each state's expansion enrollees. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "uniform implementation choices across states within each scenario" … "differences in the composition of each state's Medicaid expansion enrollees" | 2026-11-10 |
+| WR-10 | Maryland's hospitals are paid under an all-payer model, a model under section 1115A of the Social Security Act. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "exclude hospitals in Maryland (because these hospitals are paid under an all payer model under section 1115A of the Act)" | 2026-11-10 |
 
 ## Notes on the sources
 
@@ -62,6 +63,12 @@ A claim marked `unverified` may not be used in copy.
   named: states' sharing of SNAP work-requirement data, which Urban models from each state's integration of the two
   systems. The page's step 2 paraphrases these; it quotes none.
 
+- **WR-10.** CMS's FY2026 inpatient final rule (FR Doc 2025-14681, August 4, 2025), the steps that set the standardized
+  amount (90 FR 37214), where CMS leaves Maryland's hospitals out because of the state's all-payer model; the family's
+  hub/CLAIMS.md HUB-04 cites the same passage for Medicare. Fetched again 2026-11-10 (`curl -sL`, 200) and the quotation
+  matched. Step 3 says only that the hospitals are paid under that model and that this scenario does not model it; it
+  describes none of the model's mechanics.
+
 ## Link check (2026-11-10)
 
 Each source above, fetched with `curl -sL`.
@@ -71,3 +78,4 @@ Each source above, fetched with `curl -sL`.
 | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
 | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | 200 (the report PDF, SHA-256 equal to the manifest's; executive summary read) | direct |
 | https://www.federalregister.gov/documents/2026/06/03/2026-11094/medicaid-program-community-engagement-requirement-for-certain-individuals | 200 on the first fetch (the rule's page; its full text read at federalregister.gov/documents/full_text/text/2026/06/03/2026-11094.txt, page 33461); a later scripted fetch was sent to the site's bot check | direct |
+| https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 (about 4.8 MB, the rule's text; the WR-10 passage found, once) | direct |

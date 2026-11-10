@@ -21,6 +21,7 @@ import { stripWords } from '../web/program/finding.js';
 import { statusText } from '../web/program/ranges.js';
 import { howModel } from '../web/program/how.js';
 import { serverTotals } from '../web/program/model.js';
+import { statesAsset, statesModel } from '../web/program/states.js';
 import { textWidth } from '../../../web/charts/text.js';
 import { DRAWINGS, axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout, thread } from '../web/program/strips.js';
 
@@ -59,10 +60,11 @@ test('the groups: each chip\'s test counts the hospitals the file\'s roll-up of 
 });
 
 test('the asset round-trips the rows and the axis', () => {
-  const extra = { totals: serverTotals(data), how: howModel(data) };
+  const extra = { totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)) };
   const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data), ...extra }))));
   assert.deepEqual(back.totals, extra.totals);
   assert.deepEqual(back.how, extra.how);
+  assert.deepEqual(back.states, extra.states);
   assert.equal(back.top, top);
   assert.deepEqual(back.rows, rows);
   assert.deepEqual(back.words, stripWords(data));

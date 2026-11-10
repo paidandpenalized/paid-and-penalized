@@ -57,22 +57,23 @@ export function hospitalRows(data) {
 // The browser's copy: the rows as arrays in COLS order, the axis's top (top), the words the strips' headers print
 // (words: { fy, lost, enrollees }: the cost reports' year, and each case's national dollars lost and Urban's enrollment
 // decline in thousands), and what the other steps draw at the default use rate (totals: model.js serverTotals; how:
-// how.js howModel).
+// how.js howModel; states: states.js statesAsset).
 const COLS = ['ccn', 'name', 'city', 'state', 'cls', 'groups', 'low', 'middle', 'high'];
-export const stripsAsset = (rows, { top, words, totals, how }) => ({
+export const stripsAsset = (rows, { top, words, totals, how, states }) => ({
   cols: COLS,
   top,
   words,
   totals,
   how,
+  states,
   rows: rows.map((r) => [r.ccn, r.name, r.city, r.state, r.cls, r.groups, ...(r.share ?? [])]), // an undrawn row ends at its groups: no three nulls
 });
 export function decodeStrips(asset) {
-  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how) {
+  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how || !asset.states) {
     throw new TypeError('strips asset: not what the build wrote');
   }
   const rows = asset.rows.map(([ccn, name, city, state, cls, groups, lo, mid, hi]) => ({ ccn, name, city, state, cls, groups, share: lo === undefined ? null : [lo, mid, hi] }));
-  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, rows };
+  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, states: asset.states, rows };
 }
 
 // The axis's top: the largest high-case share at the what-if's top use rate (useMax, the file's params.use_max), up to the

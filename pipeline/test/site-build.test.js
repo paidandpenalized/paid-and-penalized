@@ -12,7 +12,7 @@ import { HRRP, generateHrrp } from '../../sites/hrrp/web/generate.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { loadMedicaid } from '../../sites/work-requirement/web/data.js';
-import { WR } from '../../sites/work-requirement/web/generate.js';
+import { WR, generateWr } from '../../sites/work-requirement/web/generate.js';
 import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../sites/work-requirement/web/links.js';
 import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
@@ -309,8 +309,9 @@ const SLICE = { ...DATA, hospitals: [...DATA.hospitals.slice(0, 4), DATA.hospita
 const SLICE_CCNS = new Set(SLICE.hospitals.map((h) => h.ccn));
 const HRRP_DATA = loadHrrp();
 const HRRP_SLICE = { ...HRRP, generate: (ctx) => generateHrrp(ctx, { data: { ...HRRP_DATA, hospitals: HRRP_DATA.hospitals.filter((h) => SLICE_CCNS.has(h.id)) }, log: () => {} }) };
-// The work-requirement site's two pages are built whole: every page's tabs link its folder.
-const builtSlice = sliceBuild(SLICE, [HRRP_SLICE, { ...WR, generate: (ctx) => WR.generate(ctx, { log: () => {} }) }]);
+// The work-requirement site's two pages are built whole: every page's tabs link its folder. Its states step links a
+// hospital's hub page only where one exists, so it is told the slice's.
+const builtSlice = sliceBuild(SLICE, [HRRP_SLICE, { ...WR, generate: (ctx) => generateWr(ctx, { log: () => {}, hubCcns: SLICE_CCNS }) }]);
 
 // CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
 // site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's
