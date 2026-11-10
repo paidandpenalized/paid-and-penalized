@@ -44,6 +44,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
   const facs = fig.querySelector('[data-h-facs]');
   const none = fig.querySelector('[data-h-none]');
   const note = fig.querySelector('[data-h-note]');
+  const table = fig.querySelector('.fig__table');
   const cells = [...fig.querySelectorAll('td[data-h]')].map((td) => [td, ...td.dataset.h.split(' ')]);
   const load = chunkLoader(urls, getJson);
   const view = (state) => ({ k: SCENARIOS.indexOf(state.scenario), use: state.use });
@@ -63,6 +64,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
       svg.innerHTML = parts[svg.dataset.fit]?.text ?? '';
       svg.setAttribute('aria-label', parts.alt);
     }
+    table.hidden = !parts.table;
     note.textContent = parts.note;
     note.parentElement.hidden = !parts.note;
     for (const [td, row, j] of cells) {
@@ -71,6 +73,20 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
       if (cell.value === null) td.removeAttribute('data-value');
       else td.dataset.value = String(cell.value);
     }
+  };
+
+  // A state's asset that didn't load: the card and the figure say so, with no stale figure or table left beside them.
+  const failed = () => {
+    const message = () => Object.assign(document.createElement('p'), { className: 'small', textContent: t('hFailed') });
+    card.replaceChildren(message());
+    card.removeAttribute('aria-busy');
+    capN.nextSibling?.remove();
+    cap.append(` ${t('hFailed')}`);
+    drawn.hidden = true;
+    table.hidden = true;
+    note.parentElement.hidden = true;
+    none.replaceChildren(message());
+    none.hidden = false;
   };
 
   // The newest change wins: a slow state asset never draws over a hospital picked after it.
@@ -85,7 +101,7 @@ export function mountHospital(section, { store, rows, urls, say = () => {} }) {
       try {
         chunk = await load(row.state);
       } catch {
-        if (mine === ticket) card.replaceChildren(Object.assign(document.createElement('p'), { className: 'small', textContent: t('hFailed') }));
+        if (mine === ticket) failed();
         return;
       }
     }

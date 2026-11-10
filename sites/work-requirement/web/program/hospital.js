@@ -20,7 +20,7 @@ import { textWidth } from '../../../../web/charts/text.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { estTag, fillCopy, formField, formTitle, stamp } from '../../../../web/render/components.js';
 import { count, dotList, money, pct, placeText, shortIsoDate } from '../../../../web/render/format.js';
-import { html } from '../../../../web/render/html.js';
+import { Safe, html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
 import { DEFAULT_SCENARIO, DEFAULT_SKIP_STATE, SCENARIOS } from '../constants.js';
@@ -33,12 +33,21 @@ const caseWord = (k) => scenWord(SCENARIOS[k]).toLowerCase();
 
 // ---------- the data ----------
 
+// The file's own middle-case results at the default use rate (the emitted numbers the hub's band also reads), by the
+// engine's result key: step 4 prints these, not a recomputation from the file's rounded inputs.
+const MIDDLE_KEYS = Object.freeze({
+  middle_lost: 'lost', middle_added_uncompensated: 'addedUncompensated', middle_operating_margin: 'operatingMargin',
+  middle_operating_margin_after: 'operatingMarginAfter', middle_total_margin_after: 'totalMarginAfter',
+});
+const FILE_MIDDLE = Object.keys(MIDDLE_KEYS);
+
 // What step 4 reads of each hospital in the file: the engine's fields (scenario.js), who it is beyond the strips' row, its
-// cost report's status and period, its flags (the reason it has no loss to draw) and its FY Medicare penalties. Each row
+// cost report's status and period, its flags (the reason it has no loss to draw), its FY Medicare penalties and the
+// file's middle-case results (FILE_MIDDLE). Each row
 // adds hub (1 when /hospital/<ccn>/ exists) and drawn (1 when step 1 draws it: a loss to draw).
 export const HOSP_COLS = Object.freeze(['ccn', 'kind', 'beds', 'own', 'status', 'period_begin', 'period_end', 'flags', 'medicaid_net_revenue',
   'net_patient_revenue', 'share', 'cost_ratio', 'has_margin', 'net_income_patients', 'other_operating_income', 'net_income', 'other_income',
-  'uncompensated_cost', 'scored', 'hrrp', 'hac']);
+  'uncompensated_cost', 'scored', 'hrrp', 'hac', ...FILE_MIDDLE]);
 const CHUNK_COLS = Object.freeze([...HOSP_COLS, 'hub', 'drawn']);
 
 // One asset per state or territory with a hospital in the file, by code (sorted): { code, name, cls, viii (CMS-64's
@@ -94,37 +103,49 @@ export function subjectOf(row, chunk) {
 
 // Why a hospital has no figure, or null when it has a loss to draw: away_<why> (not in the file), its class (outside a
 // scenario state, or no cost report), or, in a scenario state, what its cost report shows: a filing error screened out
-// (negative, exceeds), no Medicaid revenue, no patient revenue, or a loss too small to draw (tiny).
+// (negative, exceeds), no Medicaid revenue, no patient revenue, no expansion share (no_share), or a loss too small to
+// draw (tiny: under TINY_SHARE of patient revenue in the low case, which step 1's 7-place shares round to nothing).
+// Anything else step 1 leaves out has no reason here to give, so it throws.
+export const TINY_SHARE = 0.5e-7;
 export function reasonOf(s) {
   if (s.away) return `away_${s.away}`;
   if (s.cls !== 'scenario') return s.cls;
   const r = s.rec;
   if (r.drawn) return null;
-  if (!r.scored) return r.flags.includes('negative_medicaid_revenue') ? 'negative' : 'exceeds';
+  if (!r.scored) return (r.flags ?? []).includes('negative_medicaid_revenue') ? 'negative' : 'exceeds';
   if (!(r.medicaid_net_revenue > 0)) return 'no_medicaid';
   if (!(r.net_patient_revenue > 0)) return 'no_npr';
-  return 'tiny';
+  if (!(r.share > 0)) return 'no_share';
+  if ((r.medicaid_net_revenue * r.share * s.chunk.declines[SCENARIOS[0]]) / r.net_patient_revenue < TINY_SHARE) return 'tiny';
+  throw new RangeError(`hospital ${s.ccn}: step 1 leaves it out with no reason step 4 can give`);
 }
 // The stamp a reason gets (copy hStamp_<group>).
 const STAMP = {
   away_inactive: 'away', away_kind: 'away', not_expansion: 'none', no_viii_group: 'none', all_payer: 'notModeled', territory: 'notModeled',
-  no_cost_report: 'noReport', negative: 'screened', exceeds: 'screened', no_medicaid: 'noLoss', no_npr: 'noLoss', tiny: 'noLoss',
+  no_cost_report: 'noReport', negative: 'screened', exceeds: 'screened', no_medicaid: 'noLoss', no_npr: 'noLoss', no_share: 'noLoss', tiny: 'noLoss',
 };
 export const REASONS = Object.freeze(Object.keys(STAMP));
 // The reason's sentence.
 const WHY_VALUES = {
   away_inactive: () => ({}), away_kind: () => ({}), all_payer: () => ({}), territory: () => ({}),
-  not_expansion: (s) => ({ state: s.stateName }), no_viii_group: (s) => ({ state: s.stateName }),
+  not_expansion: (s) => ({ state: s.stateName }), no_viii_group: (s) => ({ state: s.stateName }), no_share: () => ({}),
 };
 export const whyOf = (s, reason) => fill(`hWhy_${reason}`, (WHY_VALUES[reason] ?? ((x) => ({ fy: String(x.chunk.fy) })))(s));
 
 // A drawn hospital's numbers at a use rate: patient revenue (npr), Medicaid revenue (m2), Medicaid's share of patient
 // revenue (ms), the expansion share (es), the expansion adults' part (exp, the engine's revenue at risk), the state's
-// declines and the engine's result for each case, its loss and its share of patient revenue lost by case.
+// declines and the engine's result for each case, its loss and its share of patient revenue lost by case. At the default
+// use rate the middle case takes the file's own results (FILE_MIDDLE) where the file gives them, so the page prints the
+// emitted numbers; the engine's agree to the file's rounding.
 export function numbersOf(s, use) {
   const r = s.rec;
   const declines = SCENARIOS.map((sc) => s.chunk.declines[sc]);
   const results = declines.map((d) => scenario(r, r.share, d, { use }));
+  if (use === 1) {
+    const own = { ...results[MIDDLE] };
+    for (const [col, key] of Object.entries(MIDDLE_KEYS)) if (r[col] !== null && r[col] !== undefined) own[key] = r[col];
+    results[MIDDLE] = own;
+  }
   const npr = r.net_patient_revenue;
   return {
     npr, m2: r.medicaid_net_revenue, ms: r.medicaid_net_revenue / npr, es: r.share, exp: results[0].atRisk, declines, use, results,
@@ -242,12 +263,19 @@ export function barLayout(n, { k, use, drawing, status }) {
   block(zx, g.rows.exp, narrow
     ? [['wr-hb__main', fill('hBarExpShort', { v: money(n.exp) })], ['wr-hb__note', fill('hBarExpOf', { share: es })]]
     : [['wr-hb__main', fill('hBarExp', { v: money(n.exp), share: es })]], 0);
-  const lost = { v: money(-n.lost[k]), scenario: caseWord(k), dc: shortPct(d) };
+  // The loss's label gives the share of the expansion part the block is: the decline, times the use rate off the default.
+  const v = money(-n.lost[k]);
+  const lost = use === 1
+    ? fill(narrow ? 'hBarLostShort' : 'hBarLost', { v, scenario: caseWord(k), dc: shortPct(d) })
+    : narrow ? fill('hBarLostShortUse', { v, part: shortPct(d * use) })
+      : fill('hBarLostUse', { v, scenario: caseWord(k), dc: shortPct(d), use: pct(use, 0), part: shortPct(d * use) });
   const share = use === 1 ? fill('hBarShare', { share: pct(n.share[k], 2) }) : fill('hBarShareUse', { share: pct(n.share[k], 2), use: pct(use, 0) });
-  const range = fill('hBarRange', { low: money(-n.lost[0]), high: money(-n.lost[SCENARIOS.length - 1]) });
+  // The dashed ticks are the other two cases; the label names exactly those, low to high.
+  const [a, b] = SCENARIOS.map((_, j) => j).filter((j) => j !== k);
+  const range = fill('hBarRange', { a: caseWord(a), x: money(-n.lost[a]), b: caseWord(b), y: money(-n.lost[b]) });
   block(lx, g.rows.lost, narrow
-    ? [['wr-hb__loss', fill('hBarLostShort', lost)], ['wr-hb__note', share], ['wr-hb__note', range]]
-    : [['wr-hb__loss', fill('hBarLost', lost)], ['wr-hb__note', `${share} · ${range}`]], 0);
+    ? [['wr-hb__loss', lost], ['wr-hb__note', share], ['wr-hb__note', range]]
+    : [['wr-hb__loss', lost], ['wr-hb__note', `${share} · ${range}`]], 0);
   labels.push({ cls: 'wr-hb__zoom', x: L, y: panelTop + panelH / 2 + 4, anchor: 'start', text: zoomText() });
 
   const rects = [
@@ -267,7 +295,7 @@ export function barLayout(n, { k, use, drawing, status }) {
     { cls: 'wr-hb__link', x1: L + w3, y1: expBottom, x2: zx + zw + 4, y2: boxTop },
     ...SCENARIOS.map((_, j) => j).filter((j) => j !== k).map((j) => {
       const x = zx + zw * n.declines[j] * use;
-      return { cls: 'wr-hb__tick', x1: x, y1: panelTop + 2, x2: x, y2: panelTop + panelH - 2 };
+      return { cls: 'wr-hb__tick', x1: x, y1: panelTop + 2, x2: x, y2: panelTop + panelH - 2, k: j };
     }),
     { cls: 'wr-hb__leader', x1: lx, y1: panelTop + panelH - 6, x2: lx, y2: g.rows.lost[0] - 12 },
   ];
@@ -328,7 +356,8 @@ export function factorsHtml(s, n, view) {
 
 // What Figure 4 shows for a hospital in a view ({ k, use }): its caption's words (cap), its text alternative (alt), the
 // two drawings' insides (narrow, wide: null without a figure), the factor rows (facs), the reason panel (none: null with
-// a figure), the note under it, and the table's cells by row and case (cells: [row id, k, { text, value }]).
+// a figure), the note under it, the table's cells by row and case (cells: [row id, k, { text, value }]), and whether the
+// table shows (table: a hospital with no figure has no table and no CSV; its cells are dashes, for the fixed rows).
 const TABLE_ROWS = ['npr', 'm2', 'exp', 'lost', 'share'];
 export function figureParts(s, { k, use }) {
   const reason = reasonOf(s);
@@ -336,6 +365,7 @@ export function figureParts(s, { k, use }) {
   if (reason) {
     return {
       reason,
+      table: false,
       cap: fill('hTakeawayNone', { name: s.name }),
       alt: fill('hTakeawayNone', { name: s.name }),
       narrow: null,
@@ -354,6 +384,7 @@ export function figureParts(s, { k, use }) {
   const text = { npr: money, m2: money, exp: money, lost: money, share: (v) => pct(v, 2) };
   return {
     reason: null,
+    table: true,
     cap: fill('hTakeaway', { name: s.name }),
     alt: fill('hAlt', {
       npr: money(n.npr), medicaid: money(n.m2), ms: pct(n.ms, 1), exp: money(n.exp), es: pct(n.es, 1), lost: money(-n.lost[k]), scenario: caseWord(k), share: pct(n.share[k], 2),
@@ -492,6 +523,9 @@ const tableOf = (parts) => ({
   ]),
 });
 
+// A figure's markup with its table's fold (and the CSV inside it) hidden when shown is false: a hospital with no figure.
+const withTable = (fig, shown) => (shown ? fig : new Safe(fig.text.replace('<details class="fig__table">', '<details class="fig__table" hidden>')));
+
 // The step. data: loadMedicaid()'s result; rows: hospitalRows(data); label: its heading; hubCcns: the CCNs with a hub
 // page; chunks: hospChunks's (the generator has them; built here when not given).
 export function hospitalStep({ data, rows, label, hubCcns = new Set(), chunks = hospChunks(data, rows, hubCcns) }) {
@@ -509,7 +543,7 @@ export function hospitalStep({ data, rows, label, hubCcns = new Set(), chunks = 
 <div class="wr-hcard" data-h-card data-h-default="${s.ccn}">${cardHtml(s, view)}</div>
 </div>
 <div class="wr-step__stage">
-${figure({
+${withTable(figure({
     n: 4,
     takeaway: parts.cap,
     chart: chartOf(parts),
@@ -518,7 +552,7 @@ ${figure({
     claimLevel: 'hypothetical',
     table: tableOf(parts),
     csvName: 'work-requirement-hospital',
-  })}
+  }), parts.table)}
 </div>
 </section>`;
 }

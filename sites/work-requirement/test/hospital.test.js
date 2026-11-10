@@ -66,16 +66,30 @@ test('the state assets: every hospital in the file once, in its state\'s asset, 
   assert.throws(() => decodeChunk({ cols: ['ccn'], rows: [], code: 'XX' }), /not what the build wrote/);
 });
 
-test('a drawn hospital\'s dollars are the engine\'s, and at the default use rate its middle loss is the file\'s', () => {
+test('a drawn hospital\'s dollars: the engine\'s, except the middle case at the default use rate, which prints the file\'s own results', () => {
+  const FILE = { middle_lost: 'lost', middle_added_uncompensated: 'addedUncompensated', middle_operating_margin_after: 'operatingMarginAfter', middle_total_margin_after: 'totalMarginAfter' };
+  let pinned = 0;
   for (const r of rows.filter((x) => x.share)) {
-    const n = numbersOf(subject(r), 1);
-    // The file's middle_lost is whole dollars from the unrounded share; its share column is rounded to 6 places.
-    const tol = 0.5 + n.m2 * 5e-7;
-    assert.ok(Math.abs(n.lost[MIDDLE] - fileRow(r.ccn)[col.middle_lost]) <= tol, `${r.ccn}: ${n.lost[MIDDLE]} against ${fileRow(r.ccn)[col.middle_lost]}`);
+    const s = subject(r);
+    const n = numbersOf(s, 1);
+    const row = fileRow(r.ccn);
+    // M1: the printed middle case at use 1 is the emitted numbers, exactly, wherever the file gives one.
+    for (const [c, key] of Object.entries(FILE)) {
+      if (row[col[c]] === null) continue;
+      assert.equal(n.results[MIDDLE][key], row[col[c]], `${r.ccn} ${c}`);
+      pinned += 1;
+    }
+    assert.equal(n.lost[MIDDLE], row[col.middle_lost]);
+    const card = words(cardHtml(s, { k: MIDDLE, use: 1 }).text);
+    assert.ok(card.includes(`${money(-row[col.middle_lost])} a year`), `${r.ccn}: the stamp prints the file's loss`);
+    // The engine agrees with the file to its rounding: whole dollars, and the share column's 6 places.
+    const engine = numbersOf(s, 1.05).lost[MIDDLE] / 1.05;
+    assert.ok(Math.abs(engine - row[col.middle_lost]) <= 0.5 + n.m2 * 5e-7, `${r.ccn}: ${engine} against ${row[col.middle_lost]}`);
     assert.ok(n.lost[0] < n.lost[1] && n.lost[1] < n.lost[2], r.ccn);
-    // The bar's arithmetic: patient revenue × Medicaid share × expansion share × decline = the loss.
-    assert.ok(Math.abs(n.npr * n.ms * n.es * n.declines[MIDDLE] - n.lost[MIDDLE]) <= 1e-6 * n.lost[MIDDLE], r.ccn);
+    // The bar's arithmetic: patient revenue × Medicaid share × expansion share × decline = the loss (the engine's, low case).
+    assert.ok(Math.abs(n.npr * n.ms * n.es * n.declines[0] - n.lost[0]) <= 1e-6 * n.lost[0], r.ccn);
   }
+  assert.ok(pinned > 10000, `${pinned} values pinned`);
 });
 
 test('review focus 1: each class and each reason a scenario hospital has no loss renders its record card and reason line, never a bar, "$0" or NaN', () => {
@@ -99,6 +113,7 @@ test('review focus 1: each class and each reason a scenario hospital has no loss
         assert.equal(reason, null);
         assert.ok(parts.narrow && parts.wide, 'a drawn hospital has its bar');
         assert.match(card, /class="wr-rec__t"/, 'and its three cases');
+        assert.equal(parts.table, true, 'and its figure\'s table');
         continue;
       }
       assert.equal(reason, what === 'scenario' ? null : what, what);
@@ -109,7 +124,8 @@ test('review focus 1: each class and each reason a scenario hospital has no loss
       const why = COPY[`hWhy_${what}`].text.replace('{state}', s.stateName).replace('{fy}', String(data.meta.fy));
       assert.ok(words(card).includes(why), `${what}: the reason line ("${why}")`);
       assert.ok(words(parts.none).includes(why), `${what}: the figure's reason panel`);
-      for (const [, , cell] of parts.cells) assert.equal(cell.value, null, `${what}: the figure's table has no numbers`);
+      assert.equal(parts.table, false, `${what}: the figure's table (and its CSV) hidden`);
+      for (const [, , cell] of parts.cells) assert.equal(cell.value, null, `${what}: and no numbers in it`);
     }
   }
 });
@@ -131,7 +147,8 @@ test('every hospital in the file, every case, the default and the extreme use ra
       }
     }
   }
-  for (const reason of [null, ...REASONS.filter((x) => x !== 'away_kind')]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
+  // away_kind and no_share are guards: no hospital in today's file has either.
+  for (const reason of [null, ...REASONS.filter((x) => x !== 'away_kind' && x !== 'no_share')]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
 });
 
 test('the stamp gives the scenario\'s loss alone: the Medicare penalties sit beside it, never added', () => {
@@ -240,6 +257,7 @@ test('the page: step 4 drawn whole without a script, its controls hidden, and th
   assert.ok(section.includes(parts.facs.text));
   assert.match(section, /data-h-pick hidden/, 'the random button waits for the script');
   assert.match(section, /<figure class="fig" id="figure-4"/);
+  assert.match(section, /<details class="fig__table">/, 'a drawn hospital\'s table shows');
   for (const [row, j, cell] of parts.cells) assert.ok(section.includes(`data-value="${cell.value}" data-h="${row} ${j}"`), `${row} ${j}`);
   assertClean(section, 'the step');
 });
@@ -268,6 +286,17 @@ test('every label in Figure 4 stays inside its drawing, whole, for every drawn h
             assert.ok(!label.text.includes('…'), `${r.ccn}: "${label.text}" cut`);
             n += 1;
           }
+          // The loss's label: the share of the expansion part its block is, the decline times the use rate.
+          const loss = layout.labels.find((l) => l.cls === 'wr-hb__loss').text;
+          const part = /([\d.]+)% (of the expansion part|\w+ decline)/.exec(loss);
+          assert.ok(part, loss);
+          assert.ok(Math.abs(Number(part[1]) / 100 - nums.declines[k] * use) < 0.0005 + 1e-12, `${r.ccn} ${drawing} k${k} ${use}: "${loss}"`);
+          // The dashed ticks are the other two cases, and the range label names exactly those.
+          const ticks = layout.lines.filter((l) => l.cls === 'wr-hb__tick').map((l) => l.k);
+          assert.deepEqual(ticks, SCENARIOS.map((_, j) => j).filter((j) => j !== k));
+          const range = layout.labels.map((l) => l.text).find((tx) => tx.includes('dashed:'));
+          const named = [...range.slice(range.indexOf('dashed:')).matchAll(/\b(low|middle|high)\b/g)].map((m) => SCENARIOS.indexOf(m[1]));
+          assert.deepEqual(named, ticks, `${r.ccn} k${k}: "${range}"`);
           for (const rect of layout.rects) assert.ok(rect.x >= 0 && rect.x + rect.w <= g.width + 1e-9 && rect.y + rect.h <= g.height, `${r.ccn} ${drawing}: ${rect.cls} outside`);
           // Labels on one row never overlap.
           const byRow = new Map();
