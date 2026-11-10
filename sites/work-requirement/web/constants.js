@@ -35,3 +35,16 @@ export const USE_STEP = 0.05;
 // state's most exposed hospitals its card names.
 export const CONTOURS = Object.freeze({ narrow: Object.freeze([0.005, 0.01, 0.02]), wide: Object.freeze([0.005, 0.01, 0.02]) });
 export const MOST_EXPOSED = 4;
+
+// Step 5's corner, "exposed on both" (web/program/both.js), the rule the page and Methods state: a hospital that loses
+// BOTH_SHARE or more of its patient revenue in the case shown (at the reader's use rate), and whose FY Medicare penalties
+// (readmissions plus hospital-acquired conditions, the hub's estimates) as a share of the same patient revenue are in the
+// top quarter: at or above the BOTH_QUANTILE quantile of that share among the hospitals Figure 5 plots (step 1's
+// hospitals with a penalty estimate, those with no penalty included), the cut being the sorted shares' entry at
+// floor(BOTH_QUANTILE × (n − 1)). The cut is computed from the data, never typed. These are this site's framing, not a
+// rule of CMS's or Urban's, so they carry no claim id and sit outside METHOD_CONSTANTS (the copy gate's sourced constants);
+// Methods lists them.
+export const BOTH_SHARE = 0.01;
+export const BOTH_QUANTILE = 0.75;
+// How many of the named table's rows show before "Show all" (with JavaScript; without it every row shows).
+export const NAMED_FIRST = 10;

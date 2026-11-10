@@ -8,6 +8,7 @@ import { loadAway, loadHubCcns, loadMedicaid } from './data.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';
 import { programPage } from './pages/program.js';
+import { bothInput, bothModel } from './program/both.js';
 import { stripWords } from './program/finding.js';
 import { hospChunks } from './program/hospital.js';
 import { howModel } from './program/how.js';
@@ -27,13 +28,14 @@ export function generateWr(ctx, { data = loadMedicaid(), hubCcns = loadHubCcns()
   const rows = hospitalRows(data);
   const states = statesModel(data, rows, hubCcns);
   const chunks = hospChunks(data, rows, hubCcns);
+  const both = bothInput(data, rows, hubCcns);
   const hosp = Object.fromEntries([...chunks].map(([code, chunk]) => [code, ctx.asset(`wr-hosp-${code.toLowerCase()}`, 'json', JSON.stringify(chunk))]));
   const stripsUrl = ctx.asset('wr-strips', 'json', JSON.stringify(stripsAsset(rows, {
     top: axisTop(rows, data.params.use_max), words: stripWords(data), totals: serverTotals(data), how: howModel(data), states: statesAsset(states),
-    hosp, away: loadAway(data, hubCcns),
+    hosp, away: loadAway(data, hubCcns), both,
   })));
   const baseUrl = ctx.asset('wr-base', 'json', JSON.stringify(baseAsset(data)));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl, hubCcns, statesModel: states, hospChunks: chunks }) });
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl, hubCcns, statesModel: states, hospChunks: chunks, bothModel: bothModel(rows, both) }) });
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ data, robots, assets }) });
   log(`Work requirement: 2 pages under ${PROGRAM_PATH}, ${data.hospitals.size} hospitals in the FY${data.meta.fy} file`);
   return { updated: { cmsReleased: data.meta.cmsReleased, changed: data.meta.changed } };

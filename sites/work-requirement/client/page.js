@@ -7,6 +7,7 @@
 //   step 2: the chain and its worksheets (client/how.js);
 //   step 3: the states' figure, the selected state's headline and card, and the state table's numbers (client/states.js);
 //   step 4: the page's hospital's record card and Figure 4 (client/hospital.js);
+//   step 5: Figure 5, the corner's range and dollars, where the page's hospital sits and the named table (client/both.js);
 //   the stage head: the scenario switch and the use-rate what-if (client/whatif.js).
 // A later step joins the same way: store.subscribe((state, changed) => …), redrawing when the keys it reads change.
 // Without the script, or without the asset, the page stays as the server drew it (the middle case at the default use
@@ -14,10 +15,12 @@
 import { setFollowed } from '../../../web/client/follow.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
+import { bothModel, decodeBoth } from '../web/program/both.js';
 import { awayRows, randomPick } from '../web/program/hospital.js';
 import { byCase, countsText, rangesInner, statusText } from '../web/program/ranges.js';
 import { decodeStates } from '../web/program/states.js';
 import { decodeStrips, drawn, stripsAlt, stripsBody, stripsLayout } from '../web/program/strips.js';
+import { mountBoth } from './both.js';
 import { mountChips } from './chips.js';
 import { defaultPool, mountFind, pageHospital } from './find.js';
 import { mountHospital } from './hospital.js';
@@ -120,11 +123,13 @@ function liveLine(el) {
 async function start(stage) {
   let data;
   let states;
+  let both;
   try {
     const res = await fetch(stage.dataset.strips);
     if (!res.ok) return;
     data = decodeStrips(await res.json());
     states = decodeStates(data.states);
+    both = bothModel(data.rows, decodeBoth(data.both));
   } catch {
     return;
   }
@@ -172,6 +177,8 @@ async function start(stage) {
   if (statesSection) mountStates(statesSection, { store, model: states, wide: window.matchMedia(WIDE_MEDIA), say });
   const hospitalSection = document.getElementById('hospital');
   if (hospitalSection) mountHospital(hospitalSection, { store, rows: data.rows, urls: data.hosp, say });
+  const bothSection = document.getElementById('both');
+  if (bothSection) mountBoth(bothSection, { store, model: both, wide: window.matchMedia(WIDE_MEDIA), say });
   const head = stage.querySelector('[data-stage-head]');
   if (head && stage.dataset.base) mountWhatif(head, { store, server: data.totals, baseUrl: stage.dataset.base });
   strips.draw();

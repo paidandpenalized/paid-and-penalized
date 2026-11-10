@@ -23,6 +23,7 @@ import { howModel } from '../web/program/how.js';
 import { serverTotals } from '../web/program/model.js';
 import { statesAsset, statesModel } from '../web/program/states.js';
 import { textWidth } from '../../../web/charts/text.js';
+import { bothInput } from '../web/program/both.js';
 import { DRAWINGS, axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout, thread } from '../web/program/strips.js';
 
 const data = loadMedicaid();
@@ -61,11 +62,12 @@ test('the groups: each chip\'s test counts the hospitals the file\'s roll-up of 
 
 test('the asset round-trips the rows and the axis', () => {
   const extra = {
-    totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)), hosp: { AK: '/assets/wr-hosp-ak.test.json' }, away: [['000000', 'A', 'B', 'AK', 'inactive']],
+    totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)), hosp: { AK: '/assets/wr-hosp-ak.test.json' }, away: [['000000', 'A', 'B', 'AK', 'inactive']], both: bothInput(data, rows),
   };
   const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data), ...extra }))));
   assert.deepEqual(back.hosp, extra.hosp);
   assert.deepEqual(back.away, extra.away);
+  assert.deepEqual(back.both, extra.both);
   assert.deepEqual(back.totals, extra.totals);
   assert.deepEqual(back.how, extra.how);
   assert.deepEqual(back.states, extra.states);

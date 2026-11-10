@@ -306,6 +306,53 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-hnone { display: grid; gap: 10px; justify-items: start; max-width: 36rem; padding: 18px 20px; border: var(--rule) solid var(--ink); }
 .wr-hnone__why { font-size: var(--fs-sm); line-height: 1.5; }
 
+/* Step 5, exposed on both (web/program/both.js): the range, the finding, the corner's dollars, Figure 5 and the named
+   table, which spans both columns under them. */
+.wr-both__head { display: grid; gap: 6px; }
+.wr-both__big { font: 400 clamp(2.2rem, 5vw, 2.75rem)/1 var(--font-display); letter-spacing: -0.01em; }
+.wr-both__big small { margin: 0 0.15em; color: var(--ink-2); font: 400 0.42em var(--font-body); letter-spacing: 0; vertical-align: 0.4em; }
+.wr-both__lab { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.wr-both__find { font-size: var(--fs-base); line-height: 1.45; }
+.wr-both__rule { line-height: 1.5; }
+.wr-both__read { padding: 10px 12px; border: 3px solid var(--pen); background: var(--paper); }
+.wr-both__rh { margin-bottom: 6px; font: 400 var(--fs-md)/1.2 var(--font-display); }
+.wr-both__dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; margin: 0; font-size: var(--fs-sm); line-height: 1.4; }
+.wr-both__dl dt .scen-tag, .wr-both__dl dt .est-tag { margin-left: 4px; }
+.wr-both__dl dd { margin: 0; color: var(--pen-ink); font: 700 var(--fs-sm)/1.4 var(--font-type); text-align: right; }
+.wr-both__never { margin-top: 6px; }
+.wr-both__you { line-height: 1.45; }
+.wr-b__corner { fill: var(--pen-tint); }
+.wr-bdots { stroke: var(--pen-scar); }
+.wr-bdots--on { stroke: var(--pen); }
+.wr-bdots--strip { stroke: var(--ink-3); }
+.wr-b__cutline { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.wr-b__paper { fill: var(--paper); }
+.wr-b__count { fill: var(--ink); font: 600 17px var(--font-body); }
+.chart--both[data-fit="narrow"] .wr-b__count { font-size: 14px; }
+.wr-b__sub, .wr-b__line { fill: var(--ink-2); font: 600 11px var(--font-body); }
+.wr-b__cut { fill: var(--ink); font: 600 11px var(--font-body); }
+.wr-b__strip { fill: var(--ink); font: 600 11px var(--font-body); }
+.chart--both[data-fit="narrow"] .wr-b__strip { font-size: 10.5px; }
+.wr-b__name { fill: var(--ink); font: 600 13px var(--font-body); }
+.wr-b__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-b__leader { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-b__tick { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-axtag rect { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-axtag__t { fill: var(--ink-2); font: 400 9.5px var(--font-type); }
+.wr-b__count, .wr-b__sub, .wr-b__line, .wr-b__cut, .wr-b__strip, .wr-b__name, .wr-axtag { pointer-events: none; }
+.wr-named { grid-column: 1 / -1; padding-top: 10px; border-top: 5px double var(--ink); }
+.wr-named__sum { min-height: var(--target-min); font: 400 var(--fs-lg)/1.2 var(--font-display); cursor: pointer; }
+.wr-named__lead { margin: 8px 0 10px; }
+.wr-named__wrap { overflow-x: auto; }
+.wr-named__t { width: 100%; min-width: 36rem; }
+.wr-named__t th small { display: block; color: var(--ink-3); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.wr-named__t td.num, .wr-named__t th.num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.wr-named__grp { text-align: center; }
+.wr-named__grp .scen-tag, .wr-named__grp .est-tag { margin-left: 4px; }
+.wr-named[data-limited] .wr-named__more { display: none; }
+.wr-named__all { margin-top: 8px; }
+[data-b-all][hidden] { display: none; }
+
 @media (forced-colors: active) {
   .wr-bar--ink, .wr-bar--pen, .wr-bar--rew, .wr-bar--scar, .wr-bar--net { fill: CanvasText; }
   .wr-band { fill: Canvas; stroke: GrayText; }
@@ -329,4 +376,8 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
   .wr-hb__tick, .wr-hb__leader, .wr-rug__me { stroke: CanvasText; }
   .wr-hb__box, .wr-hb__link, .wr-rug__ticks, .wr-rug__line { stroke: GrayText; }
   .wr-rec__t .on { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .wr-b__corner { fill: Canvas; }
+  .wr-bdots, .wr-bdots--strip, .wr-axtag rect { stroke: GrayText; }
+  .wr-bdots--on, .wr-b__cutline, .wr-b__leader, .wr-b__tick { stroke: CanvasText; }
+  .wr-b__dot { fill: CanvasText; }
 }
