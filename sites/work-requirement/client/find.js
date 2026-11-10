@@ -36,11 +36,14 @@ const words = {
 };
 
 // Mounts the Find on form. rows: the strips' rows; onLit(ccns or null): the hospitals the words typed match (null when
-// the box is empty or a hospital was picked); onPick(row): a hospital picked. The box then shows its name.
+// the box is empty or a hospital was picked); onPick(row): a hospital picked. The box then shows its name, until the
+// page's hospital moves to another (step 4's random pick): returns showing(hospital), for the page to call with its
+// hospital whenever it changes, which empties the box (and unlights what it typed) unless that is the hospital picked.
 export function mountFind(form, { rows, onLit, onPick }) {
   const byCcn = new Map(rows.map((r) => [r.ccn, r]));
   const index = buildIndex(findEntries(rows));
   const input = form.querySelector('[role="combobox"]');
+  let picked = null;
   mountOmnibox(form, {
     load: () => Promise.resolve(index),
     words,
@@ -48,6 +51,7 @@ export function mountFind(form, { rows, onLit, onPick }) {
     open: (href) => {
       const row = pageHospital(new URL(href, window.location.href).search, byCcn);
       if (!row) return;
+      picked = row.ccn;
       input.value = row.name;
       onLit(null);
       onPick(row);
@@ -63,4 +67,11 @@ export function mountFind(form, { rows, onLit, onPick }) {
       onLit(q ? new Set(search(q, index, { limit: Infinity, types: ['hospital'] }).results.map((e) => e.key)) : null);
     });
   });
+  return function showing(hospital) {
+    if (hospital?.ccn === picked) return;
+    picked = null;
+    if (!input.value) return;
+    input.value = '';
+    onLit(null);
+  };
 }

@@ -333,3 +333,44 @@ test('the work-requirement tags are set at the caption size, as the scenario tag
   assert.match(/^\.wr-tag \{[^}]*\}/m.exec(site)[0], /font: 400 var\(--fs-cap\)\/1\.5 var\(--font-type\)/);
   assert.match(/^\.scen-tag \{[^}]*\}/m.exec(shared)[0], /font: 400 var\(--fs-cap\)\/1\.5 var\(--font-type\)/);
 });
+
+// ---------- the Find's box ----------
+
+// The Find mounted on the stand-in search form (web/test/dom.js), its box keeping every input listener (the combobox's
+// and the Find's own), and a frame run at once.
+async function findOn(t) {
+  const { comboForm, standIn } = await import('../../../web/test/dom.js');
+  const { mountFind } = await import('../client/find.js');
+  const s = comboForm(t);
+  standIn(t, { window: { location: { href: 'https://example.invalid/work-requirement/', assign() {} } }, requestAnimationFrame: (fn) => fn() });
+  const add = s.input.addEventListener;
+  s.input.addEventListener = (type, fn) => {
+    const prev = s.input.listeners[type];
+    if (!prev) return add(type, fn);
+    s.input.listeners[type] = (e) => { const r = prev(e); fn(e); return r; };
+  };
+  const lit = [];
+  const picks = [];
+  const showing = mountFind(s.form, { rows, onLit: (ccns) => lit.push(ccns), onPick: (row) => picks.push(row) });
+  const enter = () => s.input.listeners.keydown({ key: 'Enter', preventDefault() {} });
+  return { ...s, lit, picks, showing, enter };
+}
+
+test('the Find\'s box: a pick shows its name; the page\'s hospital moving to another empties it and unlights it; the same one keeps it', async (t) => {
+  const f = await findOn(t);
+  const [a, b] = rows.filter((r) => r.share && r.name.length > 6);
+  await f.type(a.ccn);
+  f.enter();
+  assert.deepEqual(f.picks.map((r) => r.ccn), [a.ccn]);
+  assert.equal(f.input.value, a.name);
+  f.showing(a);
+  assert.equal(f.input.value, a.name, 'the hospital picked keeps its name in the box');
+  f.showing(b);
+  assert.equal(f.input.value, '', 'a random pick (or any other hospital) leaves no stale name');
+  assert.equal(f.lit.at(-1), null);
+  await f.type(b.name.slice(0, 5));
+  assert.ok(f.lit.at(-1) instanceof Set, 'words typed light their matches');
+  f.showing(a);
+  assert.equal(f.input.value, '', 'typed words go too when another hospital becomes the page\'s');
+  assert.equal(f.lit.at(-1), null);
+});

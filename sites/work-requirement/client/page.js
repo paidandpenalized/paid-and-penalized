@@ -183,7 +183,7 @@ async function start(stage, story) {
   });
   const form = document.querySelector('header.fam form#omni');
   if (form) {
-    mountFind(form, {
+    const showing = mountFind(form, {
       rows: data.rows,
       onLit: (ccns) => strips.setLit(ccns),
       onPick: (row) => {
@@ -191,6 +191,8 @@ async function start(stage, story) {
         store.set({ hospital: row });
       },
     });
+    // Another hospital made the page's (step 4's random pick): the box no longer names the one picked in it.
+    store.subscribe((state, changed) => changed.has('hospital') && showing(state.hospital));
   }
   const howSection = document.getElementById('how');
   if (howSection) mountHow(howSection, { store, how: data.how });
