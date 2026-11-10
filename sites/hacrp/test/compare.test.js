@@ -7,6 +7,7 @@ import { isAssigned } from '../../../engine/js/hacrp/hospital.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
+import { median } from '../../../engine/js/stats.js';
 import { GROUP_KINDS, bedBand, biggestLever, countBins, edgesAround } from '../web/compare.js';
 import { miles } from '../../../web/charts/geo.js';
 import { BED_BANDS, FEW_IN_GROUP, NEAREST } from '../web/constants.js';
@@ -75,6 +76,14 @@ test('groupsOf: the nation first, every kind in order, each group counting its d
   assert.equal(state.scored, inState.length);
   assert.equal(state.yes, inState.filter((x) => x.paymentReduction === 'Yes').length);
   assert.deepEqual(NAT.groupsOf('990001'), [], 'a hospital not in the file belongs to no group');
+  // The middle score is over the hospitals with a payment decision, the ones the figure draws and its words name; the
+  // nation's differs from every scored hospital's (Maryland's are scored, with no decision).
+  const decidedScores = DATA.hospitals.filter((x) => x.total !== null && (x.paymentReduction === 'Yes' || x.paymentReduction === 'No')).map((x) => x.total);
+  const scoredScores = DATA.hospitals.filter((x) => x.total !== null).map((x) => x.total);
+  assert.ok(scoredScores.length > decidedScores.length, 'some scored hospitals have no decision (if not, this no longer tests the difference)');
+  assert.equal(groups[0].median, median(decidedScores));
+  assert.notEqual(groups[0].median, median(scoredScores));
+  assert.equal(state.median, median(inState.filter((x) => x.paymentReduction === 'Yes' || x.paymentReduction === 'No').map((x) => x.total)));
 });
 
 test('nearest: the closest other hospitals with a score and a place, nearest first, never the hospital itself', () => {
