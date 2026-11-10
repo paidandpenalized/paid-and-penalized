@@ -1,0 +1,296 @@
+// Step 4, one hospital: the record card, Figure 4 (the nested bar and the four factor rows) and what the browser redraws
+// for the page's hospital. A hospital with no loss to draw (any class but scenario, a scenario hospital whose cost report
+// gives no loss, or a hub hospital the file leaves out) gets its record card and its reason, never a bar, "$0", NaN or an
+// empty table; a hospital's page across the programs is linked only where it exists; the random pick stays outside
+// DEFAULT_SKIP_STATE. Fixtures pick hospitals by property, never by name.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { textOf } from '../../../pipeline/site/html.js';
+import { testAssets } from '../../../pipeline/test/helpers.js';
+import { money } from '../../../web/render/format.js';
+import { escapeHtml } from '../../../web/render/html.js';
+import { hospitalPathOf } from '../../../web/site.js';
+import { pageHospital } from '../client/find.js';
+import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
+import { COPY } from '../web/copy.js';
+import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
+import { programPage } from '../web/pages/program.js';
+import {
+  HB_DRAWINGS, HB_FONTS, REASONS, awayRows, barLayout, cardHtml, decodeChunk, defaultPool, figureParts, hospChunks, numbersOf, randomPick, reasonOf,
+  sayOf, serverPick, subjectOf,
+} from '../web/program/hospital.js';
+import { hospitalRows } from '../web/program/strips.js';
+import { textWidth } from '../../../web/charts/text.js';
+
+const data = loadMedicaid();
+const rows = hospitalRows(data);
+const hubCcns = loadHubCcns();
+const chunks = hospChunks(data, rows, hubCcns);
+// The browser's copy: each state's asset as the page fetches it (JSON), decoded.
+const decoded = new Map([...chunks].map(([code, chunk]) => [code, decodeChunk(JSON.parse(JSON.stringify(chunk)))]));
+const subject = (row) => subjectOf(row, row.away ? null : decoded.get(row.state));
+const col = Object.fromEntries(data.columns.map((name, i) => [name, i]));
+const fileRow = (ccn) => data.hospitals.get(ccn);
+const words = (markup) => textOf(String(markup)).replace(/\s+/g, ' ').trim();
+const MIDDLE = SCENARIOS.indexOf('middle');
+const away = awayRows(loadAway(data, hubCcns));
+const page = programPage({ data, robots: 'noindex', assets: testAssets(), stripsUrl: '/assets/wr-strips.test.json', hubCcns });
+const section = /<section class="step wr-step wr-hosp" id="hospital"[\s\S]*?<\/section>/.exec(page)?.[0] ?? '';
+
+// No number that isn't one: what a card or a figure must never print.
+const BAD = /NaN|undefined|null|Infinity|(?<![\d.,])\$0(?![\d.,])/;
+function assertClean(markup, what) {
+  const text = words(markup);
+  assert.doesNotMatch(text, BAD, `${what}: ${text.match(BAD)?.[0]} in "${text.slice(0, 200)}…"`);
+}
+
+// A hospital of each kind, by property.
+const byClass = (cls) => rows.find((r) => r.cls === cls);
+const undrawn = (reason) => rows.find((r) => r.cls === 'scenario' && !r.share && reasonOf(subject(r)) === reason);
+
+test('the state assets: every hospital in the file once, in its state\'s asset, with its engine fields as the file has them', () => {
+  let n = 0;
+  for (const [code, chunk] of decoded) {
+    for (const rec of chunk.recs.values()) {
+      n += 1;
+      const row = fileRow(rec.ccn);
+      assert.equal(row[col.state], code);
+      for (const name of ['medicaid_net_revenue', 'net_patient_revenue', 'share', 'cost_ratio', 'has_margin', 'scored', 'hrrp', 'hac', 'flags']) {
+        assert.deepEqual(rec[name], row[col[name]], `${rec.ccn} ${name}`);
+      }
+      assert.equal(rec.hub, hubCcns.has(rec.ccn));
+      assert.equal(rec.drawn, Boolean(rows.find((r) => r.ccn === rec.ccn).share));
+    }
+  }
+  assert.equal(n, data.hospitals.size);
+  assert.throws(() => decodeChunk({ cols: ['ccn'], rows: [], code: 'XX' }), /not what the build wrote/);
+});
+
+test('a drawn hospital\'s dollars are the engine\'s, and at the default use rate its middle loss is the file\'s', () => {
+  for (const r of rows.filter((x) => x.share)) {
+    const n = numbersOf(subject(r), 1);
+    // The file's middle_lost is whole dollars from the unrounded share; its share column is rounded to 6 places.
+    const tol = 0.5 + n.m2 * 5e-7;
+    assert.ok(Math.abs(n.lost[MIDDLE] - fileRow(r.ccn)[col.middle_lost]) <= tol, `${r.ccn}: ${n.lost[MIDDLE]} against ${fileRow(r.ccn)[col.middle_lost]}`);
+    assert.ok(n.lost[0] < n.lost[1] && n.lost[1] < n.lost[2], r.ccn);
+    // The bar's arithmetic: patient revenue × Medicaid share × expansion share × decline = the loss.
+    assert.ok(Math.abs(n.npr * n.ms * n.es * n.declines[MIDDLE] - n.lost[MIDDLE]) <= 1e-6 * n.lost[MIDDLE], r.ccn);
+  }
+});
+
+test('review focus 1: each class and each reason a scenario hospital has no loss renders its record card and reason line, never a bar, "$0" or NaN', () => {
+  const cases = [
+    ['scenario', byClass('scenario') && rows.find((r) => r.cls === 'scenario' && r.share)],
+    ...['all_payer', 'not_expansion', 'no_viii_group', 'no_cost_report', 'territory'].map((cls) => [cls, byClass(cls)]),
+    ...['negative', 'exceeds', 'no_medicaid', 'no_npr', 'tiny'].map((reason) => [reason, undrawn(reason)]),
+    ['away_inactive', away.find((r) => r.away === 'inactive')],
+  ];
+  for (const [what, row] of cases) {
+    assert.ok(row, `the file has a hospital for ${what}`);
+    const s = subject(row);
+    const reason = reasonOf(s);
+    for (const k of SCENARIOS.keys()) {
+      const card = cardHtml(s, { k, use: 1 }).text;
+      const parts = figureParts(s, { k, use: 1 });
+      assertClean(card, `${what} card`);
+      assertClean(`${parts.cap} ${parts.alt} ${parts.note}`, `${what} figure words`);
+      assert.ok(card.includes(`CCN ${s.ccn}`), `${what}: the record card`);
+      if (what === 'scenario') {
+        assert.equal(reason, null);
+        assert.ok(parts.narrow && parts.wide, 'a drawn hospital has its bar');
+        assert.match(card, /class="wr-rec__t"/, 'and its three cases');
+        continue;
+      }
+      assert.equal(reason, what === 'scenario' ? null : what, what);
+      assert.equal(parts.narrow, null, `${what}: no bar`);
+      assert.equal(parts.wide, null, `${what}: no bar`);
+      assert.equal(parts.facs, null, `${what}: no factor rows`);
+      assert.doesNotMatch(card, /class="wr-rec__t"/, `${what}: no scenario table`);
+      const why = COPY[`hWhy_${what}`].text.replace('{state}', s.stateName).replace('{fy}', String(data.meta.fy));
+      assert.ok(words(card).includes(why), `${what}: the reason line ("${why}")`);
+      assert.ok(words(parts.none).includes(why), `${what}: the figure's reason panel`);
+      for (const [, , cell] of parts.cells) assert.equal(cell.value, null, `${what}: the figure's table has no numbers`);
+    }
+  }
+});
+
+test('every hospital in the file, every case, the default and the extreme use rates: a figure exactly when step 1 draws it, and no bad number anywhere', () => {
+  const seen = new Set();
+  for (const r of [...rows, ...away]) {
+    const s = subject(r);
+    const reason = reasonOf(s);
+    seen.add(reason);
+    assert.equal(reason === null, Boolean(r.share), r.ccn);
+    if (reason) assert.ok(REASONS.includes(reason), `${r.ccn}: ${reason}`);
+    for (const use of reason ? [1] : [0.75, 1, 1.25]) {
+      for (const k of SCENARIOS.keys()) {
+        const parts = figureParts(s, { k, use });
+        assertClean(cardHtml(s, { k, use }).text, `${r.ccn} card ${k} ${use}`);
+        assertClean(`${parts.cap} ${parts.alt} ${parts.note} ${parts.facs ?? ''} ${parts.none ?? ''}`, `${r.ccn} figure ${k} ${use}`);
+        assertClean(sayOf(s, { k, use }), `${r.ccn} live line`);
+      }
+    }
+  }
+  for (const reason of [null, ...REASONS.filter((x) => x !== 'away_kind')]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
+});
+
+test('the stamp gives the scenario\'s loss alone: the Medicare penalties sit beside it, never added', () => {
+  const r = rows.find((x) => x.share && fileRow(x.ccn)[col.hrrp] < 0 && fileRow(x.ccn)[col.hac] < 0);
+  assert.ok(r, 'a drawn hospital with both penalties');
+  const s = subject(r);
+  const n = numbersOf(s, 1);
+  const card = cardHtml(s, { k: MIDDLE, use: 1 }).text;
+  const stampText = words(/<p class="stamp[^"]*">[\s\S]*?<\/p>/.exec(card)[0]);
+  assert.ok(stampText.startsWith(`${money(-n.lost[MIDDLE])} a year`), stampText);
+  const row = fileRow(r.ccn);
+  assert.ok(words(card).includes(money(row[col.hrrp])) && words(card).includes(money(row[col.hac])), 'both penalties shown');
+  assert.ok(!words(card).includes(money(-n.lost[MIDDLE] + row[col.hrrp] + row[col.hac])), 'never summed with the loss');
+  assert.ok(card.includes(COPY.hPenNote.text), 'and said so');
+});
+
+test('the labels: the scenario\'s numbers carry SCENARIO · year $, the cost report MEASURED with its status', () => {
+  for (const status of ['settled', 'as filed']) {
+    const r = rows.find((x) => x.share && fileRow(x.ccn)[col.status] === status);
+    const card = words(cardHtml(subject(r), { k: MIDDLE, use: 1 }).text);
+    assert.ok(card.includes(`${COPY.hScenHead.text} SCENARIO · ${data.meta.fy} $`), card.slice(0, 300));
+    assert.ok(card.includes(`Measured · ${status}`), status);
+  }
+});
+
+test('review focus 2: a hospital\'s page across the programs is linked only where the hub has it; a critical access hospital without one gets no link', () => {
+  const cah = rows.find((r) => fileRow(r.ccn)[col.kind] === 'critical_access' && !hubCcns.has(r.ccn));
+  assert.ok(cah, 'a critical access hospital with no hub page');
+  const linkOf = (r) => hospitalPathOf('hub', r.ccn);
+  const card = cardHtml(subject(cah), { k: MIDDLE, use: 1 }).text;
+  assert.ok(!card.includes(linkOf(cah)), 'no link to a page that does not exist');
+  assert.doesNotMatch(card, /href="\/hospital\//);
+  for (const r of rows) {
+    const has = cardHtml(subject(r), { k: MIDDLE, use: 1 }).text.includes(`href="${linkOf(r)}"`);
+    assert.equal(has, hubCcns.has(r.ccn), r.ccn);
+  }
+  // A hub hospital the file leaves out has its hub page by definition.
+  for (const r of away) assert.ok(cardHtml(subject(r), { k: MIDDLE, use: 1 }).text.includes(`href="${linkOf(r)}"`), r.ccn);
+});
+
+test('a ?h= naming a hub hospital the file leaves out keeps it as the page\'s hospital, with its reason', () => {
+  assert.ok(away.length > 0, 'the hub has hospitals the file leaves out');
+  for (const r of away) {
+    assert.ok(hubCcns.has(r.ccn) && !data.hospitals.has(r.ccn), r.ccn);
+    assert.ok(['inactive', 'kind'].includes(r.away));
+  }
+  const byCcn = new Map([...rows, ...away].map((r) => [r.ccn, r]));
+  const one = away[0];
+  assert.equal(pageHospital(`?h=${one.ccn}`, byCcn), one);
+  const s = subject(one);
+  assert.ok(words(cardHtml(s, { k: MIDDLE, use: 1 }).text).includes(COPY.hStamp_away.text));
+});
+
+// A seeded random source (mulberry32), so a draw repeats.
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let x = Math.imul(a ^ (a >>> 15), a | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+test('show another at random: 1,000 seeded draws, never a hospital in the skipped state, always one step 1 draws in a scenario state, never the one shown', () => {
+  const pool = defaultPool(rows);
+  assert.ok(rows.some((r) => r.share && r.state === DEFAULT_SKIP_STATE), 'the skipped state has drawn hospitals to leave out');
+  const rng = seeded(20261110);
+  let shown = pool[0].ccn;
+  const states = new Set();
+  for (let i = 0; i < 1000; i += 1) {
+    const pick = randomPick(pool, rng, shown);
+    assert.notEqual(pick.state, DEFAULT_SKIP_STATE);
+    assert.ok(pick.share && pick.cls === 'scenario', pick.ccn);
+    assert.notEqual(pick.ccn, shown);
+    states.add(pick.state);
+    shown = pick.ccn;
+  }
+  assert.ok(states.size > 20, 'draws spread across states');
+  assert.equal(randomPick([], rng), null);
+  assert.equal(randomPick([pool[0]], rng, pool[0].ccn), pool[0], 'a pool of one gives that one');
+});
+
+test('the server draws the hospital with the median middle-case loss, outside the skipped state', () => {
+  const pick = serverPick(rows);
+  const pool = defaultPool(rows);
+  assert.notEqual(pick.state, DEFAULT_SKIP_STATE);
+  assert.ok(pick.share);
+  const below = pool.filter((r) => r.share[MIDDLE] < pick.share[MIDDLE]).length;
+  const above = pool.filter((r) => r.share[MIDDLE] > pick.share[MIDDLE]).length;
+  assert.ok(Math.abs(below - above) <= 1, `${below} below, ${above} above`);
+  assert.ok(section.includes(`data-h-default="${pick.ccn}"`));
+});
+
+test('the page: step 4 drawn whole without a script, its controls hidden, and the server\'s markup the browser\'s own at the default', () => {
+  assert.ok(section, 'step 4 is on the page');
+  const s = subject(serverPick(rows));
+  const view = { k: MIDDLE, use: 1 };
+  assert.ok(section.includes(cardHtml(s, view).text), 'the card is the browser\'s');
+  const parts = figureParts(s, view);
+  for (const drawing of ['narrow', 'wide']) {
+    const svg = new RegExp(`<svg[^>]*data-fit="${drawing}"[^>]*>([\\s\\S]*?)</svg>`).exec(section)?.[1];
+    assert.equal(svg, parts[drawing].text, `${drawing}: the server's drawing is the browser's`);
+  }
+  assert.ok(section.includes(`Figure 4.</span> ${escapeHtml(parts.cap)}`), 'the caption');
+  assert.ok(section.includes(parts.facs.text));
+  assert.match(section, /data-h-pick hidden/, 'the random button waits for the script');
+  assert.match(section, /<figure class="fig" id="figure-4"/);
+  for (const [row, j, cell] of parts.cells) assert.ok(section.includes(`data-value="${cell.value}" data-h="${row} ${j}"`), `${row} ${j}`);
+  assertClean(section, 'the step');
+});
+
+// Each label's extent as drawn: x, anchor and its font (HB_FONTS), with the kit's width estimate.
+function extent(label) {
+  const f = HB_FONTS[label.cls];
+  const w = textWidth(label.text, f.size, { mono: f.mono });
+  const left = label.anchor === 'end' ? label.x - w : label.anchor === 'middle' ? label.x - w / 2 : label.x;
+  return [left, left + w, label.y - f.size, label.y + f.size * 0.25];
+}
+
+test('every label in Figure 4 stays inside its drawing, whole, for every drawn hospital, case and use rate, phone and wide', () => {
+  let n = 0;
+  for (const r of rows.filter((x) => x.share)) {
+    const s = subject(r);
+    for (const use of [0.75, 1, 1.25]) {
+      const nums = numbersOf(s, use);
+      for (const k of SCENARIOS.keys()) {
+        for (const drawing of ['narrow', 'wide']) {
+          const g = HB_DRAWINGS[drawing];
+          const layout = barLayout(nums, { k, use, drawing, status: s.rec.status });
+          for (const label of layout.labels) {
+            const [x0, x1, y0, y1] = extent(label);
+            assert.ok(x0 >= 0 && x1 <= g.width && y0 >= 0 && y1 <= g.height, `${r.ccn} ${drawing} k${k} ${use}: "${label.text}" spans ${x0.toFixed(1)}–${x1.toFixed(1)} of ${g.width}`);
+            assert.ok(!label.text.includes('…'), `${r.ccn}: "${label.text}" cut`);
+            n += 1;
+          }
+          for (const rect of layout.rects) assert.ok(rect.x >= 0 && rect.x + rect.w <= g.width + 1e-9 && rect.y + rect.h <= g.height, `${r.ccn} ${drawing}: ${rect.cls} outside`);
+          // Labels on one row never overlap.
+          const byRow = new Map();
+          for (const label of layout.labels) byRow.set(label.y, [...(byRow.get(label.y) ?? []), extent(label)]);
+          for (const boxes of byRow.values()) {
+            for (let i = 0; i < boxes.length; i += 1) for (let j = i + 1; j < boxes.length; j += 1) {
+              assert.ok(boxes[i][1] <= boxes[j][0] || boxes[j][1] <= boxes[i][0], `${r.ccn} ${drawing}: two labels overlap`);
+            }
+          }
+        }
+      }
+    }
+  }
+  assert.ok(n > 300000, `${n} labels checked`);
+});
+
+test('the factor rows: each beside the state\'s other drawn hospitals, ranked among them; the decline the same for all', () => {
+  const r = rows.find((x) => x.share && rows.filter((y) => y.share && y.state === x.state).length > 10);
+  const s = subject(r);
+  const parts = figureParts(s, { k: MIDDLE, use: 1 });
+  const others = rows.filter((y) => y.share && y.state === r.state && y.ccn !== r.ccn).length;
+  assert.ok(words(parts.note).includes(`other ${others.toLocaleString('en-US')} hospitals`), parts.note);
+  assert.equal((parts.facs.text.match(/class="wr-rug"/g) ?? []).length, 3, 'three rugs; the decline has none');
+  assert.equal((parts.facs.text.match(/class="wr-fac"/g) ?? []).length, 4);
+  for (const m of words(parts.facs).matchAll(/than ([\d,]+) of the ([\d,]+)/g)) assert.equal(Number(m[2].replace(/,/g, '')), others);
+});

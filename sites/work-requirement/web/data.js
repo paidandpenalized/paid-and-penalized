@@ -2,7 +2,7 @@
 // `run.py emit`) and the manifest's entries for its inputs (for the newest date CMS gives any of them). File reads live
 // here; the pages stay pure.
 import { builtOn } from '../../../engine/js/dates.js';
-import { REPO_ROOT, dollarsPath, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, masterPath, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
 
 // A pinned input is CMS's when CMS serves it: its download, or the download of the file it was cut from or is a member
 // of, is on a cms.gov or medicaid.gov host.
@@ -26,7 +26,8 @@ let loaded = null;
 
 // The scenario file, read once per build:
 //   meta        { fy (the base year: the HCRIS year, the year of the dollars), builtAt, changed (builtAt's day,
-//               YYYY-MM-DD, UTC), cmsReleased (newestCmsDate over the file's sources), methodsVersion, sources }
+//               YYYY-MM-DD, UTC), cmsReleased (newestCmsDate over the file's sources), methodsVersion, sources,
+//               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net) }
 //   columns     the hospital rows' column names, in order (engine/js/medicaid/scenario.js rowToBase reads a row by them)
 //   hospitals   each hospital's row (an array in columns' order), by CCN, in the file's order
 //   states, national, groups, scenarios, params   as the file gives them (schemas/medicaid.schema.json)
@@ -41,7 +42,7 @@ export function loadMedicaid() {
   if (missing.length) throw new RangeError(`work requirement: ${path}: sources not in the manifest: ${missing.join(', ')}`);
   const ccn = file.columns.indexOf('ccn');
   loaded = {
-    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources },
+    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy },
     columns: file.columns,
     hospitals: new Map(file.hospitals.map((row) => [row[ccn], row])),
     states: file.states,
@@ -60,4 +61,20 @@ let hub = null;
 export function loadHubCcns() {
   hub ??= new Set(readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars'))).hospitals.map((r) => r.ccn));
   return hub;
+}
+
+// The hospitals with a page across the programs that the scenario file leaves out (it holds every active acute-care and
+// critical access hospital in the master; the hub's pages also cover hospitals CMS has since listed as closed or changed),
+// so a ?h= that follows one of them names it on the program page with the reason: [ccn, name, city, state, why], why
+// 'inactive' (the master gives it an inactive date) or 'kind' (neither acute care nor critical access), in CCN order.
+// data: loadMedicaid()'s result; hubCcns: loadHubCcns()'s.
+export function loadAway(data, hubCcns = loadHubCcns()) {
+  const left = [...hubCcns].filter((ccn) => !data.hospitals.has(ccn)).sort();
+  if (!left.length) return [];
+  const master = new Map(readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))).hospitals.map((h) => [h.ccn, h]));
+  return left.map((ccn) => {
+    const h = master.get(ccn);
+    if (!h) throw new RangeError(`work requirement: CCN ${ccn} has a hub page but no hospital master record`);
+    return [ccn, h.name, h.city ?? '', h.state, h.inactive ? 'inactive' : 'kind'];
+  });
 }

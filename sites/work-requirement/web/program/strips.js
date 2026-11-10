@@ -57,23 +57,27 @@ export function hospitalRows(data) {
 // The browser's copy: the rows as arrays in COLS order, the axis's top (top), the words the strips' headers print
 // (words: { fy, lost, enrollees }: the cost reports' year, and each case's national dollars lost and Urban's enrollment
 // decline in thousands), and what the other steps draw at the default use rate (totals: model.js serverTotals; how:
-// how.js howModel; states: states.js statesAsset).
+// how.js howModel; states: states.js statesAsset; hosp: step 4's asset for each state, its address by code; away: the
+// hub's hospitals the file leaves out, data.js loadAway's rows).
 const COLS = ['ccn', 'name', 'city', 'state', 'cls', 'groups', 'low', 'middle', 'high'];
-export const stripsAsset = (rows, { top, words, totals, how, states }) => ({
+export const stripsAsset = (rows, { top, words, totals, how, states, hosp, away }) => ({
   cols: COLS,
   top,
   words,
   totals,
   how,
   states,
+  hosp,
+  away,
   rows: rows.map((r) => [r.ccn, r.name, r.city, r.state, r.cls, r.groups, ...(r.share ?? [])]), // an undrawn row ends at its groups: no three nulls
 });
 export function decodeStrips(asset) {
-  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how || !asset.states) {
+  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how || !asset.states
+    || !asset.hosp || typeof asset.hosp !== 'object' || !Array.isArray(asset.away)) {
     throw new TypeError('strips asset: not what the build wrote');
   }
   const rows = asset.rows.map(([ccn, name, city, state, cls, groups, lo, mid, hi]) => ({ ccn, name, city, state, cls, groups, share: lo === undefined ? null : [lo, mid, hi] }));
-  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, states: asset.states, rows };
+  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, states: asset.states, hosp: asset.hosp, away: asset.away, rows };
 }
 
 // The axis's top: the largest high-case share at the what-if's top use rate (useMax, the file's params.use_max), up to the
@@ -195,12 +199,16 @@ export function fitText(text, max, size, { mono = false } = {}) {
 // A label beside a mark at x, kept inside span ([lo, hi], the strips' margins): right of it (gap away) where it fits,
 // else left of it, else set against the end the mark is nearer (the label then sits over the mark, which a halo keeps
 // readable), and cut with an ellipsis (fitText) when it is wider than the span itself. Returns { x, anchor, text }.
-export function markLabel(x, text, { size, mono = false, gap, span: [lo, hi] }) {
-  const fitted = fitText(text, hi - lo, size, { mono });
-  const w = textWidth(fitted, size, { mono });
-  if (x + gap + w <= hi) return { x: x + gap, anchor: 'start', text: fitted };
-  if (x - gap - w >= lo) return { x: x - gap, anchor: 'end', text: fitted };
-  return x - lo > hi - x ? { x: hi, anchor: 'end', text: fitted } : { x: lo, anchor: 'start', text: fitted };
+export function markLabel(x, text, { size, mono = false, gap, span }) {
+  const fitted = fitText(text, span[1] - span[0], size, { mono });
+  return { ...placeAt(x, textWidth(fitted, size, { mono }), { gap, span }), text: fitted };
+}
+
+// markLabel's rule for a label w units wide (a block of lines: its widest): { x, anchor }.
+export function placeAt(x, w, { gap, span: [lo, hi] }) {
+  if (x + gap + w <= hi) return { x: x + gap, anchor: 'start' };
+  if (x - gap - w >= lo) return { x: x - gap, anchor: 'end' };
+  return x - lo > hi - x ? { x: hi, anchor: 'end' } : { x: lo, anchor: 'start' };
 }
 
 // A strip's dot diameter at pitch d.

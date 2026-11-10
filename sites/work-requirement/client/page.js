@@ -6,17 +6,21 @@
 //           (web/program/ranges.js), the chips' readout, and the live line a screen reader hears;
 //   step 2: the chain and its worksheets (client/how.js);
 //   step 3: the states' figure, the selected state's headline and card, and the state table's numbers (client/states.js);
+//   step 4: the page's hospital's record card and Figure 4 (client/hospital.js);
 //   the stage head: the scenario switch and the use-rate what-if (client/whatif.js).
 // A later step joins the same way: store.subscribe((state, changed) => …), redrawing when the keys it reads change.
 // Without the script, or without the asset, the page stays as the server drew it (the middle case at the default use
 // rate), and the chips, the Find and the controls stay hidden.
 import { setFollowed } from '../../../web/client/follow.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
+import { fill } from '../web/copy.js';
+import { awayRows, randomPick } from '../web/program/hospital.js';
 import { byCase, countsText, rangesInner, statusText } from '../web/program/ranges.js';
 import { decodeStates } from '../web/program/states.js';
 import { decodeStrips, drawn, stripsAlt, stripsBody, stripsLayout } from '../web/program/strips.js';
 import { mountChips } from './chips.js';
 import { defaultPool, mountFind, pageHospital } from './find.js';
+import { mountHospital } from './hospital.js';
 import { mountHow } from './how.js';
 import { createStore } from './state.js';
 import { mountStates } from './states.js';
@@ -28,11 +32,19 @@ export const WIDE_MEDIA = '(min-width: 560px)';
 
 // Step 1's strips, redrawn for the state and for what only this step shows: the Find's matches (lit, item indexes) and
 // the chips' group ({ name, test } or null). Only the drawing on show is drawn (each is some 150 KB of markup); the other
-// is drawn when the width brings it on.
+// is drawn when the width brings it on. A page's hospital the strips don't draw gets a line under the figure saying so,
+// pointing to step 4's reason.
 function mountStrips(stage, { data, store }) {
   const items = drawn(data.rows);
   const at = new Map(items.map((r, i) => [r.ccn, i]));
   const svgs = new Map(DRAWINGS.map((drawing) => [drawing, stage.querySelector(`svg[data-fit="${drawing}"]`)]).filter(([, svg]) => svg));
+  const undrawn = stage.querySelector('.wr-thread-none');
+  const sayUndrawn = (hospital) => {
+    if (!undrawn) return;
+    const off = Boolean(hospital) && !at.has(hospital.ccn);
+    undrawn.hidden = !off;
+    undrawn.querySelector('a').textContent = off ? fill('hThreadNone', { name: hospital.name }) : '';
+  };
   const wide = window.matchMedia(WIDE_MEDIA);
   const local = { lit: null, group: null };
   // The layouts change only with the case shown, the use rate or the group; the hospital and the matches only redraw
@@ -59,8 +71,10 @@ function mountStrips(stage, { data, store }) {
   store.subscribe((state, changed) => {
     if (changed.has('use')) for (const svg of svgs.values()) svg.setAttribute('aria-label', stripsAlt(items, state.use));
     if (changed.has('scenario') || changed.has('use')) layouts = new Map();
+    if (changed.has('hospital')) sayUndrawn(state.hospital);
     if (changed.has('scenario') || changed.has('use') || changed.has('hospital') || changed.has('totals')) draw();
   });
+  sayUndrawn(store.get().hospital);
   return {
     items,
     at,
@@ -114,12 +128,13 @@ async function start(stage) {
   } catch {
     return;
   }
-  const byCcn = new Map(data.rows.map((r) => [r.ccn, r]));
-  const pool = defaultPool(data.rows);
+  // A ?h= may name a hospital in the file or a hub hospital the file leaves out (step 4 gives its reason), so the page and
+  // the shell's followed-hospital chip name the same hospital.
+  const byCcn = new Map([...data.rows, ...awayRows(data.away)].map((r) => [r.ccn, r]));
   const store = createStore({
     scenario: DEFAULT_SCENARIO,
     use: 1,
-    hospital: pageHospital(window.location.search, byCcn) ?? pool[Math.floor(Math.random() * pool.length)],
+    hospital: pageHospital(window.location.search, byCcn) ?? randomPick(defaultPool(data.rows)),
     totals: data.totals,
     stateCode: states.selected,
   });
@@ -155,6 +170,8 @@ async function start(stage) {
   if (howSection) mountHow(howSection, { store, how: data.how });
   const statesSection = document.getElementById('states');
   if (statesSection) mountStates(statesSection, { store, model: states, wide: window.matchMedia(WIDE_MEDIA), say });
+  const hospitalSection = document.getElementById('hospital');
+  if (hospitalSection) mountHospital(hospitalSection, { store, rows: data.rows, urls: data.hosp, say });
   const head = stage.querySelector('[data-stage-head]');
   if (head && stage.dataset.base) mountWhatif(head, { store, server: data.totals, baseUrl: stage.dataset.base });
   strips.draw();

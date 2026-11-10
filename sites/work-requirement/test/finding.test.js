@@ -60,8 +60,12 @@ test('the groups: each chip\'s test counts the hospitals the file\'s roll-up of 
 });
 
 test('the asset round-trips the rows and the axis', () => {
-  const extra = { totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)) };
+  const extra = {
+    totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)), hosp: { AK: '/assets/wr-hosp-ak.test.json' }, away: [['000000', 'A', 'B', 'AK', 'inactive']],
+  };
   const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data), ...extra }))));
+  assert.deepEqual(back.hosp, extra.hosp);
+  assert.deepEqual(back.away, extra.away);
   assert.deepEqual(back.totals, extra.totals);
   assert.deepEqual(back.how, extra.how);
   assert.deepEqual(back.states, extra.states);

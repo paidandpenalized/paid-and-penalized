@@ -80,13 +80,13 @@ test('the program page: its title and dek, the Work requirement tab current, the
   assert.deepEqual(SECTIONS, ['finding', 'how', 'states', 'hospital', 'both']);
 });
 
-test('the program page: each of the five steps is an anchored section with its heading; those after the third empty until drawn', () => {
+test('the program page: each of the five steps is an anchored section with its heading; those after the fourth empty until drawn', () => {
   for (const id of SECTIONS) {
     const section = new RegExp(`<section class="step[^"]*" id="${id}" aria-labelledby="${id}-h">[\\s\\S]*?<h2[^>]* id="${id}-h">([^<]+)<`).exec(program);
     assert.ok(section, id);
     assert.ok(section[1].length > 0, `${id}: a heading`);
   }
-  for (const id of SECTIONS.slice(3)) assert.match(program, new RegExp(`<section class="step" id="${id}" aria-labelledby="${id}-h">\\s*<h2 id="${id}-h">[^<]+</h2>\\s*</section>`), id);
+  for (const id of SECTIONS.slice(4)) assert.match(program, new RegExp(`<section class="step" id="${id}" aria-labelledby="${id}-h">\\s*<h2 id="${id}-h">[^<]+</h2>\\s*</section>`), id);
   // The steps in order.
   const at = SECTIONS.map((id) => program.indexOf(`id="${id}"`));
   assert.deepEqual([...at].sort((a, b) => a - b), at);

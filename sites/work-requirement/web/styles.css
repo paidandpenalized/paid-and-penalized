@@ -248,6 +248,64 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .chart--states[data-fit="narrow"] :is(.wr-st__code, .wr-st__gut, .wr-st__fn) { font-size: 9.5px; }
 .chart--states[data-fit="narrow"] .wr-st__name { font-size: 12px; }
 
+/* Step 4 (program/hospital.js): the record card (the family's red-ruled form, formField) with its stamp, the scenario's three
+   cases (the selected one tinted), the cost report and the Medicare penalties beside it; Figure 4, the nested bar in ink
+   and pen with the expansion part enlarged under it, then the four factor rows, each a rug of the state's other hospitals
+   and a mark for this one. The labels' sizes are hospital.js HB_FONTS's. */
+.wr-hosp { padding-top: 12px; }
+.wr-hpick[hidden], [data-h-noscript][hidden], .wr-thread-none[hidden] { display: none; }
+.wr-hrand { min-height: var(--target-min); padding: 0; border: 0; background: none; color: var(--ink); font: 600 var(--fs-sm)/1.3 var(--font-body); text-decoration: underline; text-decoration-color: var(--pen); text-underline-offset: 3px; cursor: pointer; }
+.wr-hcard[aria-busy="true"] { opacity: 0.6; }
+.wr-rec { grid-template-columns: minmax(0, 1fr); }
+.wr-rec .field__value.wr-rec__name { font: 400 1.45rem/1.1 var(--font-display); }
+.wr-rec__link { display: inline-block; margin-top: 2px; font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.wr-rec__verdict { display: grid; gap: 8px; justify-items: start; padding-block: 12px; }
+.wr-rec__verdict .stamp { margin-left: 4px; font-size: 1.15rem; text-align: center; line-height: 1.15; }
+.wr-rec__verdict .stamp small { display: block; font: 400 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.06em; }
+.wr-rec__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-rec__sec .field__label { flex-wrap: wrap; }
+.wr-rec__sec .field__label :is(.scen-tag, .wr-tag, .est-tag) { margin-left: 0; vertical-align: 0; text-transform: none; }
+.wr-rec__sec .field__label .wr-tag { text-transform: uppercase; }
+.wr-rec__t { width: 100%; margin-top: 4px; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-rec__t :is(th, td) { padding: 4px 5px; border-bottom: 1px solid var(--line); text-align: right; }
+.wr-rec__t td { white-space: nowrap; }
+.wr-rec__t tbody th { color: var(--ink-2); font: 400 var(--fs-sm)/1.3 var(--font-body); text-align: left; }
+.wr-rec__t thead th { color: var(--ink-2); font: 600 var(--fs-xs)/1.2 var(--font-body); }
+.wr-rec__t .on { background: var(--pen-tint); color: var(--ink); font-weight: 700; }
+.wr-rec__dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; margin: 4px 0 0; font-size: var(--fs-sm); }
+.wr-rec__dl dt { color: var(--ink-2); }
+.wr-rec__dl dd { margin: 0; font: 400 var(--fs-sm)/1.45 var(--font-type); text-align: right; white-space: nowrap; }
+.wr-rec__p { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.45; }
+.wr-rec__note { color: var(--ink-2); font-size: var(--fs-xs); }
+.chart--hosp { max-width: calc(var(--vb) * 1.1px); }
+.wr-hosp .fig__note { max-width: none; }
+.wr-hfig[hidden], .wr-hnone[hidden] { display: none; }
+.wr-hfig { display: grid; gap: 6px; }
+.wr-hb__npr { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__m2 { fill: var(--paper-2); stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__exp { fill: var(--pen-tint); stroke: var(--pen); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__lost { fill: var(--pen); }
+.wr-hb__box, .wr-hb__link { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.wr-hb__tick { stroke: var(--pen-ink); stroke-width: 1.5px; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.wr-hb__leader { stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-hb__main { fill: var(--ink); font: 600 12px var(--font-body); }
+.wr-hb__note { fill: var(--ink-2); font: 400 11px var(--font-body); }
+.wr-hb__loss { fill: var(--pen-ink); font: 700 12px var(--font-body); }
+.wr-hb__zoom { fill: var(--ink-2); font: 400 10.5px var(--font-type); }
+.wr-facs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 20px; }
+@media (min-width: 560px) { .wr-facs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wr-fac { min-width: 0; padding: 6px 0 4px; border-top: 1px solid var(--line); }
+.wr-fac__h { display: flex; justify-content: space-between; gap: 10px; font: 600 var(--fs-sm)/1.25 var(--font-body); }
+.wr-fac__h b { font: 700 var(--fs-base)/1.2 var(--font-type); white-space: nowrap; }
+.wr-fac__n { margin-top: 1px; color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.35; }
+.wr-fac__rug { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 2px; color: var(--ink-2); font: 400 var(--fs-cap)/1.2 var(--font-type); }
+.wr-rug { display: block; width: 100%; height: 18px; }
+.wr-rug__line { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-rug__ticks { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-rug__me { stroke: var(--ink); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.wr-hnone { display: grid; gap: 10px; justify-items: start; max-width: 36rem; padding: 18px 20px; border: var(--rule) solid var(--ink); }
+.wr-hnone__why { font-size: var(--fs-sm); line-height: 1.5; }
+
 @media (forced-colors: active) {
   .wr-bar--ink, .wr-bar--pen, .wr-bar--rew, .wr-bar--scar, .wr-bar--net { fill: CanvasText; }
   .wr-band { fill: Canvas; stroke: GrayText; }
@@ -265,4 +323,10 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
   .wr-iso__line, .wr-st__whisker, .wr-st__leader, .wr-gutter { stroke: GrayText; }
   .wr-st__dot, .wr-hit__bar i { fill: CanvasText; background: CanvasText; }
   .wr-st__ring, .wr-st__hollow { stroke: CanvasText; }
+  .wr-hb__lost { fill: CanvasText; }
+  .wr-hb__exp { fill: Canvas; stroke: CanvasText; }
+  .wr-hb__m2, .wr-hb__npr { fill: Canvas; stroke: CanvasText; }
+  .wr-hb__tick, .wr-hb__leader, .wr-rug__me { stroke: CanvasText; }
+  .wr-hb__box, .wr-hb__link, .wr-rug__ticks, .wr-rug__line { stroke: GrayText; }
+  .wr-rec__t .on { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }

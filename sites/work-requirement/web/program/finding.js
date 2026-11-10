@@ -111,6 +111,7 @@ ${chips(states)}
 <div class="wr-step__stage"${stripsUrl ? html` data-strips="${stripsUrl}"` : ''}${baseUrl ? html` data-base="${baseUrl}"` : ''}>
 ${stageHead(data.params, selected)}
 ${stripsFigure({ rows, top, words: stripWords(data), selected })}
+<p class="small muted wr-thread-none" hidden><a href="#hospital"></a></p>
 </div>
 </section>`;
 }

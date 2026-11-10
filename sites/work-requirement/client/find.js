@@ -1,13 +1,13 @@
 // The masthead's Find on the program page, and the page's hospital. The bar's search box (web/render/shell.js searchForm,
 // over the strips' asset) lists the file's hospitals by name, city, state or CCN; typing lights the matches' dots in the
 // strips, and a pick makes the hospital the page's, in place of opening its page. A ?h=<CCN> on arrival sets it too, when
-// it is a well-formed CCN the file has; anything else is ignored, and the page opens on a random hospital drawn in the
-// strips outside DEFAULT_SKIP_STATE. The pure parts are exported for the tests.
+// it is a well-formed CCN the file has, or one the hub has a page for that the file leaves out (step 4 says why it has no
+// scenario); anything else is ignored, and the page opens on a random hospital drawn in the strips outside
+// DEFAULT_SKIP_STATE. The pure parts are exported for the tests.
 import { followedCcn } from '../../../web/client/follow.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { buildIndex, search } from '../../../web/client/search.js';
 import { count, placeText } from '../../../web/render/format.js';
-import { DEFAULT_SKIP_STATE } from '../web/constants.js';
 import { fill, t } from '../web/copy.js';
 import { PROGRAM_PATH } from '../web/links.js';
 
@@ -18,8 +18,9 @@ export const pageHospital = (query, byCcn) => {
   return ccn === null ? null : byCcn.get(ccn);
 };
 
-// The hospitals a page may open on: drawn in the strips, outside DEFAULT_SKIP_STATE.
-export const defaultPool = (rows) => rows.filter((r) => r.share && r.cls === 'scenario' && r.state !== DEFAULT_SKIP_STATE);
+// The hospitals a page may open on: drawn in the strips, outside DEFAULT_SKIP_STATE (web/program/hospital.js, which step
+// 4's random pick shares).
+export { defaultPool } from '../web/program/hospital.js';
 
 // The search entries: every hospital in the file, its href this page with it as ?h= (what a pick sets).
 export const findEntries = (rows) => rows.map(({ ccn, name, city, state }) => ({
