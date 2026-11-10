@@ -184,11 +184,12 @@ test('shell: the program tabs are All programs and the programs with dollar esti
     ['/', 'All programs', 'page', 'tab'],
     ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
   ]);
-  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp']);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
   assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
-  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a></div></nav>'), 'the row ends at the last program with estimates');
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, then the scenario');
+  assert.ok(header.includes('<a class="tab" href="/work-requirement/"><span>Work requirement</span> <span class="tab__ab">Medicaid</span></a></div></nav>'), 'the row ends at the scenario, the last listed program');
   // The programs under consideration have no tab, and the row no gap or label before where they were.
   for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
   assert.doesNotMatch(header, /tab--soon|tabs__gap/);
@@ -201,6 +202,8 @@ test('shell: the program tabs are All programs and the programs with dollar esti
   assert.doesNotMatch(headerOf(team), /aria-current="page"/);
   const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
   assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
+  const wr = tabsOf(page({ ...PAGE, path: '/work-requirement/', program: 'work-requirement' }));
+  assert.deepEqual(wr.filter(([, , current]) => current).map(([href]) => href), ['/work-requirement/']);
   assert.throws(() => page({ ...PAGE, program: 'nope' }), /nope/);
 });
 
@@ -211,7 +214,8 @@ test('shell: with a followed hospital, each tab opens that program\'s page for i
   assert.equal(href('HRRP'), '/hrrp/hospital/990001/');
   assert.equal(href('HACRP'), '/hacrp/hospital/990001/');
   assert.equal(href('HVBP'), '/hvbp/');
-  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs and the programs with estimates');
+  assert.equal(href('Medicaid'), '/work-requirement/', 'the scenario has no hospital pages: its folder');
+  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs, the programs with estimates and the scenario');
   // Not in the Readmissions file: the Readmissions folder.
   const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inHrrp: false } }));
   assert.equal(notTdr[1][0], '/hrrp/');
@@ -286,6 +290,9 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
     assert.match(foot, new RegExp(`<a href="${href}">${name} <span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
   }
+  // The scenario's figure: its national range of Medicaid revenue lost, low to high, tagged as a scenario in its base
+  // year's dollars; not an estimate for the family's fiscal year, so no "Estimated FY2026" before it.
+  assert.ok(foot.includes('<li class="ft__scen"><a href="/work-requirement/">Work requirement <span class="ft__ab">Medicaid</span></a> <span class="ft__v">$4.0–9.0M Medicaid revenue lost a year <span class="scen-tag">SCENARIO · 2023 $</span></span>'), 'the scenario\'s range and tag');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(considered.startsWith('Under consideration: '));
   assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),

@@ -184,7 +184,7 @@ ${peerToggle()}
 </div>
 </div>
 <div class="wrap below">
-${directory({ programs: SITE.programs, facts, hospitals, fy, hrrpFy })}
+${directory({ programs: SITE.programs, figures: assets.shell.programs, facts, hospitals, fy, hrrpFy })}
 ${methodsBrief({ h: example, fy, src: hubUrl, bands })}
 ${yourTurn({ feedback: feedbackFor({ path: '/' }) })}
 </div>`;

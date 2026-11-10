@@ -109,6 +109,8 @@ test('program budgets: HACRP\'s are unchanged, and every program site has budget
   const KB = 1024;
   assert.deepEqual(PROGRAM_BUDGETS.hacrp, { program: 330 * KB, hospital: 120 * KB, place: 150 * KB, methods: 100 * KB, dictionary: 50 * KB });
   for (const { id } of PROGRAM_SITES) assert.ok(PROGRAM_BUDGETS[id], id);
+  // The work requirement has only a program page and Methods: HACRP's numbers for those two.
+  assert.deepEqual(PROGRAM_BUDGETS['work-requirement'], { program: 330 * KB, methods: 100 * KB });
   for (const budgets of Object.values(PROGRAM_BUDGETS)) for (const b of Object.values(budgets)) assert.ok(Number.isInteger(b) && b > 0);
 });
 

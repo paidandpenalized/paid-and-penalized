@@ -12,9 +12,10 @@ import { r1 } from '../../web/charts/svg.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, programDek, rulePercent } from '../../web/programs.js';
 import { fillCopy, sentenceOf } from '../../web/render/components.js';
-import { absLogPct, capitalize, count, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
+import { absLogPct, capitalize, count, fractionWord, money, moneyRange, numberWord, pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { externalLink } from '../../web/render/layout.js';
+import { scenarioTag } from '../../web/render/shell.js';
 import { SITE, underConstruction } from '../../web/site.js';
 import { shareDomain, shareScale, tickText, wholePercents } from '../client/scale.js';
 import { OUTSIDE, worksheetModel } from '../client/story/worksheet.js';
@@ -188,19 +189,36 @@ ${p.id === 'hrrp' ? yearSplit(hrrpFy, Number(fy)) : ''}
 </article>`;
 }
 
+// A scenario's card (web/site.js `scenario`): its name, the statute's name for the requirement, its dek, the national
+// range of Medicaid revenue lost (low case to high, from the shell's facts: figure) with the scenario tag, and the way to
+// its page. No histogram: the dollar estimates hold no scenario.
+function scenarioCard(p, figure) {
+  if (!figure?.scenario) throw new RangeError(`hub home: the directory has no figure for the scenario "${p.id}" (hub/model.js shellFacts)`);
+  const { year, lost } = figure.scenario;
+  return html`<article class="pc pc--scen">
+<h3><span>${p.name}</span> <abbr class="ab" title="${p.long}">${p.ab}</abbr></h3>
+<p class="pc__dek">${programDek(p.id)}</p>
+<p class="pc__big">${moneyRange(lost.low, lost.high)} ${scenarioTag(year)}</p>
+<p class="pc__sub">${COPY.dirScenarioSub}</p>
+<a class="go" href="${p.path}" aria-label="${fill('dirOpenScenarioLabel', { name: p.name })}">${COPY.dirOpenScenario}${arrow}</a>
+</article>`;
+}
+
 // A slip for a program under consideration: its abbreviation, name and dek over an empty hatched band, linking to its
 // placeholder page (hub/coming.js).
 const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title="${p.long}">${p.ab}</abbr><b>${p.name}</b><span>${programDek(p.id)}</span><span class="hh__nextbox slip__none"><span>${COPY.soonNone}</span></span></a>`;
 
-// The directory. programs: the registry (SITE.programs); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year;
-// hrrpFy: the year the Readmissions site's pages show (the estimates' when left out).
+// The directory. programs: the registry (SITE.programs); figures: the shell's facts' figures by program id (assets.shell
+// .programs; a scenario's card reads its own); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year; hrrpFy:
+// the year the Readmissions site's pages show (the estimates' when left out).
 // A card per program the dollar estimates hold (one of them with no page here, stage soon, is under construction: its
-// card's link says so), then the rest by group. The heading counts the programs with pages here (live), those under
-// construction, and those under consideration.
-export function directory({ programs, facts, hospitals, fy, hrrpFy = fy }) {
+// card's link says so), then the scenarios' cards under their own heading, then the rest by group. The heading counts the
+// programs with pages here and data (live), those under construction, and those under consideration; a scenario is none.
+export function directory({ programs, figures = {}, facts, hospitals, fy, hrrpFy = fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
-  const soon = programs.filter((p) => !p.inData);
+  const scenarios = programs.filter((p) => p.scenario);
+  const soon = programs.filter((p) => !p.inData && !p.scenario);
   const building = live.filter(underConstruction).length;
   for (const p of soon) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
@@ -212,7 +230,9 @@ export function directory({ programs, facts, hospitals, fy, hrrpFy = fy }) {
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, hrrpFy, domain }))}</div>
-<div class="soon">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
+${scenarios.length ? html`<p class="grp cap"><span>${GROUP_WORDS.scenario}</span></p>
+<div class="dir dir--scen">${scenarios.map((p) => scenarioCard(p, figures[p.id]))}</div>
+` : ''}<div class="soon">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
 </section>`;
 }
 

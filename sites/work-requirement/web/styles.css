@@ -1,0 +1,6 @@
+/* The work-requirement site's own rules, linked after the shared stylesheet (web/styles/) and the chart and what-if kit.
+   The program page's head and its five steps (pages/program.js), each a section the section menu opens (the html
+   element's scroll-padding keeps an anchored step clear of the sticky header). */
+.wr__top { padding-bottom: 24px; border-bottom: 5px double var(--ink); }
+.wr__top .dek { max-width: 60ch; }
+.step { padding: 32px 0; border-bottom: 1px solid var(--line); }

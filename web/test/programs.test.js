@@ -5,21 +5,24 @@ import { LINE_PERCENTILE } from '../../engine/js/hacrp/history.js';
 import { HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT, programDek, rulePercent } from '../programs.js';
 import { LISTED_PROGRAMS, PLACEHOLDER_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalFolderOf, hospitalPathOf, programById, programOf, siteOf } from '../site.js';
 
-const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team'];
+const IDS = ['hrrp', 'hacrp', 'hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team', 'work-requirement'];
 
-test('the registry lists the nine programs in order, each with its names (CMS\'s, exactly, in `long`), folder, stage, group and whether the hub has its data', () => {
-  const row = (p) => [p.id, p.name, p.ab, p.long, p.path, p.stage, p.group, p.inData];
+test('the registry lists the nine programs and the one scenario in order, each with its names (CMS\'s or the statute\'s, exactly, in `long`), folder, stage, group, whether the hub has its data and whether it is a scenario', () => {
+  const row = (p) => [p.id, p.name, p.ab, p.long, p.path, p.stage, p.group, p.inData, p.scenario === true];
   assert.deepEqual(SITE.programs.map(row), [
-    ['hrrp', 'Readmissions', 'HRRP', 'Hospital Readmissions Reduction Program', '/hrrp/', 'live', 'quality', true],
-    ['hacrp', 'Hospital-acquired conditions', 'HACRP', 'Hospital-Acquired Condition Reduction Program', '/hacrp/', 'live', 'quality', true],
-    ['hvbp', 'Value-based purchasing', 'HVBP', 'Hospital Value-Based Purchasing Program', '/hvbp/', 'soon', 'quality', true],
-    ['wage-index', 'Local wages', 'Wage index', 'Hospital Wage Index', '/wage-index/', 'soon', 'price', false],
-    ['dsh', 'Low-income patients', 'DSH + UC', 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments', '/dsh/', 'soon', 'price', false],
-    ['ime', 'Teaching', 'IME', 'Indirect Medical Education Adjustment', '/ime/', 'soon', 'price', false],
-    ['iqr', 'Quality reporting', 'IQR', 'Hospital Inpatient Quality Reporting Program', '/iqr/', 'soon', 'reporting', false],
-    ['pi', 'Electronic health records', 'PI', 'Medicare Promoting Interoperability Program', '/pi/', 'soon', 'reporting', false],
-    ['team', 'Surgical episodes', 'TEAM', 'Transforming Episode Accountability Model', '/team/', 'soon', 'episode', false],
+    ['hrrp', 'Readmissions', 'HRRP', 'Hospital Readmissions Reduction Program', '/hrrp/', 'live', 'quality', true, false],
+    ['hacrp', 'Hospital-acquired conditions', 'HACRP', 'Hospital-Acquired Condition Reduction Program', '/hacrp/', 'live', 'quality', true, false],
+    ['hvbp', 'Value-based purchasing', 'HVBP', 'Hospital Value-Based Purchasing Program', '/hvbp/', 'soon', 'quality', true, false],
+    ['wage-index', 'Local wages', 'Wage index', 'Hospital Wage Index', '/wage-index/', 'soon', 'price', false, false],
+    ['dsh', 'Low-income patients', 'DSH + UC', 'Medicare Disproportionate Share Hospital and Uncompensated Care Payments', '/dsh/', 'soon', 'price', false, false],
+    ['ime', 'Teaching', 'IME', 'Indirect Medical Education Adjustment', '/ime/', 'soon', 'price', false, false],
+    ['iqr', 'Quality reporting', 'IQR', 'Hospital Inpatient Quality Reporting Program', '/iqr/', 'soon', 'reporting', false, false],
+    ['pi', 'Electronic health records', 'PI', 'Medicare Promoting Interoperability Program', '/pi/', 'soon', 'reporting', false, false],
+    ['team', 'Surgical episodes', 'TEAM', 'Transforming Episode Accountability Model', '/team/', 'soon', 'episode', false, false],
+    ['work-requirement', 'Work requirement', 'Medicaid', 'Community Engagement Requirement for Applicable Individuals', '/work-requirement/', 'live', 'scenario', false, true],
   ]);
+  // Only a scenario carries the flag; a CMS payment program leaves it out.
+  for (const p of SITE.programs) assert.ok(p.scenario === true || !('scenario' in p), p.id);
 });
 
 test('every program\'s path is a lowercase folder ending in "/", and no two programs share one', () => {
@@ -29,7 +32,12 @@ test('every program\'s path is a lowercase folder ending in "/", and no two prog
 
 test('the registry\'s groups: listed (full tabs and the footer\'s figures), unlisted (dashed), and those with a placeholder (still to come)', () => {
   const ids = (list) => list.map((p) => p.id);
-  assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp']);
+  assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
+  // A scenario (no payment, a page of its own here) is listed: a tab and a footer figure, never a slip or a placeholder.
+  for (const p of SITE.programs.filter((q) => q.scenario)) {
+    assert.ok(LISTED_PROGRAMS.includes(p), p.id);
+    assert.ok(!UNLISTED_PROGRAMS.includes(p) && !PLACEHOLDER_PROGRAMS.includes(p), p.id);
+  }
   assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
   // Readmissions' folder holds its own site, so only the programs still to come have a placeholder.
   assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
@@ -38,7 +46,11 @@ test('the registry\'s groups: listed (full tabs and the footer\'s figures), unli
 });
 
 test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
-  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp']);
+  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp', 'work-requirement']);
+  assert.equal(SITE.sites['work-requirement'].path, programById('work-requirement').path);
+  assert.equal(SITE.sites['work-requirement'].released, false, 'the work-requirement site stays unreleased: noindex, out of the sitemap');
+  assert.equal(SITE.sites['work-requirement'].title, 'The Medicaid work requirement, hospital by hospital');
+  assert.equal(siteOf('/work-requirement/methods/'), SITE.sites['work-requirement']);
   assert.equal(SITE.sites.hrrp.path, programById('hrrp').path);
   assert.equal(SITE.sites.hacrp.path, programById('hacrp').path);
   assert.equal(siteOf('/hacrp/hospital/990001/'), SITE.sites.hacrp);
@@ -61,6 +73,7 @@ test('programOf names the program whose folder holds the path, or null for the f
   assert.equal(programOf('/hacrp/hospital/990001/')?.id, 'hacrp');
   assert.equal(programOf('/hrrp/hospital/990001/')?.id, 'hrrp');
   assert.equal(programOf('/wage-index/')?.id, 'wage-index');
+  assert.equal(programOf('/work-requirement/methods/')?.id, 'work-requirement');
   for (const path of ['/', '/methods/', '/hospital/990001/', '/hacrpx/', '/404.html']) assert.equal(programOf(path), null, path);
 });
 
@@ -75,7 +88,7 @@ test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital
   assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: true }), '/hrrp/hospital/990001/');
   assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: false }), null);
   assert.equal(hospitalPathOf('hrrp', '990001'), null, 'no flag is not in the Readmissions file');
-  for (const id of ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team', 'nope']) {
+  for (const id of ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team', 'work-requirement', 'nope']) {
     assert.equal(hospitalPathOf(id, '990001', { inHrrp: true }), null, id);
   }
   // A hospital the dollar file lacks has no hub or HACRP page; its Readmissions page goes by inHrrp alone.
@@ -88,7 +101,7 @@ test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital
   // Each page sits in its program's hospital folder; a program with none has no folder.
   assert.deepEqual(['hub', 'hacrp', 'hrrp'].map(hospitalFolderOf), ['/hospital/', '/hacrp/hospital/', '/hrrp/hospital/']);
   for (const id of ['hub', 'hacrp', 'hrrp']) assert.ok(hospitalPathOf(id, '990001', { inHrrp: true }).startsWith(hospitalFolderOf(id)), id);
-  for (const id of ['hvbp', 'team', 'nope']) assert.equal(hospitalFolderOf(id), null, id);
+  for (const id of ['hvbp', 'team', 'work-requirement', 'nope']) assert.equal(hospitalFolderOf(id), null, id);
 });
 
 test('the method constants are the programs\' own rules: the 3% Readmissions cap, the 1% hospital-acquired conditions cut, the 2% withheld', () => {
@@ -114,6 +127,7 @@ test('the deks say the rules\' numbers in the words they read in (the copy holds
   assert.equal(programDek('iqr'), 'Hospitals that don\u2019t report required quality data have a quarter of the market-basket increase taken off their yearly payment update.');
   assert.equal(programDek('pi'), 'Hospitals that miss electronic health record requirements have three-quarters of the market-basket increase taken off their yearly update.');
   assert.equal(programDek('team'), 'In selected areas, hospitals earn or owe money against a spending target for five surgeries.');
+  assert.equal(programDek('work-requirement'), 'States must make many adults in Medicaid\u2019s expansion group show work or other community engagement to stay eligible. What that could cost each hospital, as a scenario, not a payment.');
 });
 
 test('each dek is copy with no digit, and fills with the rule\'s percent and nothing left over', () => {

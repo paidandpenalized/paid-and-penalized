@@ -41,10 +41,11 @@ A claim marked `unverified` may not be used in copy.
 | HUB-23 | CMS's name for the quality reporting program is the Hospital Inpatient Quality Reporting Program. | https://www.cms.gov/medicare/quality/initiatives/hospital-quality-initiative/inpatient-reporting-program | "The Hospital Inpatient Quality Reporting Program" | 2026-11-08 |
 | HUB-24 | CMS's name for the electronic health records program is the Medicare Promoting Interoperability Program. | https://www.cms.gov/medicare/regulations-guidance/promoting-interoperability-programs | "The Medicare Promoting Interoperability Program" | 2026-11-08 |
 | HUB-25 | CMS's name for the surgical episodes model is the Transforming Episode Accountability Model (TEAM). | https://www.cms.gov/priorities/innovation/innovation-models/team-model | "TEAM (Transforming Episode Accountability Model)" | 2026-11-08 |
+| HUB-26 | The 2025 reconciliation law (Public Law 119-21, section 71119) adds the Medicaid work requirement to the Social Security Act under the heading "Community Engagement Requirement for Applicable Individuals" (section 1902(xx)). | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "SEC. 71119. REQUIREMENT FOR STATES TO ESTABLISH MEDICAID COMMUNITY ENGAGEMENT REQUIREMENTS FOR CERTAIN INDIVIDUALS." … "(xx) Community Engagement Requirement for Applicable Individuals" | 2026-11-10 |
 
 ## Program rows the hub cites
 
-Shared copy (`web/`, `hub/`) may cite either program site's rows (`pipeline/test/copy-gate.test.js` `citeError`). These
+Shared copy (`web/`, `hub/`) may cite any program site's rows (`pipeline/test/copy-gate.test.js` `citeError`). These
 already support hub sentences, so the hub cites them instead of repeating them:
 
 - Readmissions: HRRP-04 (only the part above the peer-group median counts), HRRP-06 (the cut applies to base operating
@@ -59,6 +60,8 @@ already support hub sentences, so the hub cites them instead of repeating them:
   after both), HACRP-83 (the uncompensated care payment is a share of a national amount), HACRP-86 and HACRP-87 (each
   factor multiplies the base; above 1 a bonus, below 1 a cut), HACRP-91 (Maryland's hospitals are not eligible for a
   readmissions penalty).
+- Work requirement: WR-01 (states must make community engagement a condition of eligibility) and WR-02 (the people it
+  applies to are the expansion group's adults), in the scenario's dek (`dekWorkRequirement`).
 
 ## Notes on the sources
 
@@ -126,6 +129,13 @@ already support hub sentences, so the hub cites them instead of repeating them:
   wage index page "Wage Index", its DSH page "Disproportionate Share Hospital (DSH)", its IME page "Indirect Medical
   Education (IME)"), the row quotes the IPPS rule's heading or the page's own sentence. "Medicare Disproportionate Share
   Hospital and Uncompensated Care Payments" joins two of the rule's headings; it is not one name CMS uses.
+- **HUB-26** is the work-requirement scenario's `long`: the heading of the subsection the law adds to the Social Security
+  Act (section 1902(xx), 42 U.S.C. 1396a), read 2026-11-10 in the enrolled law on govinfo (139 Stat. 306-307). The law
+  has no short title in its enrolled text ("An Act To provide for reconciliation pursuant to title II of H. Con. Res.
+  14", H.R. 1, July 4, 2025), so the site names it by its public law number, not "One Big Beautiful Bill Act". The
+  section's own heading speaks of "Medicaid community engagement requirements"; the subsection heading is the
+  requirement's name in the Act it amends, so `long` takes that one. The work requirement is a scenario here, not a CMS
+  payment program: CMS gives it no program name.
 - **Fiscal years.** The hub's dollars, the front page and the hospital pages are FY2026 (`data/emitted/dollars/fy2026`);
   HUB-04 and the HUB-06/07 figures cite the FY2026 rule. The Readmissions site's pages are FY2027 (HRRP-14, HRRP-19); the
   deks name no year and the rules they state (the 3 percent cap, 30 days, 2 percent, a quarter and three-quarters, the
@@ -163,6 +173,7 @@ Each source above, fetched with `curl -sIL` (at most two requests a second per h
 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/wage-index | 200 | direct |
 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/disproportionate-share-hospital-dsh | 200 | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | 200 to a browser-like client (redirects to the section's full path); a plain `curl` gets the bot check | api (the eCFR renderer API, 200) |
+| https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (2026-11-10; about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
 | https://docs.google.com/forms/d/e/1FAIpQLSekdB41siZs44_4gLNBGD2OqalK2TGNk7o8Q0bHl20ggYBy_Q/viewform | 200 (the form's public page, read only; nothing submitted) | direct |
 
 
@@ -183,10 +194,11 @@ labels, or a statement about the site: the next section).
 | `web/copy.js` | dekIqr | HUB-06 |
 | `web/copy.js` | dekPi | HUB-07 |
 | `web/copy.js` | dekTeam | HUB-11, HUB-12 |
+| `web/copy.js` | dekWorkRequirement | WR-01, WR-02 |
 | `web/copy.js` | yearSplitHrrp, yearSplitCard | HACRP-12 |
 | `web/copy.js` | notInHrrp | HRRP-11, HRRP-12, HRRP-13, HRRP-16 |
 | `hub/claims.js` | HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT, HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES (`web/programs.js`) | HRRP-09, HACRP-01, HUB-01, HRRP-23, HACRP-02, HUB-06, HUB-07, HUB-11 |
-| `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25 |
+| `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team, work-requirement | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25, HUB-26 |
 | `hub/home/copy.js` | hrrpText | HRRP-06, HRRP-09, HRRP-04 |
 | `hub/home/copy.js` | hacHead | HACRP-01, HACRP-02 |
 | `hub/home/copy.js` | hacText | HACRP-17, HACRP-02, HACRP-01, HACRP-75 |

@@ -191,9 +191,9 @@ export function exampleRule(hospitals) {
 
 // What the shell shows on every page, as numbers (the shell formats them): the fiscal year, how many hospitals have an
 // estimate, the day the estimates were built (YYYY-MM-DD, from `builtAt`), and each program's figure for the tabs and
-// the footer: Readmissions' and hospital-acquired conditions' dollars and cut hospitals, and the value-based purchasing
-// bonuses moved and the program's net.
-export function shellFacts({ facts, builtAt, fy }) {
+// the footer: Readmissions' and hospital-acquired conditions' dollars and cut hospitals, the value-based purchasing
+// bonuses moved and the program's net, and the work-requirement scenario's range (medicaid: loadHub's).
+export function shellFacts({ facts, builtAt, fy, medicaid }) {
   const changed = builtOn(builtAt);
   if (!changed) throw new RangeError(`hub: built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(builtAt)}`);
   return {
@@ -204,6 +204,9 @@ export function shellFacts({ facts, builtAt, fy }) {
       hrrp: { dollars: facts.hrrpSum, cutN: facts.hrrpCut },
       hacrp: { dollars: facts.hacSum, cutN: facts.hacCut },
       hvbp: { moved: facts.vbpBonus, net: facts.vbpNet },
+      // A scenario, not an estimate of the year's pay: the national Medicaid revenue lost in each case, in the base
+      // year's dollars (loadHub's medicaid).
+      'work-requirement': { scenario: { year: medicaid.fy, lost: { low: medicaid.national.low.lost, middle: medicaid.national.middle.lost, high: medicaid.national.high.lost } } },
     },
   };
 }

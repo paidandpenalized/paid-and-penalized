@@ -33,6 +33,10 @@ export const COPY = typesetCopy({
   footFeedback: 'Feedback',
   footEstimated: 'Estimated FY{fy}:',
   footMoved: '{amount} moved',
+  // A scenario's figure (web/site.js scenario): its national range of Medicaid revenue lost, low to high, and the tag
+  // every scenario number carries (the base year of its dollars).
+  footScenario: '{range} Medicaid revenue lost a year',
+  scenarioTag: 'SCENARIO · {year} $',
   footConsidered: 'Under consideration:',
   footHospitals: '{n} hospitals',
   footEstimates: '{hospitals}, estimated from public CMS files.',
@@ -104,4 +108,9 @@ export const COPY = typesetCopy({
     claim: ['HRRP-11', 'HRRP-12', 'HRRP-13', 'HRRP-16'],
   },
   dekTeam: { text: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.', claim: ['HUB-11', 'HUB-12'] },
+  // A scenario, not a payment: the law it models (the work-requirement site's register, WR-01 and WR-02).
+  dekWorkRequirement: {
+    text: 'States must make many adults in Medicaid’s expansion group show work or other community engagement to stay eligible. What that could cost each hospital, as a scenario, not a payment.',
+    claim: ['WR-01', 'WR-02'],
+  },
 });

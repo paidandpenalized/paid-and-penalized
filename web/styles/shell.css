@@ -113,6 +113,10 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .ft__list a:hover { text-decoration: underline; text-decoration-color: var(--ink); }
 .ft__ab { margin-left: 4px; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
 .ft__v { flex: none; color: var(--ink-2); font: 400 0.75rem/1.3 var(--font-type); white-space: nowrap; }
+/* A scenario's figure (a range and its tag) is longer than a program's: a line of its own under the name, wrapping as
+   it must, its tag kept whole. */
+.ft__scen { flex-wrap: wrap; row-gap: 0; }
+.ft__scen .ft__v { flex: 1 0 100%; margin-top: -2px; white-space: normal; line-height: 1.6; }
 .ft__soon { max-width: none; margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--ink-3); font: 400 0.75rem/1.5 var(--font-type); }
 .ft__f .ft__soon a { color: inherit; }
 .ft__links { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }

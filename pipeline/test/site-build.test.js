@@ -11,6 +11,8 @@ import { EXAMPLE_CCN } from '../../hub/model.js';
 import { HRRP, generateHrrp } from '../../sites/hrrp/web/generate.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
+import { WR } from '../../sites/work-requirement/web/generate.js';
+import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../sites/work-requirement/web/links.js';
 import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
@@ -203,10 +205,12 @@ test('build writes the hub\'s asset once and hands every site the shell\'s facts
     assert.equal(shell.fy, asset.fy);
     assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
     assert.match(shell.changed, /^\d{4}-\d{2}-\d{2}$/);
-    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp']);
+    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
     assert.ok(shell.programs.hrrp.dollars < 0 && shell.programs.hrrp.cutN > 0);
     assert.ok(shell.programs.hacrp.dollars < 0 && shell.programs.hacrp.cutN > 0);
     assert.ok(shell.programs.hvbp.moved > 0 && Number.isInteger(shell.programs.hvbp.net));
+    const { scenario } = shell.programs['work-requirement'];
+    assert.ok(Number.isInteger(scenario.year) && scenario.lost.low > 0 && scenario.lost.low < scenario.lost.middle && scenario.lost.middle < scenario.lost.high);
     // The test helper's invented facts have the build's shape, so a page rendered in a test meets the same fields.
     const shape = (facts) => ({ ...Object.fromEntries(Object.keys(facts).map((k) => [k, typeof facts[k]])),
       programs: Object.fromEntries(Object.entries(facts.programs).map(([id, figures]) => [id, Object.keys(figures)])) });
@@ -304,7 +308,8 @@ const SLICE = { ...DATA, hospitals: [...DATA.hospitals.slice(0, 4), DATA.hospita
 const SLICE_CCNS = new Set(SLICE.hospitals.map((h) => h.ccn));
 const HRRP_DATA = loadHrrp();
 const HRRP_SLICE = { ...HRRP, generate: (ctx) => generateHrrp(ctx, { data: { ...HRRP_DATA, hospitals: HRRP_DATA.hospitals.filter((h) => SLICE_CCNS.has(h.id)) }, log: () => {} }) };
-const builtSlice = sliceBuild(SLICE, [HRRP_SLICE]);
+// The work-requirement site's two pages are built whole: every page's tabs link its folder.
+const builtSlice = sliceBuild(SLICE, [HRRP_SLICE, { ...WR, generate: (ctx) => WR.generate(ctx, { log: () => {} }) }]);
 
 // CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
 // site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's
@@ -319,6 +324,19 @@ test('the Readmissions site has a page for every hospital the hub marks for Read
   const have = new Set(HRRP_DATA.hospitals.map((h) => hrrpHospitalPath(h.id)));
   const missing = [...loadHub().hrrp.hospitals.keys()].filter((ccn) => !have.has(hrrpHospitalPath(ccn)));
   assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
+});
+
+test('the work-requirement site builds its program page and Methods, unreleased: noindex in a production build and out of the sitemap; its dates on /corrections/', async () => {
+  const out = await builtSlice();
+  for (const path of [WR_PROGRAM, WR_METHODS]) {
+    const text = readFileSync(join(out, path, 'index.html'), 'utf8');
+    assert.ok(text.includes('<meta name="robots" content="noindex">'), path);
+  }
+  const sitemap = readFileSync(join(out, 'sitemap.xml'), 'utf8');
+  assert.ok(!sitemap.includes(WR_PROGRAM), 'no work-requirement page in the sitemap');
+  assert.ok(sitemap.includes('/hacrp/'), 'the released sites\' pages are');
+  const corrections = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
+  assert.ok(corrections.includes('<time datetime="2026-02-17">'), 'the CMS-64 file\'s date');
 });
 
 test('HACRP gives the build its two dates, which /corrections/ shows', async () => {

@@ -24,15 +24,22 @@ export const SITE = {
   sites: {
     hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
     hrrp: { path: '/hrrp/', released: true, title: 'Readmissions', subtitle: 'HRRP' },
+    // A scenario, not a CMS payment program (the program's `scenario` below).
+    'work-requirement': { path: '/work-requirement/', released: false, title: 'The Medicaid work requirement, hospital by hospital', subtitle: 'Medicaid scenario' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
-  //   name, ab, long   the tab's name, its short form, and CMS's name for the program
+  //   name, ab, long   the tab's name, its short form, and CMS's name for the program (a scenario's: the statute's
+  //                    heading for the requirement)
   //   path             the program's folder (a program not built here holds a placeholder page there)
   //   stage            live (a site here), soon (no page here: not built; the id is internal)
   //   group            what the program does to payment: quality (a cut or bonus for scores), price (an adjustment to
-  //                    the rate), reporting (a cut for not reporting), episode (a spending target)
+  //                    the rate), reporting (a cut for not reporting), episode (a spending target); a scenario's is
+  //                    scenario
   //   inData           whether the dollar estimates (hub/) include the program
+  //   scenario         true for a scenario: a law's possible effect on hospitals, modeled here, not a payment CMS makes
+  //                    (left out on every other program). Listed (a tab and a footer figure, its own range), never a
+  //                    slip or a placeholder, and never in the dollar estimates.
   programs: [
     { id: 'hrrp', name: 'Readmissions', ab: 'HRRP', long: 'Hospital Readmissions Reduction Program', path: '/hrrp/', stage: 'live', group: 'quality', inData: true },
     { id: 'hacrp', name: 'Hospital-acquired conditions', ab: 'HACRP', long: 'Hospital-Acquired Condition Reduction Program', path: '/hacrp/', stage: 'live', group: 'quality', inData: true },
@@ -43,6 +50,7 @@ export const SITE = {
     { id: 'iqr', name: 'Quality reporting', ab: 'IQR', long: 'Hospital Inpatient Quality Reporting Program', path: '/iqr/', stage: 'soon', group: 'reporting', inData: false },
     { id: 'pi', name: 'Electronic health records', ab: 'PI', long: 'Medicare Promoting Interoperability Program', path: '/pi/', stage: 'soon', group: 'reporting', inData: false },
     { id: 'team', name: 'Surgical episodes', ab: 'TEAM', long: 'Transforming Episode Accountability Model', path: '/team/', stage: 'soon', group: 'episode', inData: false },
+    { id: 'work-requirement', name: 'Work requirement', ab: 'Medicaid', long: 'Community Engagement Requirement for Applicable Individuals', path: '/work-requirement/', stage: 'live', group: 'scenario', inData: false, scenario: true },
   ],
 };
 
@@ -61,9 +69,9 @@ export const programById = (id) => SITE.programs.find((p) => p.id === id) ?? nul
 // The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).
 export const programOf = (path) => SITE.programs.find((program) => path.startsWith(program.path)) ?? null;
 
-// The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live and
-// programs and the not-built ones the dollar estimates already include, the shell's tabs and the footer's
-// figures; unlisted: the rest, under consideration, the footer's "Under consideration:" line and the front page's
+// The registry's programs in the groups the family's pages show, each in the registry's order. Listed: the live
+// programs (a scenario among them) and the not-built ones the dollar estimates already include, the shell's tabs and the
+// footer's figures; unlisted: the rest, under consideration, the footer's "Under consideration:" line and the front page's
 // slips (no tab). Placeholder: every program with no page here (stage soon), whose folder holds the hub's placeholder
 // page (hub/coming.js). A live program's folder holds its site.
 export const LISTED_PROGRAMS = Object.freeze(SITE.programs.filter((p) => p.stage !== 'soon' || p.inData));

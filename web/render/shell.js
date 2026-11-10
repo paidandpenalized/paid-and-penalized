@@ -7,7 +7,7 @@
 import { COPY } from '../copy.js';
 import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS, hospitalPathOf, programOf } from '../site.js';
 import { fillAround, fillCopy, fillCopyKeep } from './components.js';
-import { count, isoDate, money } from './format.js';
+import { count, isoDate, money, moneyRange } from './format.js';
 import { html } from './html.js';
 
 // A link to another site: it opens in a new tab, and hidden words tell a screen reader so. text: words or markup.
@@ -90,8 +90,13 @@ export const searchForm = ({ id, src, label, find, findRest, placeholder, hero =
 </form>`;
 
 // Each listed program's figure in the footer, from the shell's facts: the estimated dollars, or for value-based
-// purchasing the bonuses it moves.
-const figureOf = ({ dollars, moved }) => (moved === undefined ? money(dollars) : fill('footMoved', { amount: money(moved) }));
+// purchasing the bonuses it moves, or for a scenario its national range of Medicaid revenue lost, low to high, with its
+// tag (the base year of its dollars).
+export const scenarioTag = (year) => html`<span class="scen-tag">${fill('scenarioTag', { year: String(year) })}</span>`;
+function figureOf({ dollars, moved, scenario }) {
+  if (scenario) return html`${fill('footScenario', { range: moneyRange(scenario.lost.low, scenario.lost.high) })} ${scenarioTag(scenario.year)}`;
+  return moved === undefined ? money(dollars) : fill('footMoved', { amount: money(moved) });
+}
 
 // One field of the footer's form: its number and label (a heading, so a screen reader can jump to it), then its body.
 const footField = (no, label, body, cls) => html`<div class="field ft__f ${cls}"><h2 class="field__label"><span class="field__no">${String(no)}</span>${label}</h2>${body}</div>`;
@@ -115,7 +120,9 @@ export function familyFooter({ feedback, shell }) {
     const link = html`<a href="${p.path}" title="${p.name}">${p.ab}</a>`;
     return i ? html` <span class="nw">· ${link}</span>` : link;
   });
-  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v"><span class="vh">${estimated} </span>${figureOf(programs[p.id])}</span></li>`)}</ul>
+  // A scenario's figure is no estimate for the fiscal year: its tag says what it is. It is longer, so it takes a line of
+  // its own under the name.
+  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li${p.scenario ? html` class="ft__scen"` : ''}><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v">${p.scenario ? '' : html`<span class="vh">${estimated} </span>`}${figureOf(programs[p.id])}</span></li>`)}</ul>
 <p class="ft__soon">${COPY.footConsidered} ${considered}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
   const asOf = html`<p>${fillAround((marks) => fill('footEstimates', marks), { hospitals: html`<span class="ft__lead">${fill('footHospitals', { n: count(hospitals) })}</span>` })}</p>
