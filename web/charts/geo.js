@@ -392,14 +392,14 @@ export function usProjected(shapes, points, width) {
 }
 
 // The year map: every state's outline as a faint land, and the hospitals as dots, one path per class (drawn in the
-// order given, so the last class sits on top). groups [{ cls, points: [[x, y]] }] already projected (usProjected) at
-// this width; size: the dots' diameter.
+// order given, so the last class sits on top). groups [{ cls, points: [[x, y]], size? }] already projected
+// (usProjected) at this width; size: the dots' diameter, where a group gives none of its own.
 export function usYearMap({ shapes, groups, size, width }) {
   const { height, paths } = usPaths(shapes, width);
   const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean);
   return frame({
     kind: 'us-years', width, height, body: html`<g class="chart-land">${land.map((d) => html`<path d="${d}"/>`)}</g>
-<g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, size))}</g>`,
+<g class="chart-years__dots" data-size="${size}">${groups.map((g) => dotsPath(g.points, g.cls, g.size ?? size))}</g>`,
   });
 }
 

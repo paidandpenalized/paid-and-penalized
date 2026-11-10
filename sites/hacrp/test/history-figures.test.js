@@ -4,6 +4,7 @@
 // historyData() computes. (figure() itself fails the build when a plotted value is missing from the table.)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { counter } from '../../../web/charts/figure.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { absoluteD } from '../../../web/charts/pathd.js';
@@ -21,6 +22,7 @@ import { hospitalPage } from '../web/pages/hospital.js';
 import { ASSETS } from './fixtures.js';
 import { HD, HISTORY_ARGS, HISTORY_URL, PAGE_CTX, SEARCH_URL, VIEWS, DATA, renderPlace, renderProgram, PLACES } from './pinned.js';
 import { SYNTH_RECORDS, synthHistory, synthMaster } from './history-fixtures.js';
+import { YEAR_CLASSES, YEAR_HOLE } from '../web/year-classes.js';
 
 const S = historyData({ history: synthHistory(), master: synthMaster() });
 const SM = synthMaster();
@@ -204,6 +206,40 @@ test('yearMapFigure: a dot for every hospital the master places, one control per
   assert.doesNotMatch(String(yearMapFigure(S, { n: 3, source: SRC, shapes: DATA.shapes, master: SM })), /data-roll=/);
 });
 
+test('yearMapFigure: the key names each kind of mark the map draws, in its shape: a cut in an earlier year a ring, the others dots', () => {
+  const s = String(yearMapFigure(S, { n: 3, source: SRC, shapes: DATA.shapes, master: SM }));
+  const key = [...s.matchAll(/<li><span class="ymap__sw ymap__sw--(\w+)"><\/span>([^<]*)<\/li>/g)].map((m) => [m[1], text(m[2])]);
+  assert.deepEqual(key, [['now', words('ymapNow')], ['scar', words('ymapScar')], ['clear', words('ymapClear')]]);
+  assert.deepEqual(key.map(([k]) => k).sort(), Object.keys(YEAR_CLASSES).sort(), 'a key entry for each kind, and no other');
+  // The drawing: a path for each kind, and right over the earlier-year cuts a hole at each of their dots, narrower than
+  // the ring, which is at least a dot wide. No other kind has a hole.
+  const paths = [...s.matchAll(/<path class="chart-dots ([\w-]+)" stroke-width="([\d.]+)" d="([^"]*)"/g)].map(([, cls, w, d]) => ({ cls, w: Number(w), d }));
+  assert.deepEqual(paths.map((p) => p.cls), [YEAR_CLASSES.clear, YEAR_CLASSES.scar, YEAR_HOLE, YEAR_CLASSES.now]);
+  const [clear, ring, hole, now] = paths;
+  assert.equal(hole.d, ring.d);
+  assert.ok(hole.w < ring.w && ring.w >= now.w && now.w === clear.w, JSON.stringify(paths.map((p) => p.w)));
+  // charts.css draws them so at every width (it overrides the drawing's widths), the hole in the land's tone; the key
+  // draws each swatch in its mark's tone, the earlier-year one as a ring (a border round no fill), the others filled.
+  const css = readFileSync(new URL('../../../web/styles/charts.css', import.meta.url), 'utf8');
+  const sheet = readFileSync(new URL('../web/styles.css', import.meta.url), 'utf8');
+  const decls = (from, sel) => {
+    const m = new RegExp(`(?:^|\\n)\\s*${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{([^}]*)\\}`).exec(from);
+    assert.ok(m, `a rule for ${sel}`);
+    return Object.fromEntries(m[1].split(';').filter((d) => d.trim()).map((d) => d.split(/:\s*/).map((x) => x.trim())));
+  };
+  const at = css.indexOf('.chart-years__dots path');
+  for (const block of [css.slice(at), css.slice(css.indexOf('@media (min-width: 560px)', at))]) {
+    const [dot, r, h] = ['.chart-years__dots path', `.chart-years__dots .${YEAR_CLASSES.scar}`, `.chart-years__dots .${YEAR_HOLE}`].map((sel) => parseFloat(decls(block, sel)['stroke-width']));
+    assert.ok(h < r && r >= dot, `ring ${r}, hole ${h}, dot ${dot}`);
+  }
+  assert.equal(decls(css, `.${YEAR_HOLE}`).stroke, decls(css, '.chart-land, .chart-land path').fill);
+  const swatch = (k) => decls(sheet, `.ymap__sw--${k}`);
+  const tone = (k) => decls(css, `.${YEAR_CLASSES[k]}`).stroke;
+  assert.match(swatch('scar').border, new RegExp(`^[\\d.]+px solid ${tone('scar').replace(/[()]/g, '\\$&')}$`));
+  assert.equal(swatch('scar').background, undefined);
+  assert.deepEqual(['now', 'clear'].map((k) => swatch(k).background), ['now', 'clear'].map(tone));
+});
+
 test('yearMapFigure on the committed history: the dots the newest year draws are the hospitals the master places, by ink', () => {
   const fig = String(yearMapFigure(HD, { n: 1, source: SRC, shapes: DATA.shapes, master: DATA.master }));
   const last = HD.fys.length - 1;
@@ -213,6 +249,7 @@ test('yearMapFigure on the committed history: the dots the newest year draws are
   assert.equal(dots('chart-dots--pen'), placed.filter(([, r]) => r[last] === 'Y').length);
   assert.equal(dots('chart-dots--years-scar'), placed.filter(([, r]) => r[last] !== 'Y' && r.slice(0, last).includes('Y')).length);
   assert.equal(dots('chart-dots--years-clear'), placed.filter(([, r]) => !r.includes('Y')).length);
+  assert.equal(dots(YEAR_HOLE), dots('chart-dots--years-scar'), 'every earlier-year cut a ring');
   assert.equal(captionOf(fig)[0], '1');
 });
 

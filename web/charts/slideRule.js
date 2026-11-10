@@ -8,9 +8,41 @@
 import { scaleLinear } from 'd3-scale';
 import { html } from '../render/html.js';
 import { frame, r2, text } from './svg.js';
+import { textWidth } from './text.js';
 
 // The rule's ends sit this far in from the drawing's edges (a page script maps a pointer back to a value with it).
 export const SLIDE_PAD = 10;
+
+// The cursor's two readings sit centered over its hairline, kept inside the drawing. The value's shares the line above
+// the rule with two words: the value scale's caption at the left end and the average's word over its mark. Where it
+// would touch a word, it sits beside that word, just clear of it, on the hairline's side, if that place is clear too;
+// else one line higher, over the words, centered over the hairline again. (Below the rule it would sit on the z-score
+// caption's line and read as a z-score; beside the word there is no room on a phone, between the caption and the word.)
+// The cursor carries its line (data-line: the rule's top and the words' spans) so the page script places the readings
+// the same way as the reader drags. Widths are text.js's estimates at charts.css's sizes: the readings 12px in the type
+// face, the words 10px caps in the body face with their letter spacing (.chart-cap 0.08em, .chart-slide__word 0.06em).
+const READ_PX = 12;
+const WORD_PX = 10;
+const READ_GAP = 4;
+// The value reading's baseline above the rule's top: on the words' line (theirs is 8 above it), or a line higher.
+const READ_ON = 12;
+const READ_UP = 22;
+const capsWide = (s, spacing) => textWidth(String(s).toUpperCase(), WORD_PX) + String(s).length * spacing * WORD_PX;
+
+// Where the readings go with the hairline at cur: the value's { x, y } (x from the hairline, a reading being centered
+// on it; y its baseline) and the z-score's zx. value and z: their texts; top: the rule's top; words: the value line's
+// [from, to] spans; width: the drawing's.
+export function readPlaces({ cur, value, z, top, words, width }) {
+  const half = (s) => textWidth(s, READ_PX, { mono: true }) / 2;
+  const inside = (hw) => Math.min(width - hw, Math.max(hw, cur));
+  const hw = half(value);
+  const hit = (c) => words.find(([a, b]) => c + hw + READ_GAP > a && c - hw - READ_GAP < b);
+  const touched = hit(inside(hw));
+  const beside = touched && (cur < (touched[0] + touched[1]) / 2 ? touched[0] - READ_GAP - hw : touched[1] + READ_GAP + hw);
+  const clear = touched && beside >= hw && beside <= width - hw && !hit(beside);
+  const [x, y] = !touched ? [inside(hw), READ_ON] : clear ? [beside, READ_ON] : [inside(hw), READ_UP];
+  return { x: r2(x - cur), y: top - y, zx: r2(inside(half(z)) - cur) };
+}
 
 export function slideRule({ p, domain: [lo, hi], value, labels, format, tickFormat = format, zFormat, zTickFormat = zFormat, width, valueTicks, zTicks }) {
   const left = SLIDE_PAD;
@@ -30,6 +62,11 @@ export function slideRule({ p, domain: [lo, hi], value, labels, format, tickForm
   const zX = (z) => x(p.mean + z * p.sd);
   const cur = r2(x(value));
   const curZ = zOf(value);
+  const meanW = capsWide(labels.mean, 0.06);
+  const line = { top, words: [[left - 6, left - 6 + capsWide(labels.value, 0.08)], [meanX - meanW / 2, meanX + meanW / 2]].map((span) => span.map(r2)) };
+  const read = format(value);
+  const zRead = zFormat(curZ);
+  const at = readPlaces({ cur, value: read, z: zRead, width, ...line });
   return frame({
     kind: 'slide', width, height: top + h + 40, body: html`<rect class="chart-slide__stock" x="${left - 6}" y="${top}" width="${r2(right - left + 12)}" height="${h}" rx="3"/>
 <rect class="chart-same" x="${r2(cx)}" y="${top}" width="${r2(right + 6 - cx)}" height="${h}"/>
@@ -42,11 +79,11 @@ ${zTicks.map((z) => html`${tick(zX(z), top + h, -1, 13)}${text({ x: zX(z), y: to
 ${text({ x: meanX, y: top - 8, cls: 'chart-slide__word', body: labels.mean })}
 ${text({ x: left - 6, y: top - 8, anchor: 'start', cls: 'chart-cap', body: labels.value })}
 ${text({ x: left - 6, y: top + h + 16, anchor: 'start', cls: 'chart-cap', body: labels.z })}
-<g class="chart-slide__cursor" data-cursor transform="translate(${cur} 0)">
+<g class="chart-slide__cursor" data-cursor data-line="${JSON.stringify(line)}" transform="translate(${cur} 0)">
 <rect class="chart-slide__glass" x="-13" y="${top - 6}" width="26" height="${h + 12}" rx="3"/>
 <line class="chart-slide__hair" x1="0" x2="0" y1="${top - 6}" y2="${top + h + 6}"/>
-<text class="chart-slide__read" x="0" y="${top - 12}" text-anchor="middle" data-read="value">${format(value)}</text>
-<text class="chart-slide__read chart-slide__read--z" x="0" y="${top + h + 32}" text-anchor="middle" data-read="z">${zFormat(curZ)}</text>
+<text class="chart-slide__read" x="${at.x}" y="${at.y}" text-anchor="middle" data-read="value">${read}</text>
+<text class="chart-slide__read chart-slide__read--z" x="${at.zx}" y="${top + h + 32}" text-anchor="middle" data-read="z">${zRead}</text>
 </g>`,
   });
 }

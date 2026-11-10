@@ -41,8 +41,8 @@ export const COPY = {
 
   // The year map.
   ymapHeading: { text: 'Watch it spread', claim: null },
-  ymapText: { text: 'Every hospital with a payment decision in any year, one dot each, where it stands. Pick a year, or press play: red is that year’s cut; pale red, a hospital cut in an earlier year; gray, one not cut so far.', claim: null },
-  ymapText2: { text: 'Each year’s red is about the same size. The pale red is not: it spreads year after year until most of the map has been cut at least once.', claim: null },
+  ymapText: { text: 'Every hospital with a payment decision in any year, one mark each, where it stands. Pick a year, or press play: a red dot is that year’s cut; a red ring, a hospital cut in an earlier year; a gray dot, one not cut so far.', claim: null },
+  ymapText2: { text: 'Each year has about as many red dots as the last. The rings keep growing: they spread year after year until most of the map has been cut at least once.', claim: null },
   ymapTakeaway: { text: 'By fiscal year {last}, {ever} hospitals ({share} of all with a decision) had been cut at least once.', claim: null },
   ymapNow: { text: 'Cut that year', claim: null },
   ymapScar: { text: 'Cut in an earlier year', claim: null },
@@ -50,7 +50,7 @@ export const COPY = {
   ymapPlay: { text: 'Play', claim: null },
   ymapStop: { text: 'Stop', claim: null },
   ymapYears: { text: 'Fiscal year', claim: null },
-  ymapAlt: { text: 'A map of the United States with a dot for every hospital, colored by whether CMS cut it in the newest fiscal year, in an earlier year, or never.', claim: null },
+  ymapAlt: { text: 'A map of the United States with a mark for every hospital: a red dot if CMS cut it in the newest fiscal year, a red ring if CMS cut it in an earlier year, a gray dot if never.', claim: null },
   ymapUnplaced: { text: '{n} hospitals CMS no longer lists have no place on the map; the table counts them.', claim: null },
 
   // Infections against the cut.
