@@ -86,7 +86,7 @@ export const COPY = {
     text: 'Three strips of dots, the low, middle and high cases, on one square-root scale of the share of patient revenue lost. Median losses: {low}, {middle} and {high}.',
     claim: null,
   },
-  figNotPlaced: { text: '{n} more have no loss to draw: no Medicaid revenue on their cost report (or a few dollars of it), no patient revenue to measure against, or a cost report screened out as a filing error.', claim: null },
+  figNotPlaced: { text: 'The strips leave out {n} hospitals in scenario states with no loss to draw: no Medicaid revenue on their cost report (or a few dollars of it), no patient revenue to measure against, or a cost report screened out as a filing error.', claim: null },
   figSource: { text: 'Urban Institute and RWJF state enrollment declines, applied to each hospital’s FY{fy} Medicare cost report (CMS HCRIS)', claim: null },
   stripEnrollees: { text: '{n} million fewer enrollees', claim: 'WR-03' },
   // The low strip's small note: CMS's own projection of the enrollment decline (about the low case's, WR-03) sits there.

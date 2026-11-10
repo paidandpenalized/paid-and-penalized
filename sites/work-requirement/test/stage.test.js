@@ -106,6 +106,14 @@ test('the story\'s rules apply only under the class the script sets; its wrapper
   for (const [sel, body] of rules) {
     if (/position: (sticky|absolute|fixed)/.test(body) && /wr-step|wr-scrolly/.test(sel)) assert.match(sel, /wr-scrolly--on|wr-field/, `"${sel}" pins only in the story`);
   }
+  // A figure not shown is only unseen: transparent and out of the pointer's way (the stage takes none; the shown figure's
+  // part takes it back), never visibility, display or aria-hidden, so a screen reader still reads it.
+  const body = (sel) => rules.find(([s]) => s === sel)?.[1] ?? '';
+  assert.match(body('.wr-scrolly--on .wr-step__fig'), /opacity: 0;/);
+  assert.match(body('.wr-scrolly--on .wr-step__stage'), /pointer-events: none;/);
+  assert.match(body('.wr-scrolly--on .wr-step__stage[data-on] .wr-step__fig'), /opacity: 1; pointer-events: auto;/);
+  for (const [sel, b] of rules) if (/wr-scrolly--on|wr-step__/.test(sel)) assert.doesNotMatch(b, /visibility: hidden|display: none/, sel);
+  assert.ok(!readFileSync(REPO_ROOT + 'sites/work-requirement/client/stage.js', 'utf8').includes('aria-hidden'));
   // The stage's width is the two columns' breakpoint.
   assert.equal(STAGE_MEDIA, '(min-width: 900px)');
   assert.match(css, /@media \(min-width: 900px\) \{\s*\.wr-step \{ grid-template-columns/);
@@ -137,6 +145,7 @@ function storyPage(t, { wide }) {
       },
       contains(x) { for (let at = x; at; at = at.parentElement) if (at === node) return true; return false; },
       toggleAttribute(k, on) { if (on) node.attrs.add(k); else node.attrs.delete(k); },
+      hasAttribute: (k) => node.attrs.has(k),
       removeAttribute(k) { node.attrs.delete(k); },
       matches: () => false,
       all() { return node.children.flatMap((c) => [c, ...c.all()]); },
@@ -166,15 +175,24 @@ function storyPage(t, { wide }) {
     return list;
   };
   const body = make('body');
+  const headings = new Map(STEPS.map((id) => {
+    const h = make('h2', { id: `${id}-h` });
+    h.focused = false;
+    h.setAttribute = (k, v) => { h[k] = v; };
+    h.focus = (opts) => { h.focused = opts; document.activeElement = h; };
+    return [`${id}-h`, h];
+  }));
+  const on = {};
+  const scrolls = [];
   standIn(t, {
-    document: { createElement: () => make(''), documentElement: { style: make('').style }, activeElement: body, body, addEventListener() {} },
-    window: { innerHeight: 800, addEventListener() {} },
+    document: { createElement: () => make(''), documentElement: { style: Object.assign(make('').style, { props: { '--sticky-top': '140px' } }) }, activeElement: body, body, addEventListener(type, fn) { on[type] = fn; }, getElementById: (id) => headings.get(id) ?? null },
+    window: { innerHeight: 800, addEventListener() {}, scrollBy(o) { scrolls.push(o); } },
     getComputedStyle: () => ({ top: '140px', paddingTop: '10px', rowGap: '8px' }),
     requestAnimationFrame: (fn) => fn(),
   });
   const lists = { wide: media(wide), motion: media(true) };
   const story = mountStage(scrolly, lists);
-  return { scrolly, sections, head, lists, story };
+  return { scrolly, sections, head, lists, story, on, scrolls, headings, body };
 }
 
 test('the stage mounts only from 900px: the class, the pins and the step shown follow the width', (t) => {
@@ -197,6 +215,31 @@ test('the stage mounts only from 900px: the class, the pins and the step shown f
   assert.ok(sections.every((s) => !s.children[1].attrs.has('data-on')));
 });
 
+test('focus reaching a figure not shown makes its step the one in view, its words brought on screen; focus left in a figure as it goes moves to the new step\'s heading', (t) => {
+  const { sections, lists, on, scrolls, headings } = storyPage(t, { wide: true });
+  lists.wide.flip(true);
+  const shown = () => sections.map((s) => s.children[1].attrs.has('data-on'));
+  assert.deepEqual(shown(), [true, false, false, false, false]);
+  // A Tab (or a screen reader's focus) into Figure 3's part, its step's top still below the line.
+  const fig3 = sections[2].children[1].children[0].children[0];
+  const control = { parentElement: fig3, matches: () => false };
+  document.activeElement = control;
+  on.focusin({ target: control });
+  assert.deepEqual(shown(), [false, false, true, false, false], 'step 3 in view at once');
+  assert.deepEqual(scrolls, [{ top: 2100 - 140, behavior: 'instant' }], 'its top brought under the header');
+  // Focus reaching a figure whose dots are still flying: shown at once.
+  sections[2].children[1].attrs.add('data-flying');
+  on.focusin({ target: control });
+  assert.ok(!sections[2].children[1].attrs.has('data-flying') && sections[2].children[1].attrs.has('data-on'), 'the flight cut short');
+  // Its words leave the screen with focus still in the figure (the page scrolled back to the top): the focus moves to
+  // the heading of the step now in view, without a scroll.
+  on.focusin({ target: headings.get('finding-h') });
+  assert.deepEqual(shown(), [true, false, false, false, false]);
+  assert.deepEqual(headings.get('finding-h').focused, { preventScroll: true });
+  assert.equal(headings.get('finding-h').tabindex, '-1');
+  assert.equal(document.activeElement, headings.get('finding-h'));
+});
+
 test('the step in view: the last whose top passed the line under the header, else the first', () => {
   assert.equal(stepAt([0, 500, 1000], 188), 0);
   assert.equal(stepAt([-900, 188, 1000], 188), 1, 'a top on the line counts');
@@ -210,6 +253,7 @@ test('a figure scales to fit the room under the head, never up and never below t
   assert.equal(zoomFor(500, 600), 1);
   assert.equal(zoomFor(600, 540), 0.9);
   assert.equal(zoomFor(1000, 100), MIN_ZOOM);
+  assert.equal(MIN_ZOOM, 0.9, 'R26: legible at 1280 by 720');
   assert.equal(zoomFor(0, 500), 1);
 });
 

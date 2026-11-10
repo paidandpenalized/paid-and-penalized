@@ -76,7 +76,6 @@ function stripsFigure({ rows, top, words, selected }) {
     svg: draw('narrow'),
     svgWide: draw('wide'),
     alt: stripsAlt(items),
-    note: fill('figNotPlaced', { n: count(inScenario - items.length) }),
     source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
     claimLevel: 'hypothetical',
     table: tableOf(items, top),
@@ -100,6 +99,7 @@ ${pageTop()}
 <p class="wr-sec__sub small muted">${t('rangesSub')}</p>
 ${ranges(serverTotals(data), selected)}
 ${chips(states)}
+<p class="small muted wr-notplaced">${fill('figNotPlaced', { n: count(rows.filter((r) => r.cls === 'scenario').length - drawn(rows).length) })}</p>
 </div>
 <div class="wr-step__stage"${stripsUrl ? html` data-strips="${stripsUrl}"` : ''}${baseUrl ? html` data-base="${baseUrl}"` : ''}>
 ${stageHead(data.params, selected)}
