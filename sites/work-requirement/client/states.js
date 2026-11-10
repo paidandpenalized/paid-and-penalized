@@ -1,11 +1,12 @@
 // Step 3 in the browser (web/program/states.js drew it for the most exposed state, the middle case and the default use
 // rate): Figure 3, the headline and the card redrawn from the page's state with the same code when the case, the use rate
-// or the selected state moves, and the table's dollars and shares when the use rate does. A click on a state's dot or its
+// or the selected state moves (and the figure's text alternative with the case and use rate), and the table's dollars and
+// shares when the use rate does. A click on a state's dot or its
 // gutter circle, or a pick in the card's list (the keyboard's way), selects it; the page's live line then says the new
 // headline. Only the drawing on show is redrawn, the other when the width brings it on.
 import { money, pct } from '../../../web/render/format.js';
 import { SCENARIOS } from '../web/constants.js';
-import { cardBody, headlineHtml, headlineOf, numbersOf, statesBody, statesLayout } from '../web/program/states.js';
+import { cardBody, headlineHtml, headlineOf, numbersOf, statesAlt, statesBody, statesLayout } from '../web/program/states.js';
 
 // section: the step; store: the page's state; model: the strips asset's states (decodeStates); wide: the media query
 // list under which the wide drawing shows; say(text): the page's live line.
@@ -42,6 +43,7 @@ export function mountStates(section, { store, model, wide, say = () => {} }) {
     for (const drawing of svgs.keys()) stale.add(drawing);
     drawOne(shown());
     const view = viewOf(state);
+    if (moved) for (const svg of svgs.values()) svg.setAttribute('aria-label', statesAlt(model, view.k, view.use));
     const headline = headlineOf(model, state.stateCode, view);
     head.innerHTML = headlineHtml(headline).text;
     card.innerHTML = cardBody(model, state.stateCode, view).text;

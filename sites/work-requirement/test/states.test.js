@@ -13,9 +13,10 @@ import { SCENARIOS } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
 import { loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
-import { hospitalRows } from '../web/program/strips.js';
+import { drawn, hospitalRows, median, stripsAlt } from '../web/program/strips.js';
+import { pct } from '../../../web/render/format.js';
 import {
-  DRAWINGS, LABEL_FONTS, cardBody, decodeStates, headlineOf, mostExposed, numbersOf, ranked, statesAsset, statesBody, statesLayout,
+  DRAWINGS, LABEL_FONTS, cardBody, decodeStates, headlineOf, mostExposed, numbersOf, ranked, statesAlt, statesAsset, statesBody, statesLayout,
   statesModel, tableRows,
 } from '../web/program/states.js';
 
@@ -200,22 +201,33 @@ test('the server draws the default state in the middle case; the browser\'s redr
   assert.match(section, new RegExp(`<p class="wr-stcard__name"[^>]*>${data.states[model.selected].name}</p>`));
 });
 
-test('the use rate scales a state\'s dollars and shares (the engine\'s arithmetic is linear in it); the case orders them', () => {
+test('a state\'s numbers at another use rate are the engine\'s, run at that rate over its hospitals; the case orders them', () => {
   for (const code of scenarioCodes) {
+    const st = data.states[code];
     const m = byCode.get(code);
-    for (const k of [0, 1, 2]) {
-      const one = numbersOf(m, k, 1);
-      for (const use of [0.75, 1.25]) {
-        const at = numbersOf(m, k, use);
-        assert.ok(Math.abs(at.lost - one.lost * use) <= 1e-9 * at.lost, code);
-        assert.ok(Math.abs(at.share - one.share * use) <= 1e-12, code);
-        assert.equal(at.y, one.y);
-      }
+    const mine = [...data.hospitals.values()].filter((r) => r[col.state] === code && r[col.cls] === 'scenario');
+    for (const use of [0.75, 1.25]) {
+      SCENARIOS.forEach((c, k) => {
+        let all = 0;
+        let lostP = 0;
+        let nprP = 0;
+        for (const r of mine) {
+          const b = rowToBase(data.columns, r);
+          const lost = scenario(b, b.share, st.declines[c], { use }).lost;
+          all += lost;
+          if (b.scored && b.net_patient_revenue > 0) {
+            lostP += lost;
+            nprP += b.net_patient_revenue;
+          }
+        }
+        const n = numbersOf(m, k, use);
+        // The file's roll-up is summed from unrounded inputs; the rows carry rounded ones (6-place shares).
+        assert.ok(Math.abs(n.lost - all) <= 5e-6 * all, `${code} ${c} at ${use}: ${n.lost} vs the engine's ${all}`);
+        assert.ok(Math.abs(n.share - lostP / nprP) <= 1e-9, `${code} ${c} at ${use}: share`);
+      });
     }
     assert.ok(numbersOf(m, 0, 1).share < numbersOf(m, 1, 1).share && numbersOf(m, 1, 1).share < numbersOf(m, 2, 1).share, `${code}: low < middle < high`);
   }
-  // The ranking does not move with the use rate, so it is computed per case only.
-  assert.deepEqual(ranked(model, MIDDLE).length, scenarioCodes.length);
 });
 
 // Each label's extent as drawn: x, anchor and its font (LABEL_FONTS, by class), with the kit's width estimate.
@@ -229,47 +241,59 @@ function fontOf(cls, drawing) {
   return { size: f.size[drawing] ?? f.size, mono: f.mono };
 }
 
-test('every label in Figure 3 stays inside its drawing, in every case at every use rate with any state selected, phone and wide', () => {
+const touch = (a, b, pad = 0) => a[0] - pad < b[0] + b[2] && a[0] + a[2] + pad > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
+const onDot = (box, c, extra = 0) => {
+  const nx = Math.max(box[0], Math.min(c.x, box[0] + box[2]));
+  const ny = Math.max(box[1], Math.min(c.y, box[1] + box[3]));
+  return (nx - c.x) ** 2 + (ny - c.y) ** 2 < (c.r + extra) ** 2;
+};
+
+test('Figure 3\'s labels, in every case at every use rate with any state selected, phone and wide: inside the drawing, none touching another, none on a dot', () => {
   let checked = 0;
-  const selections = model.states.map((s) => s.code);
   for (const drawing of Object.keys(DRAWINGS)) {
     const { width, height } = DRAWINGS[drawing];
     for (const k of [0, 1, 2]) {
       for (const use of [0.75, 1, 1.25]) {
-        for (const selected of selections) {
-          const body = statesBody(statesLayout({ model, drawing, k, use, selected })).text;
-          for (const [, attrs, inner] of body.matchAll(LABEL)) {
+        for (const selected of model.states.map((s) => s.code)) {
+          const layout = statesLayout({ model, drawing, k, use, selected });
+          const at = `${drawing} ${SCENARIOS[k]} at ${use}, ${selected} selected`;
+          // Every <text> inside the drawing, by its font (LABEL_FONTS) and the kit's width estimate.
+          for (const [, attrs, inner] of statesBody(layout).text.matchAll(LABEL)) {
             const { size, mono } = fontOf(attr(attrs, 'class'), drawing);
             const x = Number(attr(attrs, 'x'));
             const y = Number(attr(attrs, 'y'));
             const w = textWidth(plainText(inner), size, { mono });
             const anchor = attr(attrs, 'text-anchor') ?? 'start';
             const left = anchor === 'end' ? x - w : anchor === 'middle' ? x - w / 2 : x;
-            const where = `${drawing} ${SCENARIOS[k]} at ${use}, ${selected} selected: "${plainText(inner)}" spans ${left.toFixed(1)}–${(left + w).toFixed(1)} of ${width}, baseline ${y}`;
+            const where = `${at}: "${plainText(inner)}" spans ${left.toFixed(1)}–${(left + w).toFixed(1)} of ${width}, baseline ${y}`;
             assert.ok(left >= 0 && left + w <= width, where);
             assert.ok(y - size * 0.8 >= 0 && y + size * 0.25 <= height, where);
             checked += 1;
           }
+          // The plot's labels (the states', the contours' and their title) clear one another by 2 px across.
+          const boxes = [...layout.labels.map((l) => [l.code, l.box]), ...layout.isoLabels.map((l) => [l.text, l.box]), ...(layout.isoTitle ? [['title', layout.isoTitle.box]] : [])];
+          boxes.forEach(([a, ba], i) => boxes.slice(i + 1).forEach(([b, bb]) => assert.ok(!touch(ba, bb, 2), `${at}: ${a} and ${b} touch`)));
+          // A state's label sits on no other state's dot; a contour's label on no dot and no whisker.
+          for (const l of layout.labels) for (const p of layout.points) if (p.code !== l.code) assert.ok(!onDot(l.box, p), `${at}: ${l.code} on ${p.code}'s dot`);
+          for (const l of layout.isoLabels) {
+            for (const p of layout.points) {
+              assert.ok(!onDot(l.box, p, 1), `${at}: ${l.text} on ${p.code}'s dot`);
+              assert.ok(!(p.y >= l.box[1] && p.y <= l.box[1] + l.box[3] && p.hi >= l.box[0] && p.lo <= l.box[0] + l.box[2]), `${at}: ${l.text} on ${p.code}'s whisker`);
+            }
+          }
+          // Every contour drawn is labeled (statesBody draws the labeled levels only), and the selected state is named.
+          assert.equal(layout.isoLabels.length, 3, `${at}: every level labeled`);
+          if (layout.points.some((p) => p.on) || layout.gutter.some((g) => g.on)) assert.ok(layout.labels.some((l) => l.code === selected && l.cls === 'wr-st__name'), `${at}: the selected state named`);
+          // The gutter: every dot and code inside it, none touching another.
+          const [g0, g1] = layout.geo.gut;
+          const gboxes = layout.gutter.flatMap((g) => [[`${g.code} dot`, [g.x - g.r, g.y - g.r, 2 * g.r, 2 * g.r]], [g.code, g.labelBox]]);
+          for (const [name, b] of gboxes) assert.ok(b[0] >= g0 && b[0] + b[2] <= g1, `${at}: ${name} inside the gutter`);
+          gboxes.forEach(([a, ba], i) => gboxes.slice(i + 1).forEach(([b, bb]) => assert.ok(!touch(ba, bb, 1), `${at}: gutter ${a} and ${b} touch`)));
         }
       }
     }
   }
   assert.ok(checked > 50000, `${checked} labels checked`);
-});
-
-test('the scenario states\' labels don\'t overlap one another or another state\'s dot', () => {
-  for (const drawing of Object.keys(DRAWINGS)) {
-    for (const k of [0, 1, 2]) {
-      for (const use of [0.75, 1, 1.25]) {
-        const layout = statesLayout({ model, drawing, k, use, selected: model.selected });
-        const boxes = layout.labels.map((l) => l.box);
-        boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b, j) => {
-          const hit = a[0] < b[0] + b[2] && a[0] + a[2] > b[0] && a[1] < b[1] + b[3] && a[1] + a[3] > b[1];
-          assert.ok(!hit, `${drawing} ${k} ${use}: ${layout.labels[i].code} and ${layout.labels[i + 1 + j].code}`);
-        }));
-      }
-    }
-  }
 });
 
 test('the hub pages the cards link to are the ones the hub writes; a hospital without one is named in plain text', async () => {
@@ -283,4 +307,17 @@ test('the hub pages the cards link to are the ones the hub writes; a hospital wi
   }
   const linked = model.states.flatMap((s) => (s.top ?? []).filter((h) => h.hub));
   assert.ok(linked.length > 0);
+});
+
+test('the figures\' text alternatives follow the case and the use rate (the browser rewrites them as they move)', () => {
+  for (const svg of section.match(/<svg role="img"[^>]*>/g)) assert.ok(svg.includes(`aria-label="${statesAlt(model, MIDDLE, 1)}"`), 'step 3 at the default');
+  const top = ranked(model, 2)[0];
+  const at = statesAlt(model, 2, 1.25);
+  assert.ok(at.includes(`${data.states[top].name} ${pct(numbersOf(byCode.get(top), 2, 1.25).share, 2)}`), at);
+  assert.ok(at.includes('high case'), at);
+  // Step 1's: each case's median share, scaled by the use rate.
+  const items = drawn(rows);
+  const mid = pct(median(items.map((r) => r.share[1] * 1.25)), 2);
+  assert.ok(stripsAlt(items, 1.25).includes(mid), stripsAlt(items, 1.25));
+  assert.notEqual(stripsAlt(items, 1.25), stripsAlt(items, 1));
 });

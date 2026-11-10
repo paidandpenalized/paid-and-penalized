@@ -315,6 +315,13 @@ ${layout.strips.map((st) => header(st, { geo: layout.geo, on: st.s === layout.se
 ${axisBlock(layout, words)}`;
 }
 
+// The figure's text alternative at a use rate (each case's median share lost; client/page.js rewrites it as the use rate
+// moves). items: the hospitals drawn.
+export const stripsAlt = (items, use = 1) => {
+  const [low, middle, high] = SCENARIOS.map((_, k) => pct(median(items.map((r) => r.share[k] * use)), 2));
+  return fill('figAlt', { low, middle, high });
+};
+
 // ---------- the group's readout ----------
 
 // One line on a group against every hospital drawn, in the selected case: how many it holds, its median loss against all

@@ -14,7 +14,7 @@ import { stageHead } from './controls.js';
 import { serverTotals } from './model.js';
 import { byCase, ranges, scenWord } from './ranges.js';
 import { pageTop } from './top.js';
-import { DRAWINGS, drawn, median, stripsBody, stripsLayout } from './strips.js';
+import { DRAWINGS, drawn, median, stripsAlt, stripsBody, stripsLayout } from './strips.js';
 
 // ---------- the chips ----------
 
@@ -77,13 +77,12 @@ function stripsFigure({ rows, top, words, selected }) {
     const layout = stripsLayout({ items, drawing, top, selected });
     return frame({ kind: 'strips', width: DRAWINGS[drawing].width, height: layout.height, body: stripsBody(layout, { words }) });
   };
-  const medians = SCENARIOS.map((_, k) => pct(median(items.map((r) => r.share[k])), 2));
   return figure({
     n: 1,
     takeaway: fill('figTakeaway', { placed: count(items.length), n: count(inScenario) }),
     svg: draw('narrow'),
     svgWide: draw('wide'),
-    alt: fill('figAlt', { low: medians[0], middle: medians[1], high: medians[2] }),
+    alt: stripsAlt(items),
     note: fill('figNotPlaced', { n: count(inScenario - items.length) }),
     source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
     claimLevel: 'hypothetical',

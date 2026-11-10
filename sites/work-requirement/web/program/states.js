@@ -27,7 +27,7 @@ import { CONTOURS, DEFAULT_SCENARIO, MOST_EXPOSED, SCENARIOS } from '../constant
 import { fill, t } from '../copy.js';
 import { lineRow, scenTag } from './chain.js';
 import { scenWord } from './ranges.js';
-import { fitText, markLabel } from './strips.js';
+import { fitText } from './strips.js';
 
 const MIDDLE = SCENARIOS.indexOf(DEFAULT_SCENARIO);
 // A case's word in a sentence (middle, low, high).
@@ -192,77 +192,111 @@ function contour(k, S, at) {
 }
 const pathOf = (pts) => pts.map(([x, y], i) => `${i ? 'L' : 'M'}${r2(x)} ${r2(y)}`).join('');
 
-// Where each state's code goes: beside its dot (right, left, the diagonals, above, below), then further out with a leader
-// line, never over another label, another dot or the plot's edge; the selected state first, named in full, then the
-// rest by size. Where nothing fits, beside the dot at the side with room (markLabel). Each: { code, cls, text, box: [x,
-// y, w, h], leader: [x1, y1, x2, y2] or null }.
+// Every label clears every other by PAD on each side (its box checked padded), so no two labels run together.
+const PAD = 2;
+const padded = (b) => [b[0] - PAD, b[1] - PAD / 2, b[2] + 2 * PAD, b[3] + PAD];
+const clear = (box, boxes) => !boxes.some((q) => overlap(q, padded(box)));
+const insidePlot = (box, plot) => box[0] >= plot.x0 + 1 && box[0] + box[2] <= plot.x1 - 1 && box[1] >= plot.y0 + 1 && box[1] + box[3] <= plot.y1 - 1;
+// A whisker (a horizontal segment { x0, x1, y }) through a box.
+const crosses = (box, s) => s.y >= box[1] && s.y <= box[1] + box[3] && s.x1 >= box[0] && s.x0 <= box[0] + box[2];
+
+// A label beside a dot c ({ x, y, r }): the first box, ring by ring outward and then by angle (right, left, the diagonals,
+// above, below), inside the plot and clear of every box placed, every other dot and every whisker; a box pushed out gets
+// a leader line back to the dot. null when none fits. Returns { box, leader }.
 const ANGLES = [0, Math.PI, -0.6, 0.6, Math.PI + 0.6, Math.PI - 0.6, -Math.PI / 2, Math.PI / 2];
-const RINGS = [0, 6, 14, 24, 36];
-function placeLabels(points, { plot, drawing, taken }) {
-  const placed = [];
-  const boxes = [...taken];
-  const order = [...points].sort((a, b) => (a.on ? -1 : b.on ? 1 : b.r - a.r || (a.code < b.code ? -1 : 1)));
-  for (const p of order) {
-    const cls = p.on ? 'wr-st__name' : 'wr-st__code';
-    const { size, mono } = fontOf(cls, drawing);
-    const text = p.on ? fitText(p.name, plot.x1 - plot.x0 - 2, size, { mono }) : p.code;
-    const w = textWidth(text, size, { mono });
-    const h = size;
-    let best = null;
-    search: for (const dd of RINGS) {
-      for (const a of ANGLES) {
-        const cs = Math.cos(a);
-        const sn = Math.sin(a);
-        const ax = p.x + cs * (p.r + 3 + dd);
-        const ay = p.y + sn * (p.r + 3 + dd);
-        const bx = cs < -0.2 ? ax - w : cs > 0.2 ? ax : ax - w / 2;
-        const by = Math.abs(cs) > 0.2 ? ay - h / 2 : sn < 0 ? ay - h : ay;
-        const box = [bx, by, w, h];
-        if (bx < plot.x0 + 1 || bx + w > plot.x1 - 1 || by < plot.y0 + 1 || by + h > plot.y1 - 1) continue;
-        if (boxes.some((q) => overlap(q, box))) continue;
-        if (points.some((q) => q !== p && hitsCircle(box, q))) continue;
-        best = { box, leader: dd ? [p.x + cs * p.r, p.y + sn * p.r, ax, ay] : null };
-        break search;
-      }
+const RINGS = [0, 5, 10, 16, 24, 34, 46, 60];
+function besideDot(c, { w, h, plot, boxes, dots, whiskers = [] }) {
+  for (const dd of RINGS) {
+    for (const a of ANGLES) {
+      const cs = Math.cos(a);
+      const sn = Math.sin(a);
+      const ax = c.x + cs * (c.r + 3 + dd);
+      const ay = c.y + sn * (c.r + 3 + dd);
+      const bx = cs < -0.2 ? ax - w : cs > 0.2 ? ax : ax - w / 2;
+      const by = Math.abs(cs) > 0.2 ? ay - h / 2 : sn < 0 ? ay - h : ay;
+      const box = [bx, by, w, h];
+      if (!insidePlot(box, plot) || !clear(box, boxes)) continue;
+      if (dots.some((q) => q !== c && hitsCircle(box, q))) continue;
+      if (whiskers.some((s) => crosses(box, s))) continue;
+      return { box, leader: dd ? [c.x + cs * c.r, c.y + sn * c.r, ax, ay] : null };
     }
-    if (!best) {
-      const m = markLabel(p.x, text, { size, mono, gap: p.r + 3, span: [plot.x0 + 1, plot.x1 - 1] });
-      const left = m.anchor === 'end' ? m.x - w : m.x;
-      const top = Math.min(Math.max(p.y - h / 2, plot.y0 + 1), plot.y1 - 1 - h);
-      best = { box: [left, top, w, h], leader: null };
-    }
-    boxes.push(best.box);
-    placed.push({ code: p.code, cls, text, ...best });
   }
-  return placed;
+  return null;
 }
 
-// The gutter's states, top to bottom by Medicaid share, alternating between its two columns, each column's dots at least
-// GAP apart and inside the plot's height.
-const GAP = 12;
-function gutterOf(model, { geo, plot, sy, selected }) {
+// The contours' labels, highest level first: each where its contour comes in at the top, else the first point down the
+// curve where the label clears every dot, every whisker and the labels before it. A level with no room for its label is
+// left undrawn (statesLayout's levels). Each: { level, text, x, y, box }.
+function contourLabels({ levels, S, sx, sy, plot, drawing, dots, whiskers }) {
+  const { size, mono } = fontOf('wr-iso__label', drawing);
+  const out = [];
+  for (const level of [...levels].reverse()) {
+    const pts = contour(level, S, (x, y) => [sx(x), sy(y)]);
+    if (!pts) continue;
+    const text = shortPct(level);
+    const w = textWidth(text, size, { mono });
+    const spots = [[pts[0][0] + 3, plot.y0 + 2], ...pts.slice(1).map(([px, py]) => [px + 3, py - size / 2])];
+    for (const [x, y] of spots) {
+      const box = [x, y, w, size];
+      if (!insidePlot(box, plot) || !clear(box, out.map((l) => l.box))) continue;
+      if (dots.some((q) => hitsCircle(box, { ...q, r: q.r + 1 })) || whiskers.some((s) => crosses(box, s))) continue;
+      out.push({ level, text, x, y: y + size * 0.8, box });
+      break;
+    }
+  }
+  return out;
+}
+
+// The gutter's states, each a hollow dot at its measured Medicaid share (as near it as room allows) with its code: in
+// the left column the code right of the dot, in the right column left of it, both inside the gutter; no dot or code
+// touches another.
+const GUT_R = 4;
+function gutterOf(model, { geo, plot, sy, selected, drawing }) {
   const [g0, g1] = geo.gut;
-  const cols = [g0 + 8, g0 + 8 + (g1 - g0) / 2];
-  const items = model.states.filter((s) => GUTTER.includes(s.cls) && s.y !== null).sort((a, b) => b.y - a.y || (a.code < b.code ? -1 : 1))
-    .map((s, i) => ({ code: s.code, name: s.name, cls: s.cls, col: i % 2, x: cols[i % 2], y: sy(s.y), on: s.code === selected, label: `${s.code}${MARKED.includes(s.cls) ? t(`stMark_${s.cls}`) : ''}` }));
-  for (const c of [0, 1]) {
-    const column = items.filter((p) => p.col === c);
-    let last = -Infinity;
-    for (const p of column) {
-      p.y = Math.max(p.y, last + GAP, plot.y0 + 6);
-      last = p.y;
+  const { size, mono } = fontOf('wr-st__gut', drawing);
+  const cols = [{ x: g0 + 2 + GUT_R, side: 1 }, { x: g1 - 2 - GUT_R, side: -1 }];
+  const taken = [];
+  const items = [];
+  for (const s of model.states.filter((x) => GUTTER.includes(x.cls) && x.y !== null).sort((a, b) => b.y - a.y || (a.code < b.code ? -1 : 1))) {
+    const label = `${s.code}${MARKED.includes(s.cls) ? t(`stMark_${s.cls}`) : ''}`;
+    const w = textWidth(label, size, { mono });
+    const ideal = sy(s.y);
+    let spot = null;
+    search: for (let d = 0; d <= plot.y1 - plot.y0; d += 1) {
+      for (const y of d ? [ideal + d, ideal - d] : [ideal]) {
+        if (y < plot.y0 + GUT_R + 2 || y > plot.y1 - GUT_R - 2) continue;
+        for (const [col, c] of cols.entries()) {
+          const dot = [c.x - GUT_R, y - GUT_R, 2 * GUT_R, 2 * GUT_R];
+          const lx = c.side > 0 ? c.x + GUT_R + 2 : c.x - GUT_R - 2 - w;
+          const lab = [lx, y + 3.5 - size * 0.8, w, size];
+          if (lx < g0 + 1 || lx + w > g1 - 1 || !clear(dot, taken) || !clear(lab, taken)) continue;
+          spot = { col, x: c.x, y, lab };
+          break search;
+        }
+      }
     }
-    let next = Infinity;
-    for (const p of [...column].reverse()) {
-      p.y = Math.min(p.y, next - GAP, plot.y1 - 6);
-      next = p.y;
-    }
+    if (!spot) continue;
+    taken.push([spot.x - GUT_R, spot.y - GUT_R, 2 * GUT_R, 2 * GUT_R], spot.lab);
+    items.push({ code: s.code, name: s.name, cls: s.cls, col: spot.col, x: spot.x, y: spot.y, r: GUT_R, on: s.code === selected, label, labelBox: spot.lab, anchor: cols[spot.col].side > 0 ? 'start' : 'end' });
   }
   return items;
 }
 
+// The selected gutter state's name, in the plot at its left edge level with the dot (or the nearest row above or below
+// it with room, 8 px at a time), with a leader line back to the dot. null when there is no room.
+function gutterName(g, { w, h, plot, boxes, dots }) {
+  for (const dy of [0, ...Array.from({ length: 16 }, (_, i) => (i % 2 ? 1 : -1) * 8 * Math.ceil((i + 1) / 2))]) {
+    const box = [plot.x0 + 4, g.y + dy - h / 2, w, h];
+    if (!insidePlot(box, plot) || !clear(box, boxes) || dots.some((q) => hitsCircle(box, q))) continue;
+    return { box, leader: [g.x + g.r + 3, g.y, box[0] - 1, g.y + dy] };
+  }
+  return null;
+}
+
 // The figure's layout for a drawing, case k, use rate and selected state (any code: one without a scenario is ringed in
-// the gutter, a territory nowhere).
+// the gutter and named in the plot beside it, a territory nowhere). Labels are placed in order: the contours' (clear of
+// the dots and whiskers), their title, the selected state's name (its code where the name has no room), then every
+// other state's code by dot size; a code with no room at all is left off (the dot's tooltip and the table name it).
 export function statesLayout({ model, drawing, k, use, selected }) {
   const geo = DRAWINGS[drawing];
   const S = scalesOf(model);
@@ -277,38 +311,53 @@ export function statesLayout({ model, drawing, k, use, selected }) {
       lo: sx(numbersOf(s, 0, use).x), hi: sx(numbersOf(s, SCENARIOS.length - 1, use).x),
     };
   });
-  // The contours' labels, where each comes in at the top, the highest levels first where two would touch.
-  const isoLabels = [];
-  const lab = fontOf('wr-iso__label', drawing);
-  for (const level of [...CONTOURS].reverse()) {
-    const xa = level / S.y1;
-    if (xa >= S.xTop) continue;
-    const text = shortPct(level);
-    const x = sx(xa) + 3;
-    const w = textWidth(text, lab.size, { mono: true });
-    const box = [x, plot.y0 + 2, w, lab.size];
-    if (x + w > plot.x1 - 2 || isoLabels.some((l) => overlap(l.box, [box[0] - 4, box[1], box[2] + 8, box[3]]))) continue;
-    isoLabels.push({ text, x, y: plot.y0 + 12, box });
-  }
-  // The contours' title under their labels, at the right (shorter on the phone).
+  const whiskers = points.map((p) => ({ x0: p.lo, x1: p.hi, y: p.y }));
+  const isoLabels = contourLabels({ levels: CONTOURS[drawing], S, sx, sy, plot, drawing, dots: points, whiskers });
+  // The contours' title at the plot's top right under their labels, else at its bottom right; left off with no room.
   const isoText = t(drawing === 'wide' ? 'stContours' : 'stContoursShort');
   const isoW = widthOf(isoText, 'wr-iso__title', drawing);
-  const isoTitle = { text: isoText, x: plot.x1 - 4, y: plot.y0 + 26, box: [plot.x1 - 4 - isoW, plot.y0 + 16, isoW, 11] };
-  const taken = [...isoLabels.map((l) => l.box), isoTitle.box];
-  const labels = placeLabels(points, { plot, drawing, taken });
-  const gutter = gutterOf(model, { geo, plot, sy, selected });
+  const isoTitle = [plot.y0 + 16, plot.y1 - 15].map((top) => ({ text: isoText, x: plot.x1 - 4, y: top + 10, box: [plot.x1 - 4 - isoW, top, isoW, 11] }))
+    .find((c) => clear(c.box, isoLabels.map((l) => l.box)) && !points.some((q) => hitsCircle(c.box, q)) && !whiskers.some((s) => crosses(c.box, s))) ?? null;
+  const boxes = [...isoLabels.map((l) => l.box), ...(isoTitle ? [isoTitle.box] : [])];
+  const gutter = gutterOf(model, { geo, plot, sy, selected, drawing });
+  const labels = [];
+  const place = (code, cls, text, spot) => {
+    if (!spot) return false;
+    boxes.push(spot.box);
+    labels.push({ code, cls, text, ...spot });
+    return true;
+  };
+  const sized = (cls, text) => {
+    const { size, mono } = fontOf(cls, drawing);
+    return { w: textWidth(text, size, { mono }), h: size };
+  };
+  const sel = points.find((p) => p.on);
+  if (sel) {
+    const name = fitText(sel.name, plot.x1 - plot.x0 - 2, fontOf('wr-st__name', drawing).size);
+    place(sel.code, 'wr-st__name', name, besideDot(sel, { ...sized('wr-st__name', name), plot, boxes, dots: points }))
+      || place(sel.code, 'wr-st__name', sel.code, besideDot(sel, { ...sized('wr-st__name', sel.code), plot, boxes, dots: points }));
+  }
+  const gsel = gutter.find((g) => g.on);
+  if (gsel) {
+    const name = fitText(gsel.name, plot.x1 - plot.x0 - 8, fontOf('wr-st__name', drawing).size);
+    place(gsel.code, 'wr-st__name', name, gutterName(gsel, { ...sized('wr-st__name', name), plot, boxes, dots: points }))
+      || place(gsel.code, 'wr-st__name', gsel.code, gutterName(gsel, { ...sized('wr-st__name', gsel.code), plot, boxes, dots: points }));
+  }
+  for (const p of [...points].filter((q) => !q.on).sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1))) {
+    place(p.code, 'wr-st__code', p.code, besideDot(p, { ...sized('wr-st__code', p.code), plot, boxes, dots: points }));
+  }
   return { drawing, geo, S, plot, sx, sy, k, use, selected, points, labels, gutter, isoLabels, isoTitle };
 }
 
 const label = (cls, x, y, text, anchor = 'start') => html`<text class="${cls} chart-label--halo" x="${r2(x)}" y="${r2(y)}"${anchor === 'start' ? '' : html` text-anchor="${anchor}"`}>${text}</text>`;
 
-// The contours: the plot's ground, each level's region (x · y at or past it) laid over the last so the ink deepens with
-// the share, and each level's dashed line.
-function contoursOf({ S, sx, sy, plot }) {
+// The contours: the plot's ground, each labeled level's region (x · y at or past it) laid over the last so the ink
+// deepens with the share, and its dashed line.
+function contoursOf({ S, sx, sy, plot, isoLabels }) {
   const at = (x, y) => [sx(x), sy(y)];
   const regions = [];
   const lines = [];
-  for (const level of CONTOURS) {
+  for (const { level } of [...isoLabels].sort((a, b) => a.level - b.level)) {
     const pts = contour(level, S, at);
     if (!pts) continue;
     const corner = S.y0 > 0 && level / S.y0 < S.xTop ? [[plot.x1, plot.y1]] : [];
@@ -355,6 +404,7 @@ export function statesBody(layout) {
   const fnRow = drawing === 'wide' ? [plot.y1 + 32, plot.y1 + 46] : [plot.y1 + 47, plot.y1 + 59];
   const notes = MARKED.filter((cls) => gutter.some((p) => p.cls === cls));
   const sel = points.find((p) => p.on);
+  const gsel = gutter.find((p) => p.on);
   return html`${hatchDefs(id)}
 ${contoursOf(layout)}
 ${axesOf(layout)}
@@ -363,13 +413,22 @@ ${label('wr-st__head', g0, drawing === 'wide' ? 12 : plot.y0 - 8, t('stGutter'))
 <g class="wr-st__whiskers">${points.map((p) => html`<path class="wr-st__whisker" d="M${r2(p.lo)} ${r2(p.y)}H${r2(p.hi)}M${r2(p.lo)} ${r2(p.y - 3)}v6M${r2(p.hi)} ${r2(p.y - 3)}v6"/>`)}</g>
 ${[...points].sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1)).map((p) => html`<g class="wr-st${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${tipOf(p, k)}</title><circle class="wr-st__dot" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${r2(p.r)}"/></g>`)}
 ${sel ? html`<circle class="wr-st__ring" cx="${r2(sel.x)}" cy="${r2(sel.y)}" r="${r2(sel.r + 3)}"/>` : ''}
-${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${p.name}: ${t(`stStatus_${p.cls}`)}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="4"/></g>${label('wr-st__gut', p.x + 6, p.y + 3.5, p.label)}`)}
+${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${p.name}: ${t(`stStatus_${p.cls}`)}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${p.r}"/></g>${label('wr-st__gut', p.anchor === 'start' ? p.labelBox[0] : p.labelBox[0] + p.labelBox[2], p.y + 3.5, p.label, p.anchor)}`)}
+${gsel ? html`<circle class="wr-st__ring" cx="${r2(gsel.x)}" cy="${r2(gsel.y)}" r="${r2(gsel.r + 3)}"/>` : ''}
 ${labels.map((l) => html`${l.leader ? html`<line class="wr-st__leader" x1="${r2(l.leader[0])}" y1="${r2(l.leader[1])}" x2="${r2(l.leader[2])}" y2="${r2(l.leader[3])}"/>` : ''}${label(l.cls, l.box[0], l.box[1] + l.box[3] * 0.8, l.text)}`)}
-${isoLabels.map((l) => label('wr-iso__label', l.x, l.y, l.text))}${label('wr-iso__title', isoTitle.x, isoTitle.y, isoTitle.text, 'end')}
+${isoLabels.map((l) => label('wr-iso__label', l.box[0], l.y, l.text))}${isoTitle ? label('wr-iso__title', isoTitle.x, isoTitle.y, isoTitle.text, 'end') : ''}
 ${notes.map((cls, i) => label('wr-st__fn', 2, fnRow[i], t(`stFn_${cls}`)))}`;
 }
 
 // ---------- the words ----------
+
+// The figure's text alternative for a case and use rate (the browser rewrites it as they move): the three most exposed
+// with their shares.
+export function statesAlt(model, k, use) {
+  const top = ranked(model, k).slice(0, 3).map((c) => { const s = stateOf(model, c); return `${s.name} ${pct(numbersOf(s, k, use).share, 2)}`; });
+  const n = model.states.filter((s) => s.cls === 'scenario').length;
+  return fill('stAlt', { n: count(n), scenario: caseWord(k), top: listText(top), m: count(model.states.filter((s) => GUTTER.includes(s.cls)).length) });
+}
 
 
 // The selected state's headline: { big (how exposed, or that it has no scenario), why (the two numbers, or the reason) }.
@@ -473,7 +532,6 @@ export function statesStep({ data, rows, label: heading, hubCcns = new Set(), mo
   const code = model.selected;
   const scen = model.states.filter((s) => s.cls === 'scenario');
   const draw = (drawing) => frame({ kind: 'states', width: DRAWINGS[drawing].width, height: DRAWINGS[drawing].height, body: statesBody(statesLayout({ model, drawing, k, use, selected: code })) });
-  const top = ranked(model, k).slice(0, 3).map((c) => { const s = stateOf(model, c); return `${s.name} ${pct(numbersOf(s, k, use).share, 2)}`; });
   const territories = model.states.filter((s) => s.cls === 'territory');
   const options = [...model.states].sort((a, b) => a.name.localeCompare(b.name));
   return html`<section class="step wr-step wr-states" id="states" aria-labelledby="states-h">
@@ -492,7 +550,7 @@ ${figure({
     takeaway: fill('stTakeaway', { n: count(scen.length) }),
     svg: draw('narrow'),
     svgWide: draw('wide'),
-    alt: fill('stAlt', { n: count(scen.length), scenario: scenWord(SCENARIOS[k]).toLowerCase(), top: listText(top), m: count(model.states.filter((s) => GUTTER.includes(s.cls)).length) }),
+    alt: statesAlt(model, k, use),
     note: fill('stNote', { floor: money(floorLost(model)), t: numberWord(territories.length), territories: territories.map((s) => s.code).join(', ') }),
     source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
     claimLevel: 'hypothetical',

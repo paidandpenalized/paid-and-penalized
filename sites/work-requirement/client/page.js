@@ -14,7 +14,7 @@ import { setFollowed } from '../../../web/client/follow.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
 import { byCase, countsText, rangesInner, statusText } from '../web/program/ranges.js';
 import { decodeStates } from '../web/program/states.js';
-import { decodeStrips, drawn, stripsBody, stripsLayout } from '../web/program/strips.js';
+import { decodeStrips, drawn, stripsAlt, stripsBody, stripsLayout } from '../web/program/strips.js';
 import { mountChips } from './chips.js';
 import { defaultPool, mountFind, pageHospital } from './find.js';
 import { mountHow } from './how.js';
@@ -57,6 +57,7 @@ function mountStrips(stage, { data, store }) {
   };
   wide.addEventListener('change', () => stale.has(shown()) && drawOne(shown()));
   store.subscribe((state, changed) => {
+    if (changed.has('use')) for (const svg of svgs.values()) svg.setAttribute('aria-label', stripsAlt(items, state.use));
     if (changed.has('scenario') || changed.has('use')) layouts = new Map();
     if (changed.has('scenario') || changed.has('use') || changed.has('hospital') || changed.has('totals')) draw();
   });
