@@ -73,8 +73,9 @@ function typeText(h) {
   return parts.length ? dotList(parts) : t('typeNone');
 }
 
-// A hospital's page on Care Compare, by its CCN, encoded as HACRP's is (sites/hacrp/web/links.js; a site does not import the other).
-const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${encodeURIComponent(ccn)}`;
+// A hospital's page on Care Compare, by its CCN, encoded as HACRP's is (sites/hacrp/web/links.js; a site does not import the
+// other), with the "/" Care Compare's own address ends in (without it, Care Compare answers with a redirect to it).
+const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${encodeURIComponent(ccn)}/`;
 
 function starsOf(h) {
   const href = careCompareHref(h.id);
