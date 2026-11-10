@@ -22,8 +22,9 @@ const number = (name, get) => ({ name, numeric: true, get });
 const inactiveCell = (h) => (h.inactive ? h.inactive.date ?? 'date not listed' : null);
 const bedsSource = (h) => (h.beds == null ? null : h.bedsSrc === 'cr' ? 'cost report' : 'certified (Provider of Services file)');
 
-// The columns in file order: get(hospital) is the cell. Stored values are already rounded by the pipeline: factor and dual
-// share 4 decimals, cut 2, dollars whole, ERR at least 6 (more where needed to read as CMS's 4-decimal value when rounded).
+// The columns in file order: get(hospital) is the cell. Stored values are already rounded by the pipeline: factor 4 decimals,
+// dual share 8 (engine/py/pp_engine/hrrp.py DUAL_DECIMALS), cut 2, dollars whole, ERR at least 6 (more where needed to read as
+// CMS's 4-decimal value when rounded).
 // A condition's penalized column is blank when the hospital had too few cases to be measured on it.
 export const HOSPITAL_COLUMNS = Object.freeze([
   text('CCN', (h) => h.id),

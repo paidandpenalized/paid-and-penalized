@@ -61,7 +61,7 @@ test('rulers: a condition with exactly one case reads "1 case", never "1 cases"'
   assert.ok(!fig.includes('1 cases'));
 });
 
-test('the dual-eligible share rounds half up from CMS\'s four decimals: 0.2065 is "20.7%", on the card and in Worksheet R', () => {
+test('the dual-eligible share prints to one decimal, an exact half rounded up: 0.2065 is "20.7%", on the card and in Worksheet R (the data keeps enough decimals that a share is never a half by rounding)', () => {
   const h = hospital({ id: '990023', dual: 0.2065 });
   const text = textOf(pageOf(h, ctxFor([h, ...OTHERS])));
   assert.ok(text.includes('20.7% of stays dual-eligible'));

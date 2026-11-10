@@ -1,7 +1,9 @@
 """The Readmissions data's goldens: a fresh build from the pins equals the committed file, and its body equals Thirty Day
 Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every field. The pinned site file is the
 reference until the FY2028 refresh. Since methods_version 2 the MDHs' base and pen differ by design (MDH case mix;
-`docs/METHODS-LOG.md`), and a test proves that is the only difference."""
+`docs/METHODS-LOG.md`), and a test proves that is the only difference. Since 2026-11-09 the dual proportion is stored to
+more decimals (`hrrp.DUAL_DECIMALS`; corrections/2026-11-09-dual-eligible-share.md): rounded to 4 decimals it is the site
+file's value."""
 import copy
 import functools
 import io
@@ -44,9 +46,15 @@ def mdh_ids():
     return {h["id"] for h in fresh()["hospitals"] if "MDH" in h["types"]}
 
 
+def as_the_site_file_rounds(h):
+    """A hospital record with its dual proportion at the site file's 4 decimals."""
+    return {**h, "dual": hrrp.rnd(h["dual"], 4, half_up=True)} if "dual" in h else h
+
+
 def differences(mine, theirs):
-    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs."""
-    a, b = {h["id"]: h for h in mine}, {h["id"]: h for h in theirs}
+    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs, the dual proportion compared at
+    the site file's 4 decimals."""
+    a, b = {h["id"]: as_the_site_file_rounds(h) for h in mine}, {h["id"]: h for h in theirs}
     return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
             for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
 
@@ -102,6 +110,24 @@ class MdhCaseMix(unittest.TestCase):
     def test_meta_sources_name_every_pin(self):
         ids = [s["id"] for s in fresh()["meta"]["sources"] if "id" in s]
         self.assertEqual(ids, list(fresh()["sources"]))
+
+
+class DualProportion(unittest.TestCase):
+    def test_stored_to_more_decimals_than_the_site_file_and_printing_as_cmss_value_rounds(self):
+        inputs = emit_hrrp.read_inputs()
+        self.assertEqual(hrrp.dual_mismatches(inputs["supp"], inputs["pub"]), [])
+        stored = {h["id"]: h["dual"] for h in fresh()["hospitals"]}
+        self.assertTrue(any(stored[c] != h["dual"] for c, h in ((h["id"], h) for h in site()["hospitals"])),
+                        "no dual proportion has more than the site file's 4 decimals")
+        # CMS's own 4 decimals print some shares a tenth of a point off: the reason for the extra decimals.
+        self.assertTrue(hrrp.dual_mismatches(inputs["supp"], inputs["pub"], places=4))
+
+    def test_the_page_rounding_matches_javascript(self):
+        # fmtShare(x, 1): 0.2065 (a float just under the tie) and 0.15146762 read as JavaScript's toUnit reads them.
+        self.assertEqual(hrrp.share_tenths(0.2065), 207)
+        self.assertEqual(hrrp.share_tenths(0.15146762), 151)
+        self.assertEqual(hrrp.true_tenths(0.15146762267533048), 151)
+        self.assertEqual(hrrp.true_tenths(0.2065), 207)
 
 
 class Formula(unittest.TestCase):
