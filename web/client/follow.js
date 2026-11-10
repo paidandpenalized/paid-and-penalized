@@ -57,18 +57,6 @@ export function withoutFollow(href) {
   return `${head.slice(0, at)}${query ? `?${query}` : ''}${tail}`;
 }
 
-// An address that follows ccn: withoutFollow's, with h=<ccn> at the end of its query (before its fragment), the rest
-// exactly as written. A page that follows a hospital the reader picks in place writes it (history.replaceState), so a
-// reload, or Back to the page after the browser dropped it, comes back to the same hospital.
-export function addressFollowing(href, ccn) {
-  const bare = withoutFollow(href);
-  const hash = bare.indexOf('#');
-  const head = hash < 0 ? bare : bare.slice(0, hash);
-  const tail = hash < 0 ? '' : bare.slice(hash);
-  const join = !head.includes('?') ? '?' : head.endsWith('?') || head.endsWith('&') ? '' : '&';
-  return `${head}${join}h=${ccn}${tail}`;
-}
-
 // Writes href (an address on this page's site) as the page's address in place, keeping the history entry's state. Some
 // browsers rate-limit replaceState: a refused write is dropped and the page goes on as it was, so a caller that writes
 // again on its next change catches up then.

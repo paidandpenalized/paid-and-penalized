@@ -11,7 +11,7 @@
 // ?h=<CCN> (web/client/follow.js) follows that hospital from the start. A followed hospital is ringed at every step, and
 // the last step shows it among its peers, in the group the peer toggle picks, with its card. The worksheet in "Methods, in
 // brief" (story/worksheet.js) fills in for the same hospital.
-import { addressFollowing, followedCcn, replaceAddress, siteAddress } from '../../web/client/follow.js';
+import { followedCcn } from '../../web/client/follow.js';
 import { loadHubAsset } from '../../web/client/hub-asset.js';
 import { storyFacts } from '../model.js';
 import { shareDomain } from './scale.js';
@@ -50,8 +50,7 @@ function start(root) {
 
   // The last step's search (the family search mounts it): once the story is drawn, a hospital it finds is followed here
   // instead of opened, and the box then names it (not the words typed to find it); until then, or for a hospital without
-  // an estimate, the pick opens its page as the bar's does. The address follows it too (?h=, replacing the entry, so Back
-  // still leaves the page), so a reload, or Back to the page after the browser dropped it, comes back to it.
+  // an estimate, the pick opens its page as the bar's does.
   let find = null;
   if (form) form.addEventListener('hub:pick', (e) => {
     const h = find?.follow(e.detail.href);
@@ -59,7 +58,6 @@ function start(root) {
     e.preventDefault();
     const box = form.querySelector('[role="combobox"]');
     if (box) box.value = h.name;
-    replaceAddress(addressFollowing(siteAddress(window.location), h.ccn));
   });
 
   // The live layout at once (one sticky stage), so the page does not shift again when the data arrives; until then the
