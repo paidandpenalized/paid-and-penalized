@@ -19,7 +19,7 @@ import { rowToBase, scenario } from '../../../../engine/js/medicaid/scenario.js'
 import { figure, num } from '../../../../web/charts/figure.js';
 import { frame, hatchDefs, hatchFill, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
-import { count, listText, money, numberWord, ordinal, pct, placeText } from '../../../../web/render/format.js';
+import { count, listText, money, ordinal, pct, placeText } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { hospitalPathOf } from '../../../../web/site.js';
@@ -277,7 +277,7 @@ function gutterOf(model, { geo, plot, sy, selected, drawing }) {
     }
     if (!spot) continue;
     taken.push([spot.x - GUT_R, spot.y - GUT_R, 2 * GUT_R, 2 * GUT_R], spot.lab);
-    items.push({ code: s.code, name: s.name, cls: s.cls, col: spot.col, x: spot.x, y: spot.y, r: GUT_R, on: s.code === selected, label, labelBox: spot.lab, anchor: cols[spot.col].side > 0 ? 'start' : 'end' });
+    items.push({ code: s.code, name: s.name, cls: s.cls, share: s.y, col: spot.col, x: spot.x, y: spot.y, r: GUT_R, on: s.code === selected, label, labelBox: spot.lab, anchor: cols[spot.col].side > 0 ? 'start' : 'end' });
   }
   return items;
 }
@@ -413,7 +413,7 @@ ${label('wr-st__head', g0, drawing === 'wide' ? 12 : plot.y0 - 8, t('stGutter'))
 <g class="wr-st__whiskers">${points.map((p) => html`<path class="wr-st__whisker" d="M${r2(p.lo)} ${r2(p.y)}H${r2(p.hi)}M${r2(p.lo)} ${r2(p.y - 3)}v6M${r2(p.hi)} ${r2(p.y - 3)}v6"/>`)}</g>
 ${[...points].sort((a, b) => b.r - a.r || (a.code < b.code ? -1 : 1)).map((p) => html`<g class="wr-st${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${tipOf(p, k)}</title><circle class="wr-st__dot" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${r2(p.r)}"/></g>`)}
 ${sel ? html`<circle class="wr-st__ring" cx="${r2(sel.x)}" cy="${r2(sel.y)}" r="${r2(sel.r + 3)}"/>` : ''}
-${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${p.name}: ${t(`stStatus_${p.cls}`)}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${p.r}"/></g>${label('wr-st__gut', p.anchor === 'start' ? p.labelBox[0] : p.labelBox[0] + p.labelBox[2], p.y + 3.5, p.label, p.anchor)}`)}
+${gutter.map((p) => html`<g class="wr-st wr-st--none${p.on ? ' wr-st--on' : ''}" data-st="${p.code}"><title>${fill('stTipGutter', { state: p.name, status: t(`stStatus_${p.cls}`), y: pct(p.share, 1) })}</title><circle class="wr-st__hollow" cx="${r2(p.x)}" cy="${r2(p.y)}" r="${p.r}"/></g>${label('wr-st__gut', p.anchor === 'start' ? p.labelBox[0] : p.labelBox[0] + p.labelBox[2], p.y + 3.5, p.label, p.anchor)}`)}
 ${gsel ? html`<circle class="wr-st__ring" cx="${r2(gsel.x)}" cy="${r2(gsel.y)}" r="${r2(gsel.r + 3)}"/>` : ''}
 ${labels.map((l) => html`${l.leader ? html`<line class="wr-st__leader" x1="${r2(l.leader[0])}" y1="${r2(l.leader[1])}" x2="${r2(l.leader[2])}" y2="${r2(l.leader[3])}"/>` : ''}${label(l.cls, l.box[0], l.box[1] + l.box[3] * 0.8, l.text)}`)}
 ${isoLabels.map((l) => label('wr-iso__label', l.box[0], l.y, l.text))}${isoTitle ? label('wr-iso__title', isoTitle.x, isoTitle.y, isoTitle.text, 'end') : ''}
@@ -490,7 +490,8 @@ ${top.length ? html`<ol class="wr-hits__list" role="list">${top.map((h) => html`
 // ---------- the table ----------
 
 // Figure 3's table: every state and territory, those with a scenario first and most exposed first (the middle case),
-// then the rest by class and name; each with its status, its hospitals, and its dollars and share lost in each case (none
+// then the rest by class and name; each with its status, its hospitals, its measured Medicaid share of patient revenue
+// (the figure's up axis, exact where the gutter's stack moves a dot), and its dollars and share lost in each case (none
 // without a scenario). data-st names a number's cell for the script: "<code> <lost|share> <case index>".
 export function tableRows(model) {
   const order = ranked(model, MIDDLE);
@@ -501,6 +502,7 @@ export function tableRows(model) {
     s.name,
     t(`stStatus_${s.cls}`),
     num(count(s.n), s.n),
+    s.y === null ? none : num(pct(s.y, 1), s.y),
     ...(s.cls === 'scenario'
       ? [...SCENARIOS.map((_, k) => ({ ...num(money(s.lost[k]), s.lost[k]), data: { st: `${s.code} lost ${k}` } })),
         ...SCENARIOS.map((_, k) => { const v = numbersOf(s, k, 1).share; return { ...num(pct(v, 2), v), data: { st: `${s.code} share ${k}` } }; })]
@@ -510,7 +512,7 @@ export function tableRows(model) {
 
 const tableOf = (model) => ({
   columns: [
-    { name: t('stColState') }, { name: t('stColStatus') }, { name: t('stColHospitals'), numeric: true },
+    { name: t('stColState') }, { name: t('stColStatus') }, { name: t('stColHospitals'), numeric: true }, { name: t('stColY'), numeric: true },
     ...SCENARIOS.map((s) => ({ name: fill('stColLost', { scenario: scenWord(s).toLowerCase() }), numeric: true })),
     ...SCENARIOS.map((s) => ({ name: fill('stColShare', { scenario: scenWord(s).toLowerCase() }), numeric: true })),
   ],
@@ -551,7 +553,7 @@ ${figure({
     svg: draw('narrow'),
     svgWide: draw('wide'),
     alt: statesAlt(model, k, use),
-    note: fill('stNote', { floor: money(floorLost(model)), t: numberWord(territories.length), territories: territories.map((s) => s.code).join(', ') }),
+    note: fill('stNote', { floor: money(floorLost(model)), territories: territories.map((s) => s.code).join(', ') }),
     source: html`${fill('figSource', { fy: String(fy) })} ${scenarioTag(fy)}`,
     claimLevel: 'hypothetical',
     table: tableOf(model),

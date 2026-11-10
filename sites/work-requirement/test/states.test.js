@@ -129,7 +129,8 @@ test('the table: one row per state or territory, with its class, sorted by share
     const s = model.states.find((x) => x.name === cells[0]);
     assert.ok(s, cells[0]);
     assert.equal(cells[1], status(s.cls), s.code);
-    if (s.cls !== 'scenario') for (const c of cells.slice(3)) assert.equal(c, COPY.stNoNumber.text, `${s.code}: ${c}`);
+    assert.equal(cells[3], s.y === null ? COPY.stNoNumber.text : pct(s.y, 1), `${s.code}: Medicaid share`);
+    if (s.cls !== 'scenario') for (const c of cells.slice(4)) assert.equal(c, COPY.stNoNumber.text, `${s.code}: ${c}`);
     return s;
   });
   const shares = seen.filter((s) => s.cls === 'scenario').map((s) => numbersOf(s, MIDDLE, 1).share);
@@ -320,4 +321,18 @@ test('the figures\' text alternatives follow the case and the use rate (the brow
   const mid = pct(median(items.map((r) => r.share[1] * 1.25)), 2);
   assert.ok(stripsAlt(items, 1.25).includes(mid), stripsAlt(items, 1.25));
   assert.notEqual(stripsAlt(items, 1.25), stripsAlt(items, 1));
+});
+
+test('the gutter discloses its stack: the note says dots may sit off their level, and each dot\'s title carries its true share', () => {
+  const note = words(/<p class="small muted fig__note">[\s\S]*?<\/p>/.exec(section)[0]);
+  assert.ok(note.includes('Gutter dots are spaced apart and may sit a little off their level; the table has exact shares.'), note);
+  for (const drawing of Object.keys(DRAWINGS)) {
+    const layout = statesLayout({ model, drawing, k: MIDDLE, use: 1, selected: model.selected });
+    const body = statesBody(layout).text;
+    for (const g of layout.gutter) {
+      const title = new RegExp(`<g class="wr-st wr-st--none[^"]*" data-st="${g.code}"><title>([^<]*)</title>`).exec(body)?.[1];
+      assert.ok(title, `${drawing} ${g.code}: a title`);
+      assert.ok(title.includes(data.states[g.code].name) && title.includes(pct(byCode.get(g.code).y, 1)), `${drawing} ${g.code}: ${title}`);
+    }
+  }
 });
