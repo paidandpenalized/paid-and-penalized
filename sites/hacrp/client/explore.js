@@ -15,7 +15,7 @@ import { SCATTER_W, agreeScatterOf, pairPoints, pullPanel, slidePanel, stackPane
 import { fill } from '../web/explore/copy.js';
 import { dotsPath } from '../../../web/charts/dots.js';
 import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
-import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
+import { YEAR_CLASSES, yearClass, yearGroups } from '../web/year-classes.js';
 
 // ---------- the assets ----------
 
@@ -518,7 +518,7 @@ export function mountYearMap(fig, history = assetLoaders()) {
         const k = yearClass(rec, i);
         if (k && hist.at[2 * j] !== null) groups[k].push([hist.at[2 * j] / 10, hist.at[2 * j + 1] / 10]);
       });
-      g.innerHTML = Object.entries(YEAR_CLASSES).map(([k, cls]) => dotsPath(groups[k], cls, Number(g.dataset.size)).toString()).join('');
+      g.innerHTML = yearGroups(groups, Number(g.dataset.size)).map((x) => dotsPath(x.points, x.cls, x.size).toString()).join('');
     }
     const [cut, ever] = hist.counts[i];
     const values = { fy: String(hist.fys[i]), cut: count(cut), ever: count(ever) };

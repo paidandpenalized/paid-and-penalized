@@ -24,7 +24,7 @@ import { groupLabel } from './groups.js';
 import { nameInText } from './places.js';
 import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
 import { COUNT_NOTE, METHODS_PATH } from './links.js';
-import { YEAR_CLASSES, yearClass } from './year-classes.js';
+import { YEAR_CLASSES, yearClass, yearGroups } from './year-classes.js';
 import { fyLabel } from './copy.js';
 import { psec } from './program-figures.js';
 import { fill, t } from './history/copy.js';
@@ -443,16 +443,17 @@ export function placeYearsFigure({ place, hd, master, next, source, src = null }
 
 // ---------- the year map ----------
 
-// The year map: every hospital a dot on the US map, its ink for one year (the newest, as the page loads): red if CMS
-// cut it that year, pale red if CMS cut it in an earlier year, gray if never so far. The page script steps the year
+// The year map: every hospital a mark on the US map for one year (the newest, as the page loads): a red dot if CMS cut
+// it that year, a red ring if CMS cut it in an earlier year, a gray dot if never so far. The page script steps the year
 // (buttons and play) from the history asset. One drawing at every width: the map has no words to keep a size, and
 // charts.css sizes its dots for a phone.
 export function yearMapFigure(hd, { n, source, shapes, master, rollUrl = null }) {
   const last = hd.fys.length - 1;
   const { points, at } = mapPlaces(hd, shapes, master);
   const unplaced = points.filter((p) => !p).length;
-  const groups = Object.entries(YEAR_CLASSES).map(([k, cls]) => ({ cls, points: hd.order.map(([, rec], j) => (yearClass(rec, last) === k ? at[j] : null)).filter(Boolean) }));
-  const svg = usYearMap({ shapes, groups, size: 4.2, width: HIST_MAP_WIDE });
+  const byKind = Object.fromEntries(Object.keys(YEAR_CLASSES).map((k) => [k, hd.order.map(([, rec], j) => (yearClass(rec, last) === k ? at[j] : null)).filter(Boolean)]));
+  const size = 4.2;
+  const svg = usYearMap({ shapes, groups: yearGroups(byKind, size), size, width: HIST_MAP_WIDE });
   const c = hd.counts[last];
   const key = html`<ul class="ymap__key" role="list"><li><span class="ymap__sw ymap__sw--now"></span>${t('ymapNow')}</li><li><span class="ymap__sw ymap__sw--scar"></span>${t('ymapScar')}</li><li><span class="ymap__sw ymap__sw--clear"></span>${t('ymapClear')}</li></ul>`;
   const chart = html`<div class="ymap"${rollUrl ? html` data-roll="${rollUrl}"` : ''}>

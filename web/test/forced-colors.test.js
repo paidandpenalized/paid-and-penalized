@@ -37,6 +37,8 @@ const MARKS = [
   '.chart-slide__glass', '.chart-slide__mean', '.chart-loupe__glass', '.chart-loupe__beam', '.chart-loupe__gap', '.chart-share__track', '.chart-share__stem',
   '.chart-share__dot', '.chart-agree__cell', '.chart-agree__sq', '.chart-scatter__bg', '.chart-card', '.chart-card__m', '.chart-card__a', '.chart-card__none',
   '.chart-place__dot--pen', '.chart-place__dot--ring', '.chart-place__dot--faint', '.chart-geo-near', '.chart-geo-mine', '.chart-outline', '.chart-swarm__ring', '.chart-bartick',
+  // the year map's dots, rings and their holes, and its key (charts.css; sites/hacrp/web/styles.css)
+  '.chart-dots--years-clear', '.chart-dots--years-scar', '.chart-dots--years-hole', '.ymap__sw--now', '.ymap__sw--scar', '.ymap__sw--clear',
   // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
