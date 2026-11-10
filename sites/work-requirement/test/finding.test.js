@@ -3,6 +3,8 @@
 // ?h= (a well-formed CCN in the file, else the random default outside Virginia).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT } from '../../../pipeline/files.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { r2 } from '../../../web/charts/svg.js';
@@ -14,7 +16,7 @@ import { COPY } from '../web/copy.js';
 import { loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import { stripWords } from '../web/program/finding.js';
-import { axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsLayout } from '../web/program/strips.js';
+import { axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout } from '../web/program/strips.js';
 
 const data = loadMedicaid();
 const rows = hospitalRows(data);
@@ -117,6 +119,10 @@ test('the chips: one button per group and a state picker, hidden until the scrip
   const chips = /<div class="wr-chips"[\s\S]*?class="wr-chips__out/.exec(section)?.[0] ?? '';
   assert.match(chips, /hidden/);
   assert.deepEqual([...chips.matchAll(/data-group="([a-z_0-9]+)"/g)].map((m) => m[1]), GROUPS);
+  // Each chip names its group for the readout in the copy's words (data-name), not its own label's.
+  const names = Object.fromEntries([...chips.matchAll(/data-group="([a-z_0-9]+)" data-name="([^"]+)"/g)].map((m) => [m[1], m[2]]));
+  assert.equal(names.safety_net, fillCopy(COPY, 'group_safety_net'));
+  assert.equal(names.beds_lt50, fillCopy(COPY, 'group_beds_lt50', { n: '50' }));
   const states = [...chips.matchAll(/<option value="([A-Z]{2})">/g)].map((m) => m[1]);
   assert.ok(states.length > 30, `${states.length} states`);
   assert.ok(states.every((st) => items.some((r) => r.state === st)), 'every state listed has a hospital drawn');
@@ -124,7 +130,7 @@ test('the chips: one button per group and a state picker, hidden until the scrip
 
 test('the chips\' readout comes from COPY with its placeholders filled', () => {
   const members = items.filter((r) => inGroup(r, 'critical_access'));
-  const name = fillCopy(COPY, 'chip_critical_access');
+  const name = fillCopy(COPY, 'group_critical_access');
   const line = groupReadout({ name, members, all: items, k: 1 });
   assert.equal(line, fillCopy(COPY, 'chipReadout', {
     group: name, n: count(members.length), median: pct(median(members.map((r) => r.share[1])), 2), all: pct(median(items.map((r) => r.share[1])), 2),
@@ -161,4 +167,52 @@ test('the page top: the title and the dek in step 1\'s words column, before the 
   assert.ok(head > 0 && head < section.indexOf('wr-chips'));
   assert.match(page, /<div class="wr-stage__head" data-stage-head><\/div>/, 'the stage head, empty until the controls arrive');
   assert.match(page, /<form class="omni" id="omni"[^>]* data-src="\/assets\/wr-strips\.test\.json"/, 'the masthead Find over the strips asset');
+});
+
+test('the low strip alone carries the small note that CMS\'s count sits there, in both drawings', () => {
+  const note = fillCopy(COPY, 'stripOfficial');
+  for (const svg of section.match(/<svg role="img"[\s\S]*?<\/svg>/g)) {
+    const heads = [...svg.matchAll(/<g class="wr-head[^"]*" data-scen="(\w+)">([\s\S]*?)<\/g>/g)];
+    assert.deepEqual(heads.map((m) => m[1]), SCENARIOS);
+    for (const [, s, body] of heads) assert.equal(body.includes(note), s === 'low', s);
+    assert.equal(svg.split(note).length - 1, 1, 'once');
+  }
+  assert.deepEqual(COPY.stripOfficial.claim, ['WR-03', 'WR-04']);
+});
+
+test('the drawing\'s order: gridlines under the strips; the thread over the dots; the headers over the thread', () => {
+  const layout = stripsLayout({ items, drawing: 'wide', top, selected: 'middle' });
+  const body = stripsBody(layout, { words: stripWords(data), hospital: { i: 0, name: items[0].name } }).text;
+  const at = (s) => body.indexOf(s);
+  assert.ok(at('class="chart-grid"') < at('<g class="wr-strip'));
+  assert.ok(at('<g class="wr-strip') < at('<g class="wr-thread"'));
+  assert.ok(at('<g class="wr-thread"') < at('<g class="wr-head'));
+  assert.ok(!body.slice(at('<g class="wr-head')).includes('chart-grid'), 'no gridline after the headers');
+});
+
+// The dots of each case, selected or not, clear 3:1 against both papers in both themes (WCAG's non-text contrast).
+test('the strips\' dot inks stand 3:1 or more off --paper and --paper-2, light and dark', () => {
+  const tokens = readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8');
+  const split = tokens.indexOf('@media (prefers-color-scheme: dark)');
+  const blocks = { light: tokens.slice(0, split), dark: tokens.slice(split) };
+  const token = (block, name) => new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, 'i').exec(block)[1];
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a, b) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const css = readFileSync(REPO_ROOT + 'sites/work-requirement/web/styles.css', 'utf8');
+  const inkOf = (selector) => new RegExp(`^\\${selector} \\{ stroke: var\\(--([a-z0-9-]+)\\); \\}`, 'm').exec(css)[1];
+  for (const cls of ['.wr-dots', '.wr-dots--on']) {
+    const ink = inkOf(cls);
+    for (const [theme, block] of Object.entries(blocks)) {
+      for (const paper of ['paper', 'paper-2']) {
+        const r = ratio(token(block, ink), token(block, paper));
+        assert.ok(r >= 3, `${cls} (--${ink}) on --${paper}, ${theme}: ${r.toFixed(2)}:1`);
+      }
+    }
+  }
 });

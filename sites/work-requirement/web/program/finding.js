@@ -47,14 +47,18 @@ ${range('income', t('rangeIncome'), byCase(national, 'income_change', -1), selec
 
 // ---------- the chips ----------
 
-const chipLabel = (key) => (key === 'beds_lt50' ? fill('chip_beds_lt50', { n: count(BEDS.small) }) : key === 'beds_300plus' ? fill('chip_beds_300plus', { n: count(BEDS.large) }) : t(`chip_${key}`));
+// A group's words: its chip's label (prefix 'chip_') or its name in the readout and on the strips (prefix 'group_'); the
+// bed-size groups' cuts come from BEDS.
+const BED_CUTS = { beds_lt50: BEDS.small, beds_300plus: BEDS.large };
+const groupWords = (prefix, key) => (key in BED_CUTS ? fill(`${prefix}${key}`, { n: count(BED_CUTS[key]) }) : t(`${prefix}${key}`));
 
-// The chips: one button per group, a picker of the states with hospitals drawn, a clear button and the readout. Hidden in
-// the markup: they do nothing without the script (client/chips.js), which shows them.
+// The chips: one button per group (data-name: the group as the readout names it), a picker of the states with hospitals
+// drawn, a clear button and the readout. Hidden in the markup: they do nothing without the script (client/chips.js),
+// which shows them.
 function chips(states) {
   return html`<div class="wr-chips" role="group" aria-labelledby="wr-chips-h" hidden>
 <p class="wr-chips__head"><span class="cap" id="wr-chips-h">${t('chipsHeading')}</span> <button type="button" class="wr-chips__clear" hidden>${t('chipsClear')}</button></p>
-<div class="wr-chips__row">${GROUPS.map((key) => html`<button type="button" class="wr-chip" data-group="${key}" aria-pressed="false">${chipLabel(key)}</button>`)}<select class="wr-chip wr-chips__state" aria-label="${t('chipStateLabel')}"><option value="">${t('chipState')}</option>${states.map(([code, name]) => html`<option value="${code}">${name}</option>`)}</select></div>
+<div class="wr-chips__row">${GROUPS.map((key) => html`<button type="button" class="wr-chip" data-group="${key}" data-name="${groupWords('group_', key)}" aria-pressed="false">${groupWords('chip_', key)}</button>`)}<select class="wr-chip wr-chips__state" aria-label="${t('chipStateLabel')}"><option value="">${t('chipState')}</option>${states.map(([code, name]) => html`<option value="${code}">${name}</option>`)}</select></div>
 <p class="wr-chips__out small" aria-live="polite">${t('chipHint')}</p>
 </div>`;
 }
@@ -129,10 +133,10 @@ export function findingStep({ data, rows, top, label, stripsUrl = null }) {
   return html`<section class="step wr-step wr-finding" id="finding" aria-labelledby="finding-h">
 <div class="wr-step__words">
 ${pageTop()}
-${chips(states)}
-<h2 class="wr-sec" id="finding-h">${label}</h2>
-<p class="wr-sec__sub small muted">${t('rangesSub')} ${scenarioTag(fy)}</p>
+<h2 class="wr-sec" id="finding-h">${label} ${scenarioTag(fy)}</h2>
+<p class="wr-sec__sub small muted">${t('rangesSub')}</p>
 ${ranges(national, selected)}
+${chips(states)}
 </div>
 <div class="wr-step__stage"${stripsUrl ? html` data-strips="${stripsUrl}"` : ''}>
 <div class="wr-stage__head" data-stage-head></div>

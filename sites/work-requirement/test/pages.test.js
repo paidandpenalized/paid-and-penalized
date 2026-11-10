@@ -83,7 +83,7 @@ test('the program page: its title and dek, the Work requirement tab current, the
 
 test('the program page: each of the five steps is an anchored section with its heading; those after the finding empty until drawn', () => {
   for (const id of SECTIONS) {
-    const section = new RegExp(`<section class="step[^"]*" id="${id}" aria-labelledby="${id}-h">[\\s\\S]*?<h2[^>]* id="${id}-h">([^<]+)</h2>`).exec(program);
+    const section = new RegExp(`<section class="step[^"]*" id="${id}" aria-labelledby="${id}-h">[\\s\\S]*?<h2[^>]* id="${id}-h">([^<]+)<`).exec(program);
     assert.ok(section, id);
     assert.ok(section[1].length > 0, `${id}: a heading`);
   }

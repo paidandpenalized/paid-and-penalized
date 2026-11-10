@@ -36,7 +36,7 @@ export function mountChips(root, { items, onGroup }) {
 
   for (const b of buttons) {
     const key = b.dataset.group;
-    b.addEventListener('click', () => set(group?.key === key ? null : { key, name: b.textContent, test: (r) => inGroup(r, key) }));
+    b.addEventListener('click', () => set(group?.key === key ? null : { key, name: b.dataset.name, test: (r) => inGroup(r, key) }));
   }
   select.addEventListener('change', () => {
     const code = select.value;

@@ -184,20 +184,23 @@ const outlineD = (counts, { L, d, mid }) => [...counts].map(([c, n]) => `M${r2(L
 
 const scenWord = (s) => t(`scen${s[0].toUpperCase()}${s.slice(1)}`);
 
-// A strip's header: its case and Urban's enrollment decline under it, the case's dollars lost a year at the right, and
-// under them the state mitigation the case assumes (the phone's drawing moves the decline down to that line).
+// A strip's header, drawn over everything else on a paper halo so neither a thread nor a dot runs through its words: its
+// case and Urban's enrollment decline under it (the low case's with the small note that CMS's count sits there), the
+// case's dollars lost a year at the right, and under them the state mitigation the case assumes (the phone's drawing
+// moves the decline down to that line).
 function header(st, { geo, on, words, narrow }) {
   const enrollees = fill('stripEnrollees', { n: decimal(words.enrollees[st.s] / 1000, 1) });
   const mitigation = t(`stripMit_${st.s}`);
   const y = r2(st.y0 + 16);
-  return html`<text x="${geo.L}" y="${y}"><tspan class="wr-strip__name${on ? ' wr-strip__name--on' : ''}">${scenWord(st.s)}</tspan>${narrow ? '' : html`<tspan class="chart-label" dx="6">· ${enrollees}</tspan>`}</text>
+  const note = st.s === 'low' ? html`<tspan class="chart-label wr-strip__note" dx="10">${t('stripOfficial')}</tspan>` : '';
+  return html`<g class="wr-head chart-label--halo" data-scen="${st.s}"><text x="${geo.L}" y="${y}"><tspan class="wr-strip__name${on ? ' wr-strip__name--on' : ''}">${scenWord(st.s)}</tspan>${narrow ? '' : html`<tspan class="chart-label" dx="6">· ${enrollees}</tspan>`}${note}</text>
 <text x="${geo.width - geo.R}" y="${y}" text-anchor="end"><tspan class="wr-strip__money${on ? ' wr-strip__money--on' : ''}">${money(words.lost[st.s])}</tspan><tspan class="chart-note" dx="4">${t('stripLost')}</tspan></text>
-<text class="chart-note" x="${geo.L}" y="${r2(st.y0 + 29)}">${narrow ? `${enrollees} · ${mitigation}` : mitigation}</text>`;
+<text class="chart-note" x="${geo.L}" y="${r2(st.y0 + 29)}">${narrow ? `${enrollees} · ${mitigation}` : mitigation}</text></g>`;
 }
 
 // One strip: its rule, the selected one's pen edge, the 1% line, the median (and in a group, the group's own and the gray
-// outline of every hospital), the dots, its header.
-function strip(st, { layout, words, group, narrow }) {
+// outline of every hospital) and the dots. Its header is drawn last (header).
+function strip(st, { layout, group }) {
   const { geo, x } = layout;
   const on = st.s === layout.selected;
   const ref = r2(x(REF_SHARE));
@@ -217,21 +220,25 @@ function strip(st, { layout, words, group, narrow }) {
 ${group ? html`<path class="wr-outline" d="${outlineD(st.counts, { L: geo.L, d: st.d, mid: st.mid })}"/>` : ''}<line class="chart-ref" x1="${ref}" x2="${ref}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>
 ${dots}
 ${medians}${label}
-${header(st, { geo, on, words, narrow })}
 </g>`;
 }
+
+// The axis's labeled ticks, those under its top.
+const ticksOf = (top) => TICKS.filter((v) => v <= top);
+
+// The gridlines at the labeled ticks, drawn first, under the strips.
+const gridOf = ({ geo, x, top }) => html`<g class="wr-grid">${ticksOf(top).map((v) => html`<line class="chart-grid" x1="${r2(x(v))}" x2="${r2(x(v))}" y1="0" y2="${r2(geo.strips + 4)}"/>`)}</g>`;
 
 // The axis under the strips: the hairline, the labeled ticks, its title and the scale's note.
 function axisBlock(layout, words) {
   const { geo, x, top } = layout;
   const y = geo.strips + 4;
-  const ticks = TICKS.filter((v) => v <= top);
   let last = -Infinity;
-  const labels = ticks.map((v) => {
+  const labels = ticksOf(top).map((v) => {
     const at = r2(x(v));
     const show = at - last >= 26;
     if (show) last = at;
-    return html`<line class="chart-grid" x1="${at}" x2="${at}" y1="0" y2="${r2(y)}"/><line class="chart-axis__tick" x1="${at}" x2="${at}" y1="${r2(y)}" y2="${r2(y + 4)}"/>${show ? html`<text class="chart-axis__label" x="${at}" y="${r2(y + 16)}" text-anchor="middle">${tickText(v)}</text>` : ''}`;
+    return html`<line class="chart-axis__tick" x1="${at}" x2="${at}" y1="${r2(y)}" y2="${r2(y + 4)}"/>${show ? html`<text class="chart-axis__label" x="${at}" y="${r2(y + 16)}" text-anchor="middle">${tickText(v)}</text>` : ''}`;
   });
   const right = geo.width - geo.R;
   return html`<g class="chart-axis"><line class="chart-axis__line" x1="${geo.L}" x2="${r2(right)}" y1="${r2(y)}" y2="${r2(y)}"/>${labels}</g>
@@ -254,15 +261,17 @@ function thread(layout, i, name) {
   return html`<g class="wr-thread"><path class="wr-thread__line" d="M${pts.map(([px, py]) => `${r2(px)} ${r2(py)}`).join('L')}"/>${pts.map(([px, py]) => html`<circle class="wr-thread__dot" cx="${r2(px)}" cy="${r2(py)}" r="4"/>`)}<text class="chart-label chart-label--halo wr-thread__name" x="${r2(toLeft ? ax - 8 : ax + 8)}" y="${r2(ay - 8)}"${toLeft ? html` text-anchor="end"` : ''}>${name}</text></g>`;
 }
 
-// The drawing's body: the strips, the hospitals the Find matches (lit: item indexes) drawn larger in ink, the page's hospital's
-// thread (hospital: { i, name }, or null), the axis. group: { name } while a group is lit, else null.
+// The drawing's body: the gridlines, the strips, the hospitals the Find matches (lit: item indexes) drawn larger in ink, the page's hospital's
+// thread (hospital: { i, name }, or null), the strips' headers, the axis. group: { name } while a group is lit, else null.
 export function stripsBody(layout, { words, group = null, lit = null, hospital = null }) {
   const narrow = isNarrow(layout.geo.width);
   const litDots = lit && lit.length
     ? layout.strips.map((st) => html`<path class="chart-dots wr-dots--lit" stroke-width="${r2(dotSize(st.d) + 3)}" d="${dotsD(lit.map((i) => st.at[i]).filter(Boolean))}"/>`)
     : '';
-  return html`${layout.strips.map((st) => strip(st, { layout, words, group, narrow }))}
+  return html`${gridOf(layout)}
+${layout.strips.map((st) => strip(st, { layout, group }))}
 ${litDots}${hospital ? thread(layout, hospital.i, hospital.name) : ''}
+${layout.strips.map((st) => header(st, { geo: layout.geo, on: st.s === layout.selected, words, narrow }))}
 ${axisBlock(layout, words)}`;
 }
 

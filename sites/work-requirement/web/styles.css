@@ -10,28 +10,36 @@
   .wr-step { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); column-gap: 40px; }
 }
 @media (min-width: 1200px) {
-  .wr-step { grid-template-columns: minmax(0, 26rem) minmax(0, 1fr); column-gap: 48px; }
+  .wr-step { grid-template-columns: minmax(0, 28rem) minmax(0, 1fr); column-gap: 44px; }
 }
-.wr-finding { padding-top: 20px; }
+.wr-finding { padding-top: 16px; }
+.wr-finding > .wr-step__words { gap: 12px; }
 
-/* The page's top: the title at the column's width (two to four lines), the dek under it. */
-.wr__top h1 { font-size: clamp(2rem, 3.2vw, 2.6rem); }
-.wr__top .dek { font-size: var(--fs-base); }
+/* The page's top: the title in about three lines at the column's width, the dek under it, so the ranges under them
+   start on the first screen at 1280 by 720. */
+.wr__top { gap: 6px; }
+.wr__top h1 { font-size: clamp(2rem, 6vw, 2.25rem); }
+@media (min-width: 900px) {
+  .wr__top h1 { font-size: 2.15rem; }
+  .wr__top .dek { font-size: var(--fs-sm); line-height: 1.5; }
+}
 
 /* The stage's head: the scenario switch and the what-if go here (empty until then, so it takes no room). */
 .wr-stage__head:empty { display: none; }
 
 /* A step's own heading in step 1's words column (the title is the page's h1): a cap rule over the ranges. */
-.wr-sec { padding-top: 10px; border-top: 5px double var(--ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
-.wr-sec__sub { margin-top: -10px; }
+.wr-sec { padding-top: 8px; border-top: 5px double var(--ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.wr-sec .scen-tag { margin-left: 6px; letter-spacing: 0.04em; }
+.wr-sec__sub { margin-top: -8px; }
 
 /* The ranges: label, low to high, the selected case's value, and a hairline with a tick per case. */
-.wr-ranges { display: grid; gap: 14px; }
-.wr-range { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
-.wr-range__lab { font-size: var(--fs-sm); color: var(--ink-2); }
-.wr-range__v { font: 700 1.5rem/1.15 var(--font-type); font-variant-numeric: tabular-nums; }
-.wr-range__mid { font: 400 var(--fs-xs)/1.4 var(--font-type); color: var(--ink-2); }
-.wr-range__bar { display: block; width: 100%; max-width: 15rem; height: auto; margin-top: 4px; }
+.wr-ranges { display: grid; gap: 8px; }
+/* A range: the label over the value, the bar beside the value, the selected case's value under it. */
+.wr-range { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "lab lab" "v bar" "mid mid"; column-gap: 16px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.wr-range__lab { grid-area: lab; font-size: var(--fs-sm); color: var(--ink-2); }
+.wr-range__v { grid-area: v; font: 700 1.375rem/1.15 var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-range__mid { grid-area: mid; font: 400 var(--fs-xs)/1.35 var(--font-type); color: var(--ink-2); }
+.wr-range__bar { grid-area: bar; align-self: center; display: block; width: 100%; max-width: 12rem; height: auto; }
 .wr-range__track { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .wr-range__tick { stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
 .wr-range__dot { fill: var(--pen); }
@@ -47,7 +55,7 @@
 select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-chip:hover:not([aria-pressed="true"]) { background: var(--paper-2); }
 .wr-chip[aria-pressed="true"], .wr-chip--on { background: var(--ink); color: var(--paper); }
-.wr-chips__out { min-height: 3em; color: var(--ink-2); }
+.wr-chips__out { color: var(--ink-2); }
 
 /* Figure 1, the three strips (program/strips.js). The selected case's strip is tall, its dots in the pen; the others'
    lighter. A group's dots sit over a gray outline of every hospital, with both medians. */
@@ -60,7 +68,9 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-strip__money { fill: var(--ink-2); font: 700 14px var(--font-type); font-variant-numeric: tabular-nums; }
 .wr-strip__money--on { fill: var(--ink); font-size: 19px; }
 .chart--strips[data-fit="narrow"] .wr-strip__money--on { font-size: 15px; }
-.wr-dots { stroke: var(--pen-seq-2); }
+/* The cases not selected: --pen-scar, lighter than the pen in the light theme and darker in the dark, 3:1 or more on
+   both papers in both (test/finding.test.js holds the pair to it). */
+.wr-dots { stroke: var(--pen-scar); }
 .wr-dots--on { stroke: var(--pen); }
 .wr-dots--lit { fill: none; stroke: var(--ink); stroke-linecap: round; }
 .wr-outline { fill: var(--ink-3); fill-opacity: 0.2; }
@@ -71,6 +81,7 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-thread__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .wr-thread__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .wr-thread__name { font-size: 13px; }
+.wr-strip__note { font-size: 11.5px; }
 @media (forced-colors: active) {
   .wr-dots, .wr-dots--on, .wr-dots--lit, .wr-median, .wr-thread__line, .wr-range__tick { stroke: CanvasText; }
   .wr-median--off, .wr-median--all, .wr-strip__rule, .wr-range__track { stroke: GrayText; }
