@@ -408,7 +408,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
 
   const sayDot = (s) => {
     const x = rows[s % N];
-    const line = fill('dotText', { name: x.name, city: x.city, state: x.state ?? '', share: signedShareText(x.est.share), fy });
+    const line = fill('dotText', { name: x.name, place: placeText(x), share: signedShareText(x.est.share), fy });
     return s % N === self ? `${line}. ${fill('dotThis')}` : line;
   };
 

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
-import { cmsText, count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money, moneyRange, pct, placeText } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from '../web/constants.js';
 import { fill as siteFill } from '../web/copy.js';
@@ -285,7 +285,7 @@ test('the share sentence names CMS\'s decision and the dollars as this site\'s e
     // The description (and og:description) is the same neutral sentence whatever the verdict: no decision, no dollars.
     assert.ok(!page.includes(`<meta name="description" content="${esc(sentence)}">`), `${row.status}: the share sentence is not the description`);
     const key = hospitalMoney(row).estimated ? 'hospitalDescription' : 'hospitalDescriptionNone';
-    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill(key, { name: view.name, city: view.city, state: view.state, fy: String(view.fy) }))}">`), `${row.status}: description`);
+    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill(key, { name: view.name, place: placeText(view), fy: String(view.fy) }))}">`), `${row.status}: description`);
     assert.ok(page.includes(esc(SITE.origin + view.path)), `${row.status}: the link to share`);
     assert.ok(page.includes(esc(sentence)), `${row.status}: the sentence to share`);
     assert.match(page, /<details class="share" data-share/);

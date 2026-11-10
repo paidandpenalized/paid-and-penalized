@@ -33,6 +33,14 @@ test('each hospital is an entry: its name, "City, ST ZIP" under it, its page', (
   assert.equal(entries[2].sub, 'Sampleville, MD', 'no ZIP, no trailing space');
 });
 
+test('a hospital with no city: its state (and ZIP) under its name, no stray comma', () => {
+  const [entry] = hospitalEntries({ hospitalPath: '/hacrp/hospital/', rows: [['990004', 'Sample Rural Hospital', '', 'SC', '0.2000', 'No', '29000']] });
+  assert.equal(entry.sub, 'SC 29000');
+  assert.equal(entry.extra, 'SC 29000');
+  const [noZip] = hospitalEntries({ hospitalPath: '/hacrp/hospital/', rows: [['990005', 'Sample Rural Hospital', '', 'SC', '0.2000', 'No', '']] });
+  assert.equal(noZip.sub, 'SC');
+});
+
 test('each place is an entry: its name, its kind and hospital count under it, its page; a state is also found by its code', () => {
   const entries = placeEntries(ASSET);
   assert.equal(entries.length, ASSET.places.length);

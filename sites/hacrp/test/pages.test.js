@@ -396,6 +396,17 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
 
+test('a hospital with no city: the title, the description and the Location field name its state alone', () => {
+  for (const city of ['', null]) {
+    const text = render(CASES.yes, { master: master(CASES.yes.ccn, { city }) });
+    const name = 'Example General Hospital';
+    assert.match(text, new RegExp(`<title>${name}, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`), `${city}: title`);
+    assert.equal(meta(text, 'description'), esc(`${name} (AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`), `${city}: description`);
+    assert.match(text, /<p class="field__value"><a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/, `${city}: the Location field`);
+    assert.doesNotMatch(text, /null/, `${city}: no "null"`);
+  }
+});
+
 test('the ledger says which measure added the most (its row tagged in red) and, with the what-if, which one at the median would lower the score most', () => {
   for (const h of [CASES.yes, CASES.no, CASES.maryland]) {
     const view = hospitalView(inputs(h));

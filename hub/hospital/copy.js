@@ -5,12 +5,12 @@ import { GROUPS } from './group-copy.js';
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  // <title> (the site's name follows it) and the description. {name}, {city}, {state}: the master record's; {n} {group}:
-  // the peers the page compares it with.
-  title: '{name}, {city}, {state}: Medicare payment programs, FY{fy}',
-  description: "Estimated FY{fy} dollars for {name} in {city}, {state}, in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs, the net of the three, and how it compares with {n} {group}.",
-  descriptionMaryland: { text: "{name} in {city}, {state} is paid under Maryland's all-payer model, so Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs don't adjust its pay.", claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
-  descriptionNoInputs: "{name} in {city}, {state}: CMS's FY{fy} payment file has no usable row for this hospital, so this site has no estimate of its dollars in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs.",
+  // <title> (the site's name follows it) and the description. {name}: the master record's; {place}: its city and state
+  // (placeText: the state alone where the master has no city); {n} {group}: the peers the page compares it with.
+  title: '{name}, {place}: Medicare payment programs, FY{fy}',
+  description: "Estimated FY{fy} dollars for {name} in {place}, in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs, the net of the three, and how it compares with {n} {group}.",
+  descriptionMaryland: { text: "{name} in {place} is paid under Maryland's all-payer model, so Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs don't adjust its pay.", claim: ['HUB-04', 'HUB-05', 'HACRP-26', 'HACRP-91'] },
+  descriptionNoInputs: "{name} in {place}: CMS's FY{fy} payment file has no usable row for this hospital, so this site has no estimate of its dollars in Medicare's Readmissions, hospital-acquired conditions and value-based purchasing programs.",
 
   // The sticky peer row: its label, the toggle (shown by the page's script) and the group it names. A toggle a hospital
   // has no group for is disabled, and the note says why.
@@ -84,7 +84,7 @@ export const COPY = typesetCopy({
   swarmAxisCut: 'cut',
   swarmAxisBonus: 'bonus',
   swarmLabel: 'The {n} {group} and all {all} hospitals with an estimate, each a dot placed by its estimated FY{fy} net as a share of its Medicare inpatient pay; this hospital is ringed. Arrow keys step through the peers; Enter opens one.',
-  dotText: '{name}, {city}, {state}: {share} net, estimated FY{fy}',
+  dotText: '{name}, {place}: {share} net, estimated FY{fy}',
   dotThis: 'This hospital',
   dotOpen: 'Tap again to open its page.',
   stripMedian: 'median',

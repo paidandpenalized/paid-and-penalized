@@ -14,7 +14,7 @@ import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
 import { paraOf } from '../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct, placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
@@ -31,7 +31,7 @@ export const ACROSS_WINDOW = 0.05;
 
 const pct0 = (x) => pct(x, 0);
 const p = paraOf(fill, t);
-const tipOf = (r) => fill('billTip', { name: r.name, city: r.city, state: r.state, money: money(r.cut) });
+const tipOf = (r) => fill('billTip', { name: r.name, place: placeText(r), money: money(r.cut) });
 
 // A figure's table cells: the text shown and the raw value kept (a count, whole dollars, a share to a tenth of a percent).
 const cnt = (n) => num(count(n), n);
@@ -85,7 +85,7 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   // faint dots. A phone's drawing names none (acrossLine).
   const dots = near.rows.map((r) => ({
     x: r.total, value: r.atStake, over: r.yes, mine: mine ? mine.has(r.ccn) : false,
-    tip: mine && !mine.has(r.ccn) ? null : fill('acrossTip', { name: r.name, city: r.city, state: r.state, score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
+    tip: mine && !mine.has(r.ccn) ? null : fill('acrossTip', { name: r.name, place: placeText(r), score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
   }));
   const labels = {
     under: [fill('acrossUnder1', { n: count(under.length) }), fill('acrossUnder2', { money: money(underMoney) })],

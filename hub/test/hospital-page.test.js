@@ -61,6 +61,16 @@ const MARYLAND = pick((h) => h.status === 'maryland', 'a Maryland hospital');
 const NO_INPUTS = pick((h) => h.status === 'no-inputs', 'a hospital with no inputs');
 const NO_INPUTS_CUT = pick((h) => h.status === 'no-inputs' && h.cut, 'a hospital with no inputs that CMS cut');
 
+test('a hospital with no city: the title, the description and the Location field name its state alone', () => {
+  for (const [kind, h] of [['estimated', CUT], ['Maryland', MARYLAND], ['no inputs', NO_INPUTS]]) {
+    const page = render({ ...h, name: 'Invented General', city: '' });
+    assert.ok(page.includes(`<title>Invented General, ${h.state}: Medicare payment programs, FY${FY} · `), `${kind}: the title`);
+    const description = /<meta name="description" content="([^"]*)">/.exec(page)[1];
+    assert.ok(description.startsWith(kind === 'estimated' ? `Estimated FY${FY} dollars for Invented General in ${h.state}, in ` : `Invented General in ${h.state}${kind === 'Maryland' ? ' ' : ':'}`), `${kind}: the description`);
+    assert.ok(mainOf(page).includes(`<p class="field__value">${h.state}</p>`), `${kind}: the Location field`);
+  }
+});
+
 test('an estimated cut hospital: its record, the net with its tag, stamp and fiscal year note, and the rows adding to it', () => {
   const page = render(CUT);
   const main = mainOf(page);

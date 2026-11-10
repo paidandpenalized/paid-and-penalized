@@ -315,7 +315,7 @@ ${notes(fy, false)}
 // the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note).
 export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null }) {
   const fy = String(assets.shell.fy);
-  const place = { name: h.name, city: h.city, state: h.state ?? '' };
+  const place = { name: h.name, place: placeText(h) };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
   const groups = h.est ? PEER_MODES.map((mode) => groupOf(hospitals, h, mode)) : [];
   const group = groups[0] ?? null;
