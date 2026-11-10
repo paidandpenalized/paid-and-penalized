@@ -326,7 +326,6 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-bdots--on { stroke: var(--pen); }
 .wr-bdots--strip { stroke: var(--ink-3); }
 .wr-b__cutline { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
-.wr-b__paper { fill: var(--paper); }
 .wr-b__count { fill: var(--ink); font: 600 17px var(--font-body); }
 .chart--both[data-fit="narrow"] .wr-b__count { font-size: 14px; }
 .wr-b__sub, .wr-b__line { fill: var(--ink-2); font: 600 11px var(--font-body); }
@@ -345,8 +344,11 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-named__lead { margin: 8px 0 10px; }
 .wr-named__wrap { overflow-x: auto; }
 .wr-named__t { width: 100%; min-width: 36rem; }
+.wr-named__t thead th { white-space: normal; }
+.wr-named__t thead th.num { width: 6.5em; }
 .wr-named__t th small { display: block; color: var(--ink-3); font: 400 var(--fs-xs)/1.3 var(--font-body); }
-.wr-named__t td.num, .wr-named__t th.num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.wr-named__t td.num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.wr-named__t th.num { text-align: right; }
 .wr-named__grp { text-align: center; }
 .wr-named__grp .scen-tag, .wr-named__grp .est-tag { margin-left: 4px; }
 .wr-named[data-limited] .wr-named__more { display: none; }

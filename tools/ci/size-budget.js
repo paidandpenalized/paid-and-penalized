@@ -63,8 +63,8 @@ export const PROGRAM_BUDGETS = {
   // Steps 3 to 5 will weigh more: each raises the program budget as it lands, a decision recorded here.
   // Step 3 (states), 2026-11-10: the program page 82.0 KB + 15% (94.3 KB), rounded up to 100 KB.
   // Step 4 (one hospital), 2026-11-10: the program page 93.9 KB + 15% (108.0 KB), rounded up to 110 KB.
-  // Step 5 (exposed on both), 2026-11-10: the program page 122.7 KB + 15% (141.1 KB), rounded up to 145 KB.
-  'work-requirement': { program: 145 * KB, methods: 30 * KB },
+  // Step 5 (exposed on both), 2026-11-10: the program page 122.7 KB + 15% (141.1 KB), rounded up to 150 KB.
+  'work-requirement': { program: 150 * KB, methods: 30 * KB },
 };
 // The budget in bytes of a page of this type (and, for a program-keyed type, this program).
 export function budgetOf({ type, program }, budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS) {

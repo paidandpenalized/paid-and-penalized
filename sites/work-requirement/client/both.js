@@ -39,12 +39,10 @@ export function mountBoth(section, { store, model, wide, say = () => {} }) {
 
   // The named table: its first NAMED_FIRST rows until the reader asks for all (kept across redraws).
   let expanded = false;
-  const countNow = () => {
-    const { k, use } = viewOf(store.get());
-    return exposed(model, k, use).length;
-  };
+  // n: the corner's count in the case and use rate shown.
+  const start = viewOf(store.get());
+  let n = exposed(model, start.k, start.use).length;
   const limit = () => {
-    const n = countNow();
     const limited = !expanded && n > NAMED_FIRST;
     named.toggleAttribute('data-limited', limited);
     all.hidden = !limited;
@@ -53,7 +51,7 @@ export function mountBoth(section, { store, model, wide, say = () => {} }) {
   all.addEventListener('click', () => {
     expanded = true;
     limit();
-    say(fill('bShowingAll', { n: count(countNow()) }));
+    say(fill('bShowingAll', { n: count(n) }));
     // The button is gone: focus moves to the first row it showed (its link), or the table's summary.
     (body.children[NAMED_FIRST]?.querySelector('a') ?? named.querySelector('summary')).focus();
   });
@@ -66,17 +64,21 @@ export function mountBoth(section, { store, model, wide, say = () => {} }) {
     const { k, use } = viewOf(state);
     you.innerHTML = youHtml(model, state.hospital, k, use).text;
     if (!moved) return;
+    // Each case's corner once for this case and use rate: the selected one feeds the words and the named table.
+    const lists = SCENARIOS.map((_, j) => exposed(model, j, use));
+    const list = lists[k];
+    n = list.length;
     for (const svg of svgs.values()) svg.setAttribute('aria-label', bothAlt(model, k, use));
-    head.innerHTML = headHtml(model, k, use).text;
-    read.innerHTML = readHtml(model, k, use).text;
+    head.innerHTML = headHtml(model, k, use, list).text;
+    read.innerHTML = readHtml(model, k, use, list).text;
     for (const [td, j, kind] of cells) {
-      const c = cellOf(model, use, Number(j), kind);
+      const c = cellOf(lists[Number(j)], Number(j), use, kind);
       td.textContent = c.text;
       td.dataset.value = String(c.value);
     }
-    sum.textContent = namedSummary(model, k, use);
+    sum.textContent = namedSummary(model, k, use, list);
     cap.textContent = namedCaption(k);
-    body.innerHTML = namedBody(model, k, use).text;
+    body.innerHTML = namedBody(model, k, use, list).text;
     limit();
   });
   limit();

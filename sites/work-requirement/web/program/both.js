@@ -108,7 +108,7 @@ export const isBoth = (model, p, k, use) => xOf(p, k, use) >= BOTH_SHARE && p.y 
 
 // The corner's hospitals in case k at use rate use, by share lost, largest first, then by name (then CCN).
 export const exposed = (model, k, use) => model.pts.filter((p) => isBoth(model, p, k, use))
-  .sort((a, b) => xOf(b, k, use) - xOf(a, k, use) || a.name.localeCompare(b.name) || (a.ccn < b.ccn ? -1 : 1));
+  .sort((a, b) => xOf(b, k, use) - xOf(a, k, use) || a.name.localeCompare(b.name, 'en-US') || (a.ccn < b.ccn ? -1 : 1));
 // The corner's count in each case at a use rate.
 export const countsAt = (model, use) => SCENARIOS.map((_, k) => model.pts.filter((p) => isBoth(model, p, k, use)).length);
 // A list's Medicaid loss (case k at use) and its penalties.
@@ -117,11 +117,12 @@ export const sumsOf = (list, k, use) => ({ lost: list.reduce((a, p) => a + p.los
 // ---------- the layout ----------
 
 // The two drawings: the phone's (the kit's 300 across) and the wide one (about the stage at 1280 and 1440). L, R, T, B:
-// the plot's margins; strip: the hatched strip's top and bottom under the plot's bottom; tagRow: the row under the plot's
+// the plot's margins; strip: the hatched strip's top and bottom under the plot's bottom (its label on a row of its own
+// under it, so no label covers a strip dot); tagRow: the row under the plot's
 // bottom the across axis's tag takes on the phone (null: on the title's row, at its left).
 export const DRAWINGS = Object.freeze({
-  narrow: { width: 300, height: 450, L: 38, R: 6, T: 26, B: 84, strip: [54, 80], tagRow: 45, dot: 3.2, stripDot: 2 },
-  wide: { width: 680, height: 350, L: 52, R: 10, T: 26, B: 66, strip: [40, 62], tagRow: null, dot: 4.4, stripDot: 2.6 },
+  narrow: { width: 300, height: 466, L: 38, R: 6, T: 26, B: 100, strip: [54, 80], tagRow: 45, dot: 3.2, stripDot: 2 },
+  wide: { width: 680, height: 366, L: 52, R: 10, T: 26, B: 82, strip: [40, 62], tagRow: null, dot: 4.4, stripDot: 2.6 },
 });
 const X_TICKS = [0, 0.005, 0.01, 0.02, 0.04, 0.08, 0.12, 0.16, 0.2];
 const Y_TICKS = [0, 0.0001, 0.0005, 0.001, 0.0025, 0.005, 0.01];
@@ -183,26 +184,18 @@ export function bothLayout({ model, drawing, k, use, ccn = null }) {
   const cutY = sy(model.cut);
   const pfy = String(model.penaltyFy);
 
-  // The fixed labels: the axes' titles and tags, the corner's count, the cut's and the line's labels, the strip's.
-  const labels = [];
+  // The fixed labels: the axes' titles and tags, the line's label and the strip's (on its own row under the strip). The
+  // corner's count and the cut's label are placed with the page's hospital (placed), clear of its mark.
   const yTitle = labelAt('chart-axis__title', wide ? fill('bAxisY', { pfy }) : t('bAxisYShort'), wide ? plot.x0 : 2, 12, 'start', drawing);
-  labels.push(yTitle);
   const yTag = labelAt('wr-axtag__t', t('hEstimate'), yTitle.box[0] + yTitle.box[2] + 9, 12, 'start', drawing);
   const xTitle = labelAt('chart-axis__title', wide ? fill('bAxisX', { fy: String(model.fy) }) : t('bAxisXShort'), plot.x1, plot.y1 + 31, 'end', drawing);
-  labels.push(xTitle);
   const scen = fillCopy(SHARED, 'scenarioTag', { year: String(model.fy) });
   const xTag = geo.tagRow === null
     ? labelAt('wr-axtag__t', scen, plot.x0 + 3, plot.y1 + 31, 'start', drawing)
     : labelAt('wr-axtag__t', scen, plot.x1 - 3, plot.y1 + geo.tagRow, 'end', drawing);
-  const tags = [yTag, xTag];
-  const countLabel = labelAt('wr-b__count', fill('bCount', { n: count(n) }), plot.x1 - 6, plot.y0 + (wide ? 20 : 17), 'end', drawing);
-  const sub = labelAt('wr-b__sub', use === 1 ? fill('bCountSub', { scenario: caseWord(k) }) : fill('bCountSubUse', { scenario: caseWord(k), use: pct(use, 0) }), plot.x1 - 6, countLabel.y + 14, 'end', drawing);
-  const cutWords = fill(wide ? 'bCut' : 'bCutShort', { cut: cutText(model.cut) });
-  const cutLabel = cutY + 14 <= plot.y1 - 3 ? labelAt('wr-b__cut', cutWords, plot.x1 - 6, cutY + 13, 'end', drawing) : labelAt('wr-b__cut', cutWords, plot.x1 - 6, cutY - 4, 'end', drawing);
   const lineLabel = labelAt('wr-b__line', fill('bLine', { line: pct(BOTH_SHARE, 0) }), lineX - 4, plot.y0 + 11, 'end', drawing);
   const nCah = model.strip.filter((s) => s.cah).length;
-  const stripLabel = labelAt('wr-b__strip', wide ? fill('bStrip', { n: count(model.strip.length), cah: count(nCah) }) : fill('bStripShort', { n: count(model.strip.length) }), plot.x1 - 6, (strip.y0 + strip.y1) / 2 + 4, 'end', drawing);
-  labels.push(countLabel, sub, cutLabel, lineLabel, stripLabel);
+  const stripLabel = labelAt('wr-b__strip', wide ? fill('bStrip', { n: count(model.strip.length), cah: count(nCah) }) : fill('bStripShort', { n: count(model.strip.length) }), plot.x1, strip.y1 + 13, 'end', drawing);
 
   // The axes' ticks, those under each top; a label only where it clears the last.
   const xTicks = [];
@@ -225,31 +218,63 @@ export function bothLayout({ model, drawing, k, use, ccn = null }) {
     yTicks.push({ y, label: show ? labelAt('chart-axis__label', shortPct(v), plot.x0 - 5, y + 4, 'end', drawing) : null });
   }
 
-  const layout = { drawing, geo, plot, sx, sy, k, use, n, on, off, stripDots, strip, lineX, cutY, labels, tags, xTicks, yTicks, page: null };
-  layout.page = pageMark(model, layout, ccn);
-  // A page's hospital in the strip under the strip's label: the label moves to the strip's other end (when that end is
-  // clear of it), so the mark shows.
-  const sb = stripLabel.box;
-  if (layout.page?.inStrip && layout.page.x >= sb[0] - 6 && layout.page.x <= sb[0] + sb[2] + 6 && layout.page.x > plot.x0 + 6 + sb[2] + 6) {
-    labels[labels.indexOf(stripLabel)] = labelAt('wr-b__strip', stripLabel.text, plot.x0 + 6, stripLabel.y, 'start', drawing);
-  }
-  return layout;
+  const layout = { drawing, geo, plot, sx, sy, k, use, n, on, off, stripDots, strip, lineX, cutY, fixed: { yTitle, xTitle, lineLabel, stripLabel }, tags: [yTag, xTag], xTicks, yTicks };
+  return Object.assign(layout, placed(model, layout, ccn));
+}
+
+// The page's hospital's mark ({ x, y, inStrip }), or null when step 1 doesn't draw it.
+function markOf(model, layout, ccn) {
+  const spot = ccn ? model.at.get(ccn) : null;
+  if (!spot) return null;
+  const { sx, sy, k, use } = layout;
+  if (spot.kind === 'strip') return { x: sx(model.strip[spot.i].share[k] * use), y: layout.stripDots[spot.i][1], inStrip: true, i: spot.i };
+  const p = model.pts[spot.i];
+  return { x: sx(xOf(p, k, use)), y: sy(p.y), inStrip: false, i: spot.i };
+}
+// The mark's radius in the plot, and the strip mark's tick past the strip's edges (bothBody draws both).
+export const MARK_R = 5;
+const TICK_OUT = 3;
+// Whether a label's box covers the mark: the plot's dot (with its radius) or the strip's tick (its whole length).
+export function covers(box, mark, strip) {
+  if (!mark) return false;
+  const [y0, y1] = mark.inStrip ? [strip.y0 - TICK_OUT, strip.y1 + TICK_OUT] : [mark.y - MARK_R, mark.y + MARK_R];
+  const [x0, x1] = mark.inStrip ? [mark.x - 1, mark.x + 1] : [mark.x - MARK_R, mark.x + MARK_R];
+  return x1 > box[0] && x0 < box[0] + box[2] && y1 > box[1] && y0 < box[1] + box[3];
+}
+
+// The labels that move for the page's hospital, and its mark: the corner's count (with its case under it) at the corner's
+// top right, else its top left, else either a step lower; the cut's label under the cut line at the right, else above it, else the same at the
+// left, else a step further off the line at the right (a mark on the line itself); each at its first place inside the plot, clear of the labels already placed and of the mark. Returns { labels
+// (in bothBody's order: the up and across titles, the count, its case, the cut's, the line's, the strip's), page }.
+export function placed(model, layout, ccn) {
+  const { plot, drawing, n, k, use, lineX, cutY, strip, fixed } = layout;
+  const wide = drawing === 'wide';
+  const mark = markOf(model, layout, ccn);
+  const taken = [fixed.lineLabel.box];
+  const ok = (l) => l.box[1] >= plot.y0 + 1 && l.box[1] + l.box[3] <= plot.y1 - 1 && l.box[0] >= plot.x0 + 1 && l.box[0] + l.box[2] <= plot.x1 - 1
+    && !covers(l.box, mark, strip) && !taken.some((b) => overlap(b, l.box));
+  const choose = (cands) => cands.find((c) => c.every(ok)) ?? cands[0];
+  const countText = fill('bCount', { n: count(n) });
+  const subText = use === 1 ? fill('bCountSub', { scenario: caseWord(k) }) : fill('bCountSubUse', { scenario: caseWord(k), use: pct(use, 0) });
+  const countY = plot.y0 + (wide ? 20 : 17);
+  const block = (x, anchor, dy = 0) => [labelAt('wr-b__count', countText, x, countY + dy, anchor, drawing), labelAt('wr-b__sub', subText, x, countY + dy + 14, anchor, drawing)];
+  const [countLabel, sub] = choose([block(plot.x1 - 6, 'end'), block(lineX + 6, 'start'), block(plot.x1 - 6, 'end', 34), block(lineX + 6, 'start', 34)]);
+  taken.push(countLabel.box, sub.box);
+  const cutWords = fill(wide ? 'bCut' : 'bCutShort', { cut: cutText(model.cut) });
+  const [cutLabel] = choose([[plot.x1 - 6, 'end', cutY + 13], [plot.x1 - 6, 'end', cutY - 4], [plot.x0 + 6, 'start', cutY + 13], [plot.x0 + 6, 'start', cutY - 4], [plot.x1 - 6, 'end', cutY + 19], [plot.x1 - 6, 'end', cutY - 10]]
+    .map(([x, anchor, y]) => [labelAt('wr-b__cut', cutWords, x, y, anchor, drawing)]));
+  const labels = [fixed.yTitle, fixed.xTitle, countLabel, sub, cutLabel, fixed.lineLabel, fixed.stripLabel];
+  return { labels, page: mark && pageMark(model, { ...layout, labels }, mark) };
 }
 
 // The page's hospital on a layout: { x, y, inStrip, label (in the plot only: its name, clear of the fixed labels and
-// inside the plot, with a leader line when moved off the dot's row), leader }; null when step 1 doesn't draw it.
+// inside the plot, with a leader line when moved off the dot's row), leader }. mark: markOf's.
 const NAME_STEPS = [-9, 17, -21, 29, -33, 41, -45, 53, -57, 65];
-export function pageMark(model, layout, ccn) {
-  const spot = ccn ? model.at.get(ccn) : null;
-  if (!spot) return null;
-  const { sx, sy, k, use, plot, drawing } = layout;
-  if (spot.kind === 'strip') {
-    const s = model.strip[spot.i];
-    return { x: sx(s.share[k] * use), y: layout.stripDots[spot.i][1], inStrip: true, label: null, leader: null };
-  }
-  const p = model.pts[spot.i];
-  const x = sx(xOf(p, k, use));
-  const y = sy(p.y);
+function pageMark(model, layout, mark) {
+  const { x, y } = mark;
+  if (mark.inStrip) return { x, y, inStrip: true, label: null, leader: null };
+  const { plot, drawing } = layout;
+  const p = model.pts[mark.i];
   const { size } = fontOf('wr-b__name', drawing);
   const name = fitText(p.name, plot.x1 - plot.x0 - 4, size);
   const w = textWidth(name, size);
@@ -280,7 +305,6 @@ export function bothBody(layout) {
   const [count_, sub, cutLabel, lineLabel, stripLabel] = labels.slice(2);
   const grid = html`${xTicks.map((tk) => html`<line class="chart-grid" x1="${r2(tk.x)}" x2="${r2(tk.x)}" y1="${r2(plot.y0)}" y2="${r2(plot.y1)}"/>`)}${yTicks.map((tk) => html`<line class="chart-grid" x1="${r2(plot.x0)}" x2="${r2(plot.x1)}" y1="${r2(tk.y)}" y2="${r2(tk.y)}"/>`)}`;
   const axes = html`<g class="chart-axis"><line class="chart-axis__line" x1="${r2(plot.x0)}" x2="${r2(plot.x1)}" y1="${r2(plot.y1)}" y2="${r2(plot.y1)}"/><line class="chart-axis__line" x1="${r2(plot.x0)}" x2="${r2(plot.x0)}" y1="${r2(plot.y0)}" y2="${r2(plot.y1)}"/>${xTicks.map((tk) => html`<line class="chart-axis__tick" x1="${r2(tk.x)}" x2="${r2(tk.x)}" y1="${r2(plot.y1)}" y2="${r2(plot.y1 + 4)}"/>${tk.label ? text(tk.label) : ''}`)}${yTicks.map((tk) => html`<line class="chart-axis__tick" x1="${r2(plot.x0 - 4)}" x2="${r2(plot.x0)}" y1="${r2(tk.y)}" y2="${r2(tk.y)}"/>${tk.label ? text(tk.label) : ''}`)}</g>`;
-  const sb = stripLabel.box;
   return html`${hatchDefs(id)}
 ${grid}
 <rect class="wr-b__corner" x="${r2(lineX)}" y="${r2(plot.y0)}" width="${r2(plot.x1 - lineX)}" height="${r2(Math.max(0, cutY - plot.y0))}"/>
@@ -290,10 +314,10 @@ ${dotsPath(on, 'wr-bdots wr-bdots--on', geo.dot)}
 <line class="wr-b__cutline" x1="${r2(lineX)}" x2="${r2(lineX)}" y1="${r2(plot.y0)}" y2="${r2(plot.y1)}"/><line class="wr-b__cutline" x1="${r2(plot.x0)}" x2="${r2(plot.x1)}" y1="${r2(cutY)}" y2="${r2(cutY)}"/>
 <rect class="wr-gutter wr-b__band" x="${r2(plot.x0)}" y="${r2(strip.y0)}" width="${r2(plot.x1 - plot.x0)}" height="${r2(strip.y1 - strip.y0)}" fill="${hatchFill(id)}"/>
 ${dotsPath(stripDots, 'wr-bdots wr-bdots--strip', geo.stripDot)}
-<rect class="wr-b__paper" x="${r2(sb[0] - 4)}" y="${r2(strip.y0 + 2)}" width="${r2(sb[2] + 8)}" height="${r2(strip.y1 - strip.y0 - 4)}"/>${text(stripLabel)}
+${text(stripLabel)}
 ${text(labels[0])}${text(labels[1])}${tags.map(tag)}
 ${text(count_, ' chart-label--halo')}${text(sub, ' chart-label--halo')}${text(cutLabel, ' chart-label--halo')}${text(lineLabel, ' chart-label--halo')}
-${page ? html`<g class="wr-b__you">${page.leader ? html`<line class="wr-b__leader" x1="${r2(page.leader[0])}" y1="${r2(page.leader[1])}" x2="${r2(page.leader[2])}" y2="${r2(page.leader[3])}"/>` : ''}${page.inStrip ? html`<line class="wr-b__tick" x1="${r2(page.x)}" x2="${r2(page.x)}" y1="${r2(strip.y0 - 3)}" y2="${r2(strip.y1 + 3)}"/>` : ''}<circle class="wr-b__dot" cx="${r2(page.x)}" cy="${r2(page.y)}" r="${page.inStrip ? 3.5 : 5}"/>${page.label ? text(page.label, ' chart-label--halo') : ''}</g>` : ''}`;
+${page ? html`<g class="wr-b__you">${page.leader ? html`<line class="wr-b__leader" x1="${r2(page.leader[0])}" y1="${r2(page.leader[1])}" x2="${r2(page.leader[2])}" y2="${r2(page.leader[3])}"/>` : ''}${page.inStrip ? html`<line class="wr-b__tick" x1="${r2(page.x)}" x2="${r2(page.x)}" y1="${r2(strip.y0 - TICK_OUT)}" y2="${r2(strip.y1 + TICK_OUT)}"/>` : ''}<circle class="wr-b__dot" cx="${r2(page.x)}" cy="${r2(page.y)}" r="${page.inStrip ? 3.5 : MARK_R}"/>${page.label ? text(page.label, ' chart-label--halo') : ''}</g>` : ''}`;
 }
 
 // ---------- the words ----------
@@ -305,11 +329,11 @@ export const bothAlt = (model, k, use) => fill('bAlt', {
 
 // The words column's head: the range of the corner's count, low case to high, at the use rate; the selected case's count;
 // and the finding: the selected case's corner, its Medicaid loss and how many times its penalties that loss is.
-export function headHtml(model, k, use) {
+// list: exposed(model, k, use), when the caller has it.
+export function headHtml(model, k, use, list = exposed(model, k, use)) {
   const counts = countsAt(model, use);
-  const list = exposed(model, k, use);
   const { lost, pen } = sumsOf(list, k, use);
-  const words = { scenario: caseWord(k), line: pct(BOTH_SHARE, 0), lost: money(lost), pen: money(pen), pfy: String(model.penaltyFy), ratio: pen > 0 ? decimal(lost / pen, 0) : '' };
+  const words = { scenario: caseWord(k), line: pct(BOTH_SHARE, 0), lost: money(lost), pen: money(pen), fy: String(model.fy), pfy: String(model.penaltyFy), ratio: pen > 0 ? decimal(lost / pen, 0) : '' };
   const find = list.length === 0 ? fill('bFindNone', { scenario: words.scenario, line: words.line })
     : list.length === 1 ? fill('bFindOne', words) : fill('bFind', { ...words, n: count(list.length) });
   const lab = use === 1 ? fill('bBigLab', { n: count(counts[k]), scenario: caseWord(k) }) : fill('bBigLabUse', { n: count(counts[k]), scenario: caseWord(k), use: pct(use, 0) });
@@ -321,8 +345,7 @@ export function headHtml(model, k, use) {
 const estimate = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: t('hEstimateLabel'), text: t('hEstimate') });
 
 // The corner's dollars in the selected case: its Medicaid loss (scenario) and its penalties (estimate), never added.
-export function readHtml(model, k, use) {
-  const list = exposed(model, k, use);
+export function readHtml(model, k, use, list = exposed(model, k, use)) {
   const { lost, pen } = sumsOf(list, k, use);
   const head = list.length === 0 ? 'bReadHeadNone' : list.length === 1 ? 'bReadHeadOne' : 'bReadHead';
   return html`<p class="wr-both__rh">${fill(head, { n: count(list.length), scenario: caseWord(k) })}</p>
@@ -339,9 +362,9 @@ export function youHtml(model, row, k, use) {
   if (!spot) return html`<a href="#hospital">${fill('bYouNone', { name: row.name })}</a>`;
   if (spot.kind === 'strip') return html`${fill('bYouStrip', { name: row.name, pfy: String(model.penaltyFy) })}`;
   const p = model.pts[spot.i];
-  const words = { name: p.name, share: pct(xOf(p, k, use), 2), scenario: caseWord(k) };
+  const words = { name: p.name, share: pct(xOf(p, k, use), 2), scenario: caseWord(k), pfy: String(model.penaltyFy) };
   if (isBoth(model, p, k, use)) return html`${fill('bYouIn', { ...words, pshare: pct(p.y, 3) })}`;
-  return html`${p.pen > 0 ? fill('bYouOut', { ...words, pshare: pct(p.y, 3) }) : fill('bYouOutZero', { ...words, pfy: String(model.penaltyFy) })}`;
+  return html`${p.pen > 0 ? fill('bYouOut', { ...words, pshare: pct(p.y, 3) }) : fill('bYouOutZero', words)}`;
 }
 
 // ---------- the tables ----------
@@ -356,8 +379,8 @@ export function tableRows(model, use = 1) {
   });
 }
 // A table cell's text and value, for the script (tableRows' cells by data-b).
-export function cellOf(model, use, k, kind) {
-  const list = exposed(model, k, use);
+// list: exposed(model, k, use).
+export function cellOf(list, k, use, kind) {
   const { lost, pen } = sumsOf(list, k, use);
   if (kind === 'n') return { text: count(list.length), value: list.length };
   return kind === 'lost' ? { text: money(-lost), value: -lost } : { text: money(-pen), value: -pen };
@@ -376,8 +399,8 @@ const nameOf = (p) => {
 };
 
 // The named table's summary line for the selected case.
-export function namedSummary(model, k, use) {
-  const n = exposed(model, k, use).length;
+export function namedSummary(model, k, use, list = exposed(model, k, use)) {
+  const n = list.length;
   const key = n === 0 ? 'bNamedSumNone' : n === 1 ? 'bNamedSumOne' : 'bNamedSum';
   return fill(key, { n: count(n), scenario: caseWord(k) });
 }
@@ -386,9 +409,9 @@ export function namedSummary(model, k, use) {
 export const namedCaption = (k) => fill('bNamedCaption', { scenario: caseWord(k) });
 
 // The named table's body: the corner's hospitals in order (exposed), each numbered, linked where its page exists, with its
-// place and kind, its loss and share (scenario) and its penalties and their share (estimate). Rows past NAMED_FIRST carry
+// place and kind, its share and loss (scenario) and its penalties and their share (estimate). Rows past NAMED_FIRST carry
 // a class the script hides until "Show all".
-export const namedBody = (model, k, use) => html`${exposed(model, k, use).map((p, i) => html`<tr${i >= NAMED_FIRST ? html` class="wr-named__more"` : ''} data-ccn="${p.ccn}"><td class="num">${count(i + 1)}</td><th scope="row">${nameOf(p)}<small>${fill('stHitPlace', { place: placeText({ city: p.city, state: p.state }), kind: kindOf(p) })}</small></th><td class="num">${money(-p.lost[k] * use)}</td><td class="num">${pct(-xOf(p, k, use), 2)}</td><td class="num">${money(-p.pen)}</td><td class="num">${pct(-p.y, 3)}</td></tr>`)}`;
+export const namedBody = (model, k, use, list = exposed(model, k, use)) => html`${list.map((p, i) => html`<tr${i >= NAMED_FIRST ? html` class="wr-named__more"` : ''} data-ccn="${p.ccn}"><td class="num">${count(i + 1)}</td><th scope="row">${nameOf(p)}<small>${fill('stHitPlace', { place: placeText({ city: p.city, state: p.state }), kind: kindOf(p) })}</small></th><td class="num">${pct(-xOf(p, k, use), 2)}</td><td class="num">${money(-p.lost[k] * use)}</td><td class="num">${money(-p.pen)}</td><td class="num">${pct(-p.y, 3)}</td></tr>`)}`;
 
 function named(model, k, use) {
   const n = exposed(model, k, use).length;
@@ -400,7 +423,7 @@ function named(model, k, use) {
 <table class="gb wr-named__t">
 <caption class="vh" data-b-cap>${namedCaption(k)}</caption>
 <thead><tr><th scope="col" rowspan="2" class="num">${t('bColNo')}</th><th scope="col" rowspan="2">${t('bColHosp')}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${t('bGrpMedicaid')} ${scenTag(model.fy)}</th><th scope="colgroup" colspan="2" class="wr-named__grp">${fill('bGrpMedicare', { pfy })} ${estimate()}</th></tr>
-<tr><th scope="col" class="num">${t('bColLostA')}</th><th scope="col" class="num">${t('bColShareA')}</th><th scope="col" class="num">${t('bColPenA')}</th><th scope="col" class="num">${t('bColShareA')}</th></tr></thead>
+<tr><th scope="col" class="num">${t('bColShareA')}</th><th scope="col" class="num">${t('bColLostA')}</th><th scope="col" class="num">${t('bColPenA')}</th><th scope="col" class="num">${t('bColShareA')}</th></tr></thead>
 <tbody data-b-rows>${namedBody(model, k, use)}</tbody>
 </table>
 </div>

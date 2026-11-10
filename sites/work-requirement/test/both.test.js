@@ -12,7 +12,7 @@ import { BOTH_QUANTILE, BOTH_SHARE, NAMED_FIRST, SCENARIOS } from '../web/consta
 import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import {
-  DRAWINGS, LABEL_FONTS, bothBody, bothInput, bothLayout, bothModel, countsAt, cutOf, decodeBoth, exposed, headHtml, namedBody, pageMark, xOf, youHtml,
+  DRAWINGS, LABEL_FONTS, bothBody, bothInput, bothLayout, bothModel, countsAt, cutOf, decodeBoth, exposed, covers, headHtml, namedBody, placed, xOf, youHtml,
 } from '../web/program/both.js';
 import { awayRows, serverPick } from '../web/program/hospital.js';
 import { hospitalRows } from '../web/program/strips.js';
@@ -85,6 +85,7 @@ test('the step leads with its range and finding; the corner is named as the top 
   assert.match(text, new RegExp(`${counts[0].toLocaleString('en-US')} to ${counts[2].toLocaleString('en-US')} hospitals exposed on both`));
   assert.match(text, /top quarter of penalty share/);
   assert.match(text, /about \d+ times their FY\d{4} Medicare penalties/);
+  assert.match(text, /a year \(\d{4} dollars\), is about/);
   assert.doesNotMatch(text, /\bworst\b/i);
   assert.doesNotMatch(text, BAD);
   assert.ok(section.includes('SCENARIO · 2023 $') || /Scenario · 2023 \$/.test(section));
@@ -162,18 +163,6 @@ test('the page\'s hospital: marked in the plot or the strip, or a reason line li
     for (const r of none) assert.equal(bothLayout({ model, drawing, k: MIDDLE, use: 1, ccn: r.ccn }).page, null, r.ccn);
   }
   assert.match(words(youHtml(model, stripRow, MIDDLE, 1)), /hatched strip/);
-  // Every strip hospital, each case and width: the strip's label stays inside the drawing, and off the mark where the
-  // strip's other end has room.
-  for (const drawing of ['narrow', 'wide']) {
-    for (const [k] of SCENARIOS.entries()) {
-      for (const s of model.strip) {
-        const L = bothLayout({ model, drawing, k, use: 1, ccn: s.ccn });
-        const b = L.labels.find((l) => l.cls === 'wr-b__strip').box;
-        assert.ok(b[0] >= L.plot.x0 && b[0] + b[2] <= L.plot.x1, `${s.ccn} ${drawing}: the strip's label`);
-        if (L.page.x > L.plot.x0 + 12 + b[2]) assert.ok(L.page.x < b[0] - 6 || L.page.x > b[0] + b[2] + 6, `${s.ccn} ${drawing} ${k}: the label covers the mark`);
-      }
-    }
-  }
   for (const r of none) {
     const out = String(youHtml(model, r, MIDDLE, 1));
     assert.match(out, /<a href="#hospital">/);
@@ -181,6 +170,7 @@ test('the page\'s hospital: marked in the plot or the strip, or a reason line li
   }
   const zero = rows.find((r) => model.at.get(r.ccn)?.kind === 'plot' && model.pts[model.at.get(r.ccn).i].pen === 0);
   assert.match(words(youHtml(model, zero, MIDDLE, 1)), /no FY\d{4} penalty/);
+  assert.match(words(youHtml(model, plotRow, MIDDLE, 1)), /FY\d{4} penalties of [\d.]+% of its patient revenue\./);
   // Markup the browser sets with .text, for every kind of hospital, case and use rate, and never a bad value.
   for (const r of [stripRow, plotRow, zero, ...none, null]) {
     for (const [k] of SCENARIOS.entries()) {
@@ -215,22 +205,45 @@ test('every label in Figure 5 stays inside its drawing, whole, with no two touch
   }
 });
 
-test('the page\'s hospital\'s name, for every plotted hospital, case, use rate and width: inside the plot, clear of the fixed labels', () => {
+test('no strip dot sits under a label, at every case, use rate and width', () => {
+  for (const drawing of ['narrow', 'wide']) {
+    for (const [k] of SCENARIOS.entries()) {
+      for (const use of USES) {
+        const L = bothLayout({ model, drawing, k, use });
+        const boxes = [...L.labels, ...L.tags, ...L.xTicks.map((x) => x.label), ...L.yTicks.map((y) => y.label)].filter(Boolean).map((l) => l.box);
+        const r = L.geo.stripDot / 2;
+        for (const [x, y] of L.stripDots) assert.ok(!boxes.some((b) => overlap(b, [x - r, y - r, 2 * r, 2 * r])), `${drawing} ${k} ${use}: a strip dot at ${x}, ${y} under a label`);
+      }
+    }
+  }
+});
+
+test('the page\'s hospital, every one plotted or in the strip, at each case, use rate and width: its mark under no label, its name inside the plot, no two labels touching', () => {
   let n = 0;
   for (const drawing of ['narrow', 'wide']) {
+    const geo = DRAWINGS[drawing];
     for (const [k] of SCENARIOS.entries()) {
       for (const use of [0.75, 1, 1.25]) {
         const L = bothLayout({ model, drawing, k, use });
-        for (const p of model.pts) {
-          const m = pageMark(model, L, p.ccn);
-          assert.ok(m.label, `${p.ccn} ${drawing} ${k} ${use}: no room for the name`);
-          const b = m.label.box;
-          assert.ok(b[0] >= L.plot.x0 && b[0] + b[2] <= L.plot.x1 && b[1] >= L.plot.y0 && b[1] + b[3] <= L.plot.y1, `${p.ccn} ${drawing}: the name leaves the plot`);
-          for (const l of L.labels) assert.ok(!overlap(b, l.box), `${p.ccn} ${drawing} ${k} ${use}: the name touches "${l.text}"`);
+        const still = [...L.tags, ...L.xTicks.map((x) => x.label), ...L.yTicks.map((y) => y.label)].filter(Boolean);
+        for (const ccn of [...model.pts, ...model.strip].map((p) => p.ccn)) {
+          const { labels, page } = placed(model, L, ccn);
+          const what = `${ccn} ${drawing} ${k} ${use}`;
+          const all = [...labels, ...still, ...(page.label ? [page.label] : [])];
+          for (const l of all) {
+            assert.ok(!covers(l.box, page, L.strip), `${what}: "${l.text}" covers the mark`);
+            assert.ok(l.box[0] >= 0 && l.box[0] + l.box[2] <= geo.width && l.box[1] >= 0 && l.box[1] + l.box[3] <= geo.height, `${what}: "${l.text}" leaves the drawing`);
+          }
+          for (let i = 0; i < all.length; i += 1) for (let j = i + 1; j < all.length; j += 1) assert.ok(!overlap(all[i].box, all[j].box), `${what}: "${all[i].text}" touches "${all[j].text}"`);
+          if (!page.inStrip) {
+            assert.ok(page.label, `${what}: no room for the name`);
+            const b = page.label.box;
+            assert.ok(b[0] >= L.plot.x0 && b[0] + b[2] <= L.plot.x1 && b[1] >= L.plot.y0 && b[1] + b[3] <= L.plot.y1, `${what}: the name leaves the plot`);
+          }
           n += 1;
         }
       }
     }
   }
-  assert.ok(n > 30000, `${n} names placed`);
+  assert.ok(n > 50000, `${n} placements`);
 });
