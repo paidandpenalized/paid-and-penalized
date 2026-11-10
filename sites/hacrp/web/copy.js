@@ -231,10 +231,10 @@ export const COPY = {
   recordCcn: { text: 'CCN {ccn}', claim: null },
   fieldHospital: { text: 'Hospital', claim: null },
   fieldLocation: { text: 'Location', claim: null },
-  location: { text: '{city}, {state} {zip}', claim: null },
+  location: { text: '{place} {zip}', claim: null },
   // The Location field's state link, for screen readers after the state's code: where it goes.
   locationState: { text: "({state}'s hospitals on the map and in the table)", claim: null },
-  locationNoZip: { text: '{city}, {state}', claim: null },
+  locationNoZip: { text: '{place}', claim: null },
   fieldType: { text: 'Type', claim: null },
   typeTeachMajor: { text: 'Major teaching', claim: null },
   typeTeachMinor: { text: 'Minor teaching', claim: null },
@@ -263,14 +263,14 @@ export const COPY = {
   mapLabel: { text: "Map of {state} with this hospital's location marked", claim: null },
 
   // Hospital page.
-  hospitalTitle: { text: '{name}, {city}, {state}: Hospital-Acquired Conditions, FY{fy}', claim: null },
+  hospitalTitle: { text: '{name}, {place}: Hospital-Acquired Conditions, FY{fy}', claim: null },
   hospitalDescription: {
-    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, and this site's estimate of the dollars, from public CMS data.",
+    text: "{name} ({place}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, and this site's estimate of the dollars, from public CMS data.",
     claim: null,
   },
   // The same, for a hospital this site has no estimate for (Maryland's, or one with no usable payment inputs).
   hospitalDescriptionNone: {
-    text: "{name} ({city}, {state}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, from public CMS data.",
+    text: "{name} ({place}): CMS's FY{fy} Hospital-Acquired Condition score and payment decision, from public CMS data.",
     claim: null,
   },
   kicker: { text: '{subtitle} · fiscal year {fy}', claim: null },
@@ -587,7 +587,8 @@ export const COPY = {
   nearbyColDecision: { text: 'Decision', claim: null },
   nearbyColMeasures: { text: 'Measures', claim: null },
   nearbyGlyph: { text: 'Above the national median on {worse} of {scored} measures', claim: null },
-  nearbyTip: { text: '{n}. {name}, {city}: score {score}, {decision}, {distance}', claim: null },
+  // {who}: the hospital's name and city (the name alone where the master has no city).
+  nearbyTip: { text: '{n}. {who}: score {score}, {decision}, {distance}', claim: null },
   nearbyThis: { text: 'This hospital', claim: null },
   nearbyRing: { text: '{miles} mi', claim: null },
   figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {distance} away.', claim: null },

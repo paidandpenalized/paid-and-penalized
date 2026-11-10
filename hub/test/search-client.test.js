@@ -10,11 +10,12 @@ import { buildIndex, search } from '../../web/client/search.js';
 import { US_STATES } from '../../engine/js/states.js';
 import { hubEntries, hubWords, mountHubSearch } from '../client/search.js';
 import { loadHub } from '../data.js';
-import { EXAMPLE_CCN, hubHospitals } from '../model.js';
+import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
 import { hubSearchForm } from '../search/form.js';
 import { comboForm } from '../../web/test/dom.js';
 
-const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inHrrp: false, est: null });
+// An estimated hospital (its est a stand-in: the search reads only whether there is one).
+const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inHrrp: false, est: { share: 0 } });
 const SAMPLE = [
   h('990001', 'Example General Hospital', 'Exampleton', 'OH'),
   h('99000A', 'Sample Medical Center', 'Sampleville', 'NY'),
@@ -40,6 +41,16 @@ test('the states are the fifty and DC, each by name and by code, with the hospit
   assert.equal(states.find((e) => e.key === 'NY').sub, 'State · 2 hospitals');
   assert.equal(states.find((e) => e.key === 'AK').sub, 'State · 0 hospitals', 'a state with none is still a place to look at');
   assert.ok(states.every((e) => e.href === `/#state=${e.key}`));
+});
+
+test('a state counts its hospitals as its line on the map does: those with an estimate, and every one in Maryland', () => {
+  const none = (ccn, state, status) => ({ ...h(ccn, 'Example Clinic', 'Exampleton', state), status, est: null });
+  const list = [...SAMPLE, none('990005', 'OH', 'no-inputs'), none('990006', 'MD', 'maryland'), none('990007', 'MD', 'no-inputs')];
+  const entries = hubEntries(list);
+  assert.equal(entries.filter((e) => e.type === 'hospital').length, list.length, 'every hospital is still found');
+  const sub = (code) => entries.find((e) => e.type === 'state' && e.key === code).sub;
+  assert.equal(sub('OH'), 'State · one hospital', 'a hospital with no estimate is not counted');
+  assert.equal(sub('MD'), 'State · 2 hospitals', "Maryland's are all counted");
 });
 
 test('typing a state\'s name or code lists the state first; a city and a state find a hospital', () => {
@@ -81,7 +92,16 @@ test('the real list: a CCN finds its hospital first, and a state carries the cou
     assert.equal(search(row.ccn, index).results[0].key, row.ccn);
   }
   const state = entries.find((e) => e.type === 'state' && e.key === EXAMPLE_STATE);
-  assert.equal(state.sub, `State · ${hospitals.filter((x) => x.state === EXAMPLE_STATE).length.toLocaleString('en-US')} hospitals`);
+  assert.equal(state.sub, `State · ${stateTotals(hospitals).get(EXAMPLE_STATE).n.toLocaleString('en-US')} hospitals`);
+});
+
+test('the real list: every state carries the count its line on the map says (stateTotals), though some have hospitals with no estimate', () => {
+  const totals = stateTotals(hospitals);
+  const states = hubEntries(hospitals).filter((e) => e.type === 'state');
+  const n = (code) => totals.get(code)?.n ?? 0;
+  const words = (k) => (k === 1 ? 'State · one hospital' : `State · ${k.toLocaleString('en-US')} hospitals`);
+  for (const e of states) assert.equal(e.sub, words(n(e.key)), `${e.key}: the map's count`);
+  assert.ok(states.some((e) => hospitals.filter((x) => x.state === e.key).length !== n(e.key)), 'some state has a hospital the map does not count (if not, this test no longer covers one)');
 });
 
 // ---------- the combobox on the hub's forms ----------

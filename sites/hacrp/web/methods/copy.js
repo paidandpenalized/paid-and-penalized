@@ -403,7 +403,7 @@ export const COPY = {
   btNotZeroActual: { text: '{n} whose cost report shows no HAC amount', claim: null },
   btNotZeroModel: { text: '{n} for which the method has no dollars at stake', claim: null },
   btNotBothZero: { text: '{n} with neither', claim: null },
-  btTip: { text: '{name}, {city}, {state}: estimate {model}, cost report {actual} ({ratio})', claim: null },
+  btTip: { text: '{name}, {place}: estimate {model}, cost report {actual} ({ratio})', claim: null },
   btTipNoName: { text: 'Estimate {model}, cost report {actual} ({ratio})', claim: null },
   btExact: { text: 'exact', claim: null },
   btOverall: { text: 'median {ratio}', claim: null },

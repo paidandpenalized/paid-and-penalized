@@ -11,15 +11,18 @@ import { mountOmnibox } from '../../web/client/omnibox.js';
 import { once } from '../../web/client/once.js';
 import { buildIndex } from '../../web/client/search.js';
 import { hospitalPathOf } from '../../web/site.js';
+import { countedOnMap } from '../model.js';
 import { fill } from '../search/copy.js';
 
 // The search entries (web/client/search.js buildIndex) for hospitals, as the asset decodes them (or hubHospitals gives
 // them): each hospital by name, with "City, ST" under it, found also by its city and state and, as its key, its CCN; each
-// state with the number of hospitals in it under it, found by its name and, as its key, its code.
+// state with the number of its hospitals the map counts under it (countedOnMap: the state's line there says the same
+// number), found by its name and, as its key, its code.
 export function hubEntries(hospitals) {
   const inState = new Map();
-  const found = hospitals.map(({ ccn, name, city, state }) => {
-    inState.set(state, (inState.get(state) ?? 0) + 1);
+  const found = hospitals.map((h) => {
+    const { ccn, name, city, state } = h;
+    if (countedOnMap(h)) inState.set(state, (inState.get(state) ?? 0) + 1);
     return { type: 'hospital', key: ccn, label: name, sub: placeText({ city, state }), extra: `${city} ${state ?? ''}`.trim(), href: hospitalPathOf('hub', ccn) };
   });
   const kind = fill('searchKindState');

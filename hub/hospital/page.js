@@ -22,7 +22,7 @@ import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
-import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
+import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -111,9 +111,10 @@ function sumRows(h, figures, fy, sets) {
     .map((row) => ({ ...row, ...rowDollars(h.est, row.id, figures) }));
   const x = sumScale(sumValues(h.est, sets));
   const zero = x(0);
+  const parts = rows.filter((row) => row.id !== 'net' && row.own !== null).map((row) => row.own);
   const line = (row) => {
     const cls = `hh__sr${row.id === 'net' ? ' hh__sr--net' : ''}`;
-    if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill('notInProgram')}</span></span></li>`;
+    if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill(outKey(row.id, 'notInProgram'))}</span></span></li>`;
     const med = row.median === null ? '' : html`<span class="vh">; ${fill('sumMedian', { amount: signedMoney(row.median) })}</span>`;
     return html`<li class="${cls}" data-sum="${row.id}"><span class="hh__sl">${row.label}</span>${track(x, row.own, row.median)}<span class="hh__sv">${signedMoney(row.own)}</span><span class="hh__sw">${word(row.id, row.own)}${med}</span></li>`;
   };
@@ -123,7 +124,8 @@ function sumRows(h, figures, fy, sets) {
 ${rows.map(line)}
 ${axis}
 </ul>
-<p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>`;
+<p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>
+<p class="hh__round" data-sum-round${addsAsPrinted(parts, h.est.net) ? ' hidden' : ''}>${fill('sumRounded')}</p>`;
 }
 
 // Where the likely ranges come from: the HACRP Methods page's back-test (its id there is the site's BACKTEST_ID), which
@@ -218,7 +220,7 @@ function programRow(h, id, figures, ctx) {
   const own = rowDollars(h.est, id, figures).own;
   const value = listed
     ? html`<span class="vh">${fill('rowValue', { fy: ctx.fy })} </span><span class="hh__num">${signedMoney(own)}</span> ${pill({ kind: inkOf(own), label: word(id, own) })}`
-    : pill({ kind: 'na', label: fill('notInProgram') });
+    : pill({ kind: 'na', label: fill(outKey(id, 'notInProgram')) });
   return html`<div class="hh__row" data-row="${id}">
 <div class="hh__rt">
 <h3 class="hh__rh">${name} <span class="hh__ab">${ab}</span></h3>
@@ -315,7 +317,7 @@ ${notes(fy, false)}
 // the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note).
 export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null }) {
   const fy = String(assets.shell.fy);
-  const place = { name: h.name, city: h.city, state: h.state ?? '' };
+  const place = { name: h.name, place: placeText(h) };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
   const groups = h.est ? PEER_MODES.map((mode) => groupOf(hospitals, h, mode)) : [];
   const group = groups[0] ?? null;

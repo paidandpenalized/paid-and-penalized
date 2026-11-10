@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { loadHub } from '../data.js';
 import { hubHospitals } from '../model.js';
-import { BIG_STEP, STEP, changed, dragAction, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, vbpMaxOf } from '../client/hospital/whatif-state.js';
+import { BIG_STEP, STEP, changed, dragAction, extent, factorAt, fromHash, initial, outcome, ranges, reduce, toHash, typedOk, vbpMaxOf } from '../client/hospital/whatif-state.js';
 import { storyFacts, vbpMaxOf as modelVbpMax } from '../model.js';
 import { holdingAxis, shareDomain } from '../client/scale.js';
 import { BASE, TOTAL, makeHospital as make, whatIfCorners } from './helpers.js';
@@ -52,6 +52,19 @@ test('set clamps to the range, keeps four decimals, and refuses a program the ho
   assert.equal(reduce(so, { type: 'set', id: 'hrrp', value: 0.98 }, octx), so);
   assert.equal(reduce(so, { type: 'step', id: 'hvbp', dir: 1 }, octx), so);
   assert.equal(reduce(so, { type: 'median', id: 'hvbp' }, octx), so);
+});
+
+test('a typed factor: one inside the field\'s ends is taken; one past them (99, what "0,99" can arrive as), or none, is refused, not moved to an end', () => {
+  const ok = (id, value, h = H) => typedOk(h, { vbpMax: VBP_MAX }, id, value);
+  assert.deepEqual([0.97, 0.99, 0.9988, 1].map((v) => ok('hrrp', v)), [true, true, true, true]);
+  assert.deepEqual([99, 1.2, 0.5, 0.9699, 1.0001, Number.NaN].map((v) => ok('hrrp', v)), [false, false, false, false, false, false]);
+  assert.deepEqual([0.98, 1.0452].map((v) => ok('hvbp', v)), [true, true]);
+  assert.deepEqual([2, 0.9799].map((v) => ok('hvbp', v)), [false, false]);
+  // Read to four decimals: the highest factor in the data, typed as the field shows it, is in.
+  assert.equal(ok('hvbp', 1.0453, make('990011', { vbpFactor: VBP_MAX })), true);
+  assert.equal(ok('hvbp', 1.0453), false, 'past another hospital\'s top');
+  assert.equal(ok('hrrp', 0.99, make('990007', { hrrpListed: false })), false, 'a program it is not in');
+  assert.equal(ok('hac', 1), false, 'the cut has no field');
 });
 
 test('a value that reads as the actual factor is the actual factor: unchanged', () => {

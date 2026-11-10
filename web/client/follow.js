@@ -57,6 +57,18 @@ export function withoutFollow(href) {
   return `${head.slice(0, at)}${query ? `?${query}` : ''}${tail}`;
 }
 
+// An address that follows ccn: withoutFollow's, with h=<ccn> at the end of its query (before its fragment), the rest
+// exactly as written. A page that follows a hospital the reader picks in place writes it (history.replaceState), so a
+// reload, or Back to the page after the browser dropped it, comes back to the same hospital.
+export function addressFollowing(href, ccn) {
+  const bare = withoutFollow(href);
+  const hash = bare.indexOf('#');
+  const head = hash < 0 ? bare : bare.slice(0, hash);
+  const tail = hash < 0 ? '' : bare.slice(hash);
+  const join = !head.includes('?') ? '?' : head.endsWith('?') || head.endsWith('&') ? '' : '&';
+  return `${head}${join}h=${ccn}${tail}`;
+}
+
 // A page's own address as a link on this site: its path, query and fragment, with leading slashes folded into one. A path
 // that begins "//" would be read as another site's address, and the chip's stop link is made from this address.
 export const siteAddress = ({ pathname, search, hash }) => `/${pathname.replace(/^\/+/, '')}${search}${hash}`;

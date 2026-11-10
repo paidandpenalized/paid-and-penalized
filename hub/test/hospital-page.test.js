@@ -61,6 +61,16 @@ const MARYLAND = pick((h) => h.status === 'maryland', 'a Maryland hospital');
 const NO_INPUTS = pick((h) => h.status === 'no-inputs', 'a hospital with no inputs');
 const NO_INPUTS_CUT = pick((h) => h.status === 'no-inputs' && h.cut, 'a hospital with no inputs that CMS cut');
 
+test('a hospital with no city: the title, the description and the Location field name its state alone', () => {
+  for (const [kind, h] of [['estimated', CUT], ['Maryland', MARYLAND], ['no inputs', NO_INPUTS]]) {
+    const page = render({ ...h, name: 'Invented General', city: '' });
+    assert.ok(page.includes(`<title>Invented General, ${h.state}: Medicare payment programs, FY${FY} · `), `${kind}: the title`);
+    const description = /<meta name="description" content="([^"]*)">/.exec(page)[1];
+    assert.ok(description.startsWith(kind === 'estimated' ? `Estimated FY${FY} dollars for Invented General in ${h.state}, in ` : `Invented General in ${h.state}${kind === 'Maryland' ? ' ' : ':'}`), `${kind}: the description`);
+    assert.ok(mainOf(page).includes(`<p class="field__value">${h.state}</p>`), `${kind}: the Location field`);
+  }
+});
+
 test('an estimated cut hospital: its record, the net with its tag, stamp and fiscal year note, and the rows adding to it', () => {
   const page = render(CUT);
   const main = mainOf(page);
@@ -183,7 +193,7 @@ test('the what-if section: a row per program with its value, pill, why and deep 
   assert.ok(whatifRow(block(mainOf(render(gone)), 'id="whatif"', '</section>'), 'hrrp').includes(esc(`CMS’s FY${HUB.hrrp.fy} Readmissions file doesn’t list it, so it has no Readmissions page here.`)), 'the year line of a hospital the newer file dropped');
   assert.ok(!whatifRow(block(mainOf(render(NOT_IN_TDR.est.hrrpListed ? { ...NOT_IN_TDR, est: { ...NOT_IN_TDR.est, hrrpListed: false } } : NOT_IN_TDR)), 'id="whatif"', '</section>'), 'hrrp').includes('Readmissions file doesn’t list it'), 'and none for a hospital neither file lists');
   assert.ok(hac.includes(esc('The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.')), 'HACRP: why its pages count differently');
-  assert.ok(hrrp.includes(`Peer median, among those in the program: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median');
+  assert.ok(hrrp.includes(`Peer median, among those in CMS’s file: ${signedShareText(fig.hrrp.median)} of pay.`), 'Readmissions: the peers\' median, among those its file lists');
   assert.ok(fig.hrrp.cut + fig.hrrp.none + fig.hrrp.out === peers.length, 'the counts add to the group');
   // The deep links: a built hospital page, or the program's folder, which holds its placeholder page (page not built yet).
   assert.ok(hrrp.includes(`<a class="hh__deep" href="${hospitalPathOf('hrrp', CUT.ccn, { inHrrp: true })}">Readmissions for this hospital<span class="ico ico--arrow" aria-hidden="true"></span></a>`), 'Readmissions: its page');
@@ -261,14 +271,34 @@ test('the stylesheet\'s glides read their length and curve from the page\'s scri
   }
 });
 
-test('a program a hospital is not in reads "Not in this program", hatched, never $0', () => {
+test('the dollar rows: a note that each figure is rounded shows only where the rows, as printed, miss the net', () => {
+  // A printed amount as dollars, read from the page ("−$41K" is -41000), independent of the page's own check.
+  const unit = { '': 1, K: 1e3, M: 1e6, B: 1e9 };
+  const printed = (t) => { const [, m, b, u] = /^(−?)\+?\$([\d.]+)([KMB]?)$/.exec(t); return (m ? -1 : 1) * Math.round(Number(b) * unit[u]); };
+  const rowsOf = (page) => Object.fromEntries([...page.matchAll(/data-sum="(\w+)">[\s\S]*?<span class="hh__sv">([^<]*)<\/span>/g)].map((m) => [m[1], printed(m[2])]));
+  const note = (page) => /<p class="hh__round" data-sum-round( hidden)?>([^<]*)<\/p>/.exec(page);
+  // A reader's check: the printed rows added up, then printed as the page prints dollars, against the printed net (so
+  // "−$205K" and "+$2.0M" make the "+$1.8M" they sit beside).
+  const misses = (page) => { const r = rowsOf(page); return money(Object.entries(r).filter(([k]) => k !== 'net').reduce((s, [, v]) => s + v, 0)) !== money(r.net); };
+  const MISS = pick((h) => h.est && misses(render(h)), 'an estimated hospital whose rows, as printed, miss its net');
+  for (const [h, miss] of [[CUT, misses(render(CUT))], [MISS, true]]) {
+    const n = note(mainOf(render(h)));
+    assert.ok(n, 'the note is on the page');
+    assert.equal(n[1] === undefined, miss, miss ? 'shown where the rows miss the net' : 'hidden where they add up');
+    assert.equal(n[2], 'Each figure is rounded on its own, so the programs’ rows may not add exactly to the net.');
+  }
+});
+
+test('a program a hospital is not in reads "Not in this program" (Readmissions, whose file not listing it doesn\'t say that: "Not in CMS\'s file"), hatched, never $0', () => {
   for (const [h, id] of [[NO_VBP, 'hvbp'], [NO_HRRP, 'hrrp']]) {
     const main = mainOf(render(h));
     const row = sumRow(main, id);
-    assert.ok(row.includes('<span class="hh__out"><span>Not in this program</span></span>'), `${id}: the dollar row is hatched with the words`);
+    const words = id === 'hrrp' ? 'Not in CMS’s file' : 'Not in this program';
+    assert.ok(row.includes(`<span class="hh__out"><span>${words}</span></span>`), `${id}: the dollar row is hatched with the words`);
     assert.ok(!row.includes('$') && !row.includes('hh__tick'), `${id}: the dollar row has no dollars and no median tick`);
     const wrow = whatifRow(main, id);
-    assert.ok(wrow.includes('<span class="pill pill--na">Not in this program</span>'), `${id}: the what-if row says so`);
+    assert.ok(wrow.includes(`<span class="pill pill--na">${words}</span>`), `${id}: the what-if row says so`);
+    if (id === 'hrrp') assert.doesNotMatch(row + wrow, /not in (this|the) program/i, 'Readmissions\' rows never say it is outside the program');
     assert.ok(!wrow.includes('$'), `${id}: the what-if row has no dollars`);
     assert.ok(wrow.includes(id === 'hvbp' ? `Not in CMS’s FY${FY} value-based purchasing file.` : `Not in CMS’s FY${FY} Readmissions file.`), `${id}: why`);
   }

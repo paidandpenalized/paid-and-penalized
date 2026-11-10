@@ -9,7 +9,7 @@
 import { STATE_NAMES } from '../../../../engine/js/states.js';
 import { stateMap } from '../../../../web/charts/geo.js';
 import { fillAround, footnoteLegend, footnoteNote, formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { cmsText, count, decimal, dotList, isoDate, ordinal, unbroken } from '../../../../web/render/format.js';
+import { cmsText, count, decimal, dotList, isoDate, ordinal, placeText, unbroken } from '../../../../web/render/format.js';
 import { closedNote } from '../../../../web/render/closed.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
@@ -99,7 +99,10 @@ function starsSpec(view, careSource) {
 function locationText(view) {
   const more = fill('locationState', { state: STATE_NAMES[view.state] ?? view.state });
   const state = html`<a class="hosp__state" href="${SITE.sites.hacrp.path}${stateHref(view.state)}">${view.state}<span class="vh"> ${more}</span></a>`;
-  return fillAround(({ state: at }) => (view.zip ? fill('location', { city: view.city, state: at, zip: view.zip }) : fill('locationNoZip', { city: view.city, state: at })), { state });
+  return fillAround(({ state: at }) => {
+    const place = placeText({ city: view.city, state: at });
+    return view.zip ? fill('location', { place, zip: view.zip }) : fill('locationNoZip', { place });
+  }, { state });
 }
 
 // The state outline with the hospital's dot, drawn faint behind the record's fields (its dot in the penalty red); null
@@ -245,7 +248,7 @@ function whatIfBlock(view, whatif, source, assets, n) {
 export function hospitalPage({ view, hospital = null, model, nat, master, source, robots, assets, whatif = null, searchUrl = null, shapes = null, counties = [], careSource = null, masterFy = null, history = null, money, backtest }) {
   if (!nat || !model) throw new TypeError('hospitalPage: nat (nationalContext) and model are required');
   const fy = String(view.fy);
-  const where = { name: view.name, city: view.city, state: view.state, fy };
+  const where = { name: view.name, place: placeText(view), fy };
   const heading = fill('hospitalTitle', where);
   const title = `${heading} · ${SITE.name}`;
   const small = smallNumber(view);

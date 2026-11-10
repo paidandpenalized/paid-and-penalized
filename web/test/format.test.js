@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
+import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, moneyShown, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -102,6 +102,13 @@ test('numberWord spells a small count and leaves a larger one in digits', () => 
   assert.deepEqual([0, 1, 5, 10].map(numberWord), ['none', 'one', 'five', 'ten']);
   assert.equal(numberWord(11), '11');
   assert.equal(numberWord(1234), '1,234');
+});
+
+test('moneyShown: the dollars money() prints, as a number', () => {
+  for (const [x, shown] of [[640.4, 640], [-41234, -41000], [999.5, 1000], [1234567, 1200000], [-1250000, -1300000], [123456789, 123000000], [2.345e9, 2.3e9], [0.2, 0], [-0.2, 0], [74999, 75000]]) {
+    assert.equal(moneyShown(x), shown, `${x}`);
+  }
+  assert.ok(Object.is(moneyShown(-0.2), 0), 'never -0');
 });
 
 test('placeText: "City, ST", or as much of it as a record has', () => {

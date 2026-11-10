@@ -572,6 +572,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__ax-bonus { position: absolute; left: calc(var(--z) * 100% + 20px); }
 .hh__key { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--ink-3); font-size: 12.5px; }
 .hh__key-tick { flex: none; width: 2px; height: 13px; background: var(--ink); }
+.hh__round { margin-top: 4px; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
 
 /* The button down to the what-if: bold, outlined, the capsule handle as its glyph. */
 .hh__wbtn { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; padding: 10px 18px 10px 12px; border: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 15.5px/1.2 var(--font-body); text-decoration: none; }
@@ -702,6 +703,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__stp:hover { background: var(--paper-2); }
 .hh__fin:focus-visible, .hh__stp:focus-visible, .hh__lnk:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .hh__ctl .hh__lnk { margin-left: 6px; }
+/* A refused typed factor: a line of its own under the controls, ruled in the penalty ink as the program sites' are. */
+.hh__refused { flex-basis: 100%; max-width: none; margin: 0; padding-left: 8px; border-left: 3px solid var(--pen); color: var(--ink); font-size: inherit; font-weight: 600; line-height: 1.4; }
 
 /* Once anything changes: the dashed Hypothetical banner sticks under the peer row (a row of its own; on a phone it takes
    the peer row's place, below), the "Reader-made scenario" line under it scrolls with the page, the stamp reads "What if"

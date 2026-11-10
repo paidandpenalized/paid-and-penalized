@@ -396,6 +396,17 @@ test('titles and descriptions: the hospital page ends with the site name; both p
   assert.equal(meta(program, 'description'), esc(`How Medicare’s Hospital-Acquired Condition Reduction Program works, and CMS’s FY${DATA.fy} scores and payment decisions for every hospital in its file.`));
 });
 
+test('a hospital with no city: the title, the description and the Location field name its state alone', () => {
+  for (const city of ['', null]) {
+    const text = render(CASES.yes, { master: master(CASES.yes.ccn, { city }) });
+    const name = 'Example General Hospital';
+    assert.match(text, new RegExp(`<title>${name}, AL: Hospital-Acquired Conditions, FY${DATA.fy} · Paid &amp; Penalized</title>`), `${city}: title`);
+    assert.equal(meta(text, 'description'), esc(`${name} (AL): CMS’s FY${DATA.fy} Hospital-Acquired Condition score and payment decision, from public CMS data.`), `${city}: description`);
+    assert.match(text, /<p class="field__value"><a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/, `${city}: the Location field`);
+    assert.doesNotMatch(text, /null/, `${city}: no "null"`);
+  }
+});
+
 test('the ledger says which measure added the most (its row tagged in red) and, with the what-if, which one at the median would lower the score most', () => {
   for (const h of [CASES.yes, CASES.no, CASES.maryland]) {
     const view = hospitalView(inputs(h));
@@ -679,7 +690,7 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div><\/div>/);
   assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
-  assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002', 'Open on Care Compare'))));
+  assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002/', 'Open on Care Compare'))));
   // The state's outline and the dot behind the whole card, first in it (so the fields paint over it), at the locator's
   // standard width; the record's own script (hacrp-record) keeps the dot clear of the fields' words.
   assert.match(text, /<div class="form hosp__id">\n<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j"><svg class="chart chart--state-map" viewBox="0 0 300 \d+"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);

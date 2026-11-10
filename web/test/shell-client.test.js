@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { CHIP } from '../chip-copy.js';
-import { followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
+import { addressFollowing, followedCcn, siteAddress, tabHref, tabProgram, withoutFollow } from '../client/follow.js';
 import * as shell from '../client/shell.js';
 import { follow, keepFocusInRow, moreTabs, rewriteLinks, tabScroll, wireFind, wireTabs, wireTheme } from '../client/shell.js';
 import { THEME_KEY, applySavedTheme, saveTheme, savedTheme, sessionStore } from '../client/theme-store.js';
@@ -77,6 +77,15 @@ test('withoutFollow: every h is dropped, everything else stays exactly as it was
   assert.equal(withoutFollow('/?h'), '/');
   assert.equal(withoutFollow('/?hh=1&xh=2'), '/?hh=1&xh=2');
   for (const same of ['/', '/hacrp/#h=990001', '/a/?x=1', '/a/?x=1&&y=2#z', '']) assert.equal(withoutFollow(same), same, `${same} is returned untouched`);
+});
+
+test('addressFollowing: one h, the CCN given, at the end of the query; the path, the rest of the query and the fragment as written', () => {
+  assert.equal(addressFollowing('/', '990001'), '/?h=990001');
+  assert.equal(addressFollowing('/?h=990002', '990001'), '/?h=990001', 'the pick replaces the one before');
+  assert.equal(addressFollowing('/?x=1&h=990002&y=a%20b#state=OH', '99000A'), '/?x=1&y=a%20b&h=99000A#state=OH');
+  assert.equal(addressFollowing('/#state=OH', '990001'), '/?h=990001#state=OH');
+  assert.equal(addressFollowing('/?', '990001'), '/?h=990001');
+  assert.equal(followedCcn(new URL(addressFollowing('/?x=1#a', '99000a'), 'https://example.invalid').search), '99000A', 'the follow reads it back');
 });
 
 test('shell.js offers the follow\'s pure parts, the very functions follow.js holds', () => {

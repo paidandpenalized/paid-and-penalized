@@ -560,7 +560,7 @@ export function placeMapFigure({ place, places, pd, shapes, counties, hospitalRo
     const h = hospitalRows.get(ccn);
     return dense ? { point: h.point, cls: `chart-dots--${kind(r)}` } : {
       point: h.point, r: r?.yes ? 4.6 : 3.8, cls: `chart-place__dot--${kind(r)}`,
-      tip: fill('placeMapTip', { name: h.name, city: h.city, score: cmsText(h.totalText), decision: decision(r) }), href: h.href,
+      tip: fill('placeMapTip', { who: [h.name, h.city].filter(Boolean).join(', '), score: cmsText(h.totalText), decision: decision(r) }), href: h.href,
     };
   });
   const label = fill('placeMapAlt', { name: nameInText(place) });

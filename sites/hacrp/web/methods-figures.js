@@ -7,7 +7,7 @@ import { proofStrips } from '../../../web/charts/proofStrips.js';
 import { ruleStack } from '../../../web/charts/ruleStack.js';
 import { periodsChart } from '../../../web/charts/periods.js';
 import { printout } from '../../../web/render/components.js';
-import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct } from '../../../web/render/format.js';
+import { capitalize, cmsText, count, decimal, dollars, isoDate, isoMonth, listText, longDate, money, noun, pct, placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { SCORE_TOLERANCE } from '../../../engine/js/hacrp/history.js';
 import { SCORE_DECIMALS as DP } from '../../../engine/js/hacrp/score.js';
@@ -327,7 +327,7 @@ export function backtestFigure(bands, { n, source, names }) {
     const dots = bands.points.filter((p) => p.stratum === band.stratum).map((p) => {
       const who = names(p.ccn);
       const values = { model: money(p.model), actual: money(p.actual), ratio: times(p.model / p.actual) };
-      return { x: p.model / p.actual, tip: who ? fill('btTip', { ...who, ...values }) : fill('btTipNoName', values) };
+      return { x: p.model / p.actual, tip: who ? fill('btTip', { name: who.name, place: placeText(who), ...values }) : fill('btTipNoName', values) };
     });
     return {
       label: label.name,

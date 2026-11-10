@@ -196,7 +196,7 @@ export const COPY = {
   billText2: { text: 'A few large hospitals carry much of the money: the cut is a share of a payment, and their payments are large.', claim: 'HACRP-01' },
   billTakeaway: { text: "The largest tenth of the cuts, {hospitals}, are {share} of the {money} this site estimates the program took.", claim: null },
   billGroupSub: { text: '{n} · {money}', claim: null },
-  billTip: { text: '{name}, {city}, {state}: {money}', claim: null },
+  billTip: { text: '{name}, {place}: {money}', claim: null },
   billAlt: { text: "Treemap of each hospital CMS cut that this site could estimate, each tile's area this site's estimate of its cut, grouped by teaching status.", claim: null },
   // The grouping is this site's rule on CMS's resident-to-bed ratio (hospital master); {r} is its major-teaching cutoff.
   billNote: { text: "Teaching status: this site's grouping of the resident-to-bed ratio in CMS's impact file: major at {r} or more, minor above zero, none at zero.", claim: null },
@@ -224,13 +224,16 @@ export const COPY = {
   acrossOver2: { text: '{money} cut', claim: null },
   acrossLine: { text: "CMS's line", claim: null },
   acrossAxis: { text: 'Total HAC Score', claim: null },
-  acrossTip: { text: '{name}, {city}, {state}: score {score}; {what} {money}', claim: null },
+  acrossTip: { text: '{name}, {place}: score {score}; {what} {money}', claim: null },
   acrossTipCut: { text: 'cut', claim: null },
   acrossTipNot: { text: 'a cut would have been', claim: null },
   acrossAlt: { text: "Dots for the hospitals nearest CMS's line on its score axis, each sized by its estimated cut, filled where CMS cut it.", claim: null },
   acrossColSide: { text: 'Side of the line', claim: null },
   acrossColHospitals: { text: 'Hospitals', claim: null },
   acrossColMoney: { text: 'Estimated cut, taken or not (whole dollars)', claim: null },
+  // A place's page adds its own hospitals on each side, beside the nation's.
+  acrossColHereHospitals: { text: 'Here', claim: null },
+  acrossColHereMoney: { text: 'Here (whole dollars)', claim: null },
   acrossSideUnder: { text: 'Under the line: not cut', claim: null },
   acrossSideOver: { text: 'Over the line: cut', claim: null },
   // Shares.

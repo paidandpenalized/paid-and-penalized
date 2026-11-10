@@ -14,7 +14,7 @@ import { pairBars } from '../../../web/charts/pairBars.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { treemap } from '../../../web/charts/treemap.js';
 import { paraOf } from '../../../web/render/components.js';
-import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, listText, money, moneyRange, noun, pct, placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from './constants.js';
 import { groupLabel, kindLabel } from './groups.js';
@@ -31,7 +31,7 @@ export const ACROSS_WINDOW = 0.05;
 
 const pct0 = (x) => pct(x, 0);
 const p = paraOf(fill, t);
-const tipOf = (r) => fill('billTip', { name: r.name, city: r.city, state: r.state, money: money(r.cut) });
+const tipOf = (r) => fill('billTip', { name: r.name, place: placeText(r), money: money(r.cut) });
 
 // A figure's table cells: the text shown and the raw value kept (a count, whole dollars, a share to a tenth of a percent).
 const cnt = (n) => num(count(n), n);
@@ -76,16 +76,19 @@ function billFigure(md, { n, source }) {
 
 // ---------- across the line ----------
 
-// mine: a place's hospitals (a Set of CCNs), drawn in full ink with the rest faint; null on the program page.
-export function acrossFigure(md, { n, source, mine = null, name = null }) {
+// mine: a place's hospitals (a Set of CCNs), drawn in full ink with the rest faint; null on the program page. A place's
+// table (its CSV named by the place: csvName) holds its own hospitals beside the nation's, each side's count and dollars,
+// as its takeaway says them.
+export function acrossFigure(md, { n, source, mine = null, name = null, csvName = 'hacrp-dollars-across-the-line' }) {
   const near = nearLine(md, ACROSS_WINDOW);
   const { over, under, overMoney, underMoney } = near;
+  const own = mine && sides(near.rows.filter((r) => mine.has(r.ccn)));
   const window = decimal(ACROSS_WINDOW, 2);
   // On a place's page only its own hospitals name themselves (a tooltip and a keyboard stop each); the nation's others are
   // faint dots. A phone's drawing names none (acrossLine).
   const dots = near.rows.map((r) => ({
     x: r.total, value: r.atStake, over: r.yes, mine: mine ? mine.has(r.ccn) : false,
-    tip: mine && !mine.has(r.ccn) ? null : fill('acrossTip', { name: r.name, city: r.city, state: r.state, score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
+    tip: mine && !mine.has(r.ccn) ? null : fill('acrossTip', { name: r.name, place: placeText(r), score: cmsText(String(r.total)), what: t(r.yes ? 'acrossTipCut' : 'acrossTipNot'), money: money(r.atStake) }),
   }));
   const labels = {
     under: [fill('acrossUnder1', { n: count(under.length) }), fill('acrossUnder2', { money: money(underMoney) })],
@@ -94,11 +97,15 @@ export function acrossFigure(md, { n, source, mine = null, name = null }) {
   };
   const draw = (width) => acrossLine({ dots, domain: [md.line - ACROSS_WINDOW, md.line + ACROSS_WINDOW], line: md.line, labels, values: { under: underMoney, over: overMoney }, width });
   return figure({
-    n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName: 'hacrp-dollars-across-the-line', note: acrossNote(near, window), ...drawn(draw, PAGE),
-    takeaway: mine ? placeAcrossTakeaway(near, mine, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
+    n, source, claimLevel: 'estimate', alt: t('acrossAlt'), csvName, note: acrossNote(near, window), ...drawn(draw, PAGE),
+    takeaway: own ? placeAcrossTakeaway(near, own, { window, name }) : fill('acrossTakeaway', { window, over: noun(over.length, 'hospital'), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) }),
     table: {
-      columns: [{ name: t('acrossColSide') }, { name: t('acrossColHospitals'), numeric: true }, { name: t('acrossColMoney'), numeric: true }],
-      rows: [[t('acrossSideUnder'), cnt(under.length), usd(underMoney)], [t('acrossSideOver'), cnt(over.length), usd(overMoney)]],
+      columns: [{ name: t('acrossColSide') }, { name: t('acrossColHospitals'), numeric: true }, { name: t('acrossColMoney'), numeric: true },
+        ...(own ? [{ name: t('acrossColHereHospitals'), numeric: true }, { name: t('acrossColHereMoney'), numeric: true }] : [])],
+      rows: [
+        [t('acrossSideUnder'), cnt(under.length), usd(underMoney), ...(own ? [cnt(own.under.length), usd(own.underMoney)] : [])],
+        [t('acrossSideOver'), cnt(over.length), usd(overMoney), ...(own ? [cnt(own.over.length), usd(own.overMoney)] : [])],
+      ],
     },
   });
 }
@@ -111,11 +118,11 @@ function acrossNote({ noEstimate, exempt }, window) {
   return exempt ? fill('acrossNoteMaryland', { m: count(exempt), window }) : null;
 }
 
-// A place's own hospitals within the window: how many on each side and their dollars. All on one side, only that side.
-function placeAcrossTakeaway(near, mine, { window, name }) {
-  const own = near.rows.filter((r) => mine.has(r.ccn));
-  const { over, under, overMoney, underMoney } = sides(own);
-  const [n, k] = [count(near.rows.length), count(own.length)];
+// A place's own hospitals within the window (own: sides() of them): how many on each side and their dollars. All on
+// one side, only that side.
+function placeAcrossTakeaway(near, own, { window, name }) {
+  const { over, under, overMoney, underMoney } = own;
+  const [n, k] = [count(near.rows.length), count(over.length + under.length)];
   if (!under.length) return fill('placeAcrossTakeawayOver', { n, window, name, over: noun(over.length, 'cut hospital'), overMoney: money(overMoney) });
   if (!over.length) return fill('placeAcrossTakeawayUnder', { n, window, name, under: noun(under.length, 'hospital not cut', 'hospitals not cut'), underMoney: money(underMoney) });
   return fill('placeAcrossTakeaway', { k, n, window, name, over: count(over.length), overMoney: money(overMoney), under: count(under.length), underMoney: money(underMoney) });

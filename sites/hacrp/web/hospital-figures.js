@@ -12,7 +12,7 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, noun, pct, pctFloor } from '../../../web/render/format.js';
+import { cmsText, count, decimal, noun, pct, pctFloor, placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { pill, printout, wsOp, wsTerm } from '../../../web/render/components.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
@@ -286,7 +286,7 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   if (!view.point || !shapes) return null;
   const near = nat.nearest(view.ccn, view.point);
   if (near.length < 2) return null;
-  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), name: h.name, city: h.city, score: cmsText(h.totalText), decision: decisionWord(h.decision), distance: milesText(h.miles) });
+  const tip = (h, i) => fill('nearbyTip', { n: String(i + 1), who: [h.name, h.city].filter(Boolean).join(', '), score: cmsText(h.totalText), decision: decisionWord(h.decision), distance: milesText(h.miles) });
   const kind = (h) => (h.decision === 'Yes' ? 'yes' : h.decision === 'No' ? 'no' : 'na');
   const far = near.at(-1).miles;
   const rings = RING_MILES.filter((r) => r < far).slice(-RINGS_MAX).map((r) => ({ miles: r, label: fill('nearbyRing', { miles: count(r) }) }));
@@ -299,14 +299,14 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
   const table = printout(html`<table class="gb gb--near" aria-labelledby="nearby-h">
 <thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col" class="num">${t('tableColMoney')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
-<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${h.city}, ${h.state}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
+<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${placeText(h)}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
     takeaway: nearbyTakeaway(yes, near.length, milesText(near[0].miles)),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
-      rows: near.map((h) => [`${h.name}, ${h.city}, ${h.state}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),
+      rows: near.map((h) => [`${h.name}, ${placeText(h)}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),
     },
   });
   return { table, fig, keys: fig ? keysHint(n, t('figRangeKeys')) : '', count: near.length };

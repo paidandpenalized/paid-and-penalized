@@ -262,7 +262,8 @@ export const COPY = {
   placeMapAlt: { text: 'A map of {name} with a dot for each hospital in CMS\'s file.', claim: null },
   placeMapTakeaway: { text: '{name}: {yes} cut of {decided} with a payment decision.', claim: null },
   placeMapTakeawayNone: { text: '{name}: no hospital with a payment decision.', claim: null },
-  placeMapTip: { text: '{name}, {city}: {score} · {decision}', claim: null },
+  // {who}: the hospital's name and city (the name alone where the master has no city).
+  placeMapTip: { text: '{who}: {score} · {decision}', claim: null },
   placeMapColHospital: { text: 'Hospital', claim: null },
 
   placeHistHeading: { text: 'Its scores against the nation\'s', claim: null },
