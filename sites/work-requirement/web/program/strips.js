@@ -180,6 +180,28 @@ export function stripsLayout({ items, drawing, top, selected, use = 1, only = nu
 
 // ---------- the drawing ----------
 
+// The medians' labels' type size (styles.css .wr-median__label: the type face).
+const MEDIAN_PX = 11;
+
+// text cut to max units wide at size (the kit's estimate, an upper bound), ending in an ellipsis; whole when it fits.
+export function fitText(text, max, size, { mono = false } = {}) {
+  if (textWidth(text, size, { mono }) <= max) return text;
+  const chars = [...text];
+  while (chars.length && textWidth(`${chars.join('').trimEnd()}…`, size, { mono }) > max) chars.pop();
+  return `${chars.join('').trimEnd()}…`;
+}
+
+// A label beside a mark at x, kept inside span ([lo, hi], the strips' margins): right of it (gap away) where it fits,
+// else left of it, else set against the end the mark is nearer (the label then sits over the mark, which a halo keeps
+// readable), and cut with an ellipsis (fitText) when it is wider than the span itself. Returns { x, anchor, text }.
+export function markLabel(x, text, { size, mono = false, gap, span: [lo, hi] }) {
+  const fitted = fitText(text, hi - lo, size, { mono });
+  const w = textWidth(fitted, size, { mono });
+  if (x + gap + w <= hi) return { x: x + gap, anchor: 'start', text: fitted };
+  if (x - gap - w >= lo) return { x: x - gap, anchor: 'end', text: fitted };
+  return x - lo > hi - x ? { x: hi, anchor: 'end', text: fitted } : { x: lo, anchor: 'start', text: fitted };
+}
+
 // A strip's dot diameter at pitch d.
 const dotSize = (d) => Math.max(0.9, d * 0.9);
 
@@ -215,10 +237,22 @@ function strip(st, { layout, group }) {
   const medians = group
     ? html`<line class="wr-median wr-median--all" x1="${mx}" x2="${mx}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>${st.groupMedian === null ? '' : html`<line class="wr-median" x1="${r2(x(st.groupMedian))}" x2="${r2(x(st.groupMedian))}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>`}`
     : html`<line class="wr-median${on ? '' : ' wr-median--off'}" x1="${mx}" x2="${mx}" y1="${r2(st.top)}" y2="${r2(st.bot)}"/>`;
+  const span = [geo.L, geo.width - geo.R];
+  // A median's label, beside its line (markLabel) at row y; cls: its ink.
+  const medianLabel = (cls, at, y, text) => {
+    const p = markLabel(at, text, { size: MEDIAN_PX, mono: true, gap: 5, span });
+    return html`<text class="${cls} chart-label--halo wr-median__label" x="${r2(p.x)}" y="${r2(y)}"${p.anchor === 'end' ? html` text-anchor="end"` : ''}>${p.text}</text>`;
+  };
   let label = '';
-  if (on && !group) label = html`<text class="chart-label chart-label--halo wr-median__label" x="${r2(mx + 5)}" y="${r2(st.top + 10)}">${fill('stripMedian', { share: pct(st.median, 2) })}</text>`;
+  if (on && !group) label = medianLabel('chart-label', mx, st.top + 10, fill('stripMedian', { share: pct(st.median, 2) }));
   if (on && group) {
-    label = html`<text class="chart-note chart-label--halo wr-median__label" x="${r2(mx + 5)}" y="${r2(st.top + 10)}">${fill('stripMedianAll', { share: pct(st.median, 2) })}</text>${st.groupMedian === null ? '' : html`<text class="chart-label chart-label--halo wr-median__label" x="${r2(x(st.groupMedian) + 5)}" y="${r2(st.top + 24)}">${fill('stripMedianGroup', { group: group.name, share: pct(st.groupMedian, 2) })}</text>`}`;
+    label = medianLabel('chart-note', mx, st.top + 10, fill('stripMedianAll', { share: pct(st.median, 2) }));
+    if (st.groupMedian !== null) {
+      // The group's name gives way first: shortened so its median still shows in full (the chips' readout names it whole).
+      const share = pct(st.groupMedian, 2);
+      const room = span[1] - span[0] - textWidth(fill('stripMedianGroup', { group: '', share }), MEDIAN_PX, { mono: true });
+      label = html`${label}${medianLabel('chart-label', x(st.groupMedian), st.top + 24, fill('stripMedianGroup', { group: fitText(group.name, room, MEDIAN_PX, { mono: true }), share }))}`;
+    }
   }
   return html`<g class="wr-strip${on ? ' wr-strip--on' : ''}" data-scen="${st.s}">
 <line class="wr-strip__rule${st.s === 'low' ? ' wr-strip__rule--top' : ''}" x1="0" x2="${geo.width}" y1="${r2(st.y0 + 0.5)}" y2="${r2(st.y0 + 0.5)}"/>${on ? html`<rect class="wr-strip__edge" x="0" y="${r2(st.y0 + 2)}" width="3" height="${r2(st.h - 2)}"/>` : ''}
@@ -255,15 +289,15 @@ function axisBlock(layout, words) {
 const NAME_PX = 13;
 
 // The page's hospital (index i in the items) threaded through its three dots, named at the selected strip; nothing when
-// it is not drawn (a group that leaves it out).
-function thread(layout, i, name) {
+// it is not drawn (a group that leaves it out). Exported for the fit test.
+export function thread(layout, i, name) {
   const pts = layout.strips.map((st) => st.at[i]);
   if (pts.some((p) => !p)) return '';
   const k = SCENARIOS.indexOf(layout.selected);
   const [ax, ay] = pts[k];
-  const right = layout.geo.width - layout.geo.R;
-  const toLeft = ax + 8 + textWidth(name, NAME_PX) > right;
-  return html`<g class="wr-thread"><path class="wr-thread__line" d="M${pts.map(([px, py]) => `${r2(px)} ${r2(py)}`).join('L')}"/>${pts.map(([px, py]) => html`<circle class="wr-thread__dot" cx="${r2(px)}" cy="${r2(py)}" r="4"/>`)}<text class="chart-label chart-label--halo wr-thread__name" x="${r2(toLeft ? ax - 8 : ax + 8)}" y="${r2(ay - 8)}"${toLeft ? html` text-anchor="end"` : ''}>${name}</text></g>`;
+  const { geo } = layout;
+  const p = markLabel(ax, name, { size: NAME_PX, gap: 8, span: [geo.L, geo.width - geo.R] });
+  return html`<g class="wr-thread"><path class="wr-thread__line" d="M${pts.map(([px, py]) => `${r2(px)} ${r2(py)}`).join('L')}"/>${pts.map(([px, py]) => html`<circle class="wr-thread__dot" cx="${r2(px)}" cy="${r2(py)}" r="4"/>`)}<text class="chart-label chart-label--halo wr-thread__name" x="${r2(p.x)}" y="${r2(ay - 8)}"${p.anchor === 'end' ? html` text-anchor="end"` : ''}>${p.text}</text></g>`;
 }
 
 // The drawing's body: the gridlines, the strips, the hospitals the Find matches (lit: item indexes) drawn larger in ink, the page's hospital's

@@ -19,7 +19,8 @@ import { programPage } from '../web/pages/program.js';
 import { stripWords } from '../web/program/finding.js';
 import { howModel } from '../web/program/how.js';
 import { serverTotals } from '../web/program/model.js';
-import { axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout } from '../web/program/strips.js';
+import { textWidth } from '../../../web/charts/text.js';
+import { DRAWINGS, axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout, thread } from '../web/program/strips.js';
 
 const data = loadMedicaid();
 const rows = hospitalRows(data);
@@ -221,4 +222,64 @@ test('the strips\' dot inks stand 3:1 or more off --paper and --paper-2, light a
       }
     }
   }
+});
+
+// The labels that move with the data (the page's hospital's name, the medians'), each extent as the kit estimates it (an
+// upper bound): inside the strips' margins in both drawings, for every drawn hospital, every group (the chips' and each
+// state's, named as the page names them) and every case, at the what-if's least, default and greatest use rate.
+const labelSpan = (svgText, drawing) => {
+  const geo = DRAWINGS[drawing];
+  return [...svgText.matchAll(/<text class="([^"]*(?:wr-thread__name|wr-median__label)[^"]*)" x="([\d.-]+)" y="[\d.-]+"( text-anchor="end")?>([^<]*)<\/text>/g)].map(([, cls, x, end, text]) => {
+    const plain = text.replace(/&amp;/g, '&').replace(/&#39;/g, '\'').replace(/&quot;/g, '"');
+    const w = cls.includes('wr-thread__name') ? textWidth(plain, 13) : textWidth(plain, 11, { mono: true });
+    const left = end ? Number(x) - w : Number(x);
+    return { text: plain, left, right: left + w, ok: left >= geo.L && left + w <= geo.width - geo.R };
+  });
+};
+const USES = [data.params.use_min, data.params.use_default, data.params.use_max];
+
+test('the page hospital\'s name stays inside the strips for every drawn hospital, in every case at every use rate, phone and wide', () => {
+  let checked = 0;
+  const out = [];
+  for (const drawing of Object.keys(DRAWINGS)) {
+    for (const selected of SCENARIOS) {
+      for (const use of USES) {
+        const layout = stripsLayout({ items, drawing, top, selected, use });
+        items.forEach((r, i) => {
+          const labels = labelSpan(thread(layout, i, r.name).text, drawing);
+          assert.equal(labels.length, 1, r.ccn);
+          checked += 1;
+          if (!labels[0].ok) out.push(`${drawing} ${selected} ${use} ${r.ccn}: "${labels[0].text}" ${labels[0].left.toFixed(1)} to ${labels[0].right.toFixed(1)}`);
+        });
+      }
+    }
+  }
+  assert.deepEqual(out.slice(0, 5), [], `${out.length} names out of the drawing`);
+  assert.equal(checked, items.length * 2 * SCENARIOS.length * USES.length);
+});
+
+test('the medians\' labels stay inside the strips for every group and every case at every use rate, phone and wide', () => {
+  const names = [...section.matchAll(/<button type="button" class="wr-chip" data-group="([^"]+)" data-name="([^"]+)"/g)].map(([, key, name]) => [name, (r) => inGroup(r, key)]);
+  const states = [...section.matchAll(/<option value="([A-Z]{2})">([^<]+)<\/option>/g)].map(([, code, name]) => [name, (r) => r.state === code]);
+  assert.equal(names.length, GROUPS.length);
+  assert.ok(states.length > 20, `${states.length} states`);
+  const fullNames = [];
+  let checked = 0;
+  for (const drawing of Object.keys(DRAWINGS)) {
+    for (const selected of SCENARIOS) {
+      for (const use of USES) {
+        for (const [name, test] of [[null, null], ...names, ...states]) {
+          const layout = stripsLayout({ items, drawing, top, selected, use, only: test });
+          const labels = labelSpan(stripsBody(layout, { words: stripWords(data), group: name && { name } }).text, drawing);
+          assert.equal(labels.length, name ? 2 : 1, `${drawing} ${selected} ${use} ${name}`);
+          for (const l of labels) assert.ok(l.ok, `${drawing} ${selected} at ${use}, ${name ?? 'every hospital'}: "${l.text}" spans ${l.left.toFixed(1)} to ${l.right.toFixed(1)}`);
+          if (name && labels[1].text.startsWith(name)) fullNames.push(drawing);
+          checked += labels.length;
+        }
+      }
+    }
+  }
+  // The wide drawing names every group in full; the phone's shortens only names too long for it.
+  assert.equal(fullNames.filter((d) => d === 'wide').length, (names.length + states.length) * SCENARIOS.length * USES.length);
+  assert.ok(checked > 1000, `${checked} labels`);
 });
