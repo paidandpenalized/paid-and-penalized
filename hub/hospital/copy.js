@@ -52,6 +52,8 @@ export const COPY = typesetCopy({
   sumNet: 'Net, estimated',
   sumMedian: "median of its peers, scaled to this hospital's pay: {amount}",
   sumKey: "Median of its peers, scaled to this hospital's pay",
+  // Under the dollar rows when, as printed, they don't add up to the net (shown and hidden by the what-if too).
+  sumRounded: "Each figure is rounded on its own, so the programs' rows may not add exactly to the net.",
   notInProgram: 'Not in this program',
   // The same for Readmissions, whose file not listing a hospital doesn't put it outside the program (text.js outKey).
   notInProgramFile: "Not in CMS's file",

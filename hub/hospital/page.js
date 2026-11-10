@@ -22,7 +22,7 @@ import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
-import { HAC_CUT_TEXT, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
+import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -111,6 +111,7 @@ function sumRows(h, figures, fy, sets) {
     .map((row) => ({ ...row, ...rowDollars(h.est, row.id, figures) }));
   const x = sumScale(sumValues(h.est, sets));
   const zero = x(0);
+  const parts = rows.filter((row) => row.id !== 'net' && row.own !== null).map((row) => row.own);
   const line = (row) => {
     const cls = `hh__sr${row.id === 'net' ? ' hh__sr--net' : ''}`;
     if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill(outKey(row.id, 'notInProgram'))}</span></span></li>`;
@@ -123,7 +124,8 @@ function sumRows(h, figures, fy, sets) {
 ${rows.map(line)}
 ${axis}
 </ul>
-<p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>`;
+<p class="hh__key"><span class="hh__key-tick" aria-hidden="true"></span>${fill('sumKey')}</p>
+<p class="hh__round" data-sum-round${addsAsPrinted(parts, h.est.net) ? ' hidden' : ''}>${fill('sumRounded')}</p>`;
 }
 
 // Where the likely ranges come from: the HACRP Methods page's back-test (its id there is the site's BACKTEST_ID), which

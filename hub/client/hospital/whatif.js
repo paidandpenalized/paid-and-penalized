@@ -34,7 +34,7 @@ import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
-import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
+import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { holdingAxis, stripAxis } from '../scale.js';
 import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash, typedOk } from './whatif-state.js';
 import { node } from './dom.js';
@@ -389,6 +389,9 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       const sw = li.querySelector('.hh__sw');
       if (sw?.firstChild?.nodeType === Node.TEXT_NODE) sw.firstChild.nodeValue = rowWord(fill, id, v);
     }
+    // The rounding note, for the figures the rows now print.
+    const round = $('[data-sum-round]');
+    if (round) round.hidden = addsAsPrinted(ROWS.map(({ id }) => now(id)).filter((v) => v !== null), out.net);
   }
 
   // Everything but the result box, at once; the axes the figures need, gliding there (animate) or at once.

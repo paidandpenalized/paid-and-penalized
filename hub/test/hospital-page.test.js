@@ -271,6 +271,24 @@ test('the stylesheet\'s glides read their length and curve from the page\'s scri
   }
 });
 
+test('the dollar rows: a note that each figure is rounded shows only where the rows, as printed, miss the net', () => {
+  // A printed amount as dollars, read from the page ("−$41K" is -41000), independent of the page's own check.
+  const unit = { '': 1, K: 1e3, M: 1e6, B: 1e9 };
+  const printed = (t) => { const [, m, b, u] = /^(−?)\+?\$([\d.]+)([KMB]?)$/.exec(t); return (m ? -1 : 1) * Math.round(Number(b) * unit[u]); };
+  const rowsOf = (page) => Object.fromEntries([...page.matchAll(/data-sum="(\w+)">[\s\S]*?<span class="hh__sv">([^<]*)<\/span>/g)].map((m) => [m[1], printed(m[2])]));
+  const note = (page) => /<p class="hh__round" data-sum-round( hidden)?>([^<]*)<\/p>/.exec(page);
+  // A reader's check: the printed rows added up, then printed as the page prints dollars, against the printed net (so
+  // "−$205K" and "+$2.0M" make the "+$1.8M" they sit beside).
+  const misses = (page) => { const r = rowsOf(page); return money(Object.entries(r).filter(([k]) => k !== 'net').reduce((s, [, v]) => s + v, 0)) !== money(r.net); };
+  const MISS = pick((h) => h.est && misses(render(h)), 'an estimated hospital whose rows, as printed, miss its net');
+  for (const [h, miss] of [[CUT, misses(render(CUT))], [MISS, true]]) {
+    const n = note(mainOf(render(h)));
+    assert.ok(n, 'the note is on the page');
+    assert.equal(n[1] === undefined, miss, miss ? 'shown where the rows miss the net' : 'hidden where they add up');
+    assert.equal(n[2], 'Each figure is rounded on its own, so the programs’ rows may not add exactly to the net.');
+  }
+});
+
 test('a program a hospital is not in reads "Not in this program" (Readmissions, whose file not listing it doesn\'t say that: "Not in CMS\'s file"), hatched, never $0', () => {
   for (const [h, id] of [[NO_VBP, 'hvbp'], [NO_HRRP, 'hrrp']]) {
     const main = mainOf(render(h));

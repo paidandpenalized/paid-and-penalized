@@ -2,7 +2,7 @@
 // restates for another peer group or a what-if. Pure and browser-safe. fill(key, values) fills hub/hospital/copy.js's
 // words (the build's fillCopy, or the script's own).
 import { HAC_CUT_PCT, rulePercent } from '../../web/programs.js';
-import { count, factorText, money, pct } from '../../web/render/format.js';
+import { count, factorText, money, moneyShown, pct } from '../../web/render/format.js';
 
 // The most decimals a share is printed with.
 const MAX_DP = 6;
@@ -22,6 +22,11 @@ export const signedShareText = (x) => (x === 0 ? pct(0, 2) : `${x < 0 ? '−' : 
 
 // Which way a figure goes: 'cut' (below zero), 'bonus' (above) or 'zero'.
 export const signOf = (x) => (x < 0 ? 'cut' : x > 0 ? 'bonus' : 'zero');
+// Whether the programs' figures, each as money() prints it, add up to the net as printed, the way a reader checks
+// them: their printed amounts added, then printed the same way (parts: the dollars of the programs the hospital is in).
+// Each is rounded on its own, so the sum can miss the net by a rounding step or two ("−$41K", "−$75K", net "−$115K").
+export const addsAsPrinted = (parts, net) => money(parts.reduce((s, v) => s + moneyShown(v), 0)) === money(net);
+
 // The copy key for what a program's row says of a hospital it has no dollars for (id: 'hrrp', 'hacrp' or 'hvbp'; key:
 // the program's words). Readmissions' file not listing a hospital doesn't put it outside the program, so for Readmissions
 // the words say only what holds, that CMS's file doesn't list it (key + 'File'); value-based purchasing's file lists the
