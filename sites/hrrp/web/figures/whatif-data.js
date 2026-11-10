@@ -16,8 +16,6 @@ import { hospitalOf, sheetRow } from './worksheet-data.js';
 export const WI_STEP = 0.001;
 // The page data's script id (the page writes it, figures/whatif.js, and the script reads it).
 export const WHATIF_DATA_ID = 'hrrp-hospital';
-// One step of the payment adjustment factor (numbers.js, beside factor4), for the what-if's note.
-export { FACTOR_STEP };
 
 // What a result field reads at a state ({ paf, cut, dollars }); the browser writes the same words.
 export const resultWords = (state) => ({

@@ -137,7 +137,8 @@ export function mountSlideRules(root = document, only = null) {
       const width = svg.viewBox.baseVal.width;
       const toX = (v) => SLIDE_PAD + ((v - s.lo) / (s.hi - s.lo)) * (width - 2 * SLIDE_PAD);
       // The value reading's line (slideRule.js): the rule's top and the words on it, which the reading moves aside for.
-      const line = JSON.parse(cursor.getAttribute('data-line'));
+      // A cursor drawn without the line (an older page) has no words to move aside for.
+      const line = JSON.parse(cursor.getAttribute('data-line') ?? 'null') ?? { top: 0, words: [] };
       let value = s.value;
       const set = (v) => {
         value = Math.min(s.hi, Math.max(s.lo, v));

@@ -738,6 +738,8 @@
 .ymap__sw--scar { border: 2.5px solid var(--pen-scar); }
 .ymap__sw--clear { background: var(--ink-3); opacity: 0.6; }
 @media (forced-colors: active) {
+  /* The swatches keep the system colors set here, as the other swatches do (forced colors would paint a background Canvas). */
+  .ymap__sw { forced-color-adjust: none; }
   .ymap__sw--now { background: CanvasText; }
   .ymap__sw--scar { border-color: CanvasText; }
   .ymap__sw--clear { background: GrayText; opacity: 1; }

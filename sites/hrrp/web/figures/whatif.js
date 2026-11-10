@@ -11,9 +11,9 @@ import { formField } from '../../../../web/render/components.js';
 import { html, jsonScript } from '../../../../web/render/html.js';
 import { fill, t } from '../hospital/copy.js';
 import { estimateTag } from '../estimate-tag.js';
-import { factor4, fmtMoney, fmtPct, ratio } from '../numbers.js';
+import { FACTOR_STEP, factor4, fmtMoney, fmtPct, ratio } from '../numbers.js';
 import { waterfallPair } from './waterfall.js';
-import { FACTOR_STEP, WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';
+import { WHATIF_DATA_ID, WI_STEP, resultWords } from './whatif-data.js';
 
 // The words under a slider about getting its condition to the median.
 export function escapeWords(row) {

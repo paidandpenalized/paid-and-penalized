@@ -214,18 +214,19 @@ function start() {
   if (chip) {
     // The hospital the address follows, now, and again whenever the page writes another into its address (FOLLOW_EVENT:
     // the front page's Find yours), so a pick follows at once what a reload would.
-    const followHere = () => follow({
+    const followHere = (search) => follow({
       hospital: header.dataset.hospital ?? null,
       chip,
       wordmark: header.querySelector('a.wordmark'),
       tabs: [...header.querySelectorAll('.tabs__scroll a.tab')],
-      search: window.location.search,
+      search,
       here: siteAddress(window.location),
       load: () => loadHubAsset(header.dataset.hubSrc),
       doc: document,
     });
-    followHere();
-    document.addEventListener(FOLLOW_EVENT, followHere);
+    followHere(window.location.search);
+    // The event's CCN, as a ?h= would give it (followedCcn checks it as it checks the address's).
+    document.addEventListener(FOLLOW_EVENT, (e) => followHere(`?h=${encodeURIComponent(String(e.detail?.ccn ?? ''))}`));
   }
 }
 
