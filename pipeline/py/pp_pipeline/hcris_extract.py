@@ -20,13 +20,12 @@ WKSHT_CD, LINE_NUM, CLMN_NUM, ITM_VAL_NUM. Lines and columns are five digits, th
 """
 import csv
 import datetime
-import hashlib
 import io
 import re
 import zipfile
 from pathlib import Path
 
-from pp_pipeline.files import manifest_entry, write_derived_pin
+from pp_pipeline.files import file_sha256, manifest_entry, write_derived_pin, zip_member_rows as _member_rows
 
 PIN_ID = "hcris-fy2024-wse"
 RPT_FIELDS = 18
@@ -129,21 +128,11 @@ def extract(report_rows, number_rows):
     return out.getvalue()
 
 
-def _member_rows(zf, member):
-    """A member's CSV rows, read as a stream (the numeric file is too large to hold as one string)."""
-    with zf.open(member) as raw:
-        yield from csv.reader(io.TextIOWrapper(raw, encoding="ascii", newline=""))
-
-
 def derive(zip_path, source):
     """The extract's bytes from the zip at `zip_path`, refused unless its size and SHA-256 are the manifest's
     (`source`, the entry's derivedFrom)."""
-    digest, size = hashlib.sha256(), 0
-    with open(zip_path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            digest.update(block)
-            size += len(block)
-    if (size, digest.hexdigest()) != (source["bytes"], source["sha256"]):
+    digest, size = file_sha256(zip_path)
+    if (size, digest) != (source["bytes"], source["sha256"]):
         raise ValueError(f"not the zip the manifest names ({source['file']}, {source['sha256']})")
     with zipfile.ZipFile(zip_path) as zf:  # zipfile checks each member's CRC-32 as it reads
         return extract(_member_rows(zf, source["members"][0]), _member_rows(zf, source["members"][1])).encode("ascii")

@@ -16,7 +16,6 @@ This is the spike's table: it doesn't read G-3 line 24's labels, so its `line24_
 """
 import contextlib
 import csv
-import hashlib
 import json
 import re
 import zipfile
@@ -24,7 +23,7 @@ from pathlib import Path
 
 from pp_engine.hcris import tidy
 from pp_engine.hcris.cells import SHEET_OF, sheets_expected
-from pp_pipeline.hcris_extract import _member_rows as member_rows
+from pp_pipeline.files import file_sha256 as sha256, zip_member_rows as member_rows
 
 MEMBER = re.compile(r"HOSP10_(\d{4})_(rpt|nmrc|alpha)\.csv", re.IGNORECASE)
 REPORT_COLUMNS = (*tidy.PIN_REPORT_COLUMNS[:2], "year", *tidy.PIN_REPORT_COLUMNS[2:])  # report_rows' order
@@ -48,15 +47,6 @@ def members(zf):
         raise tidy.HcrisError(f"not an HCRIS hospital zip (members: {zf.namelist()})")
     (year,) = years
     return found, year
-
-
-def sha256(path):
-    digest, size = hashlib.sha256(), 0
-    with open(path, "rb") as f:
-        for block in iter(lambda: f.read(1 << 20), b""):
-            digest.update(block)
-            size += len(block)
-    return digest.hexdigest(), size
 
 
 def read_year(zip_path, line24=None):
