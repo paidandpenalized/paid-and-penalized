@@ -1,4 +1,4 @@
-// The Readmissions program page's controls in a real browser: the hero search, Worksheet R's hospital swap (the sheet and the
+// The Readmissions program page's controls in a real browser: the hero search (and what it says for the state the program leaves out), Worksheet R's hospital swap (the sheet and the
 // waterfall under it change hospital and the waterfall stays wired), Step 2's condition switch (the other five conditions
 // load lazily, in one fetch), the map's measure switch, hospital dots and "Every state" pager; and at 360 px, no sideways
 // scroll and no console error. Hospitals are picked by property (hrrp-pick.js), never named. Runs against dist/ or any URL; see site.js.
@@ -8,7 +8,9 @@ import { normalize } from '../../web/client/search.js';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
 import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
 import { METHODS_PATH, placePath } from '../../sites/hrrp/web/links.js';
-import { STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
+import { NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
+import { fill as searchFill } from '../../sites/hrrp/web/search/copy.js';
+import { STATE_NAMES } from '../../engine/js/states.js';
 import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, fetchesOf, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
@@ -68,6 +70,17 @@ describe('hero search', () => {
     await input.fill('qqzzxxqq');
     await eventually(async () => (await input.getAttribute('aria-expanded')) !== null && (await page.locator('#hero .vh[role="status"]').textContent()).length > 0, 'the search says nothing for a query with no match');
     assert.equal(await page.locator('#hero-list').getByRole('option').count(), 0, 'no option listed');
+  }));
+
+  it('the state the program leaves out finds nothing, and the box says why', () => withPage(tabs, { path: PATH }, async (page) => {
+    const input = page.locator('#hero-q');
+    await input.waitFor({ state: 'visible' });
+    await input.fill(STATE_NAMES[NOT_IN_PROGRAM_STATE]);
+    const empty = page.locator('#hero-list .omni__empty');
+    await empty.waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#hero-list').getByRole('option').count(), 0, 'no option listed');
+    assert.equal(await empty.textContent(), searchFill('searchNotInProgram'));
+    assert.equal(await page.locator('#hero .vh[role="status"]').textContent(), searchFill('searchNotInProgram'), 'the status says it too');
   }));
 });
 

@@ -1,10 +1,12 @@
 // The program page's hospital search, the hero's box (web/client/omnibox.js): each hospital found by name, city, state, ZIP code or
 // CCN, and each place the site has a page for, opening its page. Worksheet R's box (client/worksheet.js) shares the
 // asset (client/hospitals.js) and the index, and searches hospitals only.
+import { STATE_NAMES } from '../../../engine/js/states.js';
 import { count, placeText } from '../../../web/render/format.js';
-import { buildIndex } from '../../../web/client/search.js';
+import { buildIndex, normalize } from '../../../web/client/search.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
+import { NOT_IN_PROGRAM_STATE } from '../web/constants.js';
 import { KINDS } from '../web/links.js';
 import { fill } from '../web/search/copy.js';
 import { loadHospitals } from './hospitals.js';
@@ -22,11 +24,20 @@ export const hospitalEntries = ({ hospitalPath, hospitals }) => hospitals.map((h
   type: 'hospital', key: h.id, label: h.name, sub: [placeText({ city: h.city, state: h.st }), h.zip].filter(Boolean).join(' '), extra: `${h.city} ${h.st} ${h.zip}`, href: `${hospitalPath}${h.id.toLowerCase()}/`,
 }));
 
+// Whether a query names the state the program leaves out (its code, or its name or the first four letters of it on): there is
+// nothing to find there, and the box says why.
+const OUT_NAME = normalize(STATE_NAMES[NOT_IN_PROGRAM_STATE]);
+export const namesStateOut = (query) => {
+  const q = normalize(query);
+  return q === NOT_IN_PROGRAM_STATE.toLowerCase() || (q.length >= 4 && OUT_NAME.startsWith(q));
+};
+const emptyWords = (query) => (namesStateOut(query) ? fill('searchNotInProgram') : fill('searchEmpty'));
+
 // The words an omnibox shows (what the site's boxes say for kinds, counts and failure).
 export const searchWords = () => ({
-  empty: fill('searchEmpty'),
+  empty: emptyWords,
   kind: Object.fromEntries(['hospital', ...KINDS].map((kind) => [kind, kindWord(kind)])),
-  count: (n) => (n === 0 ? fill('searchEmpty') : n === 1 ? fill('searchCountOne') : fill('searchCount', { n: count(n) })),
+  count: (n, query = '') => (n === 0 ? emptyWords(query) : n === 1 ? fill('searchCountOne') : fill('searchCount', { n: count(n) })),
   failed: fill('searchFailed'),
   more: null,
 });
