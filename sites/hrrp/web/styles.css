@@ -528,6 +528,8 @@
 @media (max-width: 899px) {
   .rul__head { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0 6px; padding: 0 6px 4px; font-size: 0.5625rem; letter-spacing: 0.02em; }
   .rul__head > :nth-child(-n+2) { display: none; }
+  /* The numbers sit at the left of their columns here, so their heads do too. */
+  .rul__head .num { text-align: left; }
   .rul__row { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px 6px; padding: 5px 6px 4px; }
   .rul__name, .rul__ruler { grid-column: 1 / -1; }
   .rul__name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
