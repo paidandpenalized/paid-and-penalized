@@ -8,6 +8,8 @@ import { loadMedicaid } from './data.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';
 import { programPage } from './pages/program.js';
+import { stripWords } from './program/finding.js';
+import { axisTop, hospitalRows, stripsAsset } from './program/strips.js';
 
 // ctx: the build's context (pipeline/site/context.js). data: loadMedicaid()'s result (tests pass their own); released:
 // whether the site's pages may be indexed in a production build; log: where progress lines go. Returns the two dates the
@@ -15,13 +17,16 @@ import { programPage } from './pages/program.js';
 export function generateWr(ctx, { data = loadMedicaid(), released = SITE.sites['work-requirement'].released, log = console.log } = {}) {
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, robots, assets }) });
+  const rows = hospitalRows(data);
+  const stripsUrl = ctx.asset('wr-strips', 'json', JSON.stringify(stripsAsset(rows, { top: axisTop(rows, data.params.use_max), words: stripWords(data) })));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl }) });
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ data, robots, assets }) });
   log(`Work requirement: 2 pages under ${PROGRAM_PATH}, ${data.hospitals.size} hospitals in the FY${data.meta.fy} file`);
   return { updated: { cmsReleased: data.meta.cmsReleased, changed: data.meta.changed } };
 }
 
-// The work-requirement site's build manifest. One browser script, the program page's (empty until its steps are drawn).
+// The work-requirement site's build manifest. One browser script, the program page's (client/page.js: the strips, the
+// chips and the bar's Find).
 export const WR = {
   id: 'work-requirement',
   entries: { 'wr-page': 'sites/work-requirement/client/page.js' },

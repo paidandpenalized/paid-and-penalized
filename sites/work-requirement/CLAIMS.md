@@ -14,6 +14,7 @@ A claim marked `unverified` may not be used in copy.
 |---|---|---|---|---|
 | WR-01 | The 2025 reconciliation law (Public Law 119-21, section 71119) requires each state to make demonstrating community engagement (work, community service, a work program or school) a condition of Medicaid eligibility for the people it applies to. | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "a State shall provide, as a condition of eligibility for medical assistance for an applicable individual, that such individual is required to demonstrate community engagement" | 2026-11-10 |
 | WR-02 | The requirement applies to adults in Medicaid's expansion group (eligible under section 1902(a)(10)(A)(i)(VIII) of the Social Security Act, or under a waiver giving equivalent coverage), other than the individuals the law excludes. | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "an individual (other than a specified excluded individual" … "who is eligible to enroll (or is enrolled) under the State plan under subsection (a)(10)(A)(i)(VIII)" | 2026-11-10 |
+| WR-03 | The Urban Institute and the Robert Wood Johnson Foundation project that the work requirement alone would cut average monthly Medicaid expansion enrollment in 2028 by 3.0 million under high state mitigation, 4.9 million under medium and 7.0 million under low. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "We project coverage losses of between 3.0 and 7.0 million expansion enrollees because of work requirements alone" … "4.9 million under the medium mitigation scenario" | 2026-11-10 |
 
 ## Notes on the sources
 
@@ -34,6 +35,13 @@ A claim marked `unverified` may not be used in copy.
   section 1902(a)(10)(A)(i)(VIII), which CMS's reports call the new adult group (the Affordable Care Act's expansion
   group), or under a waiver with equivalent coverage (adults 19 to 64 not otherwise eligible under the plan); specified
   excluded individuals (paragraph (9)(A)(ii)) are out.
+- **WR-03.** Urban Institute and RWJF, "Projected Reductions in Medicaid Expansion Enrollment Under OBBBA's Work
+  Requirements and Six-Month Redeterminations: National and State Estimates for 2028" (March 2026), executive summary,
+  page vii (the PDF's SHA-256 is the manifest's `urban-2026-a2-wr` `derivedFrom.sha256`). The three figures are the
+  incremental effect of the work requirement after six-month redeterminations, in average monthly enrollment in 2028;
+  the report's high, medium and low mitigation scenarios are this site's low, middle and high cases. The strips print
+  them from the emitted file (`scenarios[].decline_enrollment`, Urban's Appendix Table A.2 national totals in thousands),
+  which round to the report's 3.0, 4.9 and 7.0 million.
 
 ## Link check (2026-11-10)
 
@@ -42,3 +50,4 @@ Each source above, fetched with `curl -sL`.
 | URL | status | via |
 |---|---|---|
 | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
+| https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | 200 (the report PDF, SHA-256 equal to the manifest's; executive summary read) | direct |

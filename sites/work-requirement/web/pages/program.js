@@ -1,31 +1,33 @@
-// The work-requirement program page. So far its head (the kicker, the title and the dek) and the five steps the section
-// menu opens, each an anchored section with its heading; the steps' figures and words are later work.
-import { programDek } from '../../../../web/programs.js';
+// The work-requirement program page: step 1 (the page's top, the finding and Figure 1, web/program/finding.js), then the
+// other four steps the section menu opens, each an anchored section with its heading until its figures are drawn. The
+// masthead's Find searches this page's hospitals (client/find.js): a pick becomes the page's hospital.
 import { html } from '../../../../web/render/html.js';
 import { page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import { SECTIONS } from '../constants.js';
 import { t } from '../copy.js';
 import { PROGRAM_PATH } from '../links.js';
-import { labelOf, shellOf } from './parts.js';
+import { findingStep } from '../program/finding.js';
+import { axisTop, hospitalRows } from '../program/strips.js';
+import { labelOf, searchBox, shellOf } from './parts.js';
 
 const TITLE = t('title');
 
-// A step: its id (the section menu's anchor) and its heading; its body comes with its figures.
+// A step not drawn yet: its id (the section menu's anchor) and its heading.
 const step = (id) => html`<section class="step" id="${id}" aria-labelledby="${id}-h">
 <h2 id="${id}-h">${labelOf(id)}</h2>
 </section>`;
 
-// robots: null for an indexable page, else the meta robots value; assets: the build's paths. The steps will read
-// loadMedicaid()'s result (data), which the generator passes already.
-export function programPage({ robots, assets }) {
+// robots: null for an indexable page, else the meta robots value; assets: the build's paths; data: loadMedicaid()'s
+// result; rows: its hospitals as the strips draw them (hospitalRows(data), which the generator has already); stripsUrl:
+// the browser's copy of those rows (web/program/strips.js stripsAsset), which the page's script and the masthead's Find
+// read (null: a page without them, as it is without JavaScript).
+export function programPage({ data, rows = hospitalRows(data), robots, assets, stripsUrl = null }) {
   const body = html`<article class="wrap page wr">
-<header class="page__head wr__top">
-<p class="cap kicker">${t('kicker')}</p>
-<h1>${TITLE}</h1>
-<p class="dek">${programDek('work-requirement')}</p>
-</header>
-${SECTIONS.map(step)}
+<div class="wr-scrolly">
+${findingStep({ data, rows, top: axisTop(rows, data.params.use_max), label: labelOf('finding'), stripsUrl })}
+${SECTIONS.slice(1).map(step)}
+</div>
 </article>`;
   return page({
     title: `${TITLE} · ${SITE.name}`,
@@ -34,6 +36,8 @@ ${SECTIONS.map(step)}
     robots,
     body,
     assets,
+    scripts: stripsUrl ? [assets.js.figure, assets.js['wr-page']] : [assets.js.figure],
     ...shellOf(),
+    search: stripsUrl ? searchBox(stripsUrl) : '',
   });
 }
