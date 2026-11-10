@@ -204,7 +204,7 @@ test('the worksheet keeps its table roles whatever its layout', () => {
   }
 });
 
-// A worksheet amount as a number: "−$69,238" is -69238. "Not in this program" is null.
+// A worksheet amount as a number: "−$69,238" is -69238. "Not in this program" (or Readmissions' "Not in CMS’s file") is null.
 const amount = (text) => (/^[−+]?\$[\d,]+$/.test(text) ? Number(text.replace('−', '-').replace(/[$,+]/g, '')) : null);
 const LINE_KEYS = ['total', 'base', 'hrrp', 'hac', 'hvbp', 'net'];
 
@@ -241,13 +241,13 @@ test('the worksheet claims no more than its rounding allows: each line rounded o
   assert.ok(!ws.includes('to the dollar'), 'no claim that the lines agree to the dollar');
 });
 
-test('worksheetModel: every hospital\'s lines add to its net; outside a program reads "Not in this program", never $0', () => {
+test('worksheetModel: every hospital\'s lines add to its net; outside a program reads "Not in this program" (Readmissions: "Not in CMS’s file"), never $0', () => {
   for (const h of estimated) {
     const m = worksheetModel(h);
     const d = programDollars(h.est);
     for (const [k, id] of [['hrrp', 'hrrpListed'], ['hvbp', 'vbpListed']]) {
       if (h.est[id]) assert.equal(amount(m.text[k]), d[k], `${h.ccn} ${k}`);
-      else assert.equal(m.text[k], 'Not in this program', `${h.ccn} ${k}`);
+      else assert.equal(m.text[k], k === 'hrrp' ? 'Not in CMS’s file' : 'Not in this program', `${h.ccn} ${k}`);
     }
     assert.equal(amount(m.text.hac), d.hac);
     assert.equal((amount(m.text.hrrp) ?? 0) + amount(m.text.hac) + (amount(m.text.hvbp) ?? 0), amount(m.text.net), h.ccn);
@@ -260,7 +260,7 @@ test('worksheetModel: every hospital\'s lines add to its net; outside a program 
     hrrpFactor: 1, vbpFactor: 1, cut: true, hrrpListed: false, vbpListed: false };
   const m = worksheetModel({ ccn: '990001', name: 'Invented General', city: 'Nowhere', state: 'ZZ', est });
   assert.deepEqual(m.text, { ccn: '990001', name: 'Invented General', place: 'Nowhere, ZZ', total: '$1,200,000', base: '$1,000,000',
-    hrrp: 'Not in this program', hrrpF: '1.0000', hac: '−$12,000', hvbp: 'Not in this program', vbpF: '1.0000', net: '−$12,000' });
+    hrrp: 'Not in CMS’s file', hrrpF: '1.0000', hac: '−$12,000', hvbp: 'Not in this program', vbpF: '1.0000', net: '−$12,000' });
   assert.equal(m.href, hospitalPathOf('hub', '990001'));
   assert.equal(worksheetModel({ ccn: '990002', name: 'B', city: null, state: 'ZZ', est }).text.place, 'ZZ');
   // A factor as precise as the dollar file prints it, at least CMS's four places, so line 2 times it gives the line.

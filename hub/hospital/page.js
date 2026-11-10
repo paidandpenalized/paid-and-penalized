@@ -22,7 +22,7 @@ import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
-import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signOf, signedMoney, whyText } from './text.js';
+import { HAC_CUT_TEXT, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -113,7 +113,7 @@ function sumRows(h, figures, fy, sets) {
   const zero = x(0);
   const line = (row) => {
     const cls = `hh__sr${row.id === 'net' ? ' hh__sr--net' : ''}`;
-    if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill('notInProgram')}</span></span></li>`;
+    if (row.own === null) return html`<li class="${cls} hh__sr--out" data-sum="${row.id}"><span class="hh__sl">${row.label}</span><span class="hh__out"><span>${fill(outKey(row.id, 'notInProgram'))}</span></span></li>`;
     const med = row.median === null ? '' : html`<span class="vh">; ${fill('sumMedian', { amount: signedMoney(row.median) })}</span>`;
     return html`<li class="${cls}" data-sum="${row.id}"><span class="hh__sl">${row.label}</span>${track(x, row.own, row.median)}<span class="hh__sv">${signedMoney(row.own)}</span><span class="hh__sw">${word(row.id, row.own)}${med}</span></li>`;
   };
@@ -218,7 +218,7 @@ function programRow(h, id, figures, ctx) {
   const own = rowDollars(h.est, id, figures).own;
   const value = listed
     ? html`<span class="vh">${fill('rowValue', { fy: ctx.fy })} </span><span class="hh__num">${signedMoney(own)}</span> ${pill({ kind: inkOf(own), label: word(id, own) })}`
-    : pill({ kind: 'na', label: fill('notInProgram') });
+    : pill({ kind: 'na', label: fill(outKey(id, 'notInProgram')) });
   return html`<div class="hh__row" data-row="${id}">
 <div class="hh__rt">
 <h3 class="hh__rh">${name} <span class="hh__ab">${ab}</span></h3>

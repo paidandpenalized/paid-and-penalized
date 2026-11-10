@@ -75,6 +75,8 @@ export const COPY = Object.freeze({
   wordBonus: 'bonus',
   wordNone: 'no change',
   notInProgram: 'Not in this program',
+  // Readmissions' words for it (hub/hospital/text.js outKey).
+  notInProgramFile: "Not in CMS's file",
   cardPeers: 'Of {n} {group}, {cutN} take a net cut; the median is {median}.',
   // The groups the peer toggle picks (hub/hospital/peers.js groupName), in the hospital page's words.
   ...GROUPS,

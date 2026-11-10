@@ -53,6 +53,8 @@ export const COPY = typesetCopy({
   sumMedian: "median of its peers, scaled to this hospital's pay: {amount}",
   sumKey: "Median of its peers, scaled to this hospital's pay",
   notInProgram: 'Not in this program',
+  // The same for Readmissions, whose file not listing a hospital doesn't put it outside the program (text.js outKey).
+  notInProgramFile: "Not in CMS's file",
   wordCut: 'cut',
   wordBonus: 'bonus',
   wordNoCut: 'no cut',
@@ -89,6 +91,7 @@ export const COPY = typesetCopy({
   dotOpen: 'Tap again to open its page.',
   stripMedian: 'median',
   stripOut: 'This hospital: not in this program',
+  stripOutFile: "This hospital: not in CMS's file",
 
   // The what-if section (#whatif): one row per program, an empty row for another (it promises none), then the net with
   // its result.
@@ -122,7 +125,9 @@ export const COPY = typesetCopy({
   partUnscoredCut: { text: '{n} with the {rate} cut but no score', claim: 'HACRP-01' },
   partNoChange: '{n} with no change',
   partOut: '{n} not in the program',
+  partOutFile: "{n} not in CMS's file",
   whyMedian: 'Peer median, among those in the program: {median} of pay.',
+  whyMedianFile: "Peer median, among those in CMS's file: {median} of pay.",
   // Under the hospital-acquired conditions row's counts: why the HACRP pages' counts of the same group can differ.
   whyHacCount: "The HAC pages count only the hospitals CMS scored with a payment decision, with or without an estimate here.",
   deepHospital: '{name} for this hospital',

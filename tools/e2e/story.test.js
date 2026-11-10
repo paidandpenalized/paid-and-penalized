@@ -346,9 +346,10 @@ describe('states you can read, and Find yours', () => {
         };
       });
       // An amount as printed ("−$1,234", "+$56", "$0"); a program the hospital is not in adds nothing.
-      const amount = (t) => (t === 'Not in this program' ? 0 : Number(t.replace('−', '-').replace(/[$,+]/g, '')));
+      const out = (t) => t === 'Not in this program' || t === 'Not in CMS’s file';
+      const amount = (t) => (out(t) ? 0 : Number(t.replace('−', '-').replace(/[$,+]/g, '')));
       assert.equal(ws.ccn, found.ccn);
-      assert.ok(Object.values(ws.lines).every((t) => t === 'Not in this program' || /^[−+]?\$[\d,]+$/.test(t)), JSON.stringify(ws.lines));
+      assert.ok(Object.values(ws.lines).every((t) => out(t) || /^[−+]?\$[\d,]+$/.test(t)), JSON.stringify(ws.lines));
       assert.equal(amount(ws.lines.hrrp) + amount(ws.lines.hac) + amount(ws.lines.hvbp), amount(ws.lines.net), 'line 6 = 3 + 4 + 5');
       assert.equal(amount(ws.lines.net), found.net, 'line 6 is the hospital\'s net');
       assert.equal(ws.example, false, '"An example" is gone');

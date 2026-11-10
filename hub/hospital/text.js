@@ -22,6 +22,11 @@ export const signedShareText = (x) => (x === 0 ? pct(0, 2) : `${x < 0 ? '−' : 
 
 // Which way a figure goes: 'cut' (below zero), 'bonus' (above) or 'zero'.
 export const signOf = (x) => (x < 0 ? 'cut' : x > 0 ? 'bonus' : 'zero');
+// The copy key for what a program's row says of a hospital it has no dollars for (id: 'hrrp', 'hacrp' or 'hvbp'; key:
+// the program's words). Readmissions' file not listing a hospital doesn't put it outside the program, so for Readmissions
+// the words say only what holds, that CMS's file doesn't list it (key + 'File'); value-based purchasing's file lists the
+// hospitals in the program that year.
+export const outKey = (id, key) => (id === 'hrrp' ? `${key}File` : key);
 // A figure's ink: 'pen' for a cut, 'rew' for a bonus, null for zero.
 export const inkOf = (x) => ({ cut: 'pen', bonus: 'rew', zero: null })[signOf(x)];
 // Dollars with their sign, as the page's figures print them: "−$1.2M", "+$34K".
@@ -63,12 +68,12 @@ export function whyText(fill, h, id, f, { fy, group }) {
   const est = h.est;
   const part = (key, n, values = {}) => ({ n, text: fill(key, { n: count(n), ...values }) });
   const parts = {
-    hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part('partOut', f.out)],
+    hrrp: [part('partCut', f.cut), part('partNoCut', f.none), part(outKey('hrrp', 'partOut'), f.out)],
     hacrp: [part('partHacCut', f.cut, { rate: HAC_CUT_TEXT }), part('partNoCut', f.none), part('partUnscored', f.unscored), part('partUnscoredCut', f.unscoredCut, { rate: HAC_CUT_TEXT })],
-    hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part('partOut', f.out)],
+    hvbp: [part('partBonus', f.bonus), part('partCut', f.cut), part('partNoChange', f.none), part(outKey('hvbp', 'partOut'), f.out)],
   }[id].filter((p, i) => i < 2 || p.n > 0);
   const peers = fill('whyPeers', { n: count(f.n), group, parts: parts.map((p) => p.text).join(', ') });
-  const median = id === 'hacrp' ? [fill('whyHacCount')] : f.median !== null ? [fill('whyMedian', { median: signedShareText(f.median) })] : [];
+  const median = id === 'hacrp' ? [fill('whyHacCount')] : f.median !== null ? [fill(outKey(id, 'whyMedian'), { median: signedShareText(f.median) })] : [];
   const own = {
     hrrp: () => (est.hrrpListed ? fill('whyFactor', { fy, factor: factorText(est.hrrpFactor) }) : fill('whyHrrpOut', { fy })),
     hacrp: () => (est.cut ? fill('whyHacCut', { fy, rate: HAC_CUT_TEXT }) : fill('whyHacNone', { fy })),

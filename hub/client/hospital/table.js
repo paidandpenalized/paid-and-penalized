@@ -5,7 +5,7 @@
 import { count } from '../../../web/client/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { ROW_KEY, inProgram } from '../../hospital/peers.js';
-import { signedMoney, signedShareText } from '../../hospital/text.js';
+import { outKey, signedMoney, signedShareText } from '../../hospital/text.js';
 import { node } from './dom.js';
 
 const COLS = [
@@ -33,7 +33,7 @@ export function fillPeerTable(details, { peers, h, fill, fy, group }) {
       : [node('a', { href: hospitalPathOf('hub', x.ccn) }, [x.name])]);
     const tr = node('tr', { class: me ? 'hh__me' : null }, [th, cell('td', x.city), cell('td', x.state ?? '')]);
     for (const col of COLS.slice(3, 7)) {
-      tr.append(inProgram(x.est, col.id) ? cell('td', signedMoney(x.est[ROW_KEY[col.id]]), 'num') : cell('td', fill('notInProgram'), 'num hh__na'));
+      tr.append(inProgram(x.est, col.id) ? cell('td', signedMoney(x.est[ROW_KEY[col.id]]), 'num') : cell('td', fill(outKey(col.id, 'notInProgram')), 'num hh__na'));
     }
     tr.append(cell('td', signedShareText(x.est.share), 'num'));
     body.append(tr);
