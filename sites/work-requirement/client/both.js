@@ -8,10 +8,13 @@ import { count } from '../../../web/render/format.js';
 import { NAMED_FIRST, SCENARIOS } from '../web/constants.js';
 import { fill } from '../web/copy.js';
 import { bothAlt, bothBody, bothLayout, cellOf, exposed, headHtml, namedBody, namedCaption, namedSummary, readHtml, youHtml } from '../web/program/both.js';
+import { movedFrom } from './state.js';
 
-// section: the step; store: the page's state; model: both.js bothModel over the strips' rows and their asset; wide: the
-// media query list under which the wide drawing shows; say(text): the page's live line.
-export function mountBoth(section, { store, model, wide, say = () => {} }) {
+// section: the step; store: the page's state; model: both.js bothModel over the strips' rows and step 5's asset; wide: the
+// media query list under which the wide drawing shows; say(text): the page's live line; server: the state the server
+// drew the step at ({ scenario, use, totals }; its hospital is the one it names), so a step mounted after the page's state
+// has moved redraws at once.
+export function mountBoth(section, { store, model, wide, say = () => {}, server = {} }) {
   const fig = section.querySelector('#figure-5');
   const head = section.querySelector('[data-b-head]');
   const read = section.querySelector('[data-b-read]');
@@ -56,7 +59,7 @@ export function mountBoth(section, { store, model, wide, say = () => {} }) {
     (body.children[NAMED_FIRST]?.querySelector('a') ?? named.querySelector('summary')).focus();
   });
 
-  store.subscribe((state, changed) => {
+  const update = (state, changed) => {
     const moved = changed.has('scenario') || changed.has('use') || changed.has('totals');
     if (!moved && !changed.has('hospital')) return;
     for (const drawing of svgs.keys()) stale.add(drawing);
@@ -80,14 +83,13 @@ export function mountBoth(section, { store, model, wide, say = () => {} }) {
     cap.textContent = namedCaption(k);
     body.innerHTML = namedBody(model, k, use, list).text;
     limit();
-  });
+  };
+  store.subscribe(update);
   limit();
-  // The page's hospital at load may differ from the server's (a ?h=, or the random default).
+  // The page's state may have left the server's by now: its hospital (a ?h=, or the random default) and, for a step
+  // mounted late, the case, the use rate and the totals.
   const first = store.get();
-  if (first.hospital?.ccn !== you.dataset.bDefault) {
-    const { k, use } = viewOf(first);
-    for (const drawing of svgs.keys()) stale.add(drawing);
-    drawOne(shown());
-    you.innerHTML = youHtml(model, first.hospital, k, use).text;
-  }
+  const changed = movedFrom(first, server);
+  if (first.hospital?.ccn !== you.dataset.bDefault) changed.add('hospital');
+  if (changed.size) update(first, changed);
 }

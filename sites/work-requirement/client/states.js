@@ -6,11 +6,13 @@
 // headline. Only the drawing on show is redrawn, the other when the width brings it on.
 import { money, pct } from '../../../web/render/format.js';
 import { SCENARIOS } from '../web/constants.js';
+import { movedFrom } from './state.js';
 import { cardBody, headlineHtml, headlineOf, numbersOf, statesAlt, statesBody, statesLayout } from '../web/program/states.js';
 
-// section: the step; store: the page's state; model: the strips asset's states (decodeStates); wide: the media query
-// list under which the wide drawing shows; say(text): the page's live line.
-export function mountStates(section, { store, model, wide, say = () => {} }) {
+// section: the step; store: the page's state; model: step 3's asset (decodeStates); wide: the media query list under which
+// the wide drawing shows; say(text): the page's live line; server: the state the server drew the step at ({ scenario,
+// use, totals, stateCode }), so a step mounted after the page's state has moved redraws at once (null: it hasn't).
+export function mountStates(section, { store, model, wide, say = () => {}, server = null }) {
   const svgs = new Map(['narrow', 'wide'].map((d) => [d, section.querySelector(`svg[data-fit="${d}"]`)]).filter(([, svg]) => svg));
   const head = section.querySelector('[data-st-head]');
   const card = section.querySelector('[data-st-card]');
@@ -37,7 +39,7 @@ export function mountStates(section, { store, model, wide, say = () => {} }) {
   for (const svg of svgs.values()) svg.addEventListener('click', (e) => { const g = e.target.closest('[data-st]'); if (g) select(g.dataset.st); });
   pick.addEventListener('change', () => select(pick.value));
 
-  store.subscribe((state, changed) => {
+  const update = (state, changed) => {
     const moved = changed.has('scenario') || changed.has('use') || changed.has('totals');
     if (!moved && !changed.has('stateCode')) return;
     for (const drawing of svgs.keys()) stale.add(drawing);
@@ -60,8 +62,13 @@ export function mountStates(section, { store, model, wide, say = () => {} }) {
         td.dataset.value = String(v);
       }
     }
-  });
+  };
+  store.subscribe(update);
   // The list takes the name's place.
   name.hidden = true;
   pick.hidden = false;
+  if (server) {
+    const changed = movedFrom(store.get(), server);
+    if (changed.size) update(store.get(), changed);
+  }
 }

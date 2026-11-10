@@ -10,7 +10,7 @@ import { brotliCompressSync, constants } from 'node:zlib';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { withTemp, writeTree } from '../../pipeline/test/helpers.js';
 import { PROGRAM_SITES } from '../ci/page-types.js';
-import { BLOCKING_JS_BUDGET, BUDGETS, JS_BUDGET, PROGRAM_BUDGETS, budgetOf, measure, overBudget, pageWeight } from '../ci/size-budget.js';
+import { BLOCKING_JS_BUDGET, BUDGETS, JSON_BUDGETS, JS_BUDGET, PROGRAM_BUDGETS, budgetOf, jsonKind, jsonOverBudget, measure, measureJson, overBudget, pageWeight } from '../ci/size-budget.js';
 
 // Brotli's size of the text; quality 5 is the one the budget counts.
 const br = (text, quality = 5) => brotliCompressSync(Buffer.from(text), { params: { [constants.BROTLI_PARAM_QUALITY]: quality } }).length;
@@ -173,7 +173,7 @@ test('CLI: exits 0 on a site within budget, and 1 naming each page over it', () 
     writeTree(dir, { 'index.html': page(), 'terms/index.html': page() });
     const ok = cli(dir);
     assert.equal(ok.status, 0, ok.stderr);
-    assert.match(ok.stdout, /2 pages within budget/);
+    assert.match(ok.stdout, /2 pages and 0 data files within budget/);
 
     // Past the policy pages' 100 KB, which random text can't be squeezed under.
     writeTree(dir, { 'terms/index.html': page(`<!-- ${noise(110 * 1024)} -->`) });
@@ -196,4 +196,32 @@ test('pageWeight: measured at brotli quality 5, the quality the budgets were set
     assert.notEqual(br(text, 11), br(text), 'precondition: the two qualities differ on this text');
     writeTree(dir, { 'index.html': text });
     assert.equal(pageWeight(dir, 'index.html').html, br(text));
+  }));
+
+test('the work requirement\'s data files: each kind has a budget; a file is weighed at quality 5 against its kind\'s; a new kind throws', () =>
+  withTemp('size-', (dir) => {
+    assert.deepEqual(Object.keys(JSON_BUDGETS).sort(), ['wr-base', 'wr-both', 'wr-hosp', 'wr-states', 'wr-strips']);
+    assert.deepEqual(['wr-strips.0123abcd.json', 'wr-hosp-ca.0123abcd.json', 'wr-page.0123abcd.js', 'hub-hospitals.0123abcd.json', 'wr-states.json'].map(jsonKind), ['wr-strips', 'wr-hosp', null, null, null]);
+    assert.deepEqual(measureJson(dir), [], 'a build with no assets folder has no data files');
+    const small = JSON.stringify({ a: noise(1000) });
+    const big = noise(45 * 1024);
+    writeTree(dir, { 'assets/wr-states.0123abcd.json': small, 'assets/wr-both.89abcdef.json': big, 'assets/hub-hospitals.0123abcd.json': big, 'assets/wr-page.0123abcd.js': big });
+    const rows = measureJson(dir);
+    assert.deepEqual(rows, [{ file: 'wr-both.89abcdef.json', kind: 'wr-both', bytes: br(big) }, { file: 'wr-states.0123abcd.json', kind: 'wr-states', bytes: br(small) }]);
+    assert.deepEqual(jsonOverBudget(rows).map((r) => [r.file, r.budget]), [['wr-both.89abcdef.json', JSON_BUDGETS['wr-both']]], 'random text past 40 KB is over wr-both\'s budget');
+    writeTree(dir, { 'assets/wr-new.0123abcd.json': small });
+    assert.throws(() => measureJson(dir), /a new kind needs one/);
+  }));
+
+test('CLI: a work-requirement data file over its budget fails the run', () =>
+  withTemp('size-', (dir) => {
+    const cli = (...args) => spawnSync('node', [join(REPO_ROOT, 'tools/ci/size-budget.js'), ...args], { encoding: 'utf8' });
+    writeTree(dir, { 'index.html': page(), 'assets/wr-states.0123abcd.json': '{}' });
+    const ok = cli(dir);
+    assert.equal(ok.status, 0, ok.stderr);
+    assert.match(ok.stdout, /1 pages and 1 data files within budget/);
+    writeTree(dir, { 'assets/wr-states.0123abcd.json': noise(30 * 1024) });
+    const bad = cli(dir);
+    assert.equal(bad.status, 1);
+    assert.match(bad.stderr, /OVER BUDGET wr-states\.0123abcd\.json \(data wr-states\): \d+\.\d KB > 20\.0 KB/);
   }));

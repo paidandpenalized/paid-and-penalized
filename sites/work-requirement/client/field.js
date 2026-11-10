@@ -111,10 +111,11 @@ export function dotAt(d, ms, span) {
 }
 
 // The field in a page: a canvas over the window (unseen by a screen reader and by the pointer), clipped to the stage.
-// scrolly: the steps' container; store: the page's state; items, top, states, both: as fieldPoints; only(): the chips'
-// group's test now; clip(): the stage's box on screen ({ left, top, right, bottom }). Returns { fly(from, to, { shown })
-// (a promise that settles true when the flight lands, false when cut short), fade(), cancel() }.
-export function mountField(scrolly, { store, items, top, states, both, only = () => null, clip }) {
+// scrolly: the steps' container; store: the page's state; items, top: as fieldPoints; models(): { states, both }, the
+// models fieldPoints reads, each null until its step's asset has come (a flight to or from that step is then skipped);
+// only(): the chips' group's test now; clip(): the stage's box on screen ({ left, top, right, bottom }). Returns
+// { fly(from, to, { shown }) (a promise that settles true when the flight lands, false when cut short), fade(), cancel() }.
+export function mountField(scrolly, { store, items, top, models, only = () => null, clip }) {
   // The canvas is made at the first flight, so a page that never flies (reduced motion, a phone) has none.
   let canvas = null;
   let ctx = null;
@@ -129,10 +130,13 @@ export function mountField(scrolly, { store, items, top, states, both, only = ()
   let settle = null;
 
   const figureOf = (step) => document.getElementById(FIELD_STEPS[step])?.querySelector(`svg[data-fit="${DRAWING}"]`) ?? null;
-  // A step's dots on screen now, through its SVG's box (laid out even while the stage hides it).
+  // A step's dots on screen now, through its SVG's box (laid out even while the stage hides it). The box is the one on
+  // screen, any zoom the stage gave the figure included, so no zoom is read here: where CSS zoom isn't supported the stage
+  // gives none (stage.js canZoom).
   const screenPoints = (step) => {
     const svg = figureOf(step);
-    if (!svg) return null;
+    const { states, both } = models();
+    if (!svg || (step === 'states' && !states) || (step === 'both' && !both)) return null;
     const vb = svg.viewBox.baseVal;
     const box = svg.getBoundingClientRect();
     if (!vb || !vb.width || !box.width) return null;

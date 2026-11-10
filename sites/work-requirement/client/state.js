@@ -38,3 +38,7 @@ export function createStore(initial) {
     },
   };
 }
+
+// The keys of server ({ key: value as the server drew it }) whose value state no longer has: what a step mounted after the
+// reader moved the page's state redraws at once, as a change it missed.
+export const movedFrom = (state, server) => new Set(Object.keys(server).filter((key) => !Object.is(state[key], server[key])));

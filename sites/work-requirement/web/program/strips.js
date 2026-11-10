@@ -58,28 +58,29 @@ export function hospitalRows(data) {
 // The browser's copy: the rows as arrays in COLS order, the axis's top (top), the words the strips' headers print
 // (words: { fy, lost, enrollees }: the cost reports' year, and each case's national dollars lost and Urban's enrollment
 // decline in thousands), and what the other steps draw at the default use rate (totals: model.js serverTotals; how:
-// how.js howModel; states: states.js statesAsset; hosp: step 4's asset for each state, its address by code; away: the
-// hub's hospitals the file leaves out, data.js loadAway's rows; both: step 5's penalties, both.js bothInput).
+// how.js howModel; src: the addresses of step 3's and step 5's own assets, { states, both } (states.js statesAsset,
+// both.js bothInput), fetched as each step nears the screen; hosp: step 4's asset for each state, its address by code;
+// away: the hub's hospitals the file leaves out, data.js loadAway's rows).
 const COLS = ['ccn', 'name', 'city', 'state', 'cls', 'groups', 'low', 'middle', 'high'];
-export const stripsAsset = (rows, { top, words, totals, how, states, hosp, away, both }) => ({
+export const stripsAsset = (rows, { top, words, totals, how, src, hosp, away }) => ({
   cols: COLS,
   top,
   words,
   totals,
   how,
-  states,
+  src,
   hosp,
   away,
-  both,
   rows: rows.map((r) => [r.ccn, r.name, r.city, r.state, r.cls, r.groups, ...(r.share ?? [])]), // an undrawn row ends at its groups: no three nulls
 });
 export function decodeStrips(asset) {
-  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how || !asset.states
-    || !asset.hosp || typeof asset.hosp !== 'object' || !Array.isArray(asset.away) || !asset.both) {
+  if (!asset || !Array.isArray(asset.rows) || asset.cols?.join() !== COLS.join() || !(asset.top > 0) || !asset.words || !asset.totals || !asset.how
+    || typeof asset.src?.states !== 'string' || typeof asset.src?.both !== 'string'
+    || !asset.hosp || typeof asset.hosp !== 'object' || !Array.isArray(asset.away)) {
     throw new TypeError('strips asset: not what the build wrote');
   }
   const rows = asset.rows.map(([ccn, name, city, state, cls, groups, lo, mid, hi]) => ({ ccn, name, city, state, cls, groups, share: lo === undefined ? null : [lo, mid, hi] }));
-  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, states: asset.states, hosp: asset.hosp, away: asset.away, both: asset.both, rows };
+  return { top: asset.top, words: asset.words, totals: asset.totals, how: asset.how, src: asset.src, hosp: asset.hosp, away: asset.away, rows };
 }
 
 // The axis's top: the largest high-case share at the what-if's top use rate (useMax, the file's params.use_max), up to the

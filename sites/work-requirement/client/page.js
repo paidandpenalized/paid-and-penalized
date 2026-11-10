@@ -10,6 +10,8 @@
 //   step 5: Figure 5, the corner's range and dollars, where the page's hospital sits and the named table (client/both.js);
 //   the stage head: the scenario switch and the use-rate what-if (client/whatif.js);
 //   Figure 1's table: its bins' counts and medians at the use rate (rebin).
+// Steps 3 and 5 draw from assets of their own (the strips asset's src), fetched as each step nears the screen (whenNear),
+// so step 1 is ready on the strips' asset alone; until its asset comes, a step stays as the server drew it.
 // From 900px the steps run as a scroll story (client/stage.js, mounted at once: it needs no data), and once the data has
 // come its field (client/field.js) flies the dots between the dot steps.
 // A later step joins the same way: store.subscribe((state, changed) => …), redrawing when the keys it reads change.
@@ -141,19 +143,44 @@ function liveLine(el) {
   };
 }
 
+const getJson = async (url) => {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`${url}: ${res.status}`);
+  return res.json();
+};
+
+// A step's own asset (url), fetched once its section first comes within a window's height of the screen (at once where
+// there's no IntersectionObserver), and handed to use(json). A fetch that fails leaves the step as the server drew it
+// and is tried again the next time the step comes near.
+export function whenNear(section, url, use, { get = getJson, win = window } = {}) {
+  let busy = false;
+  const go = async (done) => {
+    if (busy) return;
+    busy = true;
+    try {
+      use(await get(url));
+      done();
+    } catch {
+      busy = false;
+    }
+  };
+  if (!('IntersectionObserver' in win)) return go(() => {});
+  const io = new win.IntersectionObserver((entries) => {
+    if (entries.some((e) => e.isIntersecting)) go(() => io.disconnect());
+  }, { rootMargin: '100% 0px' });
+  io.observe(section);
+  return undefined;
+}
+
 async function start(stage, story) {
   let data;
-  let states;
-  let both;
   try {
-    const res = await fetch(stage.dataset.strips);
-    if (!res.ok) return;
-    data = decodeStrips(await res.json());
-    states = decodeStates(data.states);
-    both = bothModel(data.rows, decodeBoth(data.both));
+    data = decodeStrips(await getJson(stage.dataset.strips));
   } catch {
     return;
   }
+  // Steps 3 and 5's models, once their assets come (whenNear below); the field flies to a step only once it has its.
+  const models = { states: null, both: null };
   // A ?h= may name a hospital in the file or a hub hospital the file leaves out (step 4 gives its reason), so the page and
   // the shell's followed-hospital chip name the same hospital.
   const byCcn = new Map([...data.rows, ...awayRows(data.away)].map((r) => [r.ccn, r]));
@@ -162,7 +189,8 @@ async function start(stage, story) {
     use: 1,
     hospital: pageHospital(window.location.search, byCcn) ?? randomPick(defaultPool(data.rows)),
     totals: data.totals,
-    stateCode: states.selected,
+    // Step 3's selected state comes with its asset (the most exposed, as the server drew it).
+    stateCode: null,
   });
 
   const section = stage.closest('section');
@@ -196,19 +224,34 @@ async function start(stage, story) {
   }
   const howSection = document.getElementById('how');
   if (howSection) mountHow(howSection, { store, how: data.how });
+  // What the server drew steps 3 and 5 at, for a step mounted late to catch up from.
+  const server = { scenario: DEFAULT_SCENARIO, use: 1, totals: data.totals };
   const statesSection = document.getElementById('states');
-  if (statesSection) mountStates(statesSection, { store, model: states, wide: window.matchMedia(WIDE_MEDIA), say });
+  if (statesSection) {
+    whenNear(statesSection, data.src.states, (json) => {
+      const model = decodeStates(json);
+      if (store.get().stateCode === null) store.set({ stateCode: model.selected });
+      models.states = model;
+      mountStates(statesSection, { store, model, wide: window.matchMedia(WIDE_MEDIA), say, server: { ...server, stateCode: model.selected } });
+    });
+  }
   const hospitalSection = document.getElementById('hospital');
   if (hospitalSection) mountHospital(hospitalSection, { store, rows: data.rows, urls: data.hosp, say });
   const bothSection = document.getElementById('both');
-  if (bothSection) mountBoth(bothSection, { store, model: both, wide: window.matchMedia(WIDE_MEDIA), say });
+  if (bothSection) {
+    whenNear(bothSection, data.src.both, (json) => {
+      const model = bothModel(data.rows, decodeBoth(json));
+      models.both = model;
+      mountBoth(bothSection, { store, model, wide: window.matchMedia(WIDE_MEDIA), say, server });
+    });
+  }
   const head = stage.querySelector('[data-stage-head]');
   if (head && stage.dataset.base) mountWhatif(head, { store, server: data.totals, baseUrl: stage.dataset.base });
   strips.draw();
   // The field flies the dots between the dot steps, drawn inside the stage's column under its head.
   if (story) {
     story.useField(mountField(stage.closest('.wr-scrolly'), {
-      store, items: strips.items, top: data.top, states, both, only: strips.only,
+      store, items: strips.items, top: data.top, models: () => models, only: strips.only,
       clip: () => {
         const box = stage.getBoundingClientRect();
         const pin = head && !head.hidden ? head.getBoundingClientRect().bottom : 0;

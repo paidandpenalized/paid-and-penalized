@@ -21,9 +21,7 @@ import { stripWords } from '../web/program/finding.js';
 import { statusText } from '../web/program/ranges.js';
 import { howModel } from '../web/program/how.js';
 import { serverTotals } from '../web/program/model.js';
-import { statesAsset, statesModel } from '../web/program/states.js';
 import { textWidth } from '../../../web/charts/text.js';
-import { bothInput } from '../web/program/both.js';
 import { DRAWINGS, axisOf, axisTop, decodeStrips, drawn, groupReadout, hospitalRows, inGroup, median, stripsAsset, stripsBody, stripsLayout, thread } from '../web/program/strips.js';
 
 const data = loadMedicaid();
@@ -60,17 +58,19 @@ test('the groups: each chip\'s test counts the hospitals the file\'s roll-up of 
   for (const key of GROUPS) assert.equal(counted.filter((r) => inGroup(r, key)).length, data.groups[key].middle.hospitals, key);
 });
 
-test('the asset round-trips the rows and the axis', () => {
+test('the asset round-trips the rows and the axis, and names steps 3 and 5\'s own assets rather than holding them', () => {
   const extra = {
-    totals: serverTotals(data), how: howModel(data), states: statesAsset(statesModel(data, rows)), hosp: { AK: '/assets/wr-hosp-ak.test.json' }, away: [['000000', 'A', 'B', 'AK', 'inactive']], both: bothInput(data, rows),
+    totals: serverTotals(data), how: howModel(data), src: { states: '/assets/wr-states.test.json', both: '/assets/wr-both.test.json' }, hosp: { AK: '/assets/wr-hosp-ak.test.json' }, away: [['000000', 'A', 'B', 'AK', 'inactive']],
   };
-  const back = decodeStrips(JSON.parse(JSON.stringify(stripsAsset(rows, { top, words: stripWords(data), ...extra }))));
+  const asset = stripsAsset(rows, { top, words: stripWords(data), ...extra });
+  assert.deepEqual(Object.keys(asset).filter((k) => k === 'states' || k === 'both'), [], 'no step 3 or 5 model in the strips');
+  const back = decodeStrips(JSON.parse(JSON.stringify(asset)));
   assert.deepEqual(back.hosp, extra.hosp);
   assert.deepEqual(back.away, extra.away);
-  assert.deepEqual(back.both, extra.both);
+  assert.deepEqual(back.src, extra.src);
   assert.deepEqual(back.totals, extra.totals);
   assert.deepEqual(back.how, extra.how);
-  assert.deepEqual(back.states, extra.states);
+  assert.throws(() => decodeStrips(JSON.parse(JSON.stringify({ ...asset, src: { states: extra.src.states } }))), TypeError, 'both addresses are required');
   assert.equal(back.top, top);
   assert.deepEqual(back.rows, rows);
   assert.deepEqual(back.words, stripWords(data));

@@ -18,7 +18,8 @@ import { axisTop, hospitalRows, stripsAsset } from './program/strips.js';
 
 // ctx: the build's context (pipeline/site/context.js). data: loadMedicaid()'s result (tests pass their own); hubCcns: the
 // CCNs with a hospital page across the programs (data.js loadHubCcns), which steps 3 and 4 link to; step 4's hospitals
-// come one asset per state (wr-hosp-<code>, program/hospital.js hospChunks), fetched for the page's hospital; released:
+// come one asset per state (wr-hosp-<code>, program/hospital.js hospChunks), fetched for the page's hospital, and steps 3
+// and 5 one each (wr-states, wr-both), fetched as the step nears the screen; released:
 // whether the site's pages may be indexed in a production build; log: where progress lines go. Returns the two dates the
 // hub's corrections page lists: the newest date CMS gives any of the scenario file's inputs (data.js newestCmsDate) and
 // the day the scenario file was built.
@@ -30,9 +31,14 @@ export function generateWr(ctx, { data = loadMedicaid(), hubCcns = loadHubCcns()
   const chunks = hospChunks(data, rows, hubCcns);
   const both = bothInput(data, rows, hubCcns);
   const hosp = Object.fromEntries([...chunks].map(([code, chunk]) => [code, ctx.asset(`wr-hosp-${code.toLowerCase()}`, 'json', JSON.stringify(chunk))]));
+  // Steps 3 and 5 each have an asset of their own, fetched as the step nears the screen, so step 1 needs only the strips'.
+  const src = {
+    states: ctx.asset('wr-states', 'json', JSON.stringify(statesAsset(states))),
+    both: ctx.asset('wr-both', 'json', JSON.stringify(both)),
+  };
   const stripsUrl = ctx.asset('wr-strips', 'json', JSON.stringify(stripsAsset(rows, {
-    top: axisTop(rows, data.params.use_max), words: stripWords(data), totals: serverTotals(data), how: howModel(data), states: statesAsset(states),
-    hosp, away: loadAway(data, hubCcns), both,
+    top: axisTop(rows, data.params.use_max), words: stripWords(data), totals: serverTotals(data), how: howModel(data), src,
+    hosp, away: loadAway(data, hubCcns),
   })));
   const baseUrl = ctx.asset('wr-base', 'json', JSON.stringify(baseAsset(data)));
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl, hubCcns, statesModel: states, hospChunks: chunks, bothModel: bothModel(rows, both) }) });
