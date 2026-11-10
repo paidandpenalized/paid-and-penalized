@@ -8,8 +8,9 @@ export const LINKS = Object.freeze({
   leapfrog: 'https://www.hospitalsafetygrade.org/',
 });
 
-// A hospital's page on Care Compare, by its CCN (the record card's stars link to it).
-export const careCompareHref = (ccn) => `${LINKS.careCompare}details/hospital/${encodeURIComponent(ccn)}`;
+// A hospital's page on Care Compare, by its CCN (the record card's stars link to it), with the "/" Care Compare's own
+// address ends in (without it, Care Compare answers with a redirect to it).
+export const careCompareHref = (ccn) => `${LINKS.careCompare}details/hospital/${encodeURIComponent(ccn)}/`;
 
 // The program page: the site's own path.
 export const PROGRAM_PATH = SITE.sites.hacrp.path;

@@ -690,7 +690,7 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(text, /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh"> \(Alabama’s hospitals on the map and in the table\)<\/span><\/a> 35000<\/p>\n<div class="field__note">Example County<\/div><\/div>/);
   assert.match(page({ zip: null }), /<p class="field__value">Exampleton, <a class="hosp__state" href="\/hacrp\/#state=AL">AL<span class="vh">[^<]*<\/span><\/a><\/p>/);
   assert.match(text, /<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆<\/span><\/span><span class="vh">4 of 5 stars<\/span>/);
-  assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002', 'Open on Care Compare'))));
+  assert.ok(text.includes(String(externalLink('https://www.medicare.gov/care-compare/details/hospital/990002/', 'Open on Care Compare'))));
   // The state's outline and the dot behind the whole card, first in it (so the fields paint over it), at the locator's
   // standard width; the record's own script (hacrp-record) keeps the dot clear of the fields' words.
   assert.match(text, /<div class="form hosp__id">\n<div class="hosp__wm" aria-hidden="true"><span class="geo geo--j"><svg class="chart chart--state-map" viewBox="0 0 300 \d+"[^>]*aria-label="Map of Alabama with this hospital’s location marked"/);
