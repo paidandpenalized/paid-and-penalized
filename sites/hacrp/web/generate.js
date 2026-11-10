@@ -5,7 +5,8 @@ import { lineScore } from '../../../web/whatif/marks.js';
 import { checkA1 } from '../../../engine/js/hacrp/acceptance.js';
 import { EQUAL_FROM, Z_FROM } from '../../../engine/js/hacrp/eras.js';
 import { yearCheck } from '../../../engine/js/hacrp/history.js';
-import { scoredHospitals, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { isDecided, scoredHospitals, scoredMeasures } from '../../../engine/js/hacrp/hospital.js';
+import { endedBy } from '../../../web/render/closed.js';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { ESTIMATE_THRESHOLD } from '../../../engine/js/hacrp/params.js';
@@ -205,6 +206,8 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       assets,
       searchUrl,
       dollars,
+      // The cut hospitals in the dollar totals (scored, cut, estimated) whose Medicare agreement had ended by the year's end.
+      closedCut: hospitals.filter((h) => isDecided(h) && h.paymentReduction === 'Yes' && dollars.byCcn.get(h.ccn)?.status === 'estimated' && endedBy(master.get(h.ccn)?.inactive ?? null, fy)).length,
       names: (ccn) => {
         const m = master.get(ccn);
         return m ? { name: m.name, city: m.city, state: m.state } : null;

@@ -9,7 +9,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mountRoll, mountYearMap } from '../client/explore.js';
 import { mountStatePicker } from '../client/roll-picker.js';
-import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
+import { YEAR_CLASSES, YEAR_HOLE, yearClass } from '../web/year-classes.js';
 import { fill, t } from '../web/explore/copy.js';
 import { fill as historyFill, t as historyText } from '../web/history/copy.js';
 import { STATE_NAMES } from '../../../engine/js/states.js';
@@ -828,7 +828,7 @@ function dotsIn(innerHTML) {
   const paths = [...innerHTML.matchAll(/<path class="chart-dots ([^"]+)" stroke-width="([^"]*)" d="([^"]*)"\/>/g)];
   return Object.fromEntries(paths.map(([, cls, , d]) => [cls, { n: (d.match(/h0/g) ?? []).length, d }]));
 }
-const [CLEAR, SCAR, NOW] = [YEAR_CLASSES.clear, YEAR_CLASSES.scar, YEAR_CLASSES.now];
+const [CLEAR, SCAR, NOW, HOLE] = [YEAR_CLASSES.clear, YEAR_CLASSES.scar, YEAR_CLASSES.now, YEAR_HOLE];
 
 // Five hospitals over three years with a place on the map (tenths of a unit; null: no place), and each year's
 // [cut, ever cut]. Worked by hand, A: 'YNN' B: 'NYN' C: '.YY' D: '..N' E: 'NNN' (no place).
@@ -869,20 +869,23 @@ test('mountYearMap: the controls appear; a year\'s button draws that year\'s dot
     // 2025: B and C cut now; A cut earlier (scar); D has no decision yet.
     await year(1);
     [narrow] = rig.groups.map((g) => dotsIn(g.innerHTML));
-    assert.deepEqual(Object.keys(narrow).sort(), [NOW, SCAR].sort());
+    assert.deepEqual(Object.keys(narrow).sort(), [NOW, SCAR, HOLE].sort());
     assert.equal(narrow[NOW].d, 'M30 40h0m20 20h0');
     assert.equal(narrow[SCAR].d, 'M10 20h0');
+    assert.equal(narrow[HOLE].d, narrow[SCAR].d, 'an earlier year\'s cut is a ring: a hole over each of its dots');
     assert.deepEqual(rig.buttons.map((b) => b.attrs['aria-pressed']), ['false', 'true', 'false']);
     assert.equal(rig.readout.textContent, fill('ymapSay', { fy: '2025', cut: '2', ever: '3' }));
     // 2026: C cut; A and B scarred; D, never cut, appears in the clear; E has no place so none of its years draw.
     await year(2);
     [narrow] = rig.groups.map((g) => dotsIn(g.innerHTML));
-    assert.deepEqual(Object.fromEntries(Object.entries(narrow).map(([k, v]) => [k, v.n])), { [CLEAR]: 1, [SCAR]: 2, [NOW]: 1 });
+    assert.deepEqual(Object.fromEntries(Object.entries(narrow).map(([k, v]) => [k, v.n])), { [CLEAR]: 1, [SCAR]: 2, [HOLE]: 2, [NOW]: 1 });
     assert.equal(narrow[CLEAR].d, 'M70 80h0');
     assert.equal(rig.readout.textContent, fill('ymapSay', { fy: '2026', cut: '1', ever: '3' }));
-    // Each year's group holds a path per class that has dots, in the key's order (clear, scar, now: the last on top).
-    const classes = [...rig.groups[0].innerHTML.matchAll(/class="chart-dots ([^"]+)"/g)].map((m) => m[1]);
-    assert.deepEqual(classes, [CLEAR, SCAR, NOW]);
+    // Each year's group holds a path per class that has dots, in the key's order (clear, scar and its holes, now: the
+    // last on top); the ring a quarter wider than a dot, its hole half the ring.
+    const paths = [...rig.groups[0].innerHTML.matchAll(/class="chart-dots ([^"]+)" stroke-width="([^"]*)"/g)];
+    assert.deepEqual(paths.map((m) => m[1]), [CLEAR, SCAR, HOLE, NOW]);
+    assert.deepEqual(paths.map((m) => Number(m[2])), [4.2, 5.3, 2.6, 4.2]);
     assert.equal(globalThis.fetch.calls.length, 1, 'the asset once, for every year');
   }));
 
@@ -1051,6 +1054,7 @@ test('the year map for every year: each ink\'s dots are the hospitals in it that
         assert.equal(n(SCAR), recs.filter((r) => r[i] !== 'Y' && early(r).includes('Y')).length, `FY${HD.fys[i]} at ${built.width}: cut before`);
         assert.equal(n(CLEAR), recs.filter((r) => !r.slice(0, i + 1).includes('Y') && /[YN]/.test(r.slice(0, i + 1))).length, `FY${HD.fys[i]} at ${built.width}: decided, never cut so far`);
         assert.equal(n(NOW) + n(SCAR) + n(CLEAR), recs.filter((r) => yearClass(r, i) !== null).length);
+        assert.equal(dots[HOLE]?.d, dots[SCAR]?.d, `FY${HD.fys[i]} at ${built.width}: every earlier-year cut a ring`);
       }
     }
     assert.equal(cutNone, 1, 'the one year CMS cut no one');

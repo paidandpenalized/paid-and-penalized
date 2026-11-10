@@ -38,6 +38,8 @@ A claim marked `unverified` may not be used in copy.
 | HRRP-28 | CMS shortened the FY2022 data window to end December 1, 2019, so that it uses no data from the COVID-19 public health emergency, whose first-half 2020 claims it left out. | https://www.federalregister.gov/documents/2021/08/13/2021-16519 | "would only be affected by a shortened performance period (July 1, 2017 through December 1, 2019) that does not use data from the COVID-19 PHE" | 2026-11-06 |
 | HRRP-22 | Congress extended the Medicare-dependent hospital program through December 31, 2026, which falls inside fiscal year 2027. | https://www.cms.gov/files/document/mm-14415-low-volume-hospital-payment-adjustment-medicare-dependent-hospital-program-fy-2026.pdf | "extends the MDH program through December 31, 2026" | 2026-11-05 |
 | HRRP-23 | The readmission measures count unplanned readmissions within 30 days of discharge. | https://www.federalregister.gov/documents/2026/08/04/2026-15833 | "assesses unplanned readmissions occurring within 30 days of discharge" | 2026-11-05 |
+| HRRP-29 | A Medicare-dependent hospital is paid the federal rate plus 75 percent of the amount by which its hospital-specific rate exceeds the federal rate, for discharges in cost-reporting periods beginning on or after October 1, 2006 and before January 1, 2027. | https://www.law.cornell.edu/cfr/text/42/412.108 | "75 percent of the amount that the Federal rate determined under paragraph (c)(1) of this section is exceeded by the highest of the following" | 2026-11-09 |
+| HRRP-30 | The IPPS impact file gives each hospital two case-mix indexes: a transfer-adjusted one, and one it calls generally applicable for sole community and Medicare-dependent hospitals paid under their hospital-specific rate. | https://www.cms.gov/files/zip/fy2027-ipps-fr-impact-file.zip | "Case Mix Index under Grouper V44 (generally applicable for SCH and MDH providers paid under their Hospital Specific Payment rate)." | 2026-11-09 |
 
 
 ## Notes on the sources
@@ -142,6 +144,15 @@ A claim marked `unverified` may not be used in copy.
   summaries repeat the FY2026 notice. So the register and the "New for" note say what CMS gave notice of.
 - **HRRP-23** is FR 2026-15833, 91 FR 49900 (a paragraph about the sepsis measure that says it is "consistent with other
   Hospital Readmissions Reduction Program measures").
+- **HRRP-29** is 42 CFR 412.108(c)(2)(iii), read from the page 2026-11-09: for those discharges a Medicare-dependent hospital is
+  paid the Federal rate ((c)(1)) plus 75 percent of the amount by which the highest of its hospital-specific rates (412.73,
+  412.75, 412.79) exceeds it. `constants.js` MDH_ADDON_SHARE carries the share, and the engine's `dollars.MDH_SHARE` is the same
+  value. Methods' dollar formula prints it with HRRP-25, which puts the difference in the base the cut applies to. When the
+  date in the quote's paragraph passes, the row is checked again (HRRP-22 is the program's current end date).
+- **HRRP-30** is the FY2027 impact file's variable descriptions (the pinned `ipps-impact-fy2027` zip, member "FY 2027 IPPS FR & CN
+  Impact File - Variable Descriptions.txt"): `CMIV44` is the quoted row and `TACMIV44` the "Transfer adjusted Case Mix Index under
+  Grouper V44" row. Methods' sentence on a Medicare-dependent hospital's second line rests on it; `ipps.py` reads `CMIV44` as
+  `cmi_hsp` (methods_version 2, `docs/METHODS-LOG.md`).
 - **42 CFR 412.152, "not less than 1.0"** (checked 2026-11-05): the definition of "excess readmissions ratio" reads "the ratio
   (but not less than 1.0) of risk-adjusted readmissions...", while CMS's published ratios run below 1.0 and only the part above
   the peer median counts. Methods says only what HRRP-04 and HRRP-09 support: a condition at or below its median adds nothing,
@@ -164,6 +175,8 @@ document's page; no source needed an archive copy.
 | https://www.law.cornell.edu/cfr/text/42/412.152 | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/412.23 | 200 | direct |
 | https://www.law.cornell.edu/cfr/text/42/413.70 | 200 | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.108 | 200 (2026-11-09) | direct |
+| https://www.cms.gov/files/zip/fy2027-ipps-fr-impact-file.zip | 200 (2026-11-09; the quote read from the pinned copy) | direct |
 | https://www.law.cornell.edu/uscode/text/42/1395ww | 200 (about 590,000 characters; the definition is in the second 100,000, read 2026-11-05) | direct |
 | https://www.cms.gov/files/document/r12622demo.pdf | 200 (a PDF; read from the downloaded file) | direct |
 | https://www.cms.gov/files/document/fy-2027-hrrp-infographic-pdf.pdf | 200 (a PDF; read from a downloaded copy kept outside the repo; checked 2026-11-05) | direct |

@@ -11,7 +11,7 @@ import { dollars, factorText, placeText } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { loadHubAsset } from '../../../web/client/hub-asset.js';
 import { inProgram } from '../../hospital/peers.js';
-import { signOf } from '../../hospital/text.js';
+import { outKey, signOf } from '../../hospital/text.js';
 import { COPY } from './copy.js';
 
 
@@ -26,7 +26,7 @@ export function worksheetModel(h) {
   const { est } = h;
   const d = programDollars(est);
   const signed = (v) => dollars(v, { sign: true });
-  const line = (id, v) => (inProgram(est, id) ? signed(v) : fillCopy(COPY, 'notInProgram'));
+  const line = (id, v) => (inProgram(est, id) ? signed(v) : fillCopy(COPY, outKey(id, 'notInProgram')));
   return {
     text: {
       ccn: h.ccn, name: h.name, place: placeText(h),

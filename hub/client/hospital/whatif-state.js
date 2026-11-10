@@ -65,6 +65,14 @@ function spanOf(rng, h, id) {
 }
 export const extent = (h, ctx, id) => spanOf(ranges(h, ctx), h, id);
 
+// Whether a factor the reader typed for id (a number, or NaN for none) is one the field takes: inside its ends (extent's),
+// read to the four decimals a factor keeps, so the top factor typed as shown is in. One past them is refused, never moved
+// to the nearer end: a phone's or a browser's reading of "0,99" as 99 must not quietly set the range's top.
+export function typedOk(h, ctx, id, value) {
+  const span = extent(h, ctx, id);
+  return Boolean(span) && Number.isFinite(value) && round4(value) >= round4(span[0]) && round4(value) <= round4(span[1]);
+}
+
 // A factor to four decimals, or the actual factor when it reads the same.
 const settle = (x, actual) => (round4(x) === round4(actual) ? actual : round4(x));
 

@@ -121,7 +121,7 @@ export function placePage({ place, places, pd, model, hospitalRows, master, shap
   const measures = placeMeasuresFigure({ place, model, next: figureNo, source: line });
   const ccns = new Set(place.ccns);
   // Its hospitals across the line, when any sits within the figure's window of it.
-  const across = md && nearLine(md, ACROSS_WINDOW).rows.some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place) }) : null;
+  const across = md && nearLine(md, ACROSS_WINDOW).rows.some((r) => ccns.has(r.ccn)) ? acrossFigure(md, { n: figureNo(), source: moneySourceText({ fy, source }), mine: ccns, name: nameInText(place), csvName: `hacrp-${place.kind}-${place.key.toLowerCase()}-across-the-line` }) : null;
   const years = hd ? placeYearsFigure({ place, hd, master, next: figureNo, source: historySource(hd), src: searchUrl }) : null;
   // A child's dollars as its own page says them (moneyFields): "no estimate", not $0, where none is estimated (Maryland's
   // are exempt); and which of the cut hospitals they come from, where only some are.

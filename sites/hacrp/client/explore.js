@@ -6,7 +6,8 @@
 import { cmsText, count, decimal, pct } from '../../../web/render/format.js';
 import { ruleCompare, ruleRank } from '../../../web/charts/scoreRule.js';
 import { once } from '../../../web/client/once.js';
-import { SLIDE_PAD } from '../../../web/charts/slideRule.js';
+import { SLIDE_PAD, readPlaces } from '../../../web/charts/slideRule.js';
+import { r2 } from '../../../web/charts/svg.js';
 import { zFromValue } from '../../../engine/js/hacrp/params.js';
 import { hospitalHref } from '../web/hospital-table.js';
 import { imageOf, imagePair } from '../../../web/charts/figure.js';
@@ -15,7 +16,7 @@ import { SCATTER_W, agreeScatterOf, pairPoints, pullPanel, slidePanel, stackPane
 import { fill } from '../web/explore/copy.js';
 import { dotsPath } from '../../../web/charts/dots.js';
 import { CUT, NONE } from '../../../engine/js/hacrp/trends.js';
-import { YEAR_CLASSES, yearClass } from '../web/year-classes.js';
+import { YEAR_CLASSES, yearClass, yearGroups } from '../web/year-classes.js';
 
 // ---------- the assets ----------
 
@@ -135,15 +136,24 @@ export function mountSlideRules(root = document, only = null) {
       const readZ = cursor.querySelector('[data-read="z"]');
       const width = svg.viewBox.baseVal.width;
       const toX = (v) => SLIDE_PAD + ((v - s.lo) / (s.hi - s.lo)) * (width - 2 * SLIDE_PAD);
+      // The value reading's line (slideRule.js): the rule's top and the words on it, which the reading moves aside for.
+      // A cursor drawn without the line (an older page) has no words to move aside for.
+      const line = JSON.parse(cursor.getAttribute('data-line') ?? 'null') ?? { top: 0, words: [] };
       let value = s.value;
       const set = (v) => {
         value = Math.min(s.hi, Math.max(s.lo, v));
-        const z = zFromValue(value, s);
-        cursor.setAttribute('transform', `translate(${toX(value).toFixed(2)} 0)`);
-        readValue.textContent = decimal(value, s.dp);
-        readZ.textContent = cmsText(decimal(z, 2));
-        svg.setAttribute('aria-valuenow', decimal(value, s.dp));
-        svg.setAttribute('aria-valuetext', `${decimal(value, s.dp)}: z ${cmsText(decimal(z, 2))}`);
+        const at = r2(toX(value));
+        const read = decimal(value, s.dp);
+        const z = cmsText(decimal(zFromValue(value, s), 2));
+        const place = readPlaces({ cur: at, value: read, z, width, ...line });
+        cursor.setAttribute('transform', `translate(${at} 0)`);
+        readValue.textContent = read;
+        readValue.setAttribute('x', place.x);
+        readValue.setAttribute('y', place.y);
+        readZ.textContent = z;
+        readZ.setAttribute('x', place.zx);
+        svg.setAttribute('aria-valuenow', read);
+        svg.setAttribute('aria-valuetext', `${read}: z ${z}`);
       };
       const fromEvent = (e) => set(s.lo + ((svgPoint(svg, e).x - SLIDE_PAD) / (width - 2 * SLIDE_PAD)) * (s.hi - s.lo));
       svg.setAttribute('tabindex', '0');
@@ -518,7 +528,7 @@ export function mountYearMap(fig, history = assetLoaders()) {
         const k = yearClass(rec, i);
         if (k && hist.at[2 * j] !== null) groups[k].push([hist.at[2 * j] / 10, hist.at[2 * j + 1] / 10]);
       });
-      g.innerHTML = Object.entries(YEAR_CLASSES).map(([k, cls]) => dotsPath(groups[k], cls, Number(g.dataset.size)).toString()).join('');
+      g.innerHTML = yearGroups(groups, Number(g.dataset.size)).map((x) => dotsPath(x.points, x.cls, x.size).toString()).join('');
     }
     const [cut, ever] = hist.counts[i];
     const values = { fy: String(hist.fys[i]), cut: count(cut), ever: count(ever) };

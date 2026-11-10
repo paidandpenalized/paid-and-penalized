@@ -169,6 +169,14 @@ export function money(x, { sign = false } = {}) {
   return `${body === '0' ? '' : x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${body}`;
 }
 
+// The amount money() prints for x, as a number of dollars ("−$1.2M" is -1200000, "$41K" 41000), for checking whether
+// printed figures add up as printed.
+const MONEY_UNIT = { '': 1, K: 1e3, M: 1e6, B: 1e9 };
+export function moneyShown(x) {
+  const [, minus, body, unit] = /^(−?)\+?\$([\d.]+)([KMB]?)$/.exec(money(x));
+  return (minus ? -1 : 1) * Math.round(Number(body) * MONEY_UNIT[unit]) + 0;
+}
+
 // A range of dollars, low to high, as money() writes each end: "$850K–$1.2M"; the unit said once when both ends share
 // it ("$1.0–1.4M"); " to " when an end is negative, where a dash would read as a minus ("−$12K to $40K"). A range under
 // $10,000 whose ends money() would write in two units ("$764–$1K") gives both in whole dollars ("$764–$1,000").

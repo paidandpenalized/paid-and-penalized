@@ -186,6 +186,19 @@ test('a place page: its estimate against the nation\'s, its children\'s dollars,
   const own = nearLine(MD, ACROSS_WINDOW).rows.filter((r) => state.ccns.includes(r.ccn)).length;
   assert.equal([...wide.matchAll(/<g class="chart-mark" data-mark/g)].length, 2 + own);
   assert.equal([...wide.matchAll(/<circle class="chart-across__dot/g)].length, nearLine(MD, ACROSS_WINDOW).rows.length, 'every near-line hospital still has its dot');
+  // Its table (and so its CSV) holds what its takeaway says, the place's own hospitals on each side, beside the nation's
+  // that the drawing labels.
+  const near = nearLine(MD, ACROSS_WINDOW);
+  const mine = near.rows.filter((r) => state.ccns.includes(r.ccn));
+  const table = /<section class="psec psec--wide" id="across"[\s\S]*?<table class="gb"[\s\S]*?<\/table>/.exec(page)[0];
+  assert.deepEqual([...table.matchAll(/<th scope="col"[^>]*>([^<]*)<\/th>/g)].map((m) => m[1]), ['Side of the line', 'Hospitals', 'Estimated cut, taken or not (whole dollars)', 'Here', 'Here (whole dollars)']);
+  assert.ok(page.includes(`data-figure-csv="hacrp-${state.kind}-${state.key}-across-the-line.csv"`), 'its CSV is named by the place');
+  const row = (side) => [...new RegExp(`<th scope="row">${side}</th>(.*?)</tr>`).exec(table)[1].matchAll(/data-value="([^"]*)"/g)].map((m) => Number(m[1]));
+  const under = mine.filter((r) => !r.yes), over = mine.filter((r) => r.yes);
+  assert.deepEqual(row('Under the line: not cut'), [near.under.length, near.underMoney, under.length, sum(under, 'atStake')]);
+  assert.deepEqual(row('Over the line: cut'), [near.over.length, near.overMoney, over.length, sum(over, 'atStake')]);
+  const caption = captionOf(page, 'across');
+  for (const [k, dollarsOf] of [[under.length, sum(under, 'atStake')], [over.length, sum(over, 'atStake')]]) if (k) assert.ok(caption.includes(money(dollarsOf)), 'the takeaway says the dollars the table holds');
 });
 
 // A place page's children table: each child's link -> { dollars: the cell's text, from: the note under it ('' for none) }.

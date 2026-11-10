@@ -109,7 +109,8 @@ export function nationalContext({ hospitals, master, model, dollars }) {
     return [id, { values, n: values.length }];
   }));
 
-  // A group's scores (all scored members) and its decided members' counts, remembered by kind and key.
+  // A group's scores (all scored members, for a hospital's rank among them) and its decided members' counts and middle
+  // score (the figure draws and names only hospitals with a payment decision), remembered by kind and key.
   const groups = new Map();
   function group(kind, key) {
     const id = `${kind}:${key}`;
@@ -122,7 +123,7 @@ export function nationalContext({ hospitals, master, model, dollars }) {
         scored: members.length,
         decided: dec.length,
         yes: dec.filter((row) => row.decision === 'Yes').length,
-        median: sortedScores.length ? median(sortedScores) : null,
+        median: dec.length ? median(dec.map((row) => row.total)) : null,
         scores: sortedScores,
         // Columns over the shared edges: decided members only, as the program page's histogram counts.
         bins: countBins(dec.map((row) => row.total), edges),

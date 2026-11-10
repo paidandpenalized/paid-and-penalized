@@ -17,6 +17,7 @@
 import { clamp } from '../../../engine/js/stats.js';
 import { count } from '../../../web/client/format.js';
 import { ROW_IDS, ROW_KEY, inProgram } from '../../hospital/peers.js';
+import { outKey } from '../../hospital/text.js';
 import { GLIDE_MS, clamp01, deviceRatio } from '../paint.js';
 import { NARROW_BELOW, drawnDot, hashOf, pileLayout, pileSpacing } from '../pile.js';
 import { shareScale, tickText, wholePercents } from '../scale.js';
@@ -445,7 +446,7 @@ export function mountStrips(root, { h, peers, figures, domain: tight, fill, stil
       st.me.setAttribute('r', String(round(Math.max(st.at.r, 1.5) + 3.5)));
       st.me.style.transform = `translate(${round(st.at.x)}px, ${round(st.at.y)}px)`;
     }
-    st.out.textContent = listed ? '' : fill('stripOut');
+    st.out.textContent = listed ? '' : fill(outKey(st.id, 'stripOut'));
     // The group's median, among those the program lists (the net's and HAC's: among all of them).
     const { median } = shows[st.id];
     st.med.style.display = median === null ? 'none' : '';

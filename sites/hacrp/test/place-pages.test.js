@@ -8,6 +8,7 @@ import { nearLine } from '../web/money-data.js';
 import assert from 'node:assert/strict';
 import { MEASURE_IDS } from '../../../engine/js/hacrp/measures.js';
 import { cmsText, count, decimal, ordinal, pct } from '../../../web/render/format.js';
+import { capsWidth } from '../../../web/charts/svg.js';
 import { FEW_DECIDED } from '../web/constants.js';
 import { ancestors, placeCounts } from '../web/places.js';
 import { DATA, HD, MD, PD, PLACES, SEARCH_URL, renderPlace } from './pinned.js';
@@ -141,8 +142,15 @@ test('the figures: the map, the scores against the nation\'s, the measures and i
   assert.deepEqual([...text.matchAll(/<section class="psec(?: psec--wide)?" id="(\w+)"/g)].map((m) => m[1]), ['where', 'scores', 'measures', ...(across ? ['across'] : [])]);
   // The rule is every hospital with a decision, with the place's ticked: it reads the hospitals asset for names.
   assert.match(text, new RegExp(`<figure class="rulefig" data-src="${SEARCH_URL.replaceAll('.', '\\.')}"`));
-  // The score rule is drawn twice, a phone's and a page's: the phone's names the place's cut count in the short form.
-  const cutLabels = [...(/<figure class="rulefig"[\s\S]*?<\/figure>/.exec(text)[0]).matchAll(/<text class="chart-cap chart-cap--pen"[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+  // The score rule is drawn twice, a phone's and a page's: the phone's names the place's cut count in the short form,
+  // each in as many lines as fit between CMS's line and the drawing's right end.
+  const drawings = [...(/<figure class="rulefig"[\s\S]*?<\/figure>/.exec(text)[0]).matchAll(/<svg[^>]* viewBox="0 0 (\d+) \d+"[\s\S]*?<\/svg>/g)];
+  const cutLabels = drawings.map(([svg, width]) => {
+    const lineX = Number(/<line class="chart-rule__line" x1="([\d.]+)"/.exec(svg)[1]);
+    const lines = [...svg.matchAll(/<text class="chart-cap chart-cap--pen" x="([\d.]+)"[^>]*>([^<]*)<\/text>/g)];
+    for (const [, x, line] of lines) assert.ok(Number(x) > lineX && Number(x) + capsWidth(line) <= Number(width), `"${line}" fits right of the line`);
+    return lines.map((m) => m[2]).join(' ');
+  });
   assert.deepEqual(cutLabels, [`${count(STATE.counts.yes)} of ${count(PD.counts.yes)} here`, `${count(PD.counts.yes)} cut nationally · ${count(STATE.counts.yes)} here`], 'phone, then page');
   assert.ok(text.includes(`Every hospital in the nation with a payment decision, lowest score to highest, each as tall as its score (above the rule, worse than average); the solid hairlines are ${esc(STATE.name)}’s, red where CMS cut.`));
   // The map's takeaway and the score figure's name this place's counts and the nation's share.

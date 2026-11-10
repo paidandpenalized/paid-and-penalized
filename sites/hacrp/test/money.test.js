@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { REPO_ROOT, dollarsPath, newestYear, readJson } from '../../../pipeline/files.js';
-import { cmsText, count, decimal, dollars, money, moneyRange, pct } from '../../../web/render/format.js';
+import { cmsText, count, decimal, dollars, money, moneyRange, pct, placeText } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { CLIFF_NEAR, MAJOR_TEACHING_RATIO, REDUCTION_PCT, REDUCTION_TEXT } from '../web/constants.js';
 import { fill as siteFill } from '../web/copy.js';
@@ -285,7 +285,7 @@ test('the share sentence names CMS\'s decision and the dollars as this site\'s e
     // The description (and og:description) is the same neutral sentence whatever the verdict: no decision, no dollars.
     assert.ok(!page.includes(`<meta name="description" content="${esc(sentence)}">`), `${row.status}: the share sentence is not the description`);
     const key = hospitalMoney(row).estimated ? 'hospitalDescription' : 'hospitalDescriptionNone';
-    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill(key, { name: view.name, city: view.city, state: view.state, fy: String(view.fy) }))}">`), `${row.status}: description`);
+    assert.ok(page.includes(`<meta name="description" content="${esc(siteFill(key, { name: view.name, place: placeText(view), fy: String(view.fy) }))}">`), `${row.status}: description`);
     assert.ok(page.includes(esc(SITE.origin + view.path)), `${row.status}: the link to share`);
     assert.ok(page.includes(esc(sentence)), `${row.status}: the sentence to share`);
     assert.match(page, /<details class="share" data-share/);
@@ -317,6 +317,9 @@ test('dollars without their ranges are refused, in every build; the data carries
   const file = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
   // Missing as well as null: a file without the field has no ranges, as one that says so.
   for (const bands of [undefined, null]) assert.throws(() => dollarsData({ ...file, bands }, DATA.hospitals), /no ranges/, String(bands));
+  // A file without a band a net's range can take stops here, once, naming it (engine/js/dollars/ranges.js checkNetBands).
+  const { hvbp: _, ...noHvbp } = file.bands.measures;
+  assert.throws(() => dollarsData({ ...file, bands: { ...file.bands, measures: noHvbp } }, DATA.hospitals), /^RangeError: HACRP: .*no back-test hvbp band/);
   assert.deepEqual(DATA.dollars.backtest, { share: file.bands.highPct - file.bands.lowPct, fy: file.bands.fy });
   assert.equal(rangeShare(BANDS), DATA.dollars.backtest.share);
   for (const row of rows) assert.equal('ranges' in row, row.status === 'estimated', row.ccn);

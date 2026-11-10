@@ -8,6 +8,9 @@ import { axis } from '../charts/axis.js';
 import { contribBars } from '../charts/contribBars.js';
 import { ruler } from '../charts/ruler.js';
 import { scoreRule } from '../charts/scoreRule.js';
+import { readPlaces, slideRule } from '../charts/slideRule.js';
+import { textWidth } from '../charts/text.js';
+import { capsWidth } from '../charts/svg.js';
 import { figure } from '../charts/figure.js';
 import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
@@ -508,6 +511,26 @@ test('scoreRule: the average mark stands where the sorted scores cross zero, nam
   assert.doesNotMatch(String(scoreRule({ scores: [-0.2, -0.1], cut: 0, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all below zero');
 });
 
+test('scoreRule: a cut count too long for the room right of the line wraps there, and the rule moves down a line for it', () => {
+  const labels = { low: 'Lowest', high: 'Highest', line: 'Line' };
+  const scores = [-1, -0.5, -0.1, 0, 0.4, 1, 2, 3];
+  const draw = (cut) => String(scoreRule({ scores, cut: 2, labels: { ...labels, cut }, width: 300 }));
+  const pens = (svg) => [...svg.matchAll(/<text class="chart-cap chart-cap--pen" x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)<\/text>/g)].map((m) => [Number(m[1]), Number(m[2]), m[3]]);
+  const bar = (svg) => Number(/<rect class="chart-rule__bar" x="0" y="([\d.]+)"/.exec(svg)[1]);
+  const height = (svg) => Number(/viewBox="0 0 \d+ ([\d.]+)"/.exec(svg)[1]);
+  // Six slots of 50 left of the line at 225: 69 units of room.
+  const short = draw('Two cut');
+  assert.deepEqual(pens(short).map(([, , t]) => t), ['Two cut']);
+  const long = draw('Two of nine hundred here');
+  const lines = pens(long);
+  assert.deepEqual(lines.map(([, , t]) => t).join(' '), 'Two of nine hundred here', 'every word, in order');
+  assert.ok(lines.length > 1, 'wrapped');
+  for (const [x, , t] of lines) assert.ok(x + capsWidth(t) <= 300, `"${t}" fits`);
+  assert.deepEqual(lines.map(([, y]) => y), lines.map((_, i) => lines[0][1] + i * 12), 'a line apart');
+  assert.equal(bar(long) - bar(short), (lines.length - 1) * 12, 'the rule moves down a line for each line past the first');
+  assert.equal(height(long) - height(short), (lines.length - 1) * 12);
+});
+
 test('every "safe" alignment in the stylesheets has the plain one just before it, for a browser that does not know safe', () => {
   const files = ['charts.css', 'components.css', 'pages.css', 'shell.css', 'whatif.css', 'base.css'].map((f) => new URL(`../styles/${f}`, import.meta.url));
   files.push(new URL('../../hub/styles.css', import.meta.url), new URL('../../sites/hacrp/web/styles.css', import.meta.url));
@@ -521,4 +544,95 @@ test('every "safe" alignment in the stylesheets has the plain one just before it
     }
   }
   assert.ok(seen > 0, 'the stylesheets hold a safe alignment to check');
+});
+
+test('scoreRule: with no hospital past the line, the cut caption stays on one line and the rule keeps its place', () => {
+  const scores = [-0.2, -0.1, 0.1, 0.3];
+  const labels = { cut: 'none cut here at all', kept: 'not cut' };
+  const none = String(scoreRule({ scores, cut: 0, labels, width: 300 }));
+  const some = String(scoreRule({ scores, cut: 1, labels: { ...labels, cut: 'one' }, width: 300 }));
+  const height = (svg) => /viewBox="0 0 \d+(?:\.\d+)? (\d+(?:\.\d+)?)"/.exec(svg)?.[1];
+  assert.ok(height(none));
+  assert.equal(height(none), height(some), 'no extra lines for a caption with no room to wrap into');
+});
+
+// ---------- the slide rule's readings ----------
+
+// A synthetic line: a caption at the left end and a word over the average, as slideRule lays them out (top 34).
+const LINE = { top: 34, words: [[4, 42], [80, 134]] };
+const READ_W = (s) => textWidth(s, 12, { mono: true });
+const span = (cur, x, s) => [cur + x - READ_W(s) / 2, cur + x + READ_W(s) / 2];
+const touches = ([a, b], words) => words.some(([c, d]) => b > c && a < d);
+
+test('readPlaces: on a clear stretch both readings sit centered over the hairline, the value on the words\' line', () => {
+  assert.deepEqual(readPlaces({ cur: 200, value: '0.559', z: '−0.11', width: 300, ...LINE }), { x: 0, y: 22, zx: 0 });
+});
+
+test('readPlaces: at the drawing\'s ends both readings move in, so neither runs past it', () => {
+  for (const cur of [10, 290]) {
+    const got = readPlaces({ cur, value: '0.559', z: '−1.41', width: 300, top: 34, words: [] });
+    for (const [x, s] of [[got.x, '0.559'], [got.zx, '−1.41']]) {
+      const [a, b] = span(cur, x, s);
+      assert.ok(a >= 0 && b <= 300 && x !== 0, `${s} at ${cur}: ${a} to ${b}`);
+    }
+  }
+});
+
+test('readPlaces: a value reading that would touch the average\'s word sits beside it, on the hairline\'s side, when there is room', () => {
+  const wide = { top: 34, words: [[4, 42], [170, 224]], width: 640 };
+  const left = readPlaces({ cur: 183, value: '0.559', z: '−0.11', ...wide });
+  const [a, b] = span(183, left.x, '0.559');
+  assert.equal(left.y, 22, 'on the words\' line');
+  assert.ok(b <= 170 && b > 160 && a > 42, `left of the word, close to it: ${a} to ${b}`);
+  const right = readPlaces({ cur: 210, value: '0.559', z: '−0.11', ...wide });
+  const [c] = span(210, right.x, '0.559');
+  assert.ok(right.y === 22 && c >= 224 && c < 234, `the hairline right of the word's middle: right of it, ${c}`);
+  assert.equal(readPlaces({ cur: 197, value: '0.559', z: '0', ...wide }).x > 0, true, 'on the middle: the right');
+});
+
+test('readPlaces: with no room beside the word (a phone\'s caption on the other side), the value reading rises a line, over the hairline', () => {
+  const got = readPlaces({ cur: 90, value: '0.559', z: '−0.11', width: 300, ...LINE });
+  assert.deepEqual(got, { x: 0, y: 12, zx: 0 });
+  const end = readPlaces({ cur: 10, value: '0.000', z: '−1.41', width: 300, ...LINE });
+  assert.equal(end.y, 12, 'at the left end, on the caption: up');
+  assert.ok(span(10, end.x, '0.000')[0] >= 0, 'and inside the drawing');
+});
+
+test('readPlaces, the whole way along: the value reading on the words\' line never touches a word, and neither reading leaves the drawing', () => {
+  const seen = new Set();
+  for (const [width, words] of [[300, LINE.words], [640, [[4, 42], [170, 224]]], [300, [[4, 42], [240, 294]]]]) {
+    for (let cur = 10; cur <= width - 10; cur += 0.5) {
+      const got = readPlaces({ cur, value: '0.5590', z: '−1.41', width, top: 34, words });
+      seen.add(got.y === 12 ? 'up' : Math.abs(got.x) > 0.01 && cur > 30 && cur < width - 30 ? 'beside' : 'over');
+      const v = span(cur, got.x, '0.5590');
+      assert.ok(v[0] >= 0 && v[1] <= width, `${width}: the value at ${cur}`);
+      const z = span(cur, got.zx, '−1.41');
+      assert.ok(z[0] >= 0 && z[1] <= width, `${width}: the z-score at ${cur}`);
+      if (got.y === 22) assert.ok(!touches([v[0] - 4, v[1] + 4], words), `${width}: at ${cur} the value is clear of the words (${v})`);
+      else assert.ok(Math.abs(got.x - (Math.min(width - READ_W('0.5590') / 2, Math.max(READ_W('0.5590') / 2, cur)) - cur)) < 0.01, `${width}: at ${cur}, up a line, centered (inside the drawing)`);
+    }
+  }
+  assert.deepEqual([...seen].sort(), ['beside', 'over', 'up'], 'the sweep meets each place');
+});
+
+test('slideRule: the cursor carries its line, and the readings stand where readPlaces puts them for the cursor\'s value', () => {
+  const p = { floor: 0, cap: 1.6, mean: 0.6, sd: 0.43 };
+  const draw = (value, width) => String(slideRule({ p, domain: [0, 2], value, labels: { value: 'Value', z: 'z-score', mean: 'average' }, format: (v) => v.toFixed(3), zFormat: (z) => z.toFixed(2), width, valueTicks: [0, 0.5, 1, 1.5, 2], zTicks: [-1, 0, 1, 2] }));
+  for (const width of [300, 640]) {
+    for (const value of [0, 0.55, 0.6, 0.65, 2]) {
+      const svg = draw(value, width);
+      const cursor = /<g class="chart-slide__cursor" data-cursor data-line="([^"]*)" transform="translate\(([\d.]+) 0\)">/.exec(svg);
+      const line = JSON.parse(cursor[1].replaceAll('&quot;', '"'));
+      const cur = Number(cursor[2]);
+      const read = /<text class="chart-slide__read" x="([^"]*)" y="([^"]*)"[^>]*data-read="value">([^<]*)</.exec(svg);
+      const z = /<text class="chart-slide__read chart-slide__read--z" x="([^"]*)"[^>]*data-read="z">([^<]*)</.exec(svg);
+      const want = readPlaces({ cur, value: read[3], z: z[2], width, ...line });
+      assert.deepEqual({ x: Number(read[1]), y: Number(read[2]), zx: Number(z[1]) }, want, `${value} at ${width}`);
+      assert.equal(line.top, 34);
+      // The line's words are the caption and the average's word: the average's centered on its mark.
+      const meanX = Number(/<line class="chart-slide__mean" x1="([\d.]+)"/.exec(svg)[1]);
+      assert.equal(line.words.length, 2);
+      assert.ok(Math.abs((line.words[1][0] + line.words[1][1]) / 2 - meanX) < 0.01 && line.words[0][0] === 4);
+    }
+  }
 });

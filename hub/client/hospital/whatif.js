@@ -26,7 +26,7 @@
 // on the axis it needs, with no glide.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
-import { siteAddress } from '../../../web/client/follow.js';
+import { replaceAddress, siteAddress } from '../../../web/client/follow.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
@@ -34,9 +34,9 @@ import { SETTLE_MS } from '../../../web/whatif/dom.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { COPY } from '../../hospital/copy.js';
 import { ROWS, ROW_IDS, ROW_KEY, barSpan, rowDollars, sumScale, trackAt } from '../../hospital/peers.js';
-import { HAC_CUT_TEXT, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
+import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, rowWord, signedMoney as usd } from '../../hospital/text.js';
 import { holdingAxis, stripAxis } from '../scale.js';
-import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash } from './whatif-state.js';
+import { changed, dragAction, extent, fromHash, initial, outcome, ranges, reduce, toHash, typedOk } from './whatif-state.js';
 import { node } from './dom.js';
 import { bannerText, sentence, valueText } from './whatif-text.js';
 
@@ -172,7 +172,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     const adjustable = id === 'hacrp' || rng[id];
     if (!row || !adjustable) continue;
     const program = programById(id).name;
-    const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, cuts: [], editing: false };
+    const r = { rv: row.querySelector('.hh__rv'), num: row.querySelector('.hh__num'), pill: row.querySelector('.hh__rv .pill'), input: null, error: null, cuts: [], editing: false };
     const median = node('button', { type: 'button', class: 'hh__lnk', 'data-wi-median': ROW_KEY[id] }, [fill('wiMedian')]);
     let kids;
     if (id === 'hacrp') {
@@ -185,10 +185,11 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       const fid = `wi-f-${id}`;
       const [lo, hi] = ends(id);
       r.input = node('input', { id: fid, type: 'number', inputmode: 'decimal', min: factor(lo), max: factor(hi), step: '0.0005', class: 'hh__fin' });
+      r.error = node('p', { class: 'hh__refused', id: `${fid}-error`, hidden: '' }, [fill('wiInvalid', { min: factor(lo), max: factor(hi) })]);
       const step = (dir, label) => node('button', { type: 'button', class: 'hh__stp', 'data-step': dir, 'aria-label': fill(label, { program }), 'aria-controls': fid }, [dir < 0 ? '−' : '+']);
       kids = [
         node('label', { for: fid }, [fill('wiFactor'), node('span', { class: 'vh' }, [`, ${fill('wiFactorFor', { program })}`])]),
-        step(-1, 'wiLower'), r.input, step(1, 'wiRaise'), median,
+        step(-1, 'wiLower'), r.input, step(1, 'wiRaise'), median, r.error,
       ];
     }
     const ctl = node('div', { class: 'hh__ctl' }, kids);
@@ -205,10 +206,16 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     r.input?.addEventListener('input', () => {
       r.editing = true;
     });
+    // A typed factor past the field's ends (or none) is refused: nothing changes, the field shows the factor in force
+    // again, and a line under it says what the field takes until the next change.
     r.input?.addEventListener('change', () => {
       r.editing = false;
-      apply({ type: 'set', id: ROW_KEY[id], value: numberOrNaN(r.input.value) });
-      r.input.value = factor(state[ROW_KEY[id]]);
+      const key = ROW_KEY[id];
+      const value = numberOrNaN(r.input.value);
+      const ok = typedOk(h, { vbpMax }, key, value);
+      if (ok) apply({ type: 'set', id: key, value });
+      r.input.value = factor(state[key]);
+      refuse(r, !ok);
     });
     r.input?.addEventListener('blur', () => {
       r.editing = false;
@@ -329,8 +336,9 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   const big = $('.hh__big');
   // The net's likely range is the actual net's: a scenario that moves the net hides it.
   const band = $('[data-band]');
-  // The note on a hospital whose Medicare agreement ended speaks of its actual net, as the likely range does.
-  const closed = $('.hh__closed');
+  // The tail of the note on a hospital whose Medicare agreement ended speaks of its actual net, as the likely range does;
+  // the sentence on when the agreement ended stays.
+  const closedTail = $('.hh__closed-tail');
   const netlab = $('.hh__netlab');
   const netTag = node('span', { class: 'hh__htag hh__htag--sm', hidden: '' }, [fill('wiTag')]);
   netlab?.append(netTag);
@@ -341,6 +349,8 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   const rs = result?.querySelector('.hh__rs');
   const match = $('[data-match]');
   const reset = $('[data-reset]');
+  // The note that the dollar rows, rounded, don't add to the net as printed.
+  const round = $('[data-sum-round]');
   if (match) match.hidden = false;
 
   // ---------- drawing ----------
@@ -381,6 +391,8 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       const sw = li.querySelector('.hh__sw');
       if (sw?.firstChild?.nodeType === Node.TEXT_NODE) sw.firstChild.nodeValue = rowWord(fill, id, v);
     }
+    // The rounding note, for the figures the rows now print.
+    if (round) round.hidden = addsAsPrinted(ROWS.map(({ id }) => now(id)).filter((v) => v !== null), out.net);
   }
 
   // Everything but the result box, at once; the axes the figures need, gliding there (animate) or at once.
@@ -396,7 +408,10 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
         r.pill.textContent = rowWord(fill, id, v);
       }
       if (r.rv) was(r.rv, struck(v, h.est[key]));
-      if (r.input && !r.editing) r.input.value = factor(state[key]);
+      if (r.input && !r.editing) {
+        r.input.value = factor(state[key]);
+        refuse(r, false);
+      }
       for (const b of r.cuts) b.setAttribute('aria-pressed', String((b.dataset.cut === '1') === state.hac));
       const handle = strips.handle(id);
       if (handle) {
@@ -430,7 +445,7 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     }
     netTag.hidden = !on;
     if (band) band.hidden = on && netMoved;
-    if (closed) closed.hidden = on && netMoved;
+    if (closedTail) closedTail.hidden = on && netMoved;
     paintSum(out);
     const head = $('[data-headline]');
     const share = on ? netShare(out.net, h.est.total) : h.est.share;
@@ -462,10 +477,20 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     const next = toHash(state, h);
     // Leave a fragment that isn't a scenario (#whatif, the skip link's #main) alone while there is nothing to write.
     if (next === location.hash || (next === '' && !isScenarioHash(location.hash))) return;
-    try {
-      history.replaceState(null, '', `${location.pathname}${location.search}${next}`);
-    } catch {
-      // Some browsers rate-limit replaceState; the next change writes the fragment again.
+    // A write a browser refuses (rate-limited) is written again with the next change.
+    replaceAddress(`${location.pathname}${location.search}${next}`);
+  }
+
+  // A factor field's refusal line shown (with the field marked invalid and described by it) or hidden.
+  function refuse(r, refused) {
+    if (r.error.hidden === !refused) return;
+    r.error.hidden = !refused;
+    if (refused) {
+      r.input.setAttribute('aria-invalid', 'true');
+      r.input.setAttribute('aria-describedby', r.error.id);
+    } else {
+      r.input.removeAttribute('aria-invalid');
+      r.input.removeAttribute('aria-describedby');
     }
   }
 

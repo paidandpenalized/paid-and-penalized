@@ -31,12 +31,12 @@ export const COPY = typesetCopy({
   startText: 'Each dot is one hospital, poured out of that bar. Under them sit the {programs} programs as gates. As each gate rises through the crowd, every hospital it passes shifts by that program’s adjustment.',
 
   // Step 2: Readmissions. {cap} the program's cap, {cutN} hospitals cut, {median} the median cut as a share of a
-  // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} it does not list (never counted at $0),
-  // when there are any.
+  // hospital's pay; then {zeroN} hospitals in the program at {zero}, and {outN} CMS's file does not list (never counted at
+  // $0, and not said to be outside the program, which the file's silence doesn't show), when there are any.
   hrrpHead: 'Readmissions: most hospitals take a small cut.',
   hrrpText: { text: 'HRRP cuts a hospital’s base payments, by up to {cap}, when its readmissions run above its peers’ median. {cutN} hospitals take a cut; the median cut is {median} of a hospital’s Medicare inpatient pay.', claim: ['HRRP-06', 'HRRP-09', 'HRRP-04'] },
   hrrpZero: '{zeroN} pass through at {zero}.',
-  hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} are not in the program.',
+  hrrpZeroOut: '{zeroN} pass through at {zero}, and {outN} aren’t in CMS’s Readmissions file.',
 
   // Step 3: hospital-acquired conditions. {cut} the flat cut; CMS cut {cmsN} scored hospitals (the HACRP pages' count),
   // {estN} of them with an estimate here; {more}: hacMore when the chart also holds hospitals with an estimate CMS cut

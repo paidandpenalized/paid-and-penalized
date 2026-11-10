@@ -572,6 +572,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__ax-bonus { position: absolute; left: calc(var(--z) * 100% + 20px); }
 .hh__key { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--ink-3); font-size: 12.5px; }
 .hh__key-tick { flex: none; width: 2px; height: 13px; background: var(--ink); }
+.hh__round { margin-top: 4px; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
 
 /* The button down to the what-if: bold, outlined, the capsule handle as its glyph. */
 .hh__wbtn { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; padding: 10px 18px 10px 12px; border: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 15.5px/1.2 var(--font-body); text-decoration: none; }
@@ -702,6 +703,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__stp:hover { background: var(--paper-2); }
 .hh__fin:focus-visible, .hh__stp:focus-visible, .hh__lnk:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .hh__ctl .hh__lnk { margin-left: 6px; }
+/* A refused typed factor: a line of its own under the controls, ruled in the penalty ink as the program sites' are. */
+.hh__refused { flex-basis: 100%; max-width: none; margin: 0; padding-left: 8px; border-left: 3px solid var(--pen); color: var(--ink); font-size: inherit; font-weight: 600; line-height: 1.4; }
 
 /* Once anything changes: the dashed Hypothetical banner sticks under the peer row (a row of its own; on a phone it takes
    the peer row's place, below), the "Reader-made scenario" line under it scrolls with the page, the stamp reads "What if"
@@ -799,6 +802,36 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 @media print {
   .hh__peers, .hh__scen, .hh__sharedrow, .hh__wbtn, .hh__ctl, .hh__how, .st__h { display: none; }
   .hh__progs { break-before: page; }
+}
+
+/* ---------- the family Methods page's back-test (hub/pages.js closeSection), root .mt ----------
+   A row per figure: its counts in mono, then a bar on one scale for every row: the box spans the middle of the misses
+   (--lo to --hi), the solid tick is the middle hospital (--at), the dotted line the cost report's own value (--z). Each
+   is a fraction of the bar's width. The bar repeats the row's numbers, so it is hidden from assistive technology. */
+.mt__close th[scope="row"] { font: 600 var(--fs-sm)/1.35 var(--font-body); }
+.mt__barh, .mt__barc { width: 30%; min-width: 7rem; }
+.mt__barc { vertical-align: middle; }
+.mt__bar { position: relative; display: block; height: 14px; }
+.mt__bar::before { content: ''; position: absolute; top: 2px; bottom: 2px; left: calc(var(--lo) * 100%); right: calc((1 - var(--hi)) * 100%); border: 1.5px solid var(--ink-2); border-radius: 2px; }
+.mt__bar::after { content: ''; position: absolute; top: -2px; bottom: -2px; left: calc(var(--at) * 100%); width: 3px; margin-left: -1.5px; border-radius: 1px; background: var(--ink); }
+.mt__z { position: absolute; top: -4px; bottom: -4px; left: calc(var(--z) * 100%); border-left: 1.5px dotted var(--ink-2); }
+.mt__key { margin-top: 8px; color: var(--ink-2); font-size: var(--fs-sm); }
+/* Phones: each figure stacks into a block (its name across the top, then each value under its column's name, then the
+   bar across the block), so the table never scrolls sideways. The heads are clipped as .vh is (web/styles/base.css), so
+   a screen reader still reads them; the cells' names, from data-label, show. */
+@media (max-width: 640px) {
+  .mt__close thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mt__close, .mt__close tbody { display: block; width: 100%; }
+  .mt__close tbody tr { display: grid; gap: 4px; padding: 10px 10px 12px; }
+  .mt__close tbody tr + tr { border-top: 1px solid var(--line); }
+  .mt__close tbody th { display: block; padding: 0 0 2px; }
+  .mt__close td { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 12px; padding: 0; text-align: right; }
+  .mt__close td[data-label]::before { content: attr(data-label); color: var(--ink-2); font: 400 var(--fs-sm)/1.35 var(--font-body); text-align: left; }
+  .mt__close td.mt__barc { display: block; width: auto; min-width: 0; padding: 6px 0 0; }
+}
+@media (forced-colors: active) {
+  .mt__bar::before, .mt__z { border-color: CanvasText; }
+  .mt__bar::after { forced-color-adjust: none; background: CanvasText; }
 }
 
 /* ---------- the masthead of the placeholder pages (hub/coming.js), root .rd ----------

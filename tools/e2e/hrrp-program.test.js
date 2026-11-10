@@ -1,4 +1,4 @@
-// The Readmissions program page's controls in a real browser: the hero search, Worksheet R's hospital swap (the sheet and the
+// The Readmissions program page's controls in a real browser: the hero search (and what it says for the state the program leaves out), Worksheet R's hospital swap (the sheet and the
 // waterfall under it change hospital and the waterfall stays wired), Step 2's condition switch (the other five conditions
 // load lazily, in one fetch), the map's measure switch, hospital dots and "Every state" pager; and at 360 px, no sideways
 // scroll and no console error. Hospitals are picked by property (hrrp-pick.js), never named. Runs against dist/ or any URL; see site.js.
@@ -8,7 +8,9 @@ import { normalize } from '../../web/client/search.js';
 import { CONDS } from '../../engine/js/hrrp/formula.js';
 import { HRRP_PROGRAM_PATH, HOSPITALS, bigState, pathOf, statesCount, swapSamples } from './hrrp-pick.js';
 import { METHODS_PATH, placePath } from '../../sites/hrrp/web/links.js';
-import { STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
+import { NOT_IN_PROGRAM_STATE, STATES_PAGE_SIZE } from '../../sites/hrrp/web/constants.js';
+import { fill as searchFill } from '../../sites/hrrp/web/search/copy.js';
+import { STATE_NAMES } from '../../engine/js/states.js';
 import { CONCURRENCY, assertNoSideways, assertQuiet, eventually, fetchesOf, searchIn, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
@@ -68,6 +70,17 @@ describe('hero search', () => {
     await input.fill('qqzzxxqq');
     await eventually(async () => (await input.getAttribute('aria-expanded')) !== null && (await page.locator('#hero .vh[role="status"]').textContent()).length > 0, 'the search says nothing for a query with no match');
     assert.equal(await page.locator('#hero-list').getByRole('option').count(), 0, 'no option listed');
+  }));
+
+  it('the state the program leaves out finds nothing, and the box says why', () => withPage(tabs, { path: PATH }, async (page) => {
+    const input = page.locator('#hero-q');
+    await input.waitFor({ state: 'visible' });
+    await input.fill(STATE_NAMES[NOT_IN_PROGRAM_STATE]);
+    const empty = page.locator('#hero-list .omni__empty');
+    await empty.waitFor({ state: 'visible' });
+    assert.equal(await page.locator('#hero-list').getByRole('option').count(), 0, 'no option listed');
+    assert.equal(await empty.textContent(), searchFill('searchNotInProgram'));
+    assert.equal(await page.locator('#hero .vh[role="status"]').textContent(), searchFill('searchNotInProgram'), 'the status says it too');
   }));
 });
 
@@ -160,6 +173,26 @@ describe('Worksheet R hospital swap', () => {
     await eventually(async () => (await page.evaluate(() => window.__records)).some(([, added]) => added > 0), 'the repeat is announced');
     const records = await page.evaluate(() => window.__records);
     assert.ok(records.some(([removed, added]) => removed > 0 && added === 0), `the old words are cleared on their own first: ${JSON.stringify(records)}`);
+  }));
+
+  it('the pick is kept in the page\'s URL, so a reload and Back after a reload show the same hospital', () => withPage(tabs, { path: PATH, watched: true }, async (page, { seen }) => {
+    const input = page.locator('#ws-pick-q');
+    await input.scrollIntoViewIfNeeded();
+    const h = swapSamples((await page.locator('.wsr-holder .wsr__id a').getAttribute('href')).split('/').filter(Boolean).pop())[0];
+    await listsHospital(input, page.locator('#ws-pick-list').getByRole('option'), h);
+    await input.press('Enter');
+    const shows = (p) => eventually(async () => (await p.locator('.wsr-holder .wsr__id a').getAttribute('href')) === pathOf(h), 'the sheet does not show the picked hospital');
+    await shows(page);
+    assert.equal(new URL(page.url()).hash, `#ws=${h.id}`, 'the pick is in the fragment');
+    await page.reload();
+    await shows(page);
+    assert.equal(await page.locator('.wsr-pick__status[role="status"]').innerText(), '', 'a restored pick is not announced');
+    // Away and Back: the page may come from the browser's cache or load again; either way it shows the pick.
+    await page.goto(new URL(METHODS_PATH, page.url()).href);
+    await page.goBack();
+    await shows(page);
+    assert.equal(new URL(page.url()).hash, `#ws=${h.id}`);
+    await assertQuiet(seen, 'worksheet pick kept');
   }));
 
   it('a CCN the asset does not hold leaves the example in place', () => withPage(tabs, { path: PATH }, async (page) => {

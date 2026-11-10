@@ -6,7 +6,7 @@
 // are over the same hospitals (all) or over those cut (penalized). The roll call covers
 // today's hospitals only, so its per-year shares can run above CMS's national share for the year;
 // any words built from it say "of today's hospitals". Pure.
-import { isoDate, listText } from '../../../../web/render/format.js';
+import { isoDate, listText, money } from '../../../../web/render/format.js';
 import { COVID_EXCLUDED, COVID_FYS, HISTORY_MARKS, RULE_WINDOWS, WINDOW_GAP } from '../constants.js';
 import { capMarks, pafByYear } from '../derive.js';
 import { httpsUrl } from '../links.js';
@@ -21,6 +21,14 @@ const totalOf = (r) => (r.totalEst == null ? null : { value: r.totalEst, kind: r
 
 // The fiscal years with no total, in words ("FY2024 and FY2026"), or null when every year has one.
 export const noTotalText = (fys) => (fys.length ? fill('histNoTotal', { years: listText(fys.map(fyLabel)) }) : null);
+
+// Where the family's estimate year (the shell's facts: { fy, hrrp }, hrrp its Readmissions dollars, a cut as a negative) is one of
+// the years with no published total, the sentence that points to the front page's figure for it; else null. fys: the years with
+// no total.
+export function familyTotalText(fys, family) {
+  if (!family || !Number.isFinite(family.hrrp) || !fys.includes(family.fy)) return null;
+  return fill('histFamilyTotal', { fy: fyLabel(family.fy), total: money(Math.abs(family.hrrp)) });
+}
 
 // history: loadHrrp().history. Returns { years, share, avgPen, avgAll, totals, noTotal, caps, marks, covid, table, steady }:
 // share, avgPen and avgAll are [{ fy, value }] (percent; value null when the year has none); totals [{ fy, value, kind, label, url

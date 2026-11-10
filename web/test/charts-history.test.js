@@ -871,16 +871,16 @@ test('usProjected puts a dot where usPoints would put it at the same width', () 
   assert.equal(attr(/<path class="chart-dots a"[^>]*>/.exec(svg)[0], 'd'), dotsD(placed));
 });
 
-test('usYearMap: the land as a faint path for each state and DC, then one path of dots for each class that has any, in the order given', () => {
+test('usYearMap: the land as a faint path for each state and DC, then one path of dots for each class that has any, in the order given, at its own size if it has one', () => {
   const [a, b] = [[100.04, 80.25], [210.5, 90]];
-  const groups = [{ cls: 'chart-dots--years-clear', points: [a, b] }, { cls: 'chart-dots--years-scar', points: [] }, { cls: 'chart-dots--pen', points: [b] }];
+  const groups = [{ cls: 'chart-dots--years-clear', points: [a, b] }, { cls: 'chart-dots--years-scar', points: [] }, { cls: 'chart-dots--years-hole', points: [a], size: 2.6 }, { cls: 'chart-dots--pen', points: [b] }];
   const out = usYearMap({ shapes, groups, size: 4.2, width: 960 });
   const s = sound(out, 'us-years');
   assert.equal(count(/<g class="chart-land">[\s\S]*?<\/g>/.exec(s)[0], /<path d="M/g), US_MAP_CODES.length);
   const dots = [...s.matchAll(/<path class="chart-dots ([\w-]+)" stroke-width="([\d.]+)" d="([^"]+)"/g)].map((m) => [m[1], m[2], m[3]]);
-  assert.deepEqual(dots.map(([cls]) => cls), ['chart-dots--years-clear', 'chart-dots--pen'], 'a class with no hospital draws no path; the last class sits on top');
-  assert.deepEqual(dots.map(([, w]) => w), ['4.2', '4.2']);
-  assert.deepEqual(dots.map(([, , d]) => d), [dotsD([a, b]), dotsD([b])]);
+  assert.deepEqual(dots.map(([cls]) => cls), ['chart-dots--years-clear', 'chart-dots--years-hole', 'chart-dots--pen'], 'a class with no hospital draws no path; the last class sits on top');
+  assert.deepEqual(dots.map(([, w]) => w), ['4.2', '2.6', '4.2']);
+  assert.deepEqual(dots.map(([, , d]) => d), [dotsD([a, b]), dotsD([a]), dotsD([b])]);
   assert.equal(attr(tags(s, 'chart-years__dots')[0], 'data-size'), '4.2');
   assert.equal(String(usYearMap({ shapes, groups, size: 4.2, width: 960 })), s, 'the same call gives the same markup');
   assert.equal(count(String(usYearMap({ shapes, groups: [], size: 4.2, width: 960 })), /chart-dots /g), 0);

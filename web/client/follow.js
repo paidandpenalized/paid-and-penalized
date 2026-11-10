@@ -57,6 +57,41 @@ export function withoutFollow(href) {
   return `${head.slice(0, at)}${query ? `?${query}` : ''}${tail}`;
 }
 
+// An address that follows ccn: withoutFollow's, with h=<ccn> at the end of its query (before its fragment), the rest
+// exactly as written. A page that follows a hospital the reader picks in place writes it (history.replaceState), so a
+// reload, or Back to the page after the browser dropped it, comes back to the same hospital.
+export function addressFollowing(href, ccn) {
+  const bare = withoutFollow(href);
+  const hash = bare.indexOf('#');
+  const head = hash < 0 ? bare : bare.slice(0, hash);
+  const tail = hash < 0 ? '' : bare.slice(hash);
+  const join = !head.includes('?') ? '?' : head.endsWith('?') || head.endsWith('&') ? '' : '&';
+  return `${head}${join}h=${ccn}${tail}`;
+}
+
+// The event setFollowed fires on the document, its detail { ccn } the hospital to follow, for the shell (shell.js) to follow
+// it at once, as it does a ?h= it loads with. The CCN rides on the event, so the shell follows it even when a browser
+// refuses the address write.
+export const FOLLOW_EVENT = 'pp:follow';
+
+// Follows ccn from this page on, as a ?h= link would: writes it into the page's address in place (addressFollowing, the
+// same history entry) and tells the shell (FOLLOW_EVENT), which then follows it as it follows a ?h= it loads with.
+export function setFollowed(ccn) {
+  replaceAddress(addressFollowing(siteAddress(window.location), ccn));
+  document.dispatchEvent(new CustomEvent(FOLLOW_EVENT, { detail: { ccn } }));
+}
+
+// Writes href (an address on this page's site) as the page's address in place, keeping the history entry's state. Some
+// browsers rate-limit replaceState: a refused write is dropped and the page goes on as it was, so a caller that writes
+// again on its next change catches up then.
+export function replaceAddress(href) {
+  try {
+    window.history.replaceState(window.history.state, '', href);
+  } catch {
+    // Rate-limited: nothing to undo.
+  }
+}
+
 // A page's own address as a link on this site: its path, query and fragment, with leading slashes folded into one. A path
 // that begins "//" would be read as another site's address, and the chip's stop link is made from this address.
 export const siteAddress = ({ pathname, search, hash }) => `/${pathname.replace(/^\/+/, '')}${search}${hash}`;

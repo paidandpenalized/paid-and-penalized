@@ -62,7 +62,9 @@ export const COPY = {
   rulersNone: { text: 'No condition has {minCases} or more cases, so none is counted and none can add to a cut.', claim: null },
   rulersBelowOne: { text: '{short}, the one counted condition, sits at or under its peer median, so it adds nothing to a cut.', claim: null },
   rulersBelowMany: { text: 'All {n} counted conditions sit at or under their peer medians, so none adds to a cut.', claim: null },
-  rulersOver: { text: '{short} costs the most: {gap} over its peer median, {cut} of the modeled cut, because each {step} of its ratio is worth {per}.', claim: null },
+  // Two facts, not a cause: {cut} is the hospital's share of dollars after the factor is rounded, {per} the slope before it, so on
+  // a hospital whose cut rounds a long way, gap x per does not give {cut}.
+  rulersOver: { text: '{short} costs the most: {gap} over its peer median and {cut} of the modeled cut. Each {step} of its ratio is worth {per} before the cut is rounded.', claim: null },
   rulersOverCapped: { text: '{short} adds the most: {gap} over its peer median, {cut} of the modeled cut. The cut is at its maximum, so more ratio would add nothing.', claim: 'HRRP-09' },
   rulersOverNoDollars: { text: '{short} adds the most: {gap} over its peer median.', claim: null },
   rulersNoParts: { text: 'A condition sits over its peer median, but none adds enough to show in the payment factor.', claim: null },
@@ -167,6 +169,11 @@ export const COPY = {
   wiEscapeNoWeight: { text: 'CMS counted this one, but its payment weight is not published, so what reaching {median} would save cannot be worked out here.', claim: null },
   wiEscapeNothing: { text: 'Down to {median}, it adds nothing, but the cut does not change.', claim: null },
   wiEscapeNothingCap: { text: 'Down to {median}, it adds nothing, but the other conditions still keep the cut at its maximum.', claim: null },
+  // Under the figure, where the savings above add up to more than the cut: {step} is one step of the factor's last decimal place.
+  wiOverSteps: { text: 'Each saving is for that condition alone. The payment adjustment factor has four decimal places, so the cut moves in steps of {step}, and the savings above add up to more than the cut.', claim: null },
+  wiStepDollars: { text: 'about {dollars}', claim: null },
+  wiStepShare: { text: '{pct} of base payments', claim: null },
+  wiOverRounded: { text: 'Each dollar figure is rounded, so the savings above add up to more than the cut.', claim: null },
   wiColEscape: { text: 'Ratio that reaches the median', claim: null },
   wiColSaveCut: { text: 'Cut saved (percent of base payments)', claim: null },
   wiColSaveDollars: { text: 'Dollars saved (estimate)', claim: null },

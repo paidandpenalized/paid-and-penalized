@@ -73,6 +73,8 @@ for (const file of copyFiles()) {
     for (const [key, { text, claim }] of entries(COPY)) {
       assert.equal(typeof text, 'string', `${key}: text`);
       assert.doesNotMatch(text, /\d/, `${key}: a digit in copy`);
+      // A city reaches copy only with its state, through placeText ({place}), which drops a city the master doesn't have.
+      assert.doesNotMatch(text, /\{city\}/, `${key}: a {city} placeholder (a place goes through placeText)`);
       const ids = idsOf(claim);
       assert.ok(claim === null || ids.length > 0, `${key}: an empty claim list`);
       for (const id of ids) {

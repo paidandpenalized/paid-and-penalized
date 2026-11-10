@@ -12,7 +12,10 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { loadHub } from '../data.js';
-import { hacCounts, hubHospitals } from '../model.js';
+import { hacCounts, hrrpCounts, hubHospitals } from '../model.js';
+import { rangeShare } from '../../engine/js/dollars/ranges.js';
+import { endedBy } from '../../web/render/closed.js';
+import { absLogPct, pct } from '../../web/render/format.js';
 import { COPY } from '../copy.js';
 import { generateHub, sitemapXml } from '../pages.js';
 import { policyPage } from '../policy.js';
@@ -70,6 +73,33 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
       `This site estimates dollars for ${n('est')} hospitals`, `except Maryland’s ${n('maryland')}`, `and ${n('noInputs')} with no usable row`,
       `So ${n('priced')} of the ${n('decidedYes')} scored hospitals CMS cut have an estimate here.`, `add up all ${n('est')} hospitals`, `add up the ${n('headline')} of them`,
       'as CMS listed it in that year’s files. A hospital that has since closed or merged keeps the figures']) assert.ok(text.includes(s), s);
+    // How close the dollar estimates are: the back-test's year and hospitals, and a row per figure (the net, then each
+    // program) with its count, its middle hospital's miss and its middle band, each the dollar file's; the lean only when
+    // every middle hospital ran above; the nation's ratio; the way to the full check.
+    const { bands } = hub.dollars;
+    const miss = (x) => `${absLogPct(x, 0)} ${x > 0 ? 'above' : 'below'}`;
+    assert.ok(text.includes(`It ran the same estimate for FY${bands.fy} and set each result beside`), 'the back-test year');
+    assert.ok(text.includes(`for the ${bands.comparison.hospitals.toLocaleString('en-US')} hospitals whose report covered exactly the federal year`));
+    const close = textOf(methods.slice(methods.indexOf('id="close"'), methods.indexOf('id="counts"'))).replace(/\s+/g, ' ');
+    for (const [measure, name] of [['net', COPY.closeNet], ['hrrp', 'Readmissions'], ['hac', 'Hospital-acquired conditions'], ['hvbp', 'Value-based purchasing']]) {
+      const o = bands.measures[measure].overall;
+      assert.ok(close.includes(`${name} ${o.n.toLocaleString('en-US')} ${miss(o.median)} ${miss(o.p10)} to ${miss(o.p90)}`), measure);
+    }
+    assert.ok(close.includes(`The middle ${pct(rangeShare(bands), 0)} of hospitals`));
+    assert.equal(close.includes(COPY.closeLean.replaceAll("'", '’')), Object.values(bands.measures).every((m) => m.overall.median > 0), 'the lean, only when every middle hospital ran above');
+    assert.ok(close.includes(`came to ${pct(bands.national.ratio, 1)} of what the method estimated`));
+    assert.ok(methods.includes('<a href="/hacrp/methods/#backtest">hospital-acquired conditions Methods page</a>'), 'the full check');
+    assert.equal((methods.match(/class="mt__bar"/g) ?? []).length, 4, 'a bar per row');
+    // The Readmissions counts: CMS's file for the estimates' year and the hospitals here it lists; the newer file the
+    // Readmissions pages show; and the hospitals whose Medicare agreement ended, kept in the totals.
+    const r = hrrpCounts(hubHospitals(hub), { fy: hub.fy, hrrpFy: hub.hrrp.fy, national: hub.hrrp.national });
+    const k = (x) => x.toLocaleString('en-US');
+    assert.ok(r.file.n > r.est && r.file.cut >= r.estCut, 'CMS\'s file lists more than the estimates do');
+    assert.ok(text.includes(`Readmissions: CMS’s FY${hub.fy} file lists ${k(r.file.n)} hospitals and cuts ${k(r.file.cut)} of them. The front page counts the ${k(r.est)} of them with an estimate here, ${k(r.estCut)} of them cut; the other ${k(r.file.n - r.est)} have`));
+    assert.equal(r.newer === null, hub.hrrp.fy === hub.fy);
+    if (r.newer) assert.ok(text.includes(`newer FY${hub.hrrp.fy} file, which lists ${k(r.newer.n)} hospitals and cuts ${k(r.newer.cut)} of them.`));
+    const closed = hubHospitals(hub).filter((h) => h.est && endedBy(hub.master.get(h.ccn).inactive ?? null, hub.fy)).length;
+    assert.ok(closed > 0 && text.includes(`the Medicare agreement of ${k(closed)} hospitals with an estimate as ended by the end of FY${hub.fy}. They stay in every total here`));
     assert.match(methods, /<section class="block" id="counts" aria-labelledby="counts-h">\n<h2 id="counts-h">How the counts differ<\/h2>/);
     assert.match(methods, /<section class="block" id="ccn" aria-labelledby="ccn-h">\n<h2 id="ccn-h">Hospitals as CMS listed them<\/h2>/);
 

@@ -4,13 +4,16 @@
 // silhouette is two filled shapes (svg.js silhouette, thinned), not a line per hospital, so it stays small at any
 // count; a page script maps a pointer's x back to the hospital under it (ruleRank).
 //   scores   sorted ascending; cut: how many at the high end are past the line
-//   labels   { low, high, line, cut, average } (text): the ends' captions, the line's name, the cut side's count and
+//   labels   { low, high, line, cut, average } (text): the ends' captions, the line's name, the cut side's count (in
+//            as many lines as the room right of the line needs, the drawing a line taller for each past the first) and
 //            the name of the mark where the scores cross zero (the average); without `average`, no mark
 //   highlight  optional ranks to draw as ticks through the rule (a place's hospitals among the nation's)
 import { html } from '../render/html.js';
-import { frame, r2, silhouette, text } from './svg.js';
+import { capsWidth, frame, r2, silhouette, text } from './svg.js';
 
 const M = { left: 0, right: 0, top: 22, bottom: 20 };
+// A caption line's height, for a cut count that wraps.
+const CAP_LINE = 12;
 
 // The rule's order: lowest score first, ties by CCN. The build draws in it and the page script maps a pointer back
 // through it, so both sort with this.
@@ -21,13 +24,24 @@ export const ruleX = (i, n, width) => M.left + ((i + 0.5) * (width - M.left - M.
 // The rank under an x, clamped to the list.
 export const ruleRank = (x, n, width) => Math.max(0, Math.min(n - 1, Math.floor(((x - M.left) / (width - M.left - M.right)) * n)));
 
-// The two silhouettes depend only on the scores, the cut, the width and the room above and under the rule: drawn once for every page that shows the same
-// rule (each place page's rule differs only in its ticks).
+// A caption's words in lines no wider than room (capsWidth), greedily; a word wider than room keeps a line of its own.
+function capLines(body, room) {
+  const lines = [];
+  for (const word of String(body).split(' ')) {
+    const line = lines.length ? `${lines[lines.length - 1]} ${word}` : word;
+    if (lines.length && capsWidth(line) <= room) lines[lines.length - 1] = line;
+    else lines.push(word);
+  }
+  return lines;
+}
+
+// The two silhouettes depend only on the scores, the cut, the width and the rule's place and the room above and under it: drawn once for every page that
+// shows the same rule (each place page's rule differs only in its ticks, and in its cut count's lines).
 const SILHOUETTES = new WeakMap();
-function silhouettes(scores, { cut, width, up, down }, shape) {
+function silhouettes(scores, { cut, width, top, up, down }, shape) {
   if (!SILHOUETTES.has(scores)) SILHOUETTES.set(scores, new Map());
   const byWidth = SILHOUETTES.get(scores);
-  const key = `${width}:${cut}:${up}:${down}`;
+  const key = `${width}:${cut}:${top}:${up}:${down}`;
   if (!byWidth.has(key)) byWidth.set(key, { ink: shape(0, scores.length - cut), pen: shape(scores.length - cut, scores.length) });
   return byWidth.get(key);
 }
@@ -38,15 +52,20 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
   const hi = Math.max(scores[n - 1], 0);
   const lo = Math.min(scores[0], 0);
   const k = Math.min(hi > 0 ? up / hi : Infinity, lo < 0 ? down / -lo : Infinity);
-  const zero = M.top + up;
+  const split = n - cut;
+  const lineX = r2(split < n ? ruleX(split, n, width) - (width - M.left - M.right) / n / 2 : width);
+  // The cut count right of the line, wrapped to the room there; each line past the first lowers the rule by one, so the
+  // count never meets the scores.
+  // With no hospital past the line (the line at the drawing's edge) there is no room to wrap into: one line.
+  const cutLines = lineX < width ? capLines(labels.cut, width - lineX - 6) : [labels.cut];
+  const top = M.top + (cutLines.length - 1) * CAP_LINE;
+  const zero = top + up;
   const y = (s) => r2(zero - s * k);
   // One silhouette from rank a to rank b (exclusive): along the scores, then back along zero.
   const slot = (width - M.left - M.right) / n;
   const x = (i) => ruleX(i, n, width);
   const shape = (a, b) => silhouette(scores, a, b, { x, x0: x(a) - slot / 2, x1: x(b - 1) + slot / 2, y, base: zero });
-  const split = n - cut;
-  const { ink, pen } = silhouettes(scores, { cut, width, up, down }, shape);
-  const lineX = r2(split < n ? ruleX(split, n, width) - (width - M.left - M.right) / n / 2 : width);
+  const { ink, pen } = silhouettes(scores, { cut, width, top, up, down }, shape);
   const height = zero + down + M.bottom;
   // A highlighted hospital: its own hairline in ink, from the rule to its score, and a short tick under the rule so
   // one with a score near zero still shows.
@@ -68,6 +87,6 @@ ${text({ x: avgX + 5, y: zero + 20, anchor: 'start', cls: 'chart-cap', body: lab
 ${text({ x: 0, y: height - 4, anchor: 'start', cls: 'chart-cap', body: labels.low })}
 ${text({ x: width, y: height - 4, anchor: 'end', cls: 'chart-cap', body: labels.high })}
 ${text({ x: lineX - 6, y: M.top - 8, anchor: 'end', cls: 'chart-cap', body: labels.line })}
-${text({ x: lineX + 6, y: M.top - 8, anchor: 'start', cls: 'chart-cap chart-cap--pen', body: labels.cut })}`,
+${cutLines.map((line, i) => text({ x: lineX + 6, y: M.top - 8 + i * CAP_LINE, anchor: 'start', cls: 'chart-cap chart-cap--pen', body: line }))}`,
   });
 }

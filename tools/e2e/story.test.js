@@ -212,6 +212,7 @@ describe('states you can read, and Find yours', () => {
     // A hospital with an estimate and no teaching status, from the page's own asset.
     const ccn = await ccnWhere(page, { status: 'e', teach: null });
     await page.evaluate(() => document.addEventListener('hub:select', (e) => { window.selected = e.detail.ccn; }));
+    const historyLength = await page.evaluate(() => window.history.length);
     // The reader groups the example by teaching status first.
     await atFind(page);
     await page.locator('.peers [data-peer="teach"]').click();
@@ -227,6 +228,10 @@ describe('states you can read, and Find yours', () => {
       why: document.querySelector('#peers-no-teach').checkVisibility(), example: document.querySelector('.card__ex').hidden,
     }));
     assert.deepEqual(s, { path: '/', selected: ccn, step: '8', teach: 'true', why: true, example: true });
+    // The pick is followed at once, as a ?h= link would be: the address carries it and the header's chip names it.
+    assert.equal(await page.evaluate(() => window.location.search), `?h=${ccn}`, 'the address follows the pick');
+    await page.waitForFunction(() => !document.querySelector('[data-chip]').hidden);
+    assert.equal(await page.evaluate(() => document.querySelector('header.fam a.wordmark').getAttribute('href')), `/?h=${ccn}`, 'the header follows it too');
     // Shown by state (it has no teaching group), "Same state" is still the reader's choice for the next hospital.
     const pressed = () => page.evaluate(() => [...document.querySelectorAll('.peers [data-peer]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.peer));
     await page.locator('.peers [data-peer="state"]').click();
@@ -239,6 +244,17 @@ describe('states you can read, and Find yours', () => {
     assert.deepEqual(await pressed(), ['state']);
     await page.locator('.peers [data-peer="teach"]').click();
     assert.deepEqual(await pressed(), ['teach']);
+    // The address follows the last pick, replacing the entry (Back still leaves the page), and so does the chip; a reload,
+    // as Back gives when the browser kept no copy of the page, comes back to the same hospital with the same chip.
+    assert.deepEqual(await page.evaluate(() => [window.location.pathname, window.location.search, window.history.length]), ['/', `?h=${other}`, historyLength], 'the address follows the last pick, in the same history entry');
+    const chipName = () => page.evaluate(() => document.querySelector('[data-chip] .chip__t')?.textContent ?? null);
+    await page.waitForFunction((c) => document.querySelector('header.fam a.wordmark').getAttribute('href') === `/?h=${c}`, other);
+    const named = await chipName();
+    await page.reload();
+    await page.waitForFunction((c) => document.querySelector('[data-card]').dataset.ccn === c, other);
+    assert.equal(await page.locator('.card__ex').isHidden(), true, 'the card is the picked hospital\'s, not the example\'s');
+    await page.waitForFunction(() => !document.querySelector('[data-chip]').hidden);
+    assert.equal(await chipName(), named, 'the same chip after the reload');
     await assertQuiet(seen, 'find yours');
   }));
 
@@ -338,9 +354,10 @@ describe('states you can read, and Find yours', () => {
         };
       });
       // An amount as printed ("−$1,234", "+$56", "$0"); a program the hospital is not in adds nothing.
-      const amount = (t) => (t === 'Not in this program' ? 0 : Number(t.replace('−', '-').replace(/[$,+]/g, '')));
+      const out = (t) => t === 'Not in this program' || t === 'Not in CMS’s file';
+      const amount = (t) => (out(t) ? 0 : Number(t.replace('−', '-').replace(/[$,+]/g, '')));
       assert.equal(ws.ccn, found.ccn);
-      assert.ok(Object.values(ws.lines).every((t) => t === 'Not in this program' || /^[−+]?\$[\d,]+$/.test(t)), JSON.stringify(ws.lines));
+      assert.ok(Object.values(ws.lines).every((t) => out(t) || /^[−+]?\$[\d,]+$/.test(t)), JSON.stringify(ws.lines));
       assert.equal(amount(ws.lines.hrrp) + amount(ws.lines.hac) + amount(ws.lines.hvbp), amount(ws.lines.net), 'line 6 = 3 + 4 + 5');
       assert.equal(amount(ws.lines.net), found.net, 'line 6 is the hospital\'s net');
       assert.equal(ws.example, false, '"An example" is gone');

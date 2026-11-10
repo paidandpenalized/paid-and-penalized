@@ -95,7 +95,7 @@ function sidesNotes(checks) {
 // DOLLARS_HREF); the back-test's is the one every range links to (BACKTEST_ID). fig: the page's figure counter;
 // names(ccn): a hospital's { name, city, state } for the back-test's tooltips, or null; pins: the manifest entries.
 const DOLLARS_ID = DOLLARS_HREF.split('#')[1];
-function dollarsSection(dollars, { fy, fig, sourceOf, names, pins }) {
+function dollarsSection(dollars, { fy, fig, sourceOf, names, pins, closedCut }) {
   const { headline, national, checks, assumptions, bands } = dollars;
   // A cut hospital CMS scored without a score, with an estimate: on its own page, outside the totals.
   const noScore = national.cut - headline.cut;
@@ -106,6 +106,7 @@ function dollarsSection(dollars, { fy, fig, sourceOf, names, pins }) {
 ${para(fill('dollarsOrder', { pct: REDUCTION_TEXT }))}
 ${dollarsOrderFigure(headline, { n: fig(), source, fy })}
 ${para(noScore > 1 ? fill('dollarsTotals', { ...totals, noScore: count(noScore) }) : fill(noScore === 1 ? 'dollarsTotalsOne' : 'dollarsTotalsNone', totals))}
+${closedCut ? para(fill(closedCut === 1 ? 'dollarsClosedOne' : 'dollarsClosed', { ...(closedCut === 1 ? {} : { n: count(closedCut) }), cut: count(headline.cut), fy: String(fy) })) : ''}
 ${para(t('dollarsMaryland'))}
 <h3 class="msec__sub">${t('dollarsFormulaSub')}</h3>
 ${dollarsPipeline(headline)}
@@ -178,7 +179,7 @@ const GLOSSARY = (v) => [
 // boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
-export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null, names = () => null }) {
+export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null, names = () => null, closedCut = 0 }) {
   const { subtitle } = SITE.sites.hacrp;
   const figureNo = counter();
   const last = checks[checks.length - 1];
@@ -227,7 +228,7 @@ ${printout(html`<table class="gb takes">
 <h3 class="msec__sub">${t('estimateHeading')}</h3>
 ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy), tagged: estimate.tagged, maxError: decimal(ceilToUnit(estimate.maxError, 4), 4) }) : fill('estimateNone', { tolerance: decimal(estimate.tolerance, 3), fy: String(fy) })}${dollars ? dollarsTagNote() : ''}`)}
 <p><a href="${SITE.pages.methods}#estimate">${t('estimateFamily')}</a></p>` },
-    ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins })] : []),
+    ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins, closedCut })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
     { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },
     { id: 'reading', heading: t('readHeading'), body: html`<ol class="reading">${['read1', 'read2', 'read3', 'read4', ['read5', { short: SHORT_NAMES.PSI90 }], ['read6', { pct: REDUCTION_TEXT }], 'read7'].map((k) => html`<li>${Array.isArray(k) ? fill(k[0], k[1]) : t(k)}</li>`)}</ol>` },

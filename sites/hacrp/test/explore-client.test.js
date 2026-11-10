@@ -1,9 +1,13 @@
 // The explorable figures' scripts (client/explore.js) against a stand-in DOM: the explore asset's loader, the measure
 // buttons that show one measure's panel in every figure that has it, the halving button, the US map's two modes and
-// a state picked on it, a place map's dots, and the score rule's order, which must be the order the build draws.
+// a state picked on it, a place map's dots, the slide rule's cursor and its readings, and the score rule's order,
+// which must be the order the build draws.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { exploreLoader, mountHalving, mountMeasureToggles, mountPlaceMaps, mountUsMap, mountViewToggle, ruleOrder } from '../client/explore.js';
+import { exploreLoader, mountHalving, mountMeasureToggles, mountPlaceMaps, mountSlideRules, mountUsMap, mountViewToggle, ruleOrder } from '../client/explore.js';
+import { slidePanel } from '../web/explore-figures.js';
+import { readPlaces } from '../../../web/charts/slideRule.js';
+import { textWidth } from '../../../web/charts/text.js';
 import { hospitalRows } from '../web/generate.js';
 import { PD, VIEWS } from './pinned.js';
 
@@ -79,6 +83,55 @@ test('the measure buttons show one measure\'s panel in every figure that has tha
   // A click off the buttons does nothing.
   one.group.handlers.click({ target: { closest: () => null } });
   assert.deepEqual(one.ps.map((p) => p.hidden), [true, true, false]);
+});
+
+// A measure's slide rule panel as the build draws it (slidePanel), on stand-ins: per drawing, its svg, cursor and two
+// readings, read from the markup (the cursor's line and translate, the readings' x, y and text).
+function slideRig(id) {
+  const panel = slidePanel(id, PD.measures[id]);
+  const unq = (s) => s.replaceAll('&quot;', '"').replaceAll('&#39;', "'").replaceAll('&amp;', '&');
+  const drawings = [String(panel.svg), String(panel.svgWide)].map((markup) => {
+    const width = Number(/viewBox="0 0 (\d+)/.exec(markup)[1]);
+    const cursorTag = /<g class="chart-slide__cursor"[^>]*>/.exec(markup)[0];
+    const reads = [...markup.matchAll(/<text class="chart-slide__read[^"]*" x="([^"]*)" y="([^"]*)"[^>]*data-read="(\w+)">([^<]*)</g)];
+    const readTag = (which) => reads.find((m) => m[3] === which);
+    const built = { cur: Number(/translate\(([\d.]+) 0\)/.exec(cursorTag)[1]), value: readTag('value'), z: readTag('z') };
+    const [readValue, readZ] = [el(), el()];
+    const cursor = el({ attrs: { 'data-line': unq(/data-line="([^"]*)"/.exec(cursorTag)[1]) }, querySelector: (s) => ({ '[data-read="value"]': readValue, '[data-read="z"]': readZ })[s] ?? null });
+    const svg = el({ viewBox: { baseVal: { width } }, querySelector: (s) => (s === '[data-cursor]' ? cursor : null), setPointerCapture() {} });
+    return { width, built, svg, cursor, readValue, readZ };
+  });
+  const box = el({ dataset: { slide: panel.data }, querySelector: (s) => (s === 'svg.chart--slide' ? drawings[0].svg : null), querySelectorAll: (s) => (s === 'svg.chart--slide' ? drawings.map((d) => d.svg) : []) });
+  box.closest = () => null;
+  return { box, drawings };
+}
+
+test('the slide rule: as it mounts, the readings stand where the build drew them; dragged by keys, where readPlaces puts them, clear of the words', () => {
+  for (const id of Object.keys(PD.measures)) {
+    const { box, drawings } = slideRig(id);
+    mountSlideRules(null, box);
+    for (const d of drawings) {
+      const at = (r) => [r.attrs.x, r.attrs.y];
+      assert.deepEqual([at(d.readValue), d.readZ.attrs.x], [[d.built.value[1], d.built.value[2]], d.built.z[1]], `${id} at ${d.width}: as built`);
+      assert.deepEqual([d.readValue.textContent, d.readZ.textContent], [d.built.value[4], d.built.z[4]]);
+    }
+    // Home, End, and every step of the way between by PageUp: each place is readPlaces's for where the cursor stands.
+    const keys = ['Home', ...Array.from({ length: 60 }, () => 'PageUp'), 'End'];
+    for (const key of keys) {
+      for (const d of drawings) {
+        d.svg.handlers.keydown({ key, preventDefault() {} });
+        const cur = Number(/translate\(([\d.-]+) 0\)/.exec(d.cursor.attrs.transform)[1]);
+        const line = JSON.parse(d.cursor.attrs['data-line']);
+        const want = readPlaces({ cur, value: d.readValue.textContent, z: d.readZ.textContent, width: d.width, ...line });
+        assert.deepEqual([Number(d.readValue.attrs.x), Number(d.readValue.attrs.y), Number(d.readZ.attrs.x)], [want.x, want.y, want.zx], `${id} at ${d.width}, ${key} to ${d.readValue.textContent}`);
+        const w = textWidth(d.readValue.textContent, 12, { mono: true });
+        const [a, b] = [cur + want.x - w / 2, cur + want.x + w / 2];
+        // (To a hundredth of a unit: the places are rounded to that.)
+        assert.ok(a >= -0.01 && b <= d.width + 0.01, `${id} at ${d.width}: the value reading inside the drawing at ${d.readValue.textContent}`);
+        if (want.y === line.top - 12) assert.ok(line.words.every(([c, e]) => b + 4 <= c + 0.01 || a - 4 >= e - 0.01), `${id} at ${d.width}: the value reading clear of the words at ${d.readValue.textContent}`);
+      }
+    }
+  }
 });
 
 test('the halving button swaps its words and the top label, and moves the values\' dots while the z-scores stay', () => {

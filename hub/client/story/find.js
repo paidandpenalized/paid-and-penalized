@@ -13,7 +13,7 @@ import { hospitalPathOf } from '../../../web/site.js';
 import { COPY } from './copy.js';
 import { COPY as HOSPITAL_COPY } from '../../hospital/copy.js';
 import { ROWS, groupName, inProgram, peersOf } from '../../hospital/peers.js';
-import { signOf, signedMoney, signedShareText } from '../../hospital/text.js';
+import { outKey, signOf, signedMoney, signedShareText } from '../../hospital/text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -32,7 +32,7 @@ const TEACHING = { major: 'teachMajor', minor: 'teachMinor', none: 'teachNone' }
 const LABELS = { hrrp: 'programHrrp', hacrp: 'programHac', hvbp: 'programVbp' };
 function programRow(est, { id, key }) {
   const label = LABELS[id];
-  if (!inProgram(est, id)) return { key: label, label: fill(label), text: fill('notInProgram'), kind: 'na' };
+  if (!inProgram(est, id)) return { key: label, label: fill(label), text: fill(outKey(id, 'notInProgram')), kind: 'na' };
   const v = est[key];
   return { key: label, label: fill(label), text: `${signedMoney(v)} ${fill(v < 0 ? 'wordCut' : v > 0 ? 'wordBonus' : 'wordNone')}`, kind: v < 0 ? 'pen' : '' };
 }

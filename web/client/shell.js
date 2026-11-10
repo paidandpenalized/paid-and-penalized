@@ -10,7 +10,7 @@ import { CCN } from '../../engine/js/ccn.js';
 import { CHIP } from '../chip-copy.js';
 import { hospitalPathOf } from '../site.js';
 import { money } from './format.js';
-import { followedCcn, siteAddress, tabHref, tabProgram, withFollow, withoutFollow } from './follow.js';
+import { FOLLOW_EVENT, followedCcn, siteAddress, tabHref, tabProgram, withFollow, withoutFollow } from './follow.js';
 import { loadHubAsset } from './hub-asset.js';
 import { saveTheme, sessionStore } from './theme-store.js';
 
@@ -83,11 +83,21 @@ function fillChip({ chip, doc, row, fy, stop }) {
 // is left as it is.
 export function rewriteLinks({ tabs, wordmark }, ccn, row = null) {
   for (const a of tabs) {
-    const href = a.getAttribute('href');
+    const href = serverHref(a);
     const program = tabProgram(href);
     if (program !== undefined) a.setAttribute('href', row ? tabHref(program, ccn, row) : withFollow(href, ccn));
   }
-  if (wordmark?.getAttribute('href') === '/') wordmark.setAttribute('href', withFollow('/', ccn));
+  if (wordmark && serverHref(wordmark) === '/') wordmark.setAttribute('href', withFollow('/', ccn));
+}
+
+// A link's address as the server wrote it, kept on the link (data-home) the first time it is read here, so a page that
+// follows another hospital later (a pick on the front page) rewrites from the server's address, not the last rewrite.
+function serverHref(a) {
+  const kept = a.getAttribute('data-home');
+  if (kept !== null) return kept;
+  const href = a.getAttribute('href');
+  if (href !== null) a.setAttribute('data-home', href);
+  return href;
 }
 
 // What the header does about a followed hospital. On a hospital's page (hospital: the CCN its header names) nothing is
@@ -202,16 +212,21 @@ function start() {
   for (const sideways of header.querySelectorAll('.tabs__scroll, .nav')) keepFocusInRow(sideways);
   const chip = header.querySelector('[data-chip]');
   if (chip) {
-    follow({
+    // The hospital the address follows, now, and again whenever the page writes another into its address (FOLLOW_EVENT:
+    // the front page's Find yours), so a pick follows at once what a reload would.
+    const followHere = (search) => follow({
       hospital: header.dataset.hospital ?? null,
       chip,
       wordmark: header.querySelector('a.wordmark'),
       tabs: [...header.querySelectorAll('.tabs__scroll a.tab')],
-      search: window.location.search,
+      search,
       here: siteAddress(window.location),
       load: () => loadHubAsset(header.dataset.hubSrc),
       doc: document,
     });
+    followHere(window.location.search);
+    // The event's CCN, as a ?h= would give it (followedCcn checks it as it checks the address's).
+    document.addEventListener(FOLLOW_EVENT, (e) => followHere(`?h=${encodeURIComponent(String(e.detail?.ccn ?? ''))}`));
   }
 }
 

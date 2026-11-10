@@ -326,7 +326,7 @@ class DollarCheckTest(unittest.TestCase):
 
 class ProgramFieldsTest(unittest.TestCase):
     # CMS's tab-delimited export rounds to 4 decimals, so a record as stored carries whatever as_stored wrote.
-    S = {"paf": 0.9966, "dual": 0.15625, "peer": 4,
+    S = {"paf": 0.9966, "dual": 0.156249996, "peer": 4,
          "c": {"AMI": {"n": 42, "err": 1.0259, "flag": 1, "ratio": 0.0648, "med": 0.997},
                "HF": {"n": 22, "err": 1.0783, "flag": 0, "ratio": 0.05, "med": 1.0077},
                "PN": {"n": None, "err": None, "flag": 0, "ratio": None, "med": 1.0021},
@@ -339,7 +339,9 @@ class ProgramFieldsTest(unittest.TestCase):
         fields, addon = hrrp.program_fields(self.S, self.IMP, ["RRC"], RATES, 0.25)
         self.assertIsNone(addon)
         self.assertEqual(list(fields), ["paf", "red", "dual", "peer", "base", "pen", "c"])
-        self.assertEqual((fields["paf"], fields["red"], fields["dual"], fields["peer"]), (0.9966, 0.34, 0.1563, 4))
+        # The dual proportion keeps DUAL_DECIMALS (8), half up: 0.156249996 is 0.15625. At CMS's 4 decimals it would be 0.1563,
+        # which prints 15.7% though the share is 15.6%.
+        self.assertEqual((fields["paf"], fields["red"], fields["dual"], fields["peer"]), (0.9966, 0.34, 0.15625, 4))
         self.assertEqual(fields["base"], round(self.FEDERAL))
         self.assertEqual(fields["pen"], round(self.FEDERAL * (1 - 0.9966)))
         self.assertEqual(fields["c"]["AMI"], {"n": 42, "err": 1.0259, "flag": 1, "ratio": 0.0648})  # med is dropped

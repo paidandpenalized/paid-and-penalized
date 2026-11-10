@@ -6,12 +6,16 @@
 //   grid    for 'left', the length of a hairline gridline at each tick (0: none)
 //   labelY  for 'top' or 'bottom', the labels' baseline off the line (default: just past the ticks)
 //   noTick  value -> true to leave that value's tick out but keep its label (e.g. a tick on top of another mark)
+//   stagger for 'top' or 'bottom', true to set every other label (the second, the fourth, …) one row further from the line, for
+//           ticks too close for one row of labels; the caller leaves STAGGER_ROW more room
 import { html } from '../render/html.js';
 import { r2 } from './svg.js';
 
 const TICK = 4;
+// A staggered axis's second row of labels, this far past the first (charts.css: the labels' 11px type).
+export const STAGGER_ROW = 12;
 
-export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, labelY = null, noTick = () => false }) {
+export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, labelY = null, noTick = () => false, stagger = false }) {
   if (!['bottom', 'top', 'left'].includes(orient)) throw new RangeError(`axis: orient must be bottom, top or left, got "${orient}"`);
   const values = Array.isArray(ticks) ? ticks : scale.ticks(ticks);
   const fmt = format ?? scale.tickFormat(Array.isArray(ticks) ? values.length : ticks);
@@ -25,8 +29,9 @@ export function axis({ scale, orient = 'bottom', ticks = 5, format, grid = 0, la
   }
   const dir = orient === 'top' ? -1 : 1;
   const baseline = labelY ?? (orient === 'top' ? -TICK - 4 : TICK + 12);
-  return html`<g class="chart-axis"><line class="chart-axis__line" x1="${a}" x2="${b}" y1="0" y2="0"/>${values.map((v) => {
+  return html`<g class="chart-axis"><line class="chart-axis__line" x1="${a}" x2="${b}" y1="0" y2="0"/>${values.map((v, i) => {
     const x = r2(scale(v));
-    return html`${noTick(v) ? '' : html`<line class="chart-axis__tick" x1="${x}" x2="${x}" y1="0" y2="${dir * TICK}"/>`}<text class="chart-axis__label" x="${x}" y="${baseline}" text-anchor="middle">${fmt(v)}</text>`;
+    const y = stagger && i % 2 ? baseline + dir * STAGGER_ROW : baseline;
+    return html`${noTick(v) ? '' : html`<line class="chart-axis__tick" x1="${x}" x2="${x}" y1="0" y2="${dir * TICK}"/>`}<text class="chart-axis__label" x="${x}" y="${y}" text-anchor="middle">${fmt(v)}</text>`;
   })}</g>`;
 }

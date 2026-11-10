@@ -33,6 +33,12 @@ CAP = 0.03
 # stored one unit of its MAX_DECIMALS-th decimal toward CMS's value (0.061450000001), and listed in the build report.
 DECIMALS = 6
 MAX_DECIMALS = 12
+# The dual proportion is stored with this many decimals: the fewest at which every FY2027 hospital's share prints on the
+# pages (one decimal of percent, the site's fmtShare) as CMS's full-precision value rounds, and rounds back to CMS's
+# published 4-decimal value. CMS's 4 decimals printed 149 hospitals 0.1 point high (0.15146... is 0.1515, "15.2%", where
+# the value is 15.1%); 5 left 18 wrong, 7 one that no longer rounds to CMS's 4 decimals. The build fails if it stops
+# sufficing (dual_mismatches).
+DUAL_DECIMALS = 8
 
 
 # --- the formula ----------------------------------------------------------------------------------------------------
@@ -214,6 +220,32 @@ def extra_places(hospitals, peer_med, nm):
     return sum(1 for v in shown if round(v, DECIMALS) != v), len(shown)
 
 
+# --- the dual proportion ----------------------------------------------------------------------------------------------
+
+def share_tenths(v):
+    """The page's one-decimal percent of a fraction, in tenths of a point: the site's fmtShare(v, 1), which is
+    engine/js/stats.js toUnit(v * 100, 1): float noise snapped to 9 significant digits, then half away from zero."""
+    y = float(f"{v * 100 * 10:.9g}")
+    return int(math.copysign(math.floor(abs(y) + 0.5), y))
+
+
+def true_tenths(v):
+    """A full-precision fraction's one-decimal percent, in tenths of a point, as CMS's value rounds (half up on the value
+    as Excel shows it, 15 significant digits)."""
+    return int(Decimal(f"{v:.15g}").scaleb(3).quantize(Decimal(1), ROUND_HALF_UP))
+
+
+def dual_mismatches(supp, pub, places=DUAL_DECIMALS):
+    """CCNs whose dual proportion, stored to `places` decimals, prints a different one-decimal percent from CMS's
+    full-precision value (supp) or no longer rounds to CMS's published 4-decimal value (pub)."""
+    out = []
+    for c, s in sorted(supp.items()):
+        v = rnd(s["dual"], places, half_up=True)
+        if v is not None and (share_tenths(v) != true_tenths(s["dual"]) or rnd(v, 4, half_up=True) != pub[c]["dual"]):
+            out.append(c)
+    return out
+
+
 # --- the other build gates ------------------------------------------------------------------------------------------
 
 def table15_mismatches(t15, supp):
@@ -303,7 +335,8 @@ def program_fields(s, imp, types, rates, mdh_share):
         base += addon[1]
     pen = est_penalty(base, s["paf"])
     fields = {
-        "paf": s["paf"], "red": round((1 - s["paf"]) * 100, 2), "dual": rnd(s["dual"], 4, half_up=True), "peer": s["peer"],
+        "paf": s["paf"], "red": round((1 - s["paf"]) * 100, 2), "dual": rnd(s["dual"], DUAL_DECIMALS, half_up=True),
+        "peer": s["peer"],
         "base": round(base) if base is not None else None,
         "pen": round(pen) if pen is not None else None,
         "c": {k: {"n": c["n"], "err": c["err"], "flag": c["flag"], "ratio": c["ratio"]}

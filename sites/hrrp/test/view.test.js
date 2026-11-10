@@ -99,7 +99,7 @@ test('an alias is stated; none is null', () => {
 test('stars, or "Not rated"', () => {
   const v = view(CUT);
   assert.deepEqual({ ...v.stars, href: undefined }, { n: 4, filled: '★★★★', empty: '☆', text: '4 of 5 stars', href: undefined });
-  assert.equal(v.stars.href, 'https://www.medicare.gov/care-compare/details/hospital/990001');
+  assert.equal(v.stars.href, 'https://www.medicare.gov/care-compare/details/hospital/990001/');
   const none = view(hospital({ star: null }));
   assert.deepEqual({ n: none.stars.n, text: none.stars.text }, { n: null, text: 'Not rated' });
 });

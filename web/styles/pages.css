@@ -71,6 +71,25 @@
    frame on a phone; prose cells in the body face, column names in mono. */
 .gb--dict { min-width: 44rem; }
 .gb--dict td { font-family: var(--font-body); }
+/* On a phone each column's row is a card instead, as HACRP Methods' tables stack: the column's name with its type
+   beside it (every dictionary's second column), then its meaning, then the rest (CMS's column, notes) quieter; an
+   empty cell takes no line. The head row stacks the same way above the first card, so its names key each line. */
+@media (max-width: 600px) {
+  .gb.gb--dict { min-width: 0; }
+  .printout__scroll:has(> .gb--dict) { overflow-x: visible; }
+  .gb.gb--dict, .gb.gb--dict :is(thead, tbody) { display: block; }
+  .gb.gb--dict tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 4px 12px; padding: 10px; }
+  .gb.gb--dict tbody > tr { border-top: 0; }
+  .gb.gb--dict tbody > tr + tr { border-top: 1px solid var(--line); }
+  .gb.gb--dict tr > * { display: block; grid-column: 1 / -1; padding: 0; }
+  .gb.gb--dict tr > :first-child { grid-column: 1; grid-row: 1; }
+  .gb.gb--dict tr > :nth-child(2) { grid-column: 2; grid-row: 1; text-align: right; }
+  .gb.gb--dict thead { box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); }
+  .gb.gb--dict thead th { position: static; box-shadow: none; white-space: normal; }
+  .gb.gb--dict tbody td:nth-child(2) { color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+  .gb.gb--dict tbody td:nth-child(n+4) { color: var(--ink-2); font-size: var(--fs-xs); }
+  .gb.gb--dict tbody td:empty { display: none; }
+}
 .dict code { font-family: var(--font-type); font-size: 0.92em; }
 /* A bare URL in its prose breaks rather than widen a phone's page. */
 :is(.dict, .doc__sec) :is(p, li) { overflow-wrap: break-word; }

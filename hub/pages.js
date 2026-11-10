@@ -7,11 +7,13 @@ import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
-import { fillCopy } from '../web/render/components.js';
-import { count } from '../web/render/format.js';
+import { fillCopy, printout } from '../web/render/components.js';
+import { absLogPct, count, pct } from '../web/render/format.js';
 import { escapeHtml, html } from '../web/render/html.js';
 import { externalLink } from '../web/render/layout.js';
-import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf, programById } from '../web/site.js';
+import { rangeShare } from '../engine/js/dollars/ranges.js';
+import { endedBy } from '../web/render/closed.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from './constants.js';
 import { COPY } from './copy.js';
 import { correctionsContent, readCorrections } from './corrections.js';
@@ -19,7 +21,8 @@ import { comingPage } from './coming.js';
 import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
 import { hospitalPage } from './hospital/page.js';
-import { hacCounts, stateTotals, storyFacts } from './model.js';
+import { hacCounts, hrrpCounts, stateTotals, storyFacts } from './model.js';
+import { ROWS } from './hospital/peers.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
 import { policyPage } from './policy.js';
 
@@ -41,10 +44,56 @@ function home({ hospitals, facts, shapes, bands, hrrpFy, assets, robots }) {
   return homePage({ hospitals, facts, states: stateTotals(hospitals), shapes, bands, hrrpFy, assets, robots });
 }
 
-// The family Methods page: what an estimate is, how the hospital-acquired conditions counts differ from page to page
-// (model.js hacCounts, over every hub hospital), and which hospital a figure belongs to.
-function methods({ hospitals, fy, assets, robots }) {
+// The figures the back-test checks, as the Methods page's table lists them: the net, then each program's dollars in the
+// hospital pages' order (hospital/peers.js ROWS), each with its band in the dollar file (bands.measures) and its name.
+const CLOSE_ROWS = [{ measure: 'net', name: COPY.closeNet }, ...ROWS.map(({ id, key }) => ({ measure: key, name: programById(id).name }))];
+// The table's lead paragraph's id: the table's name, so its scroll box on a phone is a named region.
+const CLOSE_LEAD_ID = 'close-lead';
+
+// A miss as the table and the words give it: a log ratio of estimate over cost report, as the percent above or below.
+const missText = (x) => {
+  const size = absLogPct(x, 0);
+  if (!/[1-9]/.test(size)) return COPY.closeEven;
+  return fillCopy(COPY, x > 0 ? 'closeAbove' : 'closeBelow', { pct: size });
+};
+
+// How close the dollar estimates are (bands: the dollar file's back-test): the check, a table of each figure's misses
+// with a bar on one scale for all of them (from the lowest 10th percentile to the highest 90th, with the cost report's
+// own value marked), what a hospital page's likely range is, the nation's total and the limits.
+function closeSection(bands) {
+  const share = pct(rangeShare(bands), 0);
+  const rows = CLOSE_ROWS.map(({ measure, name }) => ({ name, ...bands.measures[measure].overall }));
+  const lo = Math.min(0, ...rows.map((r) => r.p10));
+  const hi = Math.max(0, ...rows.map((r) => r.p90));
+  const at = (x) => ((x - lo) / (hi - lo)).toFixed(3);
+  const middle = fillCopy(COPY, 'closeColMiddle', { share });
+  // A figure's row: its name, then each value with its column's name (data-label, which a phone shows), then its bar.
+  const row = (r) => {
+    const band = fillCopy(COPY, 'closeMiddle', { low: missText(r.p10), high: missText(r.p90) });
+    const bar = html`<span class="mt__bar" style="--lo:${at(r.p10)};--hi:${at(r.p90)};--at:${at(r.median)};--z:${at(0)}" aria-hidden="true"><span class="mt__z"></span></span>`;
+    return html`<tr><th scope="row">${r.name}</th><td class="num" data-label="${COPY.closeColN}">${count(r.n)}</td><td class="num" data-label="${COPY.closeColMedian}">${missText(r.median)}</td><td class="num" data-label="${middle}">${band}</td><td class="mt__barc">${bar}</td></tr>`;
+  };
+  const table = printout(html`<table class="gb mt__close" aria-labelledby="${CLOSE_LEAD_ID}">
+<thead><tr><th scope="col">${COPY.closeColFigure}</th><th scope="col" class="num">${COPY.closeColN}</th><th scope="col" class="num">${COPY.closeColMedian}</th><th scope="col" class="num">${middle}</th><th scope="col" class="mt__barh"><span class="vh">${COPY.closeColBar}</span></th></tr></thead>
+<tbody>${rows.map(row)}</tbody>
+</table>`);
+  const lean = rows.every((r) => r.median > 0) ? ` ${COPY.closeLean}` : '';
+  return html`<section class="block mt" id="close" aria-labelledby="close-h">
+<h2 id="close-h">${COPY.closeHeading}</h2>
+${para('closeCheck', {}, { fy: String(bands.fy), hospitals: count(bands.comparison.hospitals) })}<p id="${CLOSE_LEAD_ID}">${COPY.closeLead}</p>
+${table}
+<p class="mt__key">${fillCopy(COPY, 'closeKey', { share })}</p>
+<p>${fillCopy(COPY, 'closeRange', { share })}${lean}</p>
+${para('closeNation', {}, { ratio: pct(bands.national.ratio, 1) })}${para('closeLimits', { dollars: html`<a href="${programMethods('hacrp')}#backtest">${COPY.dollarsLink}</a>` }, { fy: String(bands.fy) })}</section>`;
+}
+
+// The family Methods page: what an estimate is, how close the dollar estimates are (closeSection, from the dollar file's
+// back-test), how the hospital-acquired conditions and Readmissions counts differ from page to page (model.js hacCounts and
+// hrrpCounts, over every hub hospital), and which hospital a figure belongs to.
+function methods({ hospitals, fy, bands, hrrp, master, assets, robots }) {
   const counts = hacCounts(hospitals);
+  const readmissions = hrrpCounts(hospitals, { fy, hrrpFy: hrrp.fy, national: hrrp.national });
+  const closed = hospitals.filter((h) => h.est && endedBy(master.get(h.ccn)?.inactive ?? null, fy)).length;
   // The counts a paragraph names, formatted.
   const of = (...keys) => Object.fromEntries(keys.map((k) => [k, count(counts[k])]));
   const body = html`<article class="wrap page">
@@ -58,9 +107,11 @@ function methods({ hospitals, fy, assets, robots }) {
 <p>${COPY.estimateHow}</p>
 <p>${COPY.estimateNot}</p>
 ${para('methodsDollars', { dollars: html`<a href="${programMethods('hacrp')}#dollars">${COPY.dollarsLink}</a>` })}${para('methodsPrograms', { hacrp: html`<a href="${programMethods('hacrp')}">${SITE.sites.hacrp.title}</a>`, hrrp: html`<a href="${programMethods('hrrp')}">${SITE.sites.hrrp.title}</a>` })}</section>
+${closeSection(bands)}
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
-${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}</section>
+${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}<p>${fillCopy(COPY, 'countsHrrp', { fy: String(fy), listed: count(readmissions.file.n), cut: count(readmissions.file.cut), est: count(readmissions.est), estCut: count(readmissions.estCut), other: count(readmissions.file.n - readmissions.est) })}${readmissions.newer ? ` ${fillCopy(COPY, 'countsHrrpNewer', { fy: String(hrrp.fy), listed: count(readmissions.newer.n), cut: count(readmissions.newer.cut) })}` : ''}</p>
+${closed > 1 ? para('countsClosed', {}, { n: count(closed), fy: String(fy) }) : closed === 1 ? para('countsClosedOne', {}, { fy: String(fy) }) : ''}</section>
 <section class="block" id="ccn" aria-labelledby="ccn-h">
 <h2 id="ccn-h">${COPY.ccnHeading}</h2>
 ${para('ccnText')}</section>
@@ -180,7 +231,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const robots = robotsFor({ env: ctx.env, released });
   const { hub, hospitals: all, facts } = hubModel();
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, hrrpFy: hub.hrrp.fy, assets, robots }) });
-  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, assets, robots }) });
+  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });

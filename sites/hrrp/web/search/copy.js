@@ -16,6 +16,9 @@ export const COPY = {
   searchPlaceSub: { text: '{kind} · {n} hospitals', claim: null },
   searchPlaceSubOne: { text: '{kind} · one hospital', claim: null },
   searchEmpty: { text: "No matches. Try a city, a ZIP code or the hospital's CCN.", claim: null },
+  // A query that names the state HRRP-01 leaves out (constants.js NOT_IN_PROGRAM_STATE) and finds nothing: the program map's
+  // words (program/copy.js mapMaryland).
+  searchNotInProgram: { text: "No matches. The program covers non-Maryland subsection (d) hospitals, so Maryland's hospitals are not in it.", claim: 'HRRP-01' },
   searchCount: { text: '{n} matches', claim: null },
   searchCountOne: { text: 'One match', claim: null },
   searchFailed: { text: "The hospital list didn't load. Leave the box and come back to try again.", claim: null },
