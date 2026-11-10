@@ -35,9 +35,10 @@ export function pickFromHash(hash) {
   return null;
 }
 
-// The fragment with its ws= part set to this CCN (or removed for null); every other part is kept.
+// The fragment with its ws= part set to this CCN (or removed for null); every other key=value part is kept. A bare
+// anchor (#how) is dropped: joined to a ws= part it would name no element, and the reader is at the worksheet by now.
 export function withPick(hash, ccn) {
-  const parts = String(hash ?? '').replace(/^#/, '').split('&').filter((p) => p && !/^ws=/.test(p));
+  const parts = String(hash ?? '').replace(/^#/, '').split('&').filter((p) => p.includes('=') && !/^ws=/.test(p));
   if (ccn) parts.push(`ws=${ccn.toUpperCase()}`);
   return parts.length ? `#${parts.join('&')}` : '';
 }

@@ -342,11 +342,13 @@ function checkPhrase(asOf) {
   return `${/^[AEIOU]/.test(month) ? 'an' : 'a'} ${month} ${year} check`;
 }
 
-// The methods version a check of `asOf` (YYYY-MM-DD) was run on: the newest the log dates on or before it, else the first (a
-// check older than the log ran on the method version 1 carried over). log: [{ version, date }]; null when the log is empty.
+// The methods version a check of `asOf` (YYYY-MM-DD) was run on: the newest the log dates before it, else the first (a
+// check older than the log ran on the method version 1 carried over). A version dated the check's own day may have come
+// after it, so it doesn't count: the page then names the older version, the safer claim. log: [{ version, date }]; null
+// when the log is empty.
 export function versionOn(log, asOf) {
   if (!log.length) return null;
-  const by = log.filter((v) => v.date <= asOf).map((v) => v.version);
+  const by = log.filter((v) => v.date < asOf).map((v) => v.version);
   return by.length ? Math.max(...by) : Math.min(...log.map((v) => v.version));
 }
 

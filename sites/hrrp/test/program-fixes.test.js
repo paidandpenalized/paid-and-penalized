@@ -182,8 +182,8 @@ test('a table beside a visible title is named by it (aria-labelledby), not by a 
 
 test('Worksheet R\'s pick in the URL: "ws=<CCN>" beside any other part of the fragment, read back as the CCN', () => {
   assert.equal(withPick('', '99000a'), '#ws=99000A');
-  assert.equal(withPick('#how', '990001'), '#how&ws=990001', 'another part is kept');
-  assert.equal(withPick('#ws=990001&how', '990002'), '#how&ws=990002', 'one pick at a time');
+  assert.equal(withPick('#how', '990001'), '#ws=990001', 'a bare anchor would name no element beside ws=, so it goes');
+  assert.equal(withPick('#state=va&ws=990001', '990002'), '#state=va&ws=990002', 'another key=value part is kept; one pick at a time');
   assert.equal(withPick('#ws=990001', null), '', 'no pick, no fragment');
   assert.equal(pickFromHash('#how&ws=99000a'), '99000A');
   assert.equal(pickFromHash(withPick('#how', '990001')), '990001');

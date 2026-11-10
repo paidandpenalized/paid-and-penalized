@@ -56,7 +56,8 @@ export function scoreRule({ scores, cut, labels, width, up = 72, down = 46, high
   const lineX = r2(split < n ? ruleX(split, n, width) - (width - M.left - M.right) / n / 2 : width);
   // The cut count right of the line, wrapped to the room there; each line past the first lowers the rule by one, so the
   // count never meets the scores.
-  const cutLines = capLines(labels.cut, width - lineX - 6);
+  // With no hospital past the line (the line at the drawing's edge) there is no room to wrap into: one line.
+  const cutLines = lineX < width ? capLines(labels.cut, width - lineX - 6) : [labels.cut];
   const top = M.top + (cutLines.length - 1) * CAP_LINE;
   const zero = top + up;
   const y = (s) => r2(zero - s * k);

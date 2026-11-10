@@ -189,3 +189,9 @@ test('the script builds markup from no data: textContent and attributes only (th
   const src = readFileSync(REPO_ROOT + 'hub/client/search.js', 'utf8').replace(/\/\/.*$/gm, '');
   for (const word of ['innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'localStorage', 'sessionStorage']) assert.ok(!src.includes(word), word);
 });
+
+test('hubEntries: a hospital with no city is found by its state alone, never by the word "null"', () => {
+  const entry = hubEntries([{ ccn: '990001', name: 'Invented Hospital', city: null, state: 'SC', est: { net: -1 } }]).find((e) => e.type === 'hospital');
+  assert.equal(entry.extra, 'SC');
+  assert.equal(entry.sub, 'SC');
+});

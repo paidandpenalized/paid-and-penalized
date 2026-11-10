@@ -543,3 +543,13 @@ test('every "safe" alignment in the stylesheets has the plain one just before it
   }
   assert.ok(seen > 0, 'the stylesheets hold a safe alignment to check');
 });
+
+test('scoreRule: with no hospital past the line, the cut caption stays on one line and the rule keeps its place', () => {
+  const scores = [-0.2, -0.1, 0.1, 0.3];
+  const labels = { cut: 'none cut here at all', kept: 'not cut' };
+  const none = String(scoreRule({ scores, cut: 0, labels, width: 300 }));
+  const some = String(scoreRule({ scores, cut: 1, labels: { ...labels, cut: 'one' }, width: 300 }));
+  const height = (svg) => /viewBox="0 0 \d+(?:\.\d+)? (\d+(?:\.\d+)?)"/.exec(svg)?.[1];
+  assert.ok(height(none));
+  assert.equal(height(none), height(some), 'no extra lines for a caption with no room to wrap into');
+});

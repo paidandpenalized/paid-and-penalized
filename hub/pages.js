@@ -111,7 +111,7 @@ ${closeSection(bands)}
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
 ${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}<p>${fillCopy(COPY, 'countsHrrp', { fy: String(fy), listed: count(readmissions.file.n), cut: count(readmissions.file.cut), est: count(readmissions.est), estCut: count(readmissions.estCut), other: count(readmissions.file.n - readmissions.est) })}${readmissions.newer ? ` ${fillCopy(COPY, 'countsHrrpNewer', { fy: String(hrrp.fy), listed: count(readmissions.newer.n), cut: count(readmissions.newer.cut) })}` : ''}</p>
-${closed ? para('countsClosed', {}, { n: count(closed), fy: String(fy) }) : ''}</section>
+${closed > 1 ? para('countsClosed', {}, { n: count(closed), fy: String(fy) }) : closed === 1 ? para('countsClosedOne', {}, { fy: String(fy) }) : ''}</section>
 <section class="block" id="ccn" aria-labelledby="ccn-h">
 <h2 id="ccn-h">${COPY.ccnHeading}</h2>
 ${para('ccnText')}</section>

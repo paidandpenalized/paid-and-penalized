@@ -187,10 +187,10 @@ test('history: a year with no total that is the family\'s estimate year points t
   assert.ok(!textOf(page()).includes('front page gives'));
 });
 
-test('the version a check ran on: the newest the log dates on or before it, else the first', () => {
+test('the version a check ran on: the newest the log dates before it, else the first', () => {
   const log = [{ version: 1, date: '2026-11-04' }, { version: 2, date: '2026-11-04' }, { version: 3, date: '2026-12-01' }];
   assert.equal(versionOn(log, '2026-10-11'), 1, 'older than the log: the version carried over');
-  assert.equal(versionOn(log, '2026-11-04'), 2);
+  assert.equal(versionOn(log, '2026-11-04'), 1, 'versions dated the check\'s own day may have come after it: the oldest stands');
   assert.equal(versionOn(log, '2026-11-20'), 2);
   assert.equal(versionOn(log, '2027-01-01'), 3);
   assert.equal(versionOn([], '2026-10-11'), null);

@@ -45,6 +45,7 @@ export const COPY = typesetCopy({
   countsHrrp: "Readmissions: CMS's FY{fy} file lists {listed} hospitals and cuts {cut} of them. The front page counts the {est} of them with an estimate here, {estCut} of them cut; the other {other} have no usable row in CMS's payment file or aren't in the hospital-acquired conditions program's file, which the estimates start from.",
   countsHrrpNewer: "The Readmissions pages show CMS's newer FY{fy} file, which lists {listed} hospitals and cuts {cut} of them.",
   countsClosed: "CMS's Provider of Services file lists the Medicare agreement of {n} hospitals with an estimate as ended by the end of FY{fy}. They stay in every total here, and each one's page carries a note saying so.",
+  countsClosedOne: "CMS's Provider of Services file lists the Medicare agreement of one hospital with an estimate as ended by the end of FY{fy}. It stays in every total here, and its page carries a note saying so.",
   // Which hospital a figure belongs to.
   ccnHeading: 'Hospitals as CMS listed them',
   ccnText: { text: "Every figure is for a hospital's CCN, its Medicare provider number, as CMS listed it in that year's files. A hospital that has since closed or merged keeps the figures CMS's files gave its CCN for that year.", claim: ['HACRP-68', 'HUB-16'] },
