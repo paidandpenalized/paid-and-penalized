@@ -8,6 +8,7 @@ import { axis } from '../charts/axis.js';
 import { contribBars } from '../charts/contribBars.js';
 import { ruler } from '../charts/ruler.js';
 import { scoreRule } from '../charts/scoreRule.js';
+import { capsWidth } from '../charts/svg.js';
 import { figure } from '../charts/figure.js';
 import { histogram, histogramBins } from '../charts/histogram.js';
 import { ramp } from '../charts/ramp.js';
@@ -506,6 +507,26 @@ test('scoreRule: the average mark stands where the sorted scores cross zero, nam
   assert.doesNotMatch(String(scoreRule({ scores, cut: 2, labels, width: 800 })), /chart-rule__avg/);
   assert.doesNotMatch(String(scoreRule({ scores: [0.1, 0.2], cut: 1, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all above zero');
   assert.doesNotMatch(String(scoreRule({ scores: [-0.2, -0.1], cut: 0, labels: { ...labels, average: 'Average' }, width: 800 })), /chart-rule__avg/, 'all below zero');
+});
+
+test('scoreRule: a cut count too long for the room right of the line wraps there, and the rule moves down a line for it', () => {
+  const labels = { low: 'Lowest', high: 'Highest', line: 'Line' };
+  const scores = [-1, -0.5, -0.1, 0, 0.4, 1, 2, 3];
+  const draw = (cut) => String(scoreRule({ scores, cut: 2, labels: { ...labels, cut }, width: 300 }));
+  const pens = (svg) => [...svg.matchAll(/<text class="chart-cap chart-cap--pen" x="([\d.]+)" y="([\d.]+)"[^>]*>([^<]*)<\/text>/g)].map((m) => [Number(m[1]), Number(m[2]), m[3]]);
+  const bar = (svg) => Number(/<rect class="chart-rule__bar" x="0" y="([\d.]+)"/.exec(svg)[1]);
+  const height = (svg) => Number(/viewBox="0 0 \d+ ([\d.]+)"/.exec(svg)[1]);
+  // Six slots of 50 left of the line at 225: 69 units of room.
+  const short = draw('Two cut');
+  assert.deepEqual(pens(short).map(([, , t]) => t), ['Two cut']);
+  const long = draw('Two of nine hundred here');
+  const lines = pens(long);
+  assert.deepEqual(lines.map(([, , t]) => t).join(' '), 'Two of nine hundred here', 'every word, in order');
+  assert.ok(lines.length > 1, 'wrapped');
+  for (const [x, , t] of lines) assert.ok(x + capsWidth(t) <= 300, `"${t}" fits`);
+  assert.deepEqual(lines.map(([, y]) => y), lines.map((_, i) => lines[0][1] + i * 12), 'a line apart');
+  assert.equal(bar(long) - bar(short), (lines.length - 1) * 12, 'the rule moves down a line for each line past the first');
+  assert.equal(height(long) - height(short), (lines.length - 1) * 12);
 });
 
 test('every "safe" alignment in the stylesheets has the plain one just before it, for a browser that does not know safe', () => {
