@@ -44,7 +44,9 @@ ${bothStep({ data, rows, label: labelOf('both'), hubCcns, model: bothModel })}
     body,
     assets,
     scripts: stripsUrl ? [assets.js.figure, assets.js['wr-page']] : [assets.js.figure],
+    // R29: the chip names the hospital only, so the family's Medicare net never sits beside this page's Medicaid scenario.
     ...shellOf(),
+    chipNet: false,
     search: stripsUrl ? searchBox(stripsUrl) : '',
   });
 }

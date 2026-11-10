@@ -64,11 +64,12 @@ ${url === null ? '' : html`<meta property="og:url" content="${url}">
 // The shell's parts (render/shell.js familyHeader): program, the current program's id (null on the family's own pages);
 // hospital, the followed hospital ({ ccn, name, net, inHrrp }) on a hospital's page, else null; sections, a program's
 // section menu ([{ id, label, href }], or null for none) and current, the section to mark (an id, or null); search, the
-// bar's search box (searchForm markup, or '' for none). The page's site, from its path (siteOf), names the site in the
+// bar's search box (searchForm markup, or '' for none); chipNet: false for a chip with the hospital's name only
+// (familyHeader). The page's site, from its path (siteOf), names the site in the
 // footer's feedback link (feedbackFor).
 // address: the page's canonical address, by default the origin and its path; null for a page with none of its own
 // (the not-found page, served at every missing address), which then has no canonical link, og:url or page prefill.
-export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], sheets = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, program = null, hospital = null, sections = null, current = null, search = '' }) {
+export function page({ title, description, path, address = SITE.origin + path, robots, body, scripts = [], sheets = [], jsonLd = null, assets, preloadFonts = PRELOAD_FONTS, program = null, hospital = null, sections = null, current = null, search = '', chipNet = true }) {
   if (!title || !description || !body) throw new TypeError('page: title, description and body are required');
   if (typeof path !== 'string' || !path.startsWith('/')) throw new RangeError(`page: path must start with "/", got "${path}"`);
   if (!assets?.css || !assets.js?.theme || !assets.js.shell || !assets.js.topbar) throw new TypeError('page: assets must hold the CSS, and the theme, shell and sticky-header script paths');
@@ -102,7 +103,7 @@ ${preloadFonts.map((f) => html`<link rel="preload" href="/assets/fonts/${f}.woff
 </head>
 <body>
 <a class="skip" href="#main">${COPY.skip}</a>
-${familyHeader({ path, program, hospital, sections, current, search, shell: assets.shell })}
+${familyHeader({ path, program, hospital, sections, current, search, chipNet, shell: assets.shell })}
 <main id="main">
 ${body}
 </main>

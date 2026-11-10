@@ -155,3 +155,21 @@ test('one scenario tag to a block: every figure\'s in its caption, none in its s
   const read = /<div class="wr-both__read" data-b-read>[\s\S]*?<\/div>/.exec(program)[0];
   assert.equal(read.match(tag).length, 1, 'the step-5 dollars box');
 });
+
+// R29: the program page's followed-hospital chip names the hospital only (no Medicare net beside the Medicaid scenario);
+// the Methods page's, like every other page's, is the family's.
+test('the program page\'s chip is marked plain; the Methods page\'s is not', () => {
+  assert.match(program, /<p class="chip" data-chip data-chip-plain hidden><\/p>/);
+  assert.match(methods, /<p class="chip" data-chip hidden><\/p>/);
+});
+
+// The measured tag keeps to one line on a phone: its shorter words there (the same facts), the full words from 480px.
+test('the cost reports\' measured tag carries its phone words, and the stylesheet shows one at a time, never wrapped', () => {
+  const tags = program.match(/<span class="wr-tag"><span class="wr-tag__long">[^<]*<\/span><span class="wr-tag__short">[^<]*<\/span><\/span>/g) ?? [];
+  assert.ok(tags.length >= 2, 'the worksheet\'s line 1 and the state card\'s');
+  const css = readFileSync(join(REPO_ROOT, 'sites/work-requirement/web/styles.css'), 'utf8');
+  assert.match(css, /^\.wr-tag \{[^}]*white-space: nowrap;/m);
+  assert.match(css, /^\.wr-tag__short \{ display: none; \}/m);
+  assert.match(css, /@media \(max-width: 479px\) \{\s*\.wr-tag__long \{ display: none; \}\s*\.wr-tag__short \{ display: inline; \}/);
+  assert.doesNotMatch(css, /\.wr-tag\)[^{]*\{[^}]*white-space: normal/);
+});

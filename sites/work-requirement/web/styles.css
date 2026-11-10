@@ -225,6 +225,12 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-wl--part .wr-wl__v { font-weight: 400; }
 .wr-ws__foot { padding: 8px 12px 10px; color: var(--ink-2); }
 .wr-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+/* The measured tag's shorter words on a phone, so it keeps to one line beside a worksheet line's amount. */
+.wr-tag__short { display: none; }
+@media (max-width: 479px) {
+  .wr-tag__long { display: none; }
+  .wr-tag__short { display: inline; }
+}
 /* What "mitigation" means, at the head of the second worksheet. */
 .wr-mitig { display: grid; gap: 6px; padding: 10px 12px 12px; border-bottom: var(--rule) solid var(--pen); font-size: var(--fs-sm); line-height: 1.45; }
 .wr-mitig__h { font: 400 1.125rem/1.2 var(--font-display); }
@@ -252,7 +258,7 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-stcard__body > p:first-child { padding-top: 10px; }
 .wr-stcard__why { font-size: var(--fs-sm); line-height: 1.5; }
 .wr-stcard__lines .wr-wl > * { padding-block: 5px; }
-.wr-stcard__lines .wr-wl__d > :is(.scen-tag, .wr-tag) { margin: 0 0 0 6px; vertical-align: 1px; white-space: normal; }
+.wr-stcard__lines .wr-wl__d > :is(.scen-tag, .wr-tag) { margin: 0 0 0 6px; vertical-align: 1px; }
 .wr-stcard__body > * { min-width: 0; }
 .wr-hits__h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .wr-hits__sub { color: var(--ink-2); font-size: var(--fs-xs); }

@@ -298,6 +298,16 @@ test('follow: a ?h= naming a known hospital fills the chip, points the tabs and 
   assert.deepEqual(hrefs(r.tabs), ['/hospital/99000a/', ...SITE.programs.map((p) => own[p.id] ?? `${p.path}?h=99000A`)]);
 });
 
+test('follow: on a page that marks its chip data-chip-plain (the work requirement\'s, R29), the chip names the hospital with no figure', async () => {
+  const p = page();
+  p.chip.dataset.chipPlain = '';
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=99000a', here: '/work-requirement/?h=99000a', load: async () => ({ fy: 2026, byCcn: ROWS }), doc: doc() });
+  assert.equal(p.chip.hidden, false);
+  const name = p.chip.children[1];
+  assert.deepEqual(name.children.map((c) => c.className), ['chip__t']);
+  assert.equal(name.children[0].textContent, 'Sample Medical');
+});
+
 test('follow: a hospital the Readmissions site lists gets its own Readmissions page', async () => {
   const r = run({ search: '?h=990001' });
   await r.done;

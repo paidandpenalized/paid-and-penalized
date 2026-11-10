@@ -3,7 +3,8 @@
 // result) and an in-page jump clear it; 0 when it does not stick. A keyboard-focused element the browser left under the
 // bar is brought down to the bar's edge, and one whose scroll margin keeps it clear of something pinned at the window's
 // foot is brought up clear of it (not one focused by a click or a touch). On a page holding the sections its section
-// menu links to, the item for the section in view is marked aria-current as the reader scrolls. Program-neutral; no
+// menu links to, the item for the section in view is marked aria-current as the reader scrolls, and a menu that scrolls
+// sideways (a phone's) brings that item into view. Program-neutral; no
 // words of its own.
 const bar = typeof document === 'undefined' ? null : document.querySelector('.topbar');
 // How long after a press's release with no click its mark is cleared (below).
@@ -14,6 +15,14 @@ export function sectionInView(tops, line) {
   let at = 0;
   tops.forEach((top, i) => { if (top <= line) at = i; });
   return at;
+}
+
+// Where a sideways-scrolling menu (a phone's section menu) scrolls to show its marked item: item { left, width } in the
+// menu's own scrolled coordinates, menu { scroll, view } (its scrollLeft and its visible width), pad the room kept beside
+// the item. Unchanged while the item is whole in view, else the item pad in from the menu's left edge.
+export function stripScroll(item, menu, pad = 16) {
+  if (item.left - pad >= menu.scroll && item.left + item.width + pad <= menu.scroll + menu.view) return menu.scroll;
+  return Math.max(0, item.left - pad);
 }
 
 if (bar) {
@@ -77,12 +86,28 @@ if (bar) {
   }).filter(Boolean);
   if (here.length) {
     let queued = false;
+    let marked = null;
+    const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // On a phone the menu scrolls sideways: the marked item is brought into it as the reader moves to its section.
+    const reveal = (a, smooth) => {
+      const menu = a.closest('.nav');
+      if (!menu || menu.scrollWidth <= menu.clientWidth) return;
+      const box = a.getBoundingClientRect();
+      const left = box.left - menu.getBoundingClientRect().left + menu.scrollLeft;
+      const to = stripScroll({ left, width: box.width }, { scroll: menu.scrollLeft, view: menu.clientWidth });
+      if (Math.abs(to - menu.scrollLeft) > 1) menu.scrollTo({ left: to, behavior: smooth && !calm.matches ? 'smooth' : 'auto' });
+    };
     const mark = () => {
       queued = false;
       const at = sectionInView(here.map(({ target }) => target.getBoundingClientRect().top), Math.max(height, 0) + 48);
       for (const a of bar.querySelectorAll('.nav a[data-nav]')) {
         if (a === here[at].a) a.setAttribute('aria-current', 'true');
         else a.removeAttribute('aria-current');
+      }
+      if (marked !== here[at].a) {
+        // At once on the first mark (a page opened at a section), smoothly after.
+        reveal(here[at].a, marked !== null);
+        marked = here[at].a;
       }
     };
     window.addEventListener('scroll', () => {

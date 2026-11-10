@@ -266,6 +266,8 @@ export const lineRow = ({ n, op = '', key, note = null, range = null, tags = '',
 const partRow = ({ kind, name, label, value, raw }) => html`<tr class="wr-wl wr-wl--part" data-${kind}="${name}" data-v="${raw}"><td class="wr-wl__n"></td><th scope="row" class="wr-wl__d">${label}</th><td class="wr-wl__v">${value}</td></tr>`;
 const headRow = (text) => html`<tr class="wr-wl wr-wl--head"><td class="wr-wl__n"></td><th scope="row" colspan="2" class="wr-wl__d">${text}</th></tr>`;
 
+// The cost reports' tag (measured, as filed or settled), in its shorter words on a phone, so it keeps to one line.
+export const measuredTag = () => html`<span class="wr-tag"><span class="wr-tag__long">${t('wsMeasured')}</span><span class="wr-tag__short">${t('wsMeasuredShort')}</span></span>`;
 export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
 const rangeOf = (totals, key, sign = 1) => fill('wsRange', { low: money(sign * totals.low[key]), high: money(sign * totals.high[key]) });
 
@@ -277,7 +279,7 @@ export function worksheetBody(n, { totals, scenario, use, how }) {
   const decline = c.lost / (c.at_risk * use);
   const ratio = c.lost_cost / c.lost;
   const lines = {
-    1: () => html`${lineRow({ n: LINE.revenue, key: 'ws1', note: fill('ws1Note', { fy: String(fy) }), tags: html` <span class="wr-tag">${t('wsMeasured')}</span>`, value: money(c.medicaid_revenue), raw: c.medicaid_revenue, cls: ' wr-wl--eq' })}
+    1: () => html`${lineRow({ n: LINE.revenue, key: 'ws1', note: fill('ws1Note', { fy: String(fy) }), tags: html` ${measuredTag()}`, value: money(c.medicaid_revenue), raw: c.medicaid_revenue, cls: ' wr-wl--eq' })}
 ${lineRow({ n: LINE.share, op: '×', key: 'ws2', note: t('ws2Note'), value: pct(c.at_risk / c.medicaid_revenue, 1), raw: c.at_risk / c.medicaid_revenue })}
 ${lineRow({ n: LINE.atRisk, op: '=', key: 'ws3', note: fill('ws3Note', { a: count(LINE.revenue) }), value: money(c.at_risk), raw: c.at_risk, cls: ' wr-wl--eq wr-wl--res' })}`,
     2: () => html`${lineRow({ n: LINE.decline, op: '×', key: 'ws4', note: fill('ws4Note', { lo: pct(declines[scenario][0], 0), hi: pct(declines[scenario][1], 0), scenario: scenWord(scenario).toLowerCase() }), value: pct(decline, 1), raw: decline })}

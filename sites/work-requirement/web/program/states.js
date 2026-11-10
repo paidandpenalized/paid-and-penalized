@@ -25,7 +25,7 @@ import { scenarioTag } from '../../../../web/render/shell.js';
 import { hospitalPathOf } from '../../../../web/site.js';
 import { CONTOURS, DEFAULT_SCENARIO, MOST_EXPOSED, SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
-import { lineRow, scenTag } from './chain.js';
+import { lineRow, measuredTag, scenTag } from './chain.js';
 import { scenWord } from './ranges.js';
 import { labelKit, overlap } from './labels.js';
 import { fitText } from './strips.js';
@@ -447,7 +447,7 @@ export function headlineOf(model, code, { k, use }) {
   };
 }
 
-const measured = () => html` <span class="wr-tag">${t('wsMeasured')}</span>`;
+const measured = () => html` ${measuredTag()}`;
 const kindOf = (kind) => t(`stKind_${kind === 'critical_access' ? 'critical_access' : 'acute'}`);
 
 // A hospital's name, linked to its page across the programs only when that page exists.

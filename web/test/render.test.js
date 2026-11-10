@@ -258,6 +258,11 @@ test('shell: the chip is empty and hidden without a hospital; with one it names 
   assert.match(headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: 48000 } })), /<\/span>\+\$48K<\/span>/);
   const none = headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: null } }));
   assert.doesNotMatch(none, /chip__v|NaN|\$0/);
+  // chipNet false (a page whose numbers are of another kind): the name only, the chip marked for the script.
+  assert.ok(headerOf(page({ ...PAGE, chipNet: false })).includes('<p class="chip" data-chip data-chip-plain hidden></p>'));
+  const named = /<p class="chip" data-chip data-chip-plain>[\s\S]*?<\/p>/.exec(headerOf(page({ ...PAGE, hospital: FOLLOWED, chipNet: false })))?.[0];
+  assert.ok(named?.includes('<span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span>'), named);
+  assert.doesNotMatch(named, /chip__v|\$58K/);
 });
 
 test('shell: the numbered section menu only when the page gives sections, the current one marked', () => {
@@ -605,6 +610,15 @@ test('topbar.js: the section in view is the last whose top has passed the line, 
   assert.equal(sectionInView([300, 900, 1500], 100), 0);
   assert.equal(sectionInView([-50, 90, 1500], 100), 1);
   assert.equal(sectionInView([-900, -400, -10], 100), 2);
+});
+
+test('topbar.js: a sideways menu scrolls only to bring its marked item whole into view, the item a pad in from its left edge', async () => {
+  const { stripScroll } = await import('../client/topbar.js');
+  const menu = { scroll: 0, view: 390 };
+  assert.equal(stripScroll({ left: 20, width: 200 }, menu), 0, 'whole in view: no scroll');
+  assert.equal(stripScroll({ left: 300, width: 200 }, menu), 284, 'cut at the right: brought in');
+  assert.equal(stripScroll({ left: 40, width: 100 }, { scroll: 200, view: 390 }), 24, 'gone past at the left: brought back');
+  assert.equal(stripScroll({ left: 4, width: 100 }, { scroll: 50, view: 390 }), 0, 'never before the start');
 });
 
 // The share card's tags on a page: { name or property: content }.

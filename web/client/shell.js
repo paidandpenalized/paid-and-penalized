@@ -58,13 +58,13 @@ const make = (doc, tag, className, text) => {
 const fillWords = (words, name, value) => words.replace(`{${name}}`, () => value);
 
 // Fills the empty chip as the build writes it for a hospital's own page: the key, the hospital's name linked to its page
-// with its estimated net (none for a hospital with no estimate), and a link that stops following (stop: the same address
-// without ?h=).
+// with its estimated net (none for a hospital with no estimate, nor on a page that marks its chip data-chip-plain), and
+// a link that stops following (stop: the same address without ?h=).
 function fillChip({ chip, doc, row, fy, stop }) {
   const name = make(doc, 'a', 'chip__n');
   name.setAttribute('href', hospitalPathOf('hub', row.ccn));
   name.append(make(doc, 'span', 'chip__t', row.name));
-  if (row.est) {
+  if (row.est && chip.dataset.chipPlain === undefined) {
     const value = make(doc, 'span', 'chip__v');
     value.append(make(doc, 'span', 'vh', `${fillWords(CHIP.chipNet, 'fy', String(fy))} `), money(row.est.net, { sign: true }));
     name.append(' ', value);

@@ -327,7 +327,7 @@ test('the figures\' text alternatives follow the case and the use rate (the brow
 
 test('the gutter discloses its stack: the note says dots may sit off their level, and each dot\'s title carries its true share', () => {
   const note = words(/<p class="small muted fig__note">[\s\S]*?<\/p>/.exec(section)[0]);
-  assert.ok(note.includes('Gutter dots are spaced apart and may sit a little off their level; the table has exact shares.'), note);
+  assert.ok(note.includes('Gutter dots sit near their share (the table has it exactly).'), note);
   for (const drawing of Object.keys(DRAWINGS)) {
     const layout = statesLayout({ model, drawing, k: MIDDLE, use: 1, selected: model.selected });
     const body = statesBody(layout).text;
