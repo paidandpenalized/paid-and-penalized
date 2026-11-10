@@ -1563,7 +1563,7 @@
     "bytes": 1832,
     "sha256": "8b16d35614ceeb269cc238453d96f2bb44bf654cc4b51c5cdcab456b6e33cc63",
     "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
-    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2010-form",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
     "derivedFrom": {
       "file": "HOSP10FY2023.ZIP",
       "bytes": 136799140,
