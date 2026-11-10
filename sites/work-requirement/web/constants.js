@@ -48,3 +48,13 @@ export const BOTH_SHARE = 0.01;
 export const BOTH_QUANTILE = 0.75;
 // How many of the named table's rows show before "Show all" (with JavaScript; without it every row shows).
 export const NAMED_FIRST = 10;
+
+// The cost report's lines Methods names (Form CMS-2552-10, Worksheet S-10 Part I): Medicaid net revenue, the line the
+// scenario takes its loss from; Medicaid supplemental payments (DSH and other), which the lines 2 + 5 version adds; and
+// Medicaid cost. The form's own line numbers, not method constants.
+export const S10_LINES = Object.freeze({ revenue: 2, supplemental: 5, cost: 7 });
+
+// Names with digits in them, which copy can't hold (the copy gate): the CMS form states report Medicaid spending on, the
+// cost report's two worksheets Methods names, and the hash the pins are checked by. Copy writes {spendForm}, {revSheet}, {marginSheet} and
+// {hash}; methods/copy.js fills them.
+export const FORM_NAMES = Object.freeze({ spendForm: 'CMS-64', revSheet: 'Worksheet S-10', marginSheet: 'Worksheet G-3', hash: 'SHA-256' });

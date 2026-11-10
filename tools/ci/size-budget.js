@@ -65,7 +65,9 @@ export const PROGRAM_BUDGETS = {
   // Step 3 (states), 2026-11-10: the program page 82.0 KB + 15% (94.3 KB), rounded up to 100 KB.
   // Step 4 (one hospital), 2026-11-10: the program page 93.9 KB + 15% (108.0 KB), rounded up to 110 KB.
   // Step 5 (exposed on both), 2026-11-10: the program page 122.7 KB + 15% (141.1 KB), rounded up to 150 KB.
-  'work-requirement': { program: 150 * KB, methods: 30 * KB },
+  // Methods built (its sections, the sensitivities figure and every pin's SHA-256), 2026-11-10: 41.1 KB + 15% (47.3 KB),
+  // rounded up to 50 KB.
+  'work-requirement': { program: 150 * KB, methods: 50 * KB },
 };
 // The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
 // most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:

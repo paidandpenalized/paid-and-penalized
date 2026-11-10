@@ -198,9 +198,11 @@ export const COPY = {
   ws8: { text: 'Cost of the care those patients got', claim: null },
   ws8Note: { text: 'Lines {a} × {b}.', claim: null },
   ws9: { text: 'Become uninsured', claim: null },
-  ws9Note: { text: 'A modeling assumption. The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: null },
+  // Lines 9 and 10: the share is this site's ratio of CBO's two counts for the requirement (WR-11), and one less the
+  // drop in hospital use the Commonwealth Fund's appendix models (WR-12); Methods gives both in full.
+  ws9Note: { text: 'From CBO’s estimate for the requirement: more uninsured over people losing Medicaid. The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: 'WR-11' },
   ws10: { text: 'Care they still use, uninsured', claim: null },
-  ws10Note: { text: 'The rest is care not given, and its cost goes away: {v}. The share is a modeling assumption.', claim: null },
+  ws10Note: { text: 'One less the drop in hospital use the Commonwealth Fund’s modelers assume for people newly uninsured. The rest is care not given, and its cost goes away: {v}.', claim: 'WR-12' },
   wsSplit: { text: 'Line {n}, split three ways', claim: null },
   wsSplitStill: { text: 'Still given, unpaid (line {n})', claim: null },
   wsSplitNotGiven: { text: 'Care not given', claim: null },
@@ -472,6 +474,19 @@ export const COPY = {
   bShowAll: { text: 'Show all {n}', claim: null },
   bShowingAll: { text: 'Showing all {n} hospitals exposed on both.', claim: null },
   bSource: { text: 'Urban Institute and RWJF state declines on FY{fy} cost reports (CMS HCRIS); this site’s FY{pfy} penalty estimates', claim: null },
+
+  // The as-of line both pages close on (pages/parts.js asOf): each data source and its date.
+  asofHeading: { text: 'About this data', claim: null },
+  asofCostLabel: { text: 'Cost reports', claim: null },
+  asofCost: { text: 'FY{fy} Medicare cost reports, CMS’s HCRIS file of {date}; {settled} settled', claim: null },
+  asofSpendLabel: { text: 'Expansion share', claim: null },
+  asofSpend: { text: '{form} spending on the new adult group, federal FY{fy}; data.medicaid.gov, updated {date}', claim: 'WR-16' },
+  asofDeclinesLabel: { text: 'Enrollment declines', claim: null },
+  asofDeclines: { text: 'Urban Institute and RWJF, Appendix Table {table}; copied {date}', claim: 'WR-18' },
+  asofPenaltiesLabel: { text: 'Medicare penalties', claim: null },
+  asofPenalties: { text: 'This site’s FY{fy} estimates', claim: null },
+  asofChangedLabel: { text: 'Numbers last changed', claim: null },
+  asofChanged: { text: '{date}', claim: null },
 
   // The Methods page.
   methodsKicker: { text: 'Methods', claim: null },

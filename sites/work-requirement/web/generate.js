@@ -4,7 +4,7 @@
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
-import { loadAway, loadHubCcns, loadMedicaid } from './data.js';
+import { loadAway, loadHubCcns, loadMedicaid, loadSourceGroups } from './data.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';
 import { programPage } from './pages/program.js';
@@ -30,6 +30,7 @@ export function generateWr(ctx, { data = loadMedicaid(), hubCcns = loadHubCcns()
   const states = statesModel(data, rows, hubCcns);
   const chunks = hospChunks(data, rows, hubCcns);
   const both = bothInput(data, rows, hubCcns);
+  const bothM = bothModel(rows, both);
   const hosp = Object.fromEntries([...chunks].map(([code, chunk]) => [code, ctx.asset(`wr-hosp-${code.toLowerCase()}`, 'json', JSON.stringify(chunk))]));
   // Steps 3 and 5 each have an asset of their own, fetched as the step nears the screen, so step 1 needs only the strips'.
   const src = {
@@ -41,8 +42,8 @@ export function generateWr(ctx, { data = loadMedicaid(), hubCcns = loadHubCcns()
     hosp, away: loadAway(data, hubCcns),
   })));
   const baseUrl = ctx.asset('wr-base', 'json', JSON.stringify(baseAsset(data)));
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl, hubCcns, statesModel: states, hospChunks: chunks, bothModel: bothModel(rows, both) }) });
-  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ data, robots, assets }) });
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ data, rows, robots, assets, stripsUrl, baseUrl, hubCcns, statesModel: states, hospChunks: chunks, bothModel: bothM }) });
+  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ data, robots, assets, sources: loadSourceGroups(data), both: bothM }) });
   log(`Work requirement: 2 pages under ${PROGRAM_PATH}, ${data.hospitals.size} hospitals in the FY${data.meta.fy} file`);
   return { updated: { cmsReleased: data.meta.cmsReleased, changed: data.meta.changed } };
 }

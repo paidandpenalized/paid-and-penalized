@@ -16,7 +16,7 @@ import { programDek } from '../../../web/programs.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { SITE } from '../../../web/site.js';
 import { SECTIONS } from '../web/constants.js';
-import { cmsDate, isCms, loadMedicaid, newestCmsDate } from '../web/data.js';
+import { cmsDate, isCms, loadMedicaid, loadSourceGroups, newestCmsDate } from '../web/data.js';
 import { WR, generateWr } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { methodsPage } from '../web/pages/methods.js';
@@ -27,7 +27,7 @@ const data = loadMedicaid();
 const assets = testAssets();
 const words = (html) => textOf(html).replace(/\s+/g, ' ').trim();
 const program = programPage({ data, robots: 'noindex', assets });
-const methods = methodsPage({ data, robots: 'noindex', assets });
+const methods = methodsPage({ data, robots: 'noindex', assets, sources: loadSourceGroups(data) });
 
 test('loadMedicaid: the newest emitted file, its hospitals by CCN, and its states, national and group roll-ups as written', () => {
   assert.equal(data.meta.fy, file.fy);

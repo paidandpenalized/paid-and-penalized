@@ -22,6 +22,17 @@ A claim marked `unverified` may not be used in copy.
 | WR-08 | In Urban's medium mitigation scenario, the scope and effectiveness of data matching and the exemptions fall between the high and low scenarios. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "the scope and effectiveness of automatic data-matching and definitions of exemptions are between the high and low mitigation scenarios" | 2026-11-10 |
 | WR-09 | Urban assumes every state makes the same implementation choices within a scenario, so its state estimates differ only with the makeup of each state's expansion enrollees. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "uniform implementation choices across states within each scenario" … "differences in the composition of each state's Medicaid expansion enrollees" | 2026-11-10 |
 | WR-10 | Maryland's hospitals are paid under an all-payer model, a model under section 1115A of the Social Security Act. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "exclude hospitals in Maryland (because these hospitals are paid under an all payer model under section 1115A of the Act)" | 2026-11-10 |
+| WR-11 | CBO estimates that under section 71119 about 2.9 million people will lose Medicaid coverage in 2034 for not meeting the requirement and about 2.8 million more because of its added application steps, and that the number of people without health insurance will rise by 5.3 million in 2034. | https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | "about 2.9 million in 2034, will lose coverage" … "about 2.8 million additional people will lose Medicaid coverage" … "increase by 5.3 million in 2034" | 2026-11-10 |
+| WR-12 | Dobson DaVanzo's technical appendix for the Commonwealth Fund (June 2017) estimates, by working back from earlier studies of the uninsured, that a newly uninsured population uses about 44 percent less hospital care. | https://www.commonwealthfund.org/sites/default/files/documents/___media_files_publications_fund_report_2017_jun_dobson_ahca_impact_safety_net_hosps_technical_appendix.pdf | "we reverse engineered the results of those studies" … "a newly uninsured population will reduce utilization of hospital services by about 44 percent" | 2026-11-10 |
+| WR-13 | Urban Institute and RWJF expect the work requirements to apply to Medicaid waiver programs in some states that did not expand Medicaid, and their projections leave out Georgia's Pathways program. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "will also apply to Medicaid waiver programs in some nonexpansion states" … "do not assess potential changes in enrollment in Georgia’s Pathways program" | 2026-11-10 |
+| WR-14 | Georgia Pathways to Coverage, a section 1115 demonstration, extends coverage to Georgians with incomes up to 100% of the federal poverty level. | https://www.medicaid.gov/medicaid/section-1115-demonstrations/downloads/ga-pathway-pa-04282025.pdf | "Under the Georgia Pathways to Coverage® Section 1115 Demonstration" … "extends healthcare coverage to individuals with incomes up to 100% of the Federal Poverty Level" | 2026-11-10 |
+| WR-15 | Georgia is the only state that continues to operate a community engagement program as a condition of Medicaid eligibility for certain adults. | https://www.federalregister.gov/documents/2026/06/03/2026-11094/medicaid-program-community-engagement-requirement-for-certain-individuals | "Georgia is the only State that continues to operate a community engagement program as a condition of Medicaid eligibility for certain adults" | 2026-11-10 |
+| WR-16 | CMS's CMS-64 new adult group dataset reports summary expenditure data for the Affordable Care Act's new adult group (the VIII group), which applies only to states that adopted the expansion. | https://data.medicaid.gov/api/1/metastore/schemas/dataset/items/00505e90-f8ac-5921-b12f-5e23ba7ffcf3 | "summary level expenditure data associated with the new adult group established under the Affordable Care Act" … "applicable for states that have expanded" | 2026-11-10 |
+| WR-17 | CMS's Financial Management Report gives each state's total Medicaid expenditures by program. | https://www.medicaid.gov/medicaid/financial-management/state-expenditure-reporting-for-medicaid-chip/expenditure-reports-mbescbes | "Summary state-by-state total expenditures by program for the Medicaid Program, Medicaid Administration and CHIP are available" | 2026-11-10 |
+| WR-18 | Urban Institute and RWJF's Appendix Table A.2 gives, by state and mitigation scenario, the projected change in average monthly Medicaid expansion enrollment in 2028. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "Projected Changes in Average Monthly Medicaid Expansion Enrollment" … "in 2028" … "by State and Mitigation Scenario" | 2026-11-10 |
+| WR-19 | All payers pay Maryland's hospitals at the rates Maryland's Health Services Cost Review Commission (HSCRC) sets. | https://hscrc.maryland.gov/Pages/About-Us.aspx | "all payers pay Maryland hospitals on the basis of the rates established by the HSCRC" | 2026-11-10 |
+| WR-20 | Maryland's rate setting builds the cost of hospitals' uncompensated care into their rates. | https://hscrc.maryland.gov/Pages/UCC.aspx | "Maryland’s rate setting system factors the cost of UCC into the State’s hospital rate setting structure" | 2026-11-10 |
+| WR-21 | HSCRC estimated the effect of H.R. 1's coverage losses on Maryland hospitals' uncompensated care in FY2027 and expects the inpatient part from the work requirement to be near zero, because an inpatient stay creates an exemption from it. | https://hscrc.maryland.gov/Documents/DanielaT%20Uploads/5%20-%20Payment%20Models%20Workgroup%20-PayMods/RY27%20(2026)/PMWG040126.pptx.pdf | "Estimated Impact of HR 1 on Medicaid Uncompensated Care in FY 2027" … "near-zero, as inpatient stays create an exemption from work requirements" | 2026-11-10 |
 
 ## Notes on the sources
 
@@ -69,6 +80,51 @@ A claim marked `unverified` may not be used in copy.
   matched. Step 3 says only that the hospitals are paid under that model and that this scenario does not model it; it
   describes none of the model's mechanics.
 
+- **WR-11.** CBO, "Public Law 119-21 ... Title VII, Finance, Subtitle B, Health, Chapter 1, Medicaid", supplemental cost
+  estimate of October 28, 2025 (publication 61837; "as enacted on July 4, 2025"), page 6, "Community Engagement
+  Requirements". The same page says CBO expects most people who lose Medicaid coverage under the section to become
+  uninsured. The worksheet's line 9 and Methods' "become uninsured" share (the scenario file's `params.uninsured_share`,
+  0.93) is this site's ratio of the two counts, 5.3 ÷ (2.9 + 2.8); CBO does not state the ratio. cbo.gov answers scripted
+  requests with a 403, so the PDF was read in a browser on 2026-11-10 and its text extracted there; the quotation matched.
+  The page links the publication page, which links the PDF.
+- **WR-12.** Dobson DaVanzo & Associates (Allen Dobson, Joan DaVanzo, Randy Haught), "The Financial Impact of the American
+  Health Care Act's Medicaid Provisions on Safety-Net Hospitals: Technical Appendix" (June 26, 2017), prepared for the
+  Commonwealth Fund, PDF page 23, "Impact on revenues and costs for persons becoming uninsured" (the PDF's SHA-256 as
+  downloaded 2026-11-10: `3dadaef77cf1debb817b633f450811748cbe3aa3ce6d223347b717f9fc419b23`). The worksheet's line 10 and
+  Methods' "still given" share (`params.care_still_used`, 0.56) is one less the 44 percent. The appendix calls the figure
+  an estimate worked back from earlier studies, and Methods says so: it is a modeling assumption with a named source,
+  not a measured effect.
+- **WR-13.** The Urban Institute and RWJF report (WR-03): the executive summary (page v) for the waiver programs, and
+  page 8 for Georgia’s Pathways program, which Urban leaves out "where enrollment impacts would
+  depend on the extent to which the state is required to align" its existing waiver's requirements with the law's.
+  Methods does not say whether the law reaches Pathways; it says Urban expects the law to reach some waiver programs and
+  leaves Pathways out, so Georgia's hospitals have no scenario.
+- **WR-14.** Georgia Department of Community Health, "Georgia Section 1115 Demonstration Waiver Extension Request"
+  (April 28, 2025), on medicaid.gov, pages 3 and 4 (the PDF's SHA-256 as downloaded 2026-11-10:
+  `f092823fac2123313226de384b39a9f379b5c8914379584532582609da5c6209`). The state's own description of its program; CMS's
+  rule (WR-15) cites the same document. Methods says "up to the poverty line" and names no percentage.
+- **WR-15.** CMS's interim final rule (WR-04), section I (background), 91 FR 33348 and after; read in the rule's full
+  text (federalregister.gov/documents/full_text/text/2026/06/03/2026-11094.txt, fetched 2026-11-10, 200).
+- **WR-16.** CMS, "Medicaid CMS-64 New Adult Group Expenditures", the dataset's description in data.medicaid.gov's
+  catalog (the metastore record the dataset page, data.medicaid.gov/dataset/00505e90-f8ac-5921-b12f-5e23ba7ffcf3, shows;
+  the page itself is drawn by script). The pinned file is the manifest's `cms64-viii-2026-02`. The second quotation is
+  from its note that the VIII group "is only applicable for states that have expanded their Medicaid programs by adopting
+  the VIII Group".
+- **WR-17.** medicaid.gov, "Expenditure Reports From MBES/CBES", the page that lists the Financial Management Report's
+  yearly zips; the pinned extract is the manifest's `cms64-fmr-fy2023-map` (each state's MAP tab: its total net
+  expenditures and the two DSH rows). Methods uses it only for the net-of-DSH sensitivity.
+- **WR-18.** The Urban Institute and RWJF report (WR-03), Appendix Table A.2, page 45: its title. The site reads the
+  table's three work-requirement columns ("Incremental Difference of Work Requirements After Six-Month
+  Redetermination"), transcribed in the manifest's `urban-2026-a2-wr`. The as-of line prints the table's name from that
+  pin's title and the day it was copied (the pin's `retrieved`), since the report carries a month, not a date.
+- **WR-19 to WR-21.** Maryland's Health Services Cost Review Commission: "About Us" (WR-19) and "Uncompensated Care
+  (UCC)" (WR-20), fetched 2026-11-10 (`curl -sL`, 200 each) and the quotations matched; and the Payment Models Workgroup
+  deck of April 1, 2026 (WR-21), slides 19 and 20 (the PDF's SHA-256 as downloaded 2026-11-10:
+  `adf27bd5b868ed5b67e31b2796c9f5f4b96381079cc26c7b178347078a3f3b87`). HSCRC's estimate covers all of H.R. 1's coverage
+  losses (immigration-related ones too), states its assumptions as of March 17, 2026, and says FY2028 can't yet be
+  estimated; its dollar figures are not in this site's data, so Methods prints none of them and links the deck. Methods
+  says only that HSCRC made its own estimate and expects the inpatient part to be near zero.
+
 ## Link check (2026-11-10)
 
 Each source above, fetched with `curl -sL`.
@@ -79,3 +135,11 @@ Each source above, fetched with `curl -sL`.
 | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | 200 (the report PDF, SHA-256 equal to the manifest's; executive summary read) | direct |
 | https://www.federalregister.gov/documents/2026/06/03/2026-11094/medicaid-program-community-engagement-requirement-for-certain-individuals | 200 on the first fetch (the rule's page; its full text read at federalregister.gov/documents/full_text/text/2026/06/03/2026-11094.txt, page 33461); a later scripted fetch was sent to the site's bot check | direct |
 | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 (about 4.8 MB, the rule's text; the WR-10 passage found, once) | direct |
+| https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | 403 to `curl`; 200 in a browser on 2026-11-10 (the publication page, cbo.gov/publication/61837, and the PDF; text read there) | browser |
+| https://www.commonwealthfund.org/sites/default/files/documents/___media_files_publications_fund_report_2017_jun_dobson_ahca_impact_safety_net_hosps_technical_appendix.pdf | 200 (the appendix PDF, 34 pages; page 23 read) | direct |
+| https://www.medicaid.gov/medicaid/section-1115-demonstrations/downloads/ga-pathway-pa-04282025.pdf | 200 (Georgia's extension request PDF; pages 3 and 4 read) | direct |
+| https://data.medicaid.gov/api/1/metastore/schemas/dataset/items/00505e90-f8ac-5921-b12f-5e23ba7ffcf3 | 200 (the dataset's catalog record, its description read) | direct |
+| https://www.medicaid.gov/medicaid/financial-management/state-expenditure-reporting-for-medicaid-chip/expenditure-reports-mbescbes | 200 (the page; the quoted sentence found) | direct |
+| https://hscrc.maryland.gov/Pages/About-Us.aspx | 200 | direct |
+| https://hscrc.maryland.gov/Pages/UCC.aspx | 200 | direct |
+| https://hscrc.maryland.gov/Documents/DanielaT%20Uploads/5%20-%20Payment%20Models%20Workgroup%20-PayMods/RY27%20(2026)/PMWG040126.pptx.pdf | 200 (the deck PDF; slides 19 to 22 read) | direct |

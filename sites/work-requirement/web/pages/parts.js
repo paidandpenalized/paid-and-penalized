@@ -1,9 +1,12 @@
 // The work-requirement pages' shared parts: the family shell's fields (the site's stylesheet, the Work requirement tab
-// and the section menu: the program page's five steps, then Methods) and the program page's Find in the bar.
+// and the section menu: the program page's five steps, then Methods), the program page's Find in the bar, and the as-of
+// line both pages close on.
 import { COPY as SHARED } from '../../../../web/copy.js';
+import { asofBar } from '../../../../web/render/components.js';
+import { isoDate, pct } from '../../../../web/render/format.js';
 import { searchForm } from '../../../../web/render/shell.js';
-import { SECTIONS } from '../constants.js';
-import { t } from '../copy.js';
+import { FORM_NAMES, SECTIONS } from '../constants.js';
+import { fill, fillKeep, t } from '../copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
 
 // A step's label (its heading and its entry in the section menu), by its id.
@@ -22,3 +25,38 @@ export const shellOf = ({ current = null } = {}) => ({ sheets: ['work-requiremen
 export const searchBox = (src) => searchForm({
   id: 'omni', src, label: t('searchHeading'), find: t('searchFind'), findRest: t('searchFindRest'), placeholder: t('searchPlaceholder'),
 });
+
+// The pinned inputs the as-of line dates, found among the scenario file's pins (data.js loadMedicaid's pins): the cost
+// reports' cells (their CMS file's date is the HCRIS zip's Last-Modified), CMS-64's new adult group spending (the
+// dataset's modified date) and Urban's state table (the day it was copied: the report carries a month, not a date).
+// Throws when one is missing, so a renamed pin can't drop a line silently.
+export function asOfPins(data) {
+  const find = (what, test) => {
+    const pin = data.pins.find(test);
+    if (!pin) throw new RangeError(`work requirement: no ${what} among the scenario file's pins`);
+    return pin;
+  };
+  return {
+    cells: find('cost report cells', (p) => p.id === `hcris-fy${data.meta.fy}-cells`),
+    spend: find('CMS-64 new adult group file', (p) => p.id.startsWith('cms64-viii')),
+    declines: find('Urban table', (p) => p.id.startsWith('urban-')),
+  };
+}
+
+// The as-of line (the family's as-of bar, components.js asofBar): each data source and its date. data: loadMedicaid()'s.
+export function asOf(data) {
+  const { cells, spend, declines } = asOfPins(data);
+  const table = /Appendix Table (A\.\d+)/.exec(declines.title)?.[1];
+  if (!table) throw new RangeError(`work requirement: the Urban pin's title names no appendix table: ${declines.title}`);
+  const date = (d) => isoDate(d);
+  return asofBar({
+    label: t('asofHeading'),
+    items: [
+      { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: date(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
+      { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: date(spend.datasetModified) }, ['date']) },
+      { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table, date: date(declines.retrieved) }, ['date']) },
+      { label: t('asofPenaltiesLabel'), value: fill('asofPenalties', { fy: String(data.meta.penaltyFy) }) },
+      { label: t('asofChangedLabel'), value: fillKeep('asofChanged', { date: date(data.meta.changed) }, ['date']) },
+    ],
+  });
+}

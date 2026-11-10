@@ -27,10 +27,13 @@ let loaded = null;
 // The scenario file, read once per build:
 //   meta        { fy (the base year: the HCRIS year, the year of the dollars), builtAt, changed (builtAt's day,
 //               YYYY-MM-DD, UTC), cmsReleased (newestCmsDate over the file's sources), methodsVersion, sources,
-//               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net) }
+//               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net), hcris (the
+//               file's `hcris`: the cost reports' settled share and whether the year is early) }
+//   pins        the manifest's entry for each of the file's sources, in the file's order (Methods lists them; the as-of
+//               line reads their dates)
 //   columns     the hospital rows' column names, in order (engine/js/medicaid/scenario.js rowToBase reads a row by them)
 //   hospitals   each hospital's row (an array in columns' order), by CCN, in the file's order
-//   states, national, groups, scenarios, params   as the file gives them (schemas/medicaid.schema.json)
+//   states, national, groups, scenarios, params, sensitivities   as the file gives them (schemas/medicaid.schema.json)
 export function loadMedicaid() {
   if (loaded) return loaded;
   const path = medicaidPath(newestYear('data/emitted/medicaid'));
@@ -42,7 +45,8 @@ export function loadMedicaid() {
   if (missing.length) throw new RangeError(`work requirement: ${path}: sources not in the manifest: ${missing.join(', ')}`);
   const ccn = file.columns.indexOf('ccn');
   loaded = {
-    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy },
+    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, hcris: file.hcris },
+    pins: file.sources.map((id) => manifest.get(id)),
     columns: file.columns,
     hospitals: new Map(file.hospitals.map((row) => [row[ccn], row])),
     states: file.states,
@@ -50,9 +54,30 @@ export function loadMedicaid() {
     groups: file.groups,
     scenarios: file.scenarios,
     params: file.params,
+    sensitivities: file.sensitivities,
   };
   return loaded;
 }
+
+// The newest hospital master, read once per build (loadAway and loadSourceGroups read it).
+let master = null;
+const loadMaster = () => (master ??= readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))));
+
+// The scenario file's sources by what they feed, for Methods' list: { scenario, hospitals, penalties }, each a list of
+// source ids in the file's order. hospitals: the hospital master's (the list of hospitals, their names and places);
+// penalties: the Medicare penalty estimates' (the dollar file's) not already among those; scenario: the rest (the state
+// inputs and the cost reports). data: loadMedicaid()'s result.
+export function loadSourceGroups(data) {
+  const hospitals = new Set(loadMaster().sources);
+  const penalties = new Set(readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars'))).sources);
+  return sourceGroups(data.meta.sources, hospitals, penalties);
+}
+// The grouping, pure: sources (the file's ids), hospitals and penalties (sets of ids).
+export const sourceGroups = (sources, hospitals, penalties) => ({
+  scenario: sources.filter((id) => !hospitals.has(id) && !penalties.has(id)),
+  hospitals: sources.filter((id) => hospitals.has(id)),
+  penalties: sources.filter((id) => !hospitals.has(id) && penalties.has(id)),
+});
 
 // The CCNs with a hospital page across the programs (/hospital/<ccn>/): the hub writes one for every hospital in the newest
 // dollar estimates (hub/model.js hubHospitals), so the work requirement links a hospital there only when it is in that
@@ -71,9 +96,9 @@ export function loadHubCcns() {
 export function loadAway(data, hubCcns = loadHubCcns()) {
   const left = [...hubCcns].filter((ccn) => !data.hospitals.has(ccn)).sort();
   if (!left.length) return [];
-  const master = new Map(readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))).hospitals.map((h) => [h.ccn, h]));
+  const byCcn = new Map(loadMaster().hospitals.map((h) => [h.ccn, h]));
   return left.map((ccn) => {
-    const h = master.get(ccn);
+    const h = byCcn.get(ccn);
     if (!h) throw new RangeError(`work requirement: CCN ${ccn} has a hub page but no hospital master record`);
     return [ccn, h.name, h.city ?? '', h.state, h.inactive ? 'inactive' : 'kind'];
   });

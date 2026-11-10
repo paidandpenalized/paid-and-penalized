@@ -14,7 +14,7 @@ import { hospitalStep } from '../program/hospital.js';
 import { howStep } from '../program/how.js';
 import { statesStep } from '../program/states.js';
 import { axisTop, hospitalRows } from '../program/strips.js';
-import { labelOf, searchBox, shellOf } from './parts.js';
+import { asOf, labelOf, searchBox, shellOf } from './parts.js';
 
 const TITLE = t('title');
 
@@ -35,6 +35,7 @@ ${statesStep({ data, rows, label: labelOf('states'), hubCcns, model: statesModel
 ${hospitalStep({ data, rows, label: labelOf('hospital'), hubCcns, chunks: hospChunks })}
 ${bothStep({ data, rows, label: labelOf('both'), hubCcns, model: bothModel })}
 </div>
+${asOf(data)}
 </article>`;
   return page({
     title: `${TITLE} · ${SITE.name}`,
