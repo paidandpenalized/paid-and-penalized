@@ -132,14 +132,19 @@ test('the stage\'s mode: off below 900px, a cut with reduced motion, the field o
 
 // A stand-in page for mountStage: the story's five steps (words, then a stage; step 1's stage holds the head), boxes at
 // fixed places, and media query lists the test can flip.
-function storyPage(t, { wide }) {
+// figH: each figure part's height (0: none, so nothing needs a fit); css: the CSS global (its supports() says whether
+// zoom works; none by default).
+function storyPage(t, { wide, figH = 0, css = undefined }) {
   const make = (cls, { id = '', children = [], box = [0, 0] } = {}) => {
     const node = {
       className: cls, id, children: [], parentElement: null, hidden: false, attrs: new Set(), dataset: {},
       style: { zoom: '', width: '', props: {}, setProperty(k, v) { this.props[k] = v; }, getPropertyValue(k) { return this.props[k] ?? ''; } },
       classList: { set: new Set(cls.split(' ')), toggle(c, on) { if (on) this.set.add(c); else this.set.delete(c); }, contains(c) { return this.set.has(c); } },
       box,
-      getBoundingClientRect() { return { top: node.box[0], bottom: node.box[1], height: node.box[1] - node.box[0], width: 600, left: 0, right: 600 }; },
+      getBoundingClientRect() {
+        const [top, bottom] = figH && node.className === 'wr-step__fig' ? [0, figH] : node.box;
+        return { top, bottom, height: bottom - top, width: 600, left: 0, right: 600 };
+      },
       append(...xs) {
         for (const x of xs) {
           if (x.parentElement) x.parentElement.children = x.parentElement.children.filter((c) => c !== x);
@@ -168,6 +173,8 @@ function storyPage(t, { wide }) {
     return node;
   };
   const head = make('wr-stage__head');
+  const slider = { on: {}, addEventListener(type, fn) { this.on[type] = fn; } };
+  head.querySelectorAll = (sel) => (sel === 'input[type="range"]' ? [slider] : []);
   const sections = STEPS.map((id, i) => make('step wr-step', {
     id,
     box: [100 + i * 1000, 1100 + i * 1000],
@@ -187,16 +194,20 @@ function storyPage(t, { wide }) {
     return [`${id}-h`, h];
   }));
   const on = {};
+  const winOn = {};
   const scrolls = [];
+  const fits = { n: 0 };
   standIn(t, {
     document: { createElement: () => make(''), documentElement: { style: Object.assign(make('').style, { props: { '--sticky-top': '140px' } }) }, activeElement: body, body, addEventListener(type, fn) { on[type] = fn; }, getElementById: (id) => headings.get(id) ?? null },
-    window: { innerHeight: 800, addEventListener() {}, scrollBy(o) { scrolls.push(o); } },
-    getComputedStyle: () => ({ top: '140px', paddingTop: '10px', rowGap: '8px' }),
+    window: { innerHeight: 800, addEventListener(type, fn) { winOn[type] = fn; }, scrollBy(o) { scrolls.push(o); } },
+    // Read once per figure in each fit.
+    getComputedStyle: () => { fits.n += 1; return { top: '140px', paddingTop: '10px', rowGap: '8px' }; },
+    CSS: css,
     requestAnimationFrame: (fn) => fn(),
   });
   const lists = { wide: media(wide), motion: media(true) };
   const story = mountStage(scrolly, lists);
-  return { scrolly, sections, head, lists, story, on, scrolls, headings, body };
+  return { scrolly, sections, head, lists, story, on, scrolls, headings, body, slider, winOn, fits };
 }
 
 test('the stage mounts only from 900px: the class, the pins and the step shown follow the width', (t) => {
@@ -364,4 +375,84 @@ test('drawingShare: the share of their width the drawings keep so the figure fit
   assert.equal(drawingShare(1000, 300), MIN_DRAWING);
   assert.equal(drawingShare(50, 0), 1, 'no drawing to narrow');
   assert.ok(MIN_DRAWING >= 0.5 && MIN_DRAWING < 1);
+});
+
+// ---------- steps 3 and 5's own assets ----------
+
+test('whenNear: a step\'s asset is fetched once it first comes near the screen, used once, and fetched again after a failure', async () => {
+  const { whenNear } = await import('../client/page.js');
+  const observers = [];
+  class IO {
+    constructor(fn, opts) { Object.assign(this, { fn, opts, on: true, watched: [] }); observers.push(this); }
+    observe(el) { this.watched.push(el); }
+    disconnect() { this.on = false; }
+  }
+  const outcomes = [false, true];
+  const gets = [];
+  const used = [];
+  const get = async (url) => {
+    gets.push(url);
+    if (!outcomes[gets.length - 1]) throw new Error('503');
+    return { url };
+  };
+  const section = {};
+  whenNear(section, '/assets/wr-states.test.json', (json) => used.push(json), { get, win: { IntersectionObserver: IO } });
+  const [io] = observers;
+  assert.deepEqual(io.watched, [section]);
+  assert.equal(io.opts.rootMargin, '100% 0px', 'a window\'s height ahead');
+  assert.equal(gets.length, 0, 'nothing fetched while the step is far off');
+  io.fn([{ isIntersecting: false }]);
+  assert.equal(gets.length, 0);
+  io.fn([{ isIntersecting: true }]);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([gets.length, used.length, io.on], [1, 0, true], 'a failed fetch keeps watching');
+  io.fn([{ isIntersecting: true }]);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([gets.length, used, io.on], [2, [{ url: '/assets/wr-states.test.json' }], false], 'used once, then no more watching');
+  // No IntersectionObserver: fetched at once.
+  const now = [];
+  await whenNear(section, '/x.json', (json) => now.push(json), { get: async () => 'ok', win: {} });
+  assert.deepEqual(now, ['ok']);
+});
+
+test('movedFrom: the keys whose values the page\'s state no longer has, for a step mounted late to redraw at once', async () => {
+  const { movedFrom } = await import('../client/state.js');
+  const totals = { a: 1 };
+  const server = { scenario: 'middle', use: 1, totals };
+  assert.deepEqual([...movedFrom({ scenario: 'middle', use: 1, totals, hospital: null }, server)], []);
+  assert.deepEqual([...movedFrom({ scenario: 'high', use: 1.1, totals: { a: 1 } }, server)], ['scenario', 'use', 'totals']);
+});
+
+// The figure parts of a mounted story page.
+const figParts = (sections) => sections.map((sec) => sec.children[1].children[0].children.at(-1));
+
+test('a figure too tall for the room is zoomed where CSS zoom works, and left at full size (not widened) where it doesn\'t', (t) => {
+  const zoomed = storyPage(t, { wide: true, figH: 1200, css: { supports: (p, v) => p === 'zoom' && v === '0.9' } });
+  zoomed.lists.wide.flip(true);
+  for (const fig of figParts(zoomed.sections)) assert.deepEqual([fig.style.zoom, fig.style.width], [String(MIN_ZOOM), `${600 / MIN_ZOOM}px`]);
+  for (const css of [undefined, { supports: () => false }]) {
+    const flat = storyPage(t, { wide: true, figH: 1200, css });
+    flat.lists.wide.flip(true);
+    for (const fig of figParts(flat.sections)) assert.deepEqual([fig.style.zoom, fig.style.width], ['', ''], String(css));
+  }
+});
+
+test('no fit while the head\'s slider is dragged; one when the drag ends', (t) => {
+  const p = storyPage(t, { wide: true, figH: 1200, css: { supports: () => true } });
+  p.lists.wide.flip(true);
+  const after = () => { const n = p.fits.n; p.fits.n = 0; return n; };
+  after();
+  p.winOn.resize();
+  assert.equal(after(), STEPS.length, 'a fit reads each figure once');
+  p.slider.on.pointerdown();
+  p.winOn.resize();
+  p.winOn.resize();
+  assert.equal(after(), 0, 'none during the drag');
+  p.winOn.pointerup();
+  assert.equal(after(), STEPS.length, 'one when it ends');
+  p.winOn.pointerup();
+  assert.equal(after(), 0, 'a pointer up with no drag asks for none');
+  p.slider.on.pointerdown();
+  p.winOn.pointercancel();
+  assert.equal(after(), 0, 'a drag that asked for nothing owes nothing');
 });

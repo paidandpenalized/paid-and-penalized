@@ -38,6 +38,10 @@ export const MIN_DRAWING = 0.6;
 // `drawn` px (a drawing keeps its shape, so its height goes with its width): never below MIN_DRAWING, never above 1.
 export const drawingShare = (over, drawn) => (over > 0 && drawn > 0 ? Math.max(MIN_DRAWING, Math.min(1, (drawn - over) / drawn)) : 1);
 
+// Whether the browser scales a box with CSS zoom. One that doesn't leaves every figure at full size: it is never laid out
+// wider for a zoom that won't come; where a figure is too tall its drawings still give way.
+export const canZoom = (css = globalThis.CSS) => Boolean(css?.supports?.('zoom', '0.9'));
+
 // 'off' (the stacked page), 'cut' (the stage, no motion) or 'field' (the stage and the field).
 export const stageMode = ({ wide, motion }) => (!wide ? 'off' : motion ? 'field' : 'cut');
 
@@ -73,6 +77,7 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
     return fig;
   });
   const lastWords = sections[sections.length - 1].querySelector(':scope > .wr-step__words');
+  const zooms = canZoom();
 
   let mode = 'off';
   let active = -1;
@@ -101,6 +106,7 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
     return h;
   };
   const scale = (p, z) => {
+    if (!zooms) return;
     p.fig.style.width = `${p.width / z}px`;
     p.fig.style.zoom = String(z);
   };
@@ -115,8 +121,10 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
       const own = pin.contains(head) ? headPx() + parseFloat(cs.rowGap || '0') : 0;
       const room = window.innerHeight - parseFloat(cs.top) - parseFloat(cs.paddingTop) - own - FOOT_PX;
       const svgs = [...fig.querySelectorAll('svg')].map((svg) => [svg, svg.getBoundingClientRect().width]).filter(([, w]) => w > 0);
-      return { fig, room, width: fig.getBoundingClientRect().width, svgs, z: Math.floor(zoomFor(heightOf(fig), room) * 1000) / 1000 };
-    }).filter((p) => p.z < 1);
+      const natural = heightOf(fig);
+      const z = zooms ? Math.floor(zoomFor(natural, room) * 1000) / 1000 : 1;
+      return { fig, room, width: fig.getBoundingClientRect().width, svgs, z, tall: natural > room };
+    }).filter((p) => p.z < 1 || p.tall);
     for (const p of plans) {
       for (const [svg, w] of p.svgs) svg.style.maxWidth = `${w}px`;
       scale(p, p.z);
@@ -132,9 +140,17 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
     }
     for (const p of plans) if (p.share < 1) for (const [svg, w] of p.give) svg.style.maxWidth = `${w * p.share}px`;
   };
-  // One fit a frame, however many things asked for it.
+  // One fit a frame, however many things asked for it; none while a slider in the head is dragged (owed: one asked for
+  // meanwhile), which redraws the figures every frame: the fit would undo and redo every zoom each frame. It runs once
+  // when the drag ends.
   let fitting = false;
+  let dragging = false;
+  let owed = false;
   const refit = () => {
+    if (dragging) {
+      owed = true;
+      return;
+    }
     if (fitting) return;
     fitting = true;
     requestAnimationFrame(() => {
@@ -246,6 +262,18 @@ export function mountStage(scrolly, { wide = window.matchMedia(STAGE_MEDIA), mot
     } else update();
   });
   window.addEventListener('resize', () => mode !== 'off' && refit(), { passive: true });
+  for (const slider of head?.querySelectorAll('input[type="range"]') ?? []) {
+    slider.addEventListener('pointerdown', () => { dragging = true; });
+  }
+  const dragEnd = () => {
+    if (!dragging) return;
+    dragging = false;
+    if (owed) {
+      owed = false;
+      refit();
+    }
+  };
+  for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, dragEnd, { capture: true });
   if ('ResizeObserver' in window) {
     // A figure's own height moves with the page's state (a hospital with no figure, a longer label), the head shows once
     // the script's data comes, and the named table opens under the last step.
