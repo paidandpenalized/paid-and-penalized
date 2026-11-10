@@ -51,8 +51,9 @@ let loaded = null;
 //   master        the hospital master's records by CCN, as every site reads them (pipeline/master.js masterByCcn)
 //   decided       the CCNs of the hospitals CMS scored and gave a Yes or No in the dollar estimates' year (a Set), from
 //                 the HACRP site's emitted file: the HACRP pages count only these, so the hub's words can too
-//   hrrp          { fy, hospitals: Map<ccn, record> } from the Readmissions site's newest emitted file: a hospital in it has a
-//                 Readmissions page, and its record's factor (paf) is the newer-factor note's
+//   hrrp          { fy, hospitals: Map<ccn, record>, national } from the Readmissions site's newest emitted file: a hospital
+//                 in it has a Readmissions page, and its record's factor (paf) is the newer-factor note's; national is its
+//                 history's row for each year CMS published ({ fy, n, nPen, ... }), which the Methods page's counts read
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 export function loadHub() {
   if (loaded) return loaded;
@@ -70,7 +71,7 @@ export function loadHub() {
     dollars,
     master: masterByCcn(masterFile),
     decided: decidedCcns(hacrp, dollars.fy),
-    hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])) },
+    hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };
   return loaded;

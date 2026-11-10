@@ -455,3 +455,11 @@ test('the line notes say which side of the percentile CMS\'s line sits: a year w
     assert.ok(!note.includes(`FY${lower.fy}`) && !note.includes(`FY${allCut.fy}`), note);
   }
 });
+
+test('the dollars section says how many cut hospitals in the totals had their Medicare agreement end by the year\'s end, and that they stay in', () => {
+  const said = (closedCut) => strip(renderMethods({ closedCut })).replace(/\s+/g, ' ');
+  const cut = DATA.dollars.headline.cut.toLocaleString('en-US');
+  assert.ok(said(12).includes(`12 of the ${cut} cut hospitals in the totals had their Medicare agreement end by the end of FY${DATA.fy}, as CMS’s Provider of Services file lists it. They stay in the totals`));
+  assert.ok(said(1).includes(`One of the ${cut} cut hospitals in the totals had its Medicare agreement end by the end of FY${DATA.fy}`));
+  assert.doesNotMatch(said(0), /Provider of Services file lists it/, 'none: no line');
+});

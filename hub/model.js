@@ -120,6 +120,26 @@ export function hacCounts(hospitals) {
   return c;
 }
 
+// The Readmissions counts the family Methods page sets side by side (hub/pages.js methods): CMS's file for the dollar
+// estimates' year (`file`: hospitals listed and cut, from the Readmissions history's national row), the hospitals here with an
+// estimate that file lists (`est`, and `estCut` with a cut), and CMS's newer file the Readmissions pages show (`newer`, null
+// when the pages show the estimates' own year). national: loadHub().hrrp.national; hrrpFy: the Readmissions pages' year. A
+// year the history doesn't hold stops the build.
+export function hrrpCounts(hospitals, { fy, hrrpFy, national }) {
+  const row = (year) => {
+    const r = national.find((x) => x.fy === year);
+    if (!r) throw new RangeError(`hub: the Readmissions history has no FY${year} row for the Methods page's counts`);
+    return { n: r.n, cut: r.nPen };
+  };
+  const listed = hospitals.filter((h) => h.est?.hrrpListed);
+  return {
+    file: row(fy),
+    est: listed.length,
+    estCut: listed.filter((h) => h.est.hrrp < 0).length,
+    newer: hrrpFy === fy ? null : row(hrrpFy),
+  };
+}
+
 // Each state's totals over its hospitals with an estimate, by postal code in order: `n` hospitals, their pay (`total`),
 // their `net` dollars, `share` = net / total, and `cutN` the hospitals whose net is a cut. Maryland (all-payer model,
 // no estimates) is `{ state: 'MD', notInPrograms: true, n }` with the count of its hospitals. A hospital that cannot be

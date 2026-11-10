@@ -21,7 +21,10 @@ test('loadHub reads the newest dollar file, the master, the Readmissions file an
   for (const row of hub.dollars.hospitals) assert.ok(hub.master.has(row.ccn));
   assert.ok(hub.hrrp.hospitals instanceof Map && hub.hrrp.hospitals.size > 0);
   assert.equal(typeof hub.hrrp.fy, 'number');
-  assert.deepEqual(Object.keys(hub.hrrp).sort(), ['fy', 'hospitals']);
+  assert.deepEqual(Object.keys(hub.hrrp).sort(), ['fy', 'hospitals', 'national']);
+  // The history's national rows, one per year, the newest the file's own year.
+  assert.ok(Array.isArray(hub.hrrp.national) && hub.hrrp.national.every((r) => Number.isInteger(r.fy) && Number.isInteger(r.n) && Number.isInteger(r.nPen)));
+  assert.equal(hub.hrrp.national.at(-1).fy, hub.hrrp.fy);
   for (const [ccn, h] of hub.hrrp.hospitals) assert.equal(h.id, ccn);
   assert.ok(hub.shapes instanceof Map && hub.shapes.has('DC'));
   // The decided CCNs (scored, with a Yes or No), from the HACRP site's file for the same year: every one is in the

@@ -4,7 +4,7 @@ import { median, peerKey } from '../../engine/js/peers.js';
 import { netShare, programDollars } from '../../engine/js/dollars/whatif.js';
 import { LISTED_PROGRAMS } from '../../web/site.js';
 import { checkHubInputs, loadHub } from '../data.js';
-import { EXAMPLE_CCN, exampleRule, hacCounts, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
+import { EXAMPLE_CCN, exampleRule, hacCounts, hrrpCounts, hubHospitals, shellFacts, stateTotals, storyFacts } from '../model.js';
 
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
@@ -250,4 +250,13 @@ test('a dollar file without one of the bands a net\'s likely range can take stop
     const dollars = { ...hub.dollars, bands: { ...hub.dollars.bands, measures: rest } };
     assert.throws(() => hubHospitals({ ...hub, dollars }), new RegExp(`no back-test ${m} band \\(bands\\.measures\\.${m}\\)`), m);
   }
+});
+
+test('hrrpCounts: CMS\'s Readmissions file for the estimates\' year beside the hospitals here it lists, and the newer file the Readmissions pages show', () => {
+  const est = (hrrp, hrrpListed = true) => ({ est: { hrrp, hrrpListed } });
+  const hospitals = [est(-10), est(0), est(-5), est(0, false), { est: null }];
+  const national = [{ fy: 2026, n: 5, nPen: 3 }, { fy: 2027, n: 4, nPen: 4 }];
+  assert.deepEqual(hrrpCounts(hospitals, { fy: 2026, hrrpFy: 2027, national }), { file: { n: 5, cut: 3 }, est: 3, estCut: 2, newer: { n: 4, cut: 4 } });
+  assert.equal(hrrpCounts(hospitals, { fy: 2026, hrrpFy: 2026, national }).newer, null, 'the same year: no newer file');
+  assert.throws(() => hrrpCounts(hospitals, { fy: 2025, hrrpFy: 2027, national }), /no FY2025 row/);
 });

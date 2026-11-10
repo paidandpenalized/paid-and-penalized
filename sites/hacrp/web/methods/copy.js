@@ -276,6 +276,9 @@ export const COPY = {
     text: "The totals on these pages add the {cut} of CMS's {yes} cut hospitals with a usable row in CMS's impact file; the other {missing} have none, so they have no estimate.",
     claim: null,
   },
+  // The cut hospitals in the totals whose Medicare agreement CMS lists as ended by the year's end (web/render/closed.js).
+  dollarsClosed: { text: "{n} of the {cut} cut hospitals in the totals had their Medicare agreement end by the end of FY{fy}, as CMS's Provider of Services file lists it. They stay in the totals, and each one's page says its cut is unlikely to have been collected in full.", claim: null },
+  dollarsClosedOne: { text: "One of the {cut} cut hospitals in the totals had its Medicare agreement end by the end of FY{fy}, as CMS's Provider of Services file lists it. It stays in the totals, and its page says its cut is unlikely to have been collected in full.", claim: null },
   dollarsMaryland: { text: "Maryland's hospitals are left out of every dollar total: they are exempt from the cut.", claim: 'HACRP-26' },
   // The payment order, drawn.
   orderBase: { text: 'Base payment', claim: null },

@@ -15,16 +15,19 @@ const WHEN = {
   during: { key: 'closedDuring', cut: 'closedTailDuringCut', bonus: 'closedTailDuringBonus' },
 };
 
+// Whether CMS lists a hospital's Medicare agreement as ended by the end of fiscal year fy (inactive: the master's, or null):
+// the hospitals that carry the note.
+export const endedBy = (inactive, fy) => Boolean(inactive) && (!inactive.date || inactive.date <= `${fy}-09-30`);
+
 // The note's copy key, the words for its placeholders and its tail's words apart ('' for none, null for a note with no
 // place for one), or null for a hospital whose agreement had not ended by the year's end. ccn: the hospital's; inactive:
 // the master's { date (YYYY-MM-DD or null), reason } or null; fy: the dollars' fiscal year (October 1 of the year before
 // to September 30); dollars: the page's estimated dollars it qualifies (negative a cut, positive a bonus, 0 or none for
 // neither).
 function noteOf({ ccn, inactive, fy, dollars = 0 }) {
-  if (!inactive) return null;
+  if (!endedBy(inactive, fy)) return null;
   const { date, reason } = inactive;
   if (!date) return { key: 'closedUndated', values: { ccn, reason }, tail: null };
-  if (date > `${fy}-09-30`) return null;
   const when = WHEN[date < `${fy - 1}-10-01` ? 'before' : 'during'];
   const tail = dollars < 0 ? when.cut : dollars > 0 ? when.bonus : null;
   return { key: when.key, values: { ccn, date: isoDate(date), reason, fy: String(fy) }, tail: tail ? fill(tail) : '' };
