@@ -1,16 +1,14 @@
-import { SITE } from '../../../web/site.js';
+import { CARE_COMPARE, SITE } from '../../../web/site.js';
+
+export { careCompareHref } from '../../../web/site.js';
 
 // Outside pages the HACRP site links to. Every URL here is checked live before launch; CMS's dataset page comes
 // from the pinned-input manifest (landingPage), not from this list.
 export const LINKS = Object.freeze({
   cmsProgram: 'https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/hospital-acquired-condition-reduction-program-hacrp',
-  careCompare: 'https://www.medicare.gov/care-compare/',
+  careCompare: CARE_COMPARE,
   leapfrog: 'https://www.hospitalsafetygrade.org/',
 });
-
-// A hospital's page on Care Compare, by its CCN (the record card's stars link to it), with the "/" Care Compare's own
-// address ends in (without it, Care Compare answers with a redirect to it).
-export const careCompareHref = (ccn) => `${LINKS.careCompare}details/hospital/${encodeURIComponent(ccn)}/`;
 
 // The program page: the site's own path.
 export const PROGRAM_PATH = SITE.sites.hacrp.path;

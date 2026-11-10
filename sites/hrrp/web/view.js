@@ -7,6 +7,7 @@ import { CAP_PCT, CONDS, MIN_DISCHARGES, PEERS, verdict } from '../../../engine/
 import { summarize } from '../../../engine/js/hrrp/summary.js';
 import { has } from '../../../engine/js/has.js';
 import { HRRP_WINDOW_DAYS } from '../../../web/programs.js';
+import { careCompareHref } from '../../../web/site.js';
 import { capitalize, dotList, isoMonth, listText, money, noun, ordinal, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { ACCURACY_BAND, GE_CUT_PCT, HISTORY_SIMULATED_FYS, MDH_ADDON_SHARE, NTAP_AMOUNT, NTAP_FY, PARHM_END, SMALL_HOSPITAL_BEDS, STARS_MAX, TEACH_MAJOR } from './constants.js';
 import { edition as editionOf } from './derive.js';
@@ -72,10 +73,6 @@ function typeText(h) {
   ].filter(Boolean);
   return parts.length ? dotList(parts) : t('typeNone');
 }
-
-// A hospital's page on Care Compare, by its CCN, encoded as HACRP's is (sites/hacrp/web/links.js; a site does not import the
-// other), with the "/" Care Compare's own address ends in (without it, Care Compare answers with a redirect to it).
-const careCompareHref = (ccn) => `https://www.medicare.gov/care-compare/details/hospital/${encodeURIComponent(ccn)}/`;
 
 function starsOf(h) {
   const href = careCompareHref(h.id);

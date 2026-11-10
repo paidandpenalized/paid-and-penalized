@@ -26,7 +26,7 @@
 // on the axis it needs, with no glide.
 import { netShare, pctOf } from '../../../engine/js/dollars/whatif.js';
 import { numberOrNaN } from '../../../engine/js/stats.js';
-import { siteAddress } from '../../../web/client/follow.js';
+import { replaceAddress, siteAddress } from '../../../web/client/follow.js';
 import { factor } from '../../../web/client/format.js';
 import { fillCopy, pillClass } from '../../../web/render/components.js';
 import { programById } from '../../../web/site.js';
@@ -349,6 +349,8 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
   const rs = result?.querySelector('.hh__rs');
   const match = $('[data-match]');
   const reset = $('[data-reset]');
+  // The note that the dollar rows, rounded, don't add to the net as printed.
+  const round = $('[data-sum-round]');
   if (match) match.hidden = false;
 
   // ---------- drawing ----------
@@ -390,7 +392,6 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
       if (sw?.firstChild?.nodeType === Node.TEXT_NODE) sw.firstChild.nodeValue = rowWord(fill, id, v);
     }
     // The rounding note, for the figures the rows now print.
-    const round = $('[data-sum-round]');
     if (round) round.hidden = addsAsPrinted(ROWS.map(({ id }) => now(id)).filter((v) => v !== null), out.net);
   }
 
@@ -476,15 +477,13 @@ export function mountWhatIf(page, { h, vbpMax, fy, still, domain, strips, swarm,
     const next = toHash(state, h);
     // Leave a fragment that isn't a scenario (#whatif, the skip link's #main) alone while there is nothing to write.
     if (next === location.hash || (next === '' && !isScenarioHash(location.hash))) return;
-    try {
-      history.replaceState(null, '', `${location.pathname}${location.search}${next}`);
-    } catch {
-      // Some browsers rate-limit replaceState; the next change writes the fragment again.
-    }
+    // A write a browser refuses (rate-limited) is written again with the next change.
+    replaceAddress(`${location.pathname}${location.search}${next}`);
   }
 
   // A factor field's refusal line shown (with the field marked invalid and described by it) or hidden.
   function refuse(r, refused) {
+    if (r.error.hidden === !refused) return;
     r.error.hidden = !refused;
     if (refused) {
       r.input.setAttribute('aria-invalid', 'true');

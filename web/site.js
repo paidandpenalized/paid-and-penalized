@@ -51,6 +51,11 @@ export const SITE = {
 export const siteOf = (path) => Object.values(SITE.sites).find((site) => path.startsWith(site.path)) ?? null;
 
 // A program by its id (SITE.programs), or null for an id the registry has not.
+// Care Compare, Medicare's hospital finder, and a hospital's page on it by its CCN (each site's record card links to it),
+// with the "/" Care Compare's own address ends in (without it, Care Compare answers with a redirect to it).
+export const CARE_COMPARE = 'https://www.medicare.gov/care-compare/';
+export const careCompareHref = (ccn) => `${CARE_COMPARE}details/hospital/${encodeURIComponent(ccn)}/`;
+
 export const programById = (id) => SITE.programs.find((p) => p.id === id) ?? null;
 
 // The program whose folder holds a page's path (SITE.programs), or null for the family's own pages (the hub's).

@@ -33,11 +33,13 @@ function noteOf({ ccn, inactive, fy, dollars = 0 }) {
   return { key: when.key, values: { ccn, date: isoDate(date), reason, fy: String(fy) }, tail: tail ? fill(tail) : '' };
 }
 
+// A note's words, its tail filled in where the note has a place for one.
+const textOf = (note) => fill(note.key, note.tail === null ? note.values : { ...note.values, tail: note.tail });
+
 // The note as text; '' for a hospital whose agreement had not ended by the year's end.
 export function closedNote(args) {
   const note = noteOf(args);
-  if (!note) return '';
-  return fill(note.key, note.tail === null ? note.values : { ...note.values, tail: note.tail });
+  return note ? textOf(note) : '';
 }
 
 // The note as markup, its tail (what the page's dollars likely were) in a span of class tailClass, so a page whose reader
@@ -45,6 +47,6 @@ export function closedNote(args) {
 export function closedNoteMarkup(args, tailClass) {
   const note = noteOf(args);
   if (!note) return '';
-  if (!note.tail) return html`${closedNote(args)}`;
+  if (!note.tail) return html`${textOf(note)}`;
   return fillAround((marks) => fill(note.key, { ...note.values, ...marks }), { tail: html`<span class="${tailClass}">${note.tail}</span>` });
 }

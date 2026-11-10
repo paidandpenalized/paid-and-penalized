@@ -118,13 +118,12 @@ export function nationalContext({ hospitals, master, model, dollars }) {
       const members = rows.filter((row) => row.keys[kind] === key);
       const sortedScores = members.map((row) => row.total).sort((a, b) => a - b);
       const dec = members.filter((row) => row.decided);
-      const decScores = dec.map((row) => row.total).sort((a, b) => a - b);
       groups.set(id, {
         kind, key,
         scored: members.length,
         decided: dec.length,
         yes: dec.filter((row) => row.decision === 'Yes').length,
-        median: decScores.length ? median(decScores) : null,
+        median: dec.length ? median(dec.map((row) => row.total)) : null,
         scores: sortedScores,
         // Columns over the shared edges: decided members only, as the program page's histogram counts.
         bins: countBins(dec.map((row) => row.total), edges),

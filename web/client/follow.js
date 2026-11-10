@@ -69,6 +69,17 @@ export function addressFollowing(href, ccn) {
   return `${head}${join}h=${ccn}${tail}`;
 }
 
+// Writes href (an address on this page's site) as the page's address in place, keeping the history entry's state. Some
+// browsers rate-limit replaceState: a refused write is dropped and the page goes on as it was, so a caller that writes
+// again on its next change catches up then.
+export function replaceAddress(href) {
+  try {
+    window.history.replaceState(window.history.state, '', href);
+  } catch {
+    // Rate-limited: nothing to undo.
+  }
+}
+
 // A page's own address as a link on this site: its path, query and fragment, with leading slashes folded into one. A path
 // that begins "//" would be read as another site's address, and the chip's stop link is made from this address.
 export const siteAddress = ({ pathname, search, hash }) => `/${pathname.replace(/^\/+/, '')}${search}${hash}`;

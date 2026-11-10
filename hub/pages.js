@@ -67,9 +67,15 @@ function closeSection(bands) {
   const hi = Math.max(0, ...rows.map((r) => r.p90));
   const at = (x) => ((x - lo) / (hi - lo)).toFixed(3);
   const middle = fillCopy(COPY, 'closeColMiddle', { share });
+  // A figure's row: its name, then each value with its column's name (data-label, which a phone shows), then its bar.
+  const row = (r) => {
+    const band = fillCopy(COPY, 'closeMiddle', { low: missText(r.p10), high: missText(r.p90) });
+    const bar = html`<span class="mt__bar" style="--lo:${at(r.p10)};--hi:${at(r.p90)};--at:${at(r.median)};--z:${at(0)}" aria-hidden="true"><span class="mt__z"></span></span>`;
+    return html`<tr><th scope="row">${r.name}</th><td class="num" data-label="${COPY.closeColN}">${count(r.n)}</td><td class="num" data-label="${COPY.closeColMedian}">${missText(r.median)}</td><td class="num" data-label="${middle}">${band}</td><td class="mt__barc">${bar}</td></tr>`;
+  };
   const table = printout(html`<table class="gb mt__close" aria-labelledby="${CLOSE_LEAD_ID}">
 <thead><tr><th scope="col">${COPY.closeColFigure}</th><th scope="col" class="num">${COPY.closeColN}</th><th scope="col" class="num">${COPY.closeColMedian}</th><th scope="col" class="num">${middle}</th><th scope="col" class="mt__barh"><span class="vh">${COPY.closeColBar}</span></th></tr></thead>
-<tbody>${rows.map((r) => html`<tr><th scope="row">${r.name}</th><td class="num" data-label="${COPY.closeColN}">${count(r.n)}</td><td class="num" data-label="${COPY.closeColMedian}">${missText(r.median)}</td><td class="num" data-label="${middle}">${fillCopy(COPY, 'closeMiddle', { low: missText(r.p10), high: missText(r.p90) })}</td><td class="mt__barc"><span class="mt__bar" style="--lo:${at(r.p10)};--hi:${at(r.p90)};--at:${at(r.median)};--z:${at(0)}" aria-hidden="true"><span class="mt__z"></span></span></td></tr>`)}</tbody>
+<tbody>${rows.map(row)}</tbody>
 </table>`);
   const lean = rows.every((r) => r.median > 0) ? ` ${COPY.closeLean}` : '';
   return html`<section class="block mt" id="close" aria-labelledby="close-h">

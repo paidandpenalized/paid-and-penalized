@@ -6,6 +6,7 @@
 // browser kept no copy of it, shows that hospital again.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
 import { mountFigure, mountScroll, unmountScroll } from '../../../web/client/figure.js';
+import { replaceAddress } from '../../../web/client/follow.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { CCN } from '../../../engine/js/ccn.js';
@@ -67,7 +68,7 @@ export function mountWorksheet() {
         for (const root of [holder, waterfall]) root?.querySelectorAll('.printout__scroll').forEach(mountScroll);
         const { pathname, search, hash } = window.location;
         const fragment = withPick(hash, ccn);
-        if (fragment !== hash) window.history.replaceState(window.history.state, '', pathname + search + fragment);
+        if (fragment !== hash) replaceAddress(pathname + search + fragment);
         if (!quiet) say(t('wsPickDone'));
       } else if (!quiet) {
         // A CCN the asset does not hold: the example stays, and the status says so (a stale failure message is replaced).

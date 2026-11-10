@@ -32,7 +32,7 @@ test('the record card holds the six numbered fields under its title bar', () => 
   assert.ok(text.includes('<a href="/hrrp/metro/99901/">See this metro</a>'));
   assert.ok(text.includes('23.5% of stays dual-eligible'));
   assert.ok(text.includes('<span class="stars" aria-hidden="true">★★★★<span class="stars__off">☆</span></span><span class="vh">4 of 5 stars</span>'));
-  assert.match(text, /<a href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990001" target="_blank" rel="noopener">Open on Medicare\.gov/);
+  assert.match(text, /<a href="https:\/\/www\.medicare\.gov\/care-compare\/details\/hospital\/990001\/" target="_blank" rel="noopener">Open on Medicare\.gov/);
   assert.ok(text.includes('0.9900') && text.includes('$100K') && text.includes('CMS, final'));
   assert.match(text, /<a class="est-tag" href="\/hrrp\/methods\/#methods-dollars"[^>]*>estimate<\/a>/);
 });

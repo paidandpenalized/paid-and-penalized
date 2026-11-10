@@ -32,7 +32,6 @@ export const COPY = typesetCopy({
   closeBelow: '{pct} below',
   closeEven: 'even',
   closeMiddle: '{low} to {high}',
-  closeExact: 'cost report',
   closeLean: "Every figure's middle hospital came out above its cost report, so the estimates lean high, and each page's likely range carries that lean: it sits mostly below the estimate.",
   closeRange: "A hospital page's likely range applies its group's misses to the hospital's estimate: the middle {share} of how far the estimates for similar hospitals ran from their cost reports, with hospitals grouped by bed count and by whether they are sole community or Medicare-dependent hospitals. It shows how far off an estimate like it has run, not where the true figure must fall.",
   closeNation: "Added up, the misses largely cancel: the cost reports of the hospitals CMS cut came to {ratio} of what the method estimated for their cut.",

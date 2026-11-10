@@ -156,10 +156,11 @@ export function stateTotals(hospitals) {
   for (const h of hospitals) {
     if (h.status === 'maryland' && h.state !== 'MD') throw new RangeError(`hub: ${h.ccn} has the Maryland status but is in ${h.state ? `"${h.state}"` : 'no state'}`);
     if (h.est && !h.state) throw new RangeError(`hub: ${h.ccn} has an estimate but no state`);
+    if (h.state === 'MD' && h.est) throw new RangeError(`hub: ${h.ccn} is in Maryland (not in these programs) but has an estimate`);
+    if (!countedOnMap(h)) continue;
     if (h.state === 'MD') {
-      if (h.est) throw new RangeError(`hub: ${h.ccn} is in Maryland (not in these programs) but has an estimate`);
       maryland += 1;
-    } else if (h.est) {
+    } else {
       const s = states.get(h.state) ?? { state: h.state, n: 0, total: 0, net: 0, cutN: 0 };
       s.n += 1;
       s.total += h.est.total;
