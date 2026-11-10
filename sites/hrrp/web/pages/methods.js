@@ -3,7 +3,7 @@
 // decimals), the peer-group medians table and the replication sentence, the dollar estimate's method with its modeled
 // totals, accuracy line and assumptions (the section every estimate tag links to, #methods-dollars), how to read a
 // penalty, places, history with the annual totals and their sources, feedback and privacy (the family's page holds the
-// privacy claims), accessibility, the pinned files and reuse; the sources list and the 14-term glossary sit beside them.
+// privacy claims), accessibility, the pinned files, what changed (one line for each methods version) and reuse; the sources list and the 14-term glossary sit beside them.
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { fillAround, fillCopy, printout } from '../../../../web/render/components.js';
 import { html } from '../../../../web/render/html.js';
@@ -86,6 +86,9 @@ ${printout(html`<table class="gb receipts" aria-labelledby="pins-h">
 <thead><tr><th scope="col">${t('pinColFile')}</th><th scope="col" class="num">${t('pinColBytes')}</th><th scope="col">${t('pinColHash')}</th><th scope="col">${t('pinColGot')}</th></tr></thead>
 <tbody>${view.pins.map((p) => html`<tr><th scope="row">${p.url ? externalLink(p.url, p.title) : p.title}</th><td class="num">${p.bytes}</td><td><code>${p.hash}</code></td><td>${p.retrieved}</td></tr>`)}</tbody>
 </table>`)}`)}
+${view.changes.length ? section('changed', t('changedHeading'), html`<p>${t('changedText')}</p>
+<ul>${view.changes.map((c) => html`<li><strong>${c.head}</strong> ${c.text}</li>`)}</ul>
+<p>${fillAround((marks) => fill('changedCorrections', marks), { log: html`<a href="${SITE.pages.corrections}">${t('changedLogLink')}</a>` })}</p>`) : ''}
 ${section('reuse', t('reuseHeading'), html`<p>${view.reuse}</p>
 <p>${fillAround((marks) => fill('reuseDictionary', marks), { link: html`<a href="${DICTIONARY_PAGE}">${t('reuseDictionaryLink')}</a>` })}</p>`)}
 </div>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { hasMethodsVersion, latestMethodsVersion } from '../methods-log.js';
+import { hasMethodsVersion, latestMethodsVersion, siteVersions } from '../methods-log.js';
 
 const LOG = '# Methods log\n\n## hacrp methods_version 1 (2026-10-20)\n- a\n\n## hacrp methods_version 3 (2026-12-01)\n\n## hvbp methods_version 2 (2026-11-01)\n';
 
@@ -15,4 +15,9 @@ test('hasMethodsVersion: an exact heading for that site and version', () => {
   assert.equal(hasMethodsVersion(LOG, 'hacrp', 1), true);
   assert.equal(hasMethodsVersion(LOG, 'hacrp', 2), false);
   assert.equal(hasMethodsVersion(LOG, 'hvbp', 1), false);
+});
+
+test('siteVersions: each of a site\'s headings with its date, in the log\'s order', () => {
+  assert.deepEqual(siteVersions(LOG, 'hacrp'), [{ version: 1, date: '2026-10-20' }, { version: 3, date: '2026-12-01' }]);
+  assert.deepEqual(siteVersions(LOG, 'tdr'), []);
 });

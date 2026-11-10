@@ -24,7 +24,7 @@ import { COPY as HOSPITAL, fill, t } from './hospital/copy.js';
 import { PROGRAM_PATH, httpsUrl, placePath } from './links.js';
 import { byId, countBy, factor4, fmtDate, fmtInt, fmtMoney, fmtPct, fmtShare, ratio } from './numbers.js';
 import { fill as placeFill, t as placeT } from './place/copy.js';
-import { fill as methodsFill, t as methodsT } from './methods/copy.js';
+import { COPY as METHODS_COPY, fill as methodsFill, t as methodsT } from './methods/copy.js';
 import { fill as programFill } from './program/copy.js';
 import { fyLabel } from './copy.js';
 import { worksheetRows } from './worksheet.js';
@@ -341,11 +341,33 @@ function checkPhrase(asOf) {
   return `${/^[AEIOU]/.test(month) ? 'an' : 'a'} ${month} ${year} check`;
 }
 
-// How the estimates compare with hospitals' cost reports; null when the data has no dollar check.
-function accuracyLine(dc, edition) {
+// The methods version a check of `asOf` (YYYY-MM-DD) was run on: the newest the log dates on or before it, else the first (a
+// check older than the log ran on the method version 1 carried over). log: [{ version, date }]; null when the log is empty.
+export function versionOn(log, asOf) {
+  if (!log.length) return null;
+  const by = log.filter((v) => v.date <= asOf).map((v) => v.version);
+  return by.length ? Math.max(...by) : Math.min(...log.map((v) => v.version));
+}
+
+// How the estimates compare with hospitals' cost reports; null when the data has no dollar check. When the check ran on an
+// older methods version than the newest in the log, a sentence says which.
+function accuracyLine(dc, edition, log = []) {
   if (dc?.within15 == null) return null;
   const small = dc.within15Small == null ? '' : methodsFill('accuracySmall', { share: fmtPct(dc.within15Small, 0), beds: String(SMALL_HOSPITAL_BEDS) });
-  return methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: fyLabel(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: fyLabel(edition.fy), small });
+  const line = methodsFill('accuracyText', { check: checkPhrase(dc.asOf), costFy: fyLabel(dc.costFy), share: fmtPct(dc.within15, 0), band: `${ACCURACY_BAND}%`, fy: fyLabel(edition.fy), small });
+  const ran = dc.asOf ? versionOn(log, dc.asOf) : null;
+  const now = log.length ? Math.max(...log.map((v) => v.version)) : null;
+  return ran !== null && ran < now ? `${line} ${methodsFill('accuracyVersion', { check: String(ran) })}` : line;
+}
+
+// Methods' What changed: each version in the log, newest first, as { head, text }; a version with no line in the copy stops
+// the build.
+export function changesOf(log) {
+  return [...log].sort((a, b) => b.version - a.version).map(({ version, date }) => {
+    const key = `changedV${version}`;
+    if (!(key in METHODS_COPY)) throw new RangeError(`HRRP Methods: docs/METHODS-LOG.md has hrrp methods_version ${version} but methods/copy.js has no ${key}`);
+    return { head: methodsFill('changedVersion', { n: String(version), date: fmtDate(date, 'long') }), text: methodsT(key) };
+  });
 }
 
 // The assumptions as [assumption, effect] rows of words: the fixed ones, then those the data calls for (the Medicare-dependent
@@ -466,7 +488,8 @@ export function methodsView(ctx) {
       text: methodsFill('dollarsTotals', { base: fmtMoney(totals.modelBase), pen: fmtMoney(totals.modelPen), cms: fmtMoney(totals.cmsEst), source: cmsLabel ?? methodsT('cmsSourceNone') }),
       url: httpsUrl(totals.cmsSrc?.url),
     },
-    accuracy: accuracyLine(meta.dollarCheck, edition),
+    accuracy: accuracyLine(meta.dollarCheck, edition, ctx.methodsLog ?? []),
+    changes: changesOf(ctx.methodsLog ?? []),
     assumptions: assumptionRows(ctx),
     figures: figureLimits(ctx),
     read: {
