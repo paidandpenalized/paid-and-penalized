@@ -175,6 +175,26 @@ describe('Worksheet R hospital swap', () => {
     assert.ok(records.some(([removed, added]) => removed > 0 && added === 0), `the old words are cleared on their own first: ${JSON.stringify(records)}`);
   }));
 
+  it('the pick is kept in the page\'s URL, so a reload and Back after a reload show the same hospital', () => withPage(tabs, { path: PATH, watched: true }, async (page, { seen }) => {
+    const input = page.locator('#ws-pick-q');
+    await input.scrollIntoViewIfNeeded();
+    const h = swapSamples((await page.locator('.wsr-holder .wsr__id a').getAttribute('href')).split('/').filter(Boolean).pop())[0];
+    await listsHospital(input, page.locator('#ws-pick-list').getByRole('option'), h);
+    await input.press('Enter');
+    const shows = (p) => eventually(async () => (await p.locator('.wsr-holder .wsr__id a').getAttribute('href')) === pathOf(h), 'the sheet does not show the picked hospital');
+    await shows(page);
+    assert.equal(new URL(page.url()).hash, `#ws=${h.id}`, 'the pick is in the fragment');
+    await page.reload();
+    await shows(page);
+    assert.equal(await page.locator('.wsr-pick__status[role="status"]').innerText(), '', 'a restored pick is not announced');
+    // Away and Back: the page may come from the browser's cache or load again; either way it shows the pick.
+    await page.goto(new URL(METHODS_PATH, page.url()).href);
+    await page.goBack();
+    await shows(page);
+    assert.equal(new URL(page.url()).hash, `#ws=${h.id}`);
+    await assertQuiet(seen, 'worksheet pick kept');
+  }));
+
   it('a CCN the asset does not hold leaves the example in place', () => withPage(tabs, { path: PATH }, async (page) => {
     const input = page.locator('#ws-pick-q');
     await input.scrollIntoViewIfNeeded();
