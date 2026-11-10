@@ -58,8 +58,10 @@ export const PROGRAM_BUDGETS = {
   hacrp: HACRP_BUDGETS,
   // Readmissions starts at HACRP's budgets; any raise is a decision to record here, as above.
   hrrp: { ...HACRP_BUDGETS },
-  // The work requirement (a program page and Methods only) starts at HACRP's budgets for those two.
-  'work-requirement': { program: HACRP_BUDGETS.program, methods: HACRP_BUDGETS.methods },
+  // The work requirement (a program page and Methods only), set 2026-11-10 by the rule above from the pages as built then
+  // (steps 1 and 2 of five): the program page 61.2 KB + 15% (70.4 KB) and Methods 24.4 KB + 15% (28.1 KB), rounded up.
+  // Steps 3 to 5 will weigh more: each raises the program budget as it lands, a decision recorded here.
+  'work-requirement': { program: 80 * KB, methods: 30 * KB },
 };
 // The budget in bytes of a page of this type (and, for a program-keyed type, this program).
 export function budgetOf({ type, program }, budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS) {
