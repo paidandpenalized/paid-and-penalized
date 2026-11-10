@@ -109,7 +109,7 @@ export const COPY = {
   // Step 2, how the scenario works (web/program/how.js): the words column.
   howBig: { text: 'Revenue lost is not income lost', claim: null },
   howLede: {
-    text: 'Four links take the Medicaid revenue on each hospital’s cost report to its operating income, on one dollar scale. In the scenario most people who lose coverage still come for care, so income falls by less than revenue, and hospitals give more care unpaid.',
+    text: 'Four links take the Medicaid revenue on each hospital’s cost report to its operating income, on one dollar scale. In the scenario most of their care is still given, so income falls by less than revenue, and hospitals give more care unpaid.',
     claim: null,
   },
   casesHead: { text: 'Urban Institute’s three cases', claim: null },
@@ -146,6 +146,10 @@ export const COPY = {
   link4NotGiven: { text: '→ {v} cost of care not given', claim: null },
   link4Note: { text: 'a year · low {low}, high {high}', claim: null },
   link4Less: { text: '← less income', claim: null },
+  // Link 4's steps named in a key under the result, where they don't fit beside zero (the phone's drawing).
+  link4KeyLost: { text: 'revenue lost', claim: null },
+  link4KeyOther: { text: 'other coverage pays', claim: null },
+  link4KeyNotGiven: { text: 'cost of care not given', claim: null },
   link1Alt: { text: 'Expansion revenue at risk: {v}, the same in every case.', claim: null },
   link2Alt: { text: 'Revenue lost in the {scenario} case: {v}, {share} of the revenue at risk; low {low}, high {high}.', claim: null },
   link3Alt: { text: 'The lost patients’ care at cost, {v}: {still} still given unpaid, {notGiven} not given, {other} paid by other coverage.', claim: null },
@@ -187,7 +191,7 @@ export const COPY = {
   ws8: { text: 'Cost of the care those patients got', claim: null },
   ws8Note: { text: 'Lines {a} × {b}.', claim: null },
   ws9: { text: 'Become uninsured', claim: null },
-  ws9Note: { text: 'The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: null },
+  ws9Note: { text: 'A modeling assumption. The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: null },
   ws10: { text: 'Care they still use, uninsured', claim: null },
   ws10Note: { text: 'The rest is care not given, and its cost goes away: {v}. A modeling assumption, not a measured effect.', claim: null },
   wsSplit: { text: 'Line {n}, split three ways', claim: null },

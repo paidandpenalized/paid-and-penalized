@@ -15,10 +15,11 @@ import { declineRange, serverTotals } from './model.js';
 import { scenWord } from './ranges.js';
 
 // What the chain and the worksheets read besides the totals: the cost reports' year, the two fixed shares of the care
-// (params), and each case's range of state declines. data: loadMedicaid()'s result.
+// and the what-if's top use rate (params: the drawings keep room for the largest amounts it allows), and each case's
+// range of state declines. data: loadMedicaid()'s result.
 export const howModel = (data) => ({
   fy: data.meta.fy,
-  params: { uninsured_share: data.params.uninsured_share, care_still_used: data.params.care_still_used },
+  params: { uninsured_share: data.params.uninsured_share, care_still_used: data.params.care_still_used, use_max: data.params.use_max },
   declines: declineRange(data.states),
 });
 

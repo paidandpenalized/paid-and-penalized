@@ -7,8 +7,37 @@ import { decodeBase, totalsAt } from '../web/program/model.js';
 import { pct } from '../../../web/render/format.js';
 import { t } from '../web/copy.js';
 
-// The totals at a use rate: server's (the file's) at the default, else the engine's over base (decodeBase's).
-export const totalsFor = (use, { server, base }) => (use === 1 ? server : totalsAt(base, use));
+// The use rate's arithmetic, apart from the page: setUse(use) finds the totals (server's, the file's, at the default;
+// else the engine's over the asset fetchBase() gives, kept once computed) and hands them to apply(use, totals), unless a
+// newer move came first; when the asset fails, fail() is called (for the newest move only) and the next move fetches
+// again. load() starts the fetch early. fetchBase: () => a promise of the asset's JSON.
+export function useControl({ server, fetchBase, apply, fail }) {
+  const cache = new Map();
+  let base = null;
+  let latest = 0;
+  const load = () => {
+    base ??= Promise.resolve().then(fetchBase).then(decodeBase).catch((err) => {
+      base = null;
+      throw err;
+    });
+    return base;
+  };
+  async function setUse(use) {
+    const ticket = ++latest;
+    let totals = use === 1 ? server : cache.get(use);
+    if (!totals) {
+      try {
+        totals = totalsAt(await load(), use);
+      } catch {
+        if (ticket === latest) fail();
+        return;
+      }
+      cache.set(use, totals);
+    }
+    if (ticket === latest) apply(use, totals);
+  }
+  return { setUse, load };
+}
 
 // head: the stage head; store: the page's state; server: the file's totals; baseUrl: the what-if's asset.
 export function mountWhatif(head, { store, server, baseUrl }) {
@@ -18,56 +47,46 @@ export function mountWhatif(head, { store, server, baseUrl }) {
   const reset = head.querySelector('.wr-use__reset');
   const note = head.querySelector('.wr-use__note');
   const hint = note.textContent;
-  const cache = new Map([[1, server]]);
-  let base = null;
-  let latest = 0;
+  const describedBy = slider.getAttribute('aria-describedby');
 
-  const loadBase = () => {
-    base ??= fetch(baseUrl).then((res) => {
-      if (!res.ok) throw new Error(String(res.status));
-      return res.json();
-    }).then(decodeBase).catch((err) => {
-      base = null;
-      throw err;
-    });
-    return base;
+  const showNote = (text, shown) => {
+    note.textContent = text;
+    note.hidden = !shown;
+    // The slider is described by the note only while the note shows.
+    if (shown) slider.setAttribute('aria-describedby', describedBy);
+    else slider.removeAttribute('aria-describedby');
   };
+  // Off the default, the way back takes the note's place (the tick on the track still marks the default).
   const showUse = (use) => {
     const text = pct(use, 0);
     slider.value = String(Math.round(use * 100));
     slider.setAttribute('aria-valuetext', text);
     out.textContent = text;
-    // Off the default, the way back takes the note's place (the tick on the track still marks the default).
     reset.hidden = use === 1;
-    note.hidden = use !== 1;
+    showNote(hint, use === 1);
   };
-
-  async function setUse(use) {
-    const ticket = ++latest;
+  const control = useControl({
+    server,
+    fetchBase: async () => {
+      const res = await fetch(baseUrl);
+      if (!res.ok) throw new Error(String(res.status));
+      return res.json();
+    },
+    apply: (use, totals) => store.set({ use, totals }),
+    fail: () => {
+      showUse(store.get().use);
+      showNote(t('useFailed'), true);
+    },
+  });
+  const setUse = (use) => {
     showUse(use);
-    let totals = cache.get(use);
-    if (!totals) {
-      try {
-        totals = totalsFor(use, { server, base: await loadBase() });
-      } catch {
-        if (ticket === latest) {
-          showUse(store.get().use);
-          note.textContent = t('useFailed');
-          note.hidden = false;
-        }
-        return;
-      }
-      cache.set(use, totals);
-    }
-    if (ticket !== latest) return;
-    note.textContent = hint;
-    store.set({ use, totals });
-  }
+    control.setUse(use);
+  };
 
   for (const radio of radios) radio.addEventListener('change', () => radio.checked && store.set({ scenario: radio.value }));
   slider.addEventListener('input', () => setUse(Number(slider.value) / 100));
   // The asset starts loading as the reader reaches for the slider, so its first move redraws at once.
-  for (const type of ['pointerenter', 'focus']) slider.addEventListener(type, () => loadBase().catch(() => {}), { once: true });
+  for (const type of ['pointerenter', 'focus']) slider.addEventListener(type, () => control.load().catch(() => {}), { once: true });
   reset.addEventListener('click', () => {
     setUse(1);
     slider.focus();
