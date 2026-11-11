@@ -63,8 +63,8 @@ function withOwnMiddle(rec, results, use) {
 // ---------- why a hospital has no loss to draw ----------
 
 // Why a hospital has no figure, or null when it has a loss to draw (drawn: drawnShares gave its shares): away_<why> (not
-// in the file: away is 'inactive' or 'kind'), its class (outside a scenario state, or no cost report), or, in a scenario
-// state, what its cost report shows: a filing error screened out (negative, exceeds), no Medicaid revenue, no patient
+// in the file: away is 'inactive', 'kind' or 'newer'), its class (outside a scenario state, or no cost report), or, in a
+// scenario state, what its cost report shows: a filing error screened out (negative, exceeds), no Medicaid revenue, no patient
 // revenue, no expansion share (no_share), or a loss too small to draw (tiny: under TINY_SHARE of patient revenue in the
 // low case, which step 1's 7-place shares round to nothing). Anything else step 1 leaves out has no reason to give, so
 // it throws at the build and in tests; the browser passes lenient and gets 'unforeseen', a generic reason, rather than a

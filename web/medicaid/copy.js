@@ -18,6 +18,7 @@ export const COPY = {
   // The reason's sentence, by reason: its class, or what its cost report shows.
   why_away_inactive: { text: 'CMS’s records list this hospital as closed, merged or changed in status. The scenario covers active acute-care and critical access hospitals, so it has no row here.', claim: null },
   why_away_kind: { text: 'The scenario covers active acute-care and critical access hospitals, and CMS’s records list this one as neither, so it has no row here.', claim: null },
+  why_away_newer: { text: 'The scenario was built from an earlier list of CMS’s hospitals, which doesn’t include this one, so it has no row here.', claim: null },
   why_not_expansion: { text: '{state} did not expand Medicaid, and Urban projects the decline in expansion enrollment only, so its hospitals have no scenario.', claim: 'WR-03' },
   why_no_viii_group: { text: '{state}’s Medicaid spending reports show no expansion group, so the method has no expansion share to apply, and its hospitals have no scenario.', claim: null },
   why_all_payer: { text: 'Maryland’s hospitals are paid under an all-payer model, which this scenario does not model.', claim: 'WR-10' },

@@ -93,13 +93,12 @@ function bar(shares, top) {
 
 const link = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
 
-// The band for a hospital (h: the hub's), ending its line, or '' with no scenario file (medicaid null) or no row for it in
-// the file (the page is then exactly as it was before the band). medicaid: loadHub().medicaid ({ fy, columns, hospitals,
-// states }); net: whether the page shows a Medicare net above (its note says
-// the band is never part of it). The shares print as the work-requirement page prints them (web/medicaid/format.js); the
+// The band for a hospital (h: the hub's), ending its line, or '' with no row for it in the scenario file (the page is then
+// exactly as it was before the band). medicaid: loadHub().medicaid ({ fy, columns, hospitals, states }), required: loadHub
+// always reads the scenario file (the shell's facts need it too); net: whether the page shows a Medicare net above (its
+// note says the band is never part of it). The shares print as the work-requirement page prints them (web/medicaid/format.js); the
 // headline is their range, or, too small to print as two numbers, its bound.
 export function medicaidBand(h, medicaid, { net }) {
-  if (!medicaid) return '';
   const { byCcn, top } = fileOf(medicaid);
   const one = byCcn.get(h.ccn);
   if (!one) return '';

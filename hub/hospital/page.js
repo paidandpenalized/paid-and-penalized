@@ -318,8 +318,9 @@ ${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
 // peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital master
 // record (the Type field's ownership and urban or rural); assets: the build's (the fiscal year is the shell's); robots:
 // the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note);
-// medicaid: loadHub().medicaid, for the Medicaid band (none: no band).
-export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null, medicaid = null }) {
+// medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario file; a hospital with no
+// row in it gets no band).
+export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null, medicaid }) {
   const fy = String(assets.shell.fy);
   const place = { name: h.name, place: placeText(h) };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).

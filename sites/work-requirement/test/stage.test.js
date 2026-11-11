@@ -379,7 +379,7 @@ test('drawingShare: the share of their width the drawings keep so the figure fit
 
 // ---------- steps 3 and 5's own assets ----------
 
-test('whenNear: a step\'s asset is fetched once it first comes near the screen, used once, and fetched again after a failure', async () => {
+test('whenNear: a step\'s asset is fetched once it first comes near the screen, used once, and fetched again after a failure, with or without an IntersectionObserver', async () => {
   const { whenNear } = await import('../client/page.js');
   const observers = [];
   class IO {
@@ -409,10 +409,33 @@ test('whenNear: a step\'s asset is fetched once it first comes near the screen, 
   io.fn([{ isIntersecting: true }]);
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([gets.length, used, io.on], [2, [{ url: '/assets/wr-states.test.json' }], false], 'used once, then no more watching');
-  // No IntersectionObserver: fetched at once.
+  // No IntersectionObserver: fetched at once, and a failure is tried again on the next scroll, until one succeeds; then
+  // the page stops listening.
+  const listeners = new Map();
+  const win = {
+    addEventListener: (type, fn, opts) => listeners.set(fn, { type, opts }),
+    removeEventListener: (type, fn) => listeners.delete(fn),
+  };
+  const scroll = () => [...listeners].filter(([, l]) => l.type === 'scroll').forEach(([fn]) => fn());
+  const tries = [false, false, true];
+  let n = 0;
   const now = [];
-  await whenNear(section, '/x.json', (json) => now.push(json), { get: async () => 'ok', win: {} });
-  assert.deepEqual(now, ['ok']);
+  await whenNear(section, '/x.json', (json) => now.push(json), { win, get: async () => { if (!tries[n++]) throw new Error('503'); return 'ok'; } });
+  assert.deepEqual([n, now, listeners.size], [1, [], 1], 'a failed first fetch keeps a scroll listener');
+  assert.equal([...listeners.values()][0].opts.passive, true);
+  scroll();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([n, now, listeners.size], [2, [], 1], 'a failed retry keeps listening');
+  scroll();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([n, now, listeners.size], [3, ['ok'], 0], 'used once, then no more listening');
+  scroll();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(n, 3, 'no fetch after the success');
+  // A first fetch that succeeds uses its asset at once and leaves no listener.
+  const once = [];
+  await whenNear(section, '/y.json', (json) => once.push(json), { win, get: async () => 'ok' });
+  assert.deepEqual([once, listeners.size], [['ok'], 0]);
 });
 
 test('movedFrom: the keys whose values the page\'s state no longer has, for a step mounted late to redraw at once', async () => {

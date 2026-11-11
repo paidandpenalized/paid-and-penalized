@@ -30,7 +30,8 @@ let loaded = null;
 //               YYYY-MM-DD, UTC), cmsReleased (newestCmsDate over the file's sources), methodsVersion, sources,
 //               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net),
 //               penaltiesChanged (the day that year's dollar file was built: YYYY-MM-DD, UTC),
-//               hcris (the file's `hcris`: the cost reports' settled share and whether the year is early) }
+//               hcris (the file's `hcris`: the cost reports' settled share, whether the year is early, and master_fy and
+//               dollars_fy, the years of the hospital master and the dollar file it was built from) }
 //   pins        the manifest's entry for each of the file's sources, in the file's order (Methods lists them; the as-of
 //               line reads their dates)
 //   columns     the hospital rows' column names, in order (engine/js/medicaid/scenario.js rowToBase reads a row by them)
@@ -65,24 +66,31 @@ export function loadMedicaid() {
 }
 
 // A year's dollar file (the Medicare penalty estimates; the newest without fy), each read once per build (loadMedicaid
-// reads its penalty year's for the as-of line; loadSourceGroups and loadHubCcns read the newest).
+// and loadSourceGroups read the scenario file's penalty year's; loadHubCcns reads the newest, the one the hub writes its
+// pages from).
 const dollarFiles = new Map();
 function loadDollars(fy = newestYear('data/emitted/dollars')) {
   if (!dollarFiles.has(fy)) dollarFiles.set(fy, readJson(REPO_ROOT + dollarsPath(fy)));
   return dollarFiles.get(fy);
 }
 
-// The newest hospital master, read once per build (loadAway and loadSourceGroups read it).
-let master = null;
-const loadMaster = () => (master ??= readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))));
+// A year's hospital master (the newest without fy), each read once per build: loadSourceGroups and loadAway read the one
+// the scenario file was built from (meta.hcris.master_fy); loadAway reads the newest for the names of hospitals listed
+// after it.
+const masters = new Map();
+function loadMaster(fy = newestYear('data/emitted/hospital')) {
+  if (!masters.has(fy)) masters.set(fy, readJson(REPO_ROOT + masterPath(fy)));
+  return masters.get(fy);
+}
 
 // The scenario file's sources by what they feed, for Methods' list: { scenario, hospitals, penalties }, each a list of
 // source ids in the file's order. hospitals: the hospital master's (the list of hospitals, their names and places);
 // penalties: the Medicare penalty estimates' (the dollar file's) not already among those; scenario: the rest (the state
-// inputs and the cost reports). data: loadMedicaid()'s result.
+// inputs and the cost reports). The master and the dollar file are the years the scenario file was built from. data:
+// loadMedicaid()'s result.
 export function loadSourceGroups(data) {
-  const hospitals = new Set(loadMaster().sources);
-  const penalties = new Set(loadDollars().sources);
+  const hospitals = new Set(loadMaster(data.meta.hcris.master_fy).sources);
+  const penalties = new Set(loadDollars(data.meta.penaltyFy).sources);
   return sourceGroups(data.meta.sources, hospitals, penalties);
 }
 // The grouping, pure: sources (the file's ids), hospitals and penalties (sets of ids).
@@ -101,18 +109,30 @@ export function loadHubCcns() {
   return hub;
 }
 
+// The facility kinds the scenario file covers (pipeline/py/pp_pipeline/medicaid/build.py KINDS).
+const SCENARIO_KINDS = new Set(['acute', 'critical_access']);
+
 // The hospitals with a page across the programs that the scenario file leaves out (it holds every active acute-care and
-// critical access hospital in the master; the hub's pages also cover hospitals CMS has since listed as closed or changed),
-// so a ?h= that follows one of them names it on the program page with the reason: [ccn, name, city, state, why], why
-// 'inactive' (the master gives it an inactive date) or 'kind' (neither acute care nor critical access), in CCN order.
-// data: loadMedicaid()'s result; hubCcns: loadHubCcns()'s.
-export function loadAway(data, hubCcns = loadHubCcns()) {
+// critical access hospital in the master it was built from; the hub's pages, from the newest dollar file, may also cover
+// hospitals CMS has since listed as closed or changed, or listed after that master), so a ?h= that follows one of them
+// names it on the program page with the reason: [ccn, name, city, state, why], in CCN order. why, read from the master
+// the file was built from (built): 'newer' (that master doesn't list it: a newer one does), 'inactive' (it gives an
+// inactive date) or 'kind' (neither acute care nor critical access). A hospital that master lists as active acute or
+// critical access belongs in the file, so one missing throws. The name and place are the newest master's (newest), else
+// built's. data: loadMedicaid()'s result; hubCcns: loadHubCcns()'s; masters: { built, newest }, master files (the
+// default: the file's year's and the newest).
+export function loadAway(data, hubCcns = loadHubCcns(), { built = loadMaster(data.meta.hcris.master_fy), newest = loadMaster() } = {}) {
   const left = [...hubCcns].filter((ccn) => !data.hospitals.has(ccn)).sort();
   if (!left.length) return [];
-  const byCcn = new Map(loadMaster().hospitals.map((h) => [h.ccn, h]));
+  const byCcn = (master) => new Map(master.hospitals.map((h) => [h.ccn, h]));
+  const then = byCcn(built);
+  const now = newest === built ? then : byCcn(newest);
   return left.map((ccn) => {
-    const h = byCcn.get(ccn);
+    const old = then.get(ccn);
+    const h = now.get(ccn) ?? old;
     if (!h) throw new RangeError(`work requirement: CCN ${ccn} has a hub page but no hospital master record`);
-    return [ccn, h.name, h.city ?? '', h.state, h.inactive ? 'inactive' : 'kind'];
+    const why = !old ? 'newer' : old.inactive ? 'inactive' : !SCENARIO_KINDS.has(old.kind) ? 'kind' : null;
+    if (!why) throw new RangeError(`work requirement: CCN ${ccn} is an active ${old.kind} hospital in the FY${data.meta.hcris.master_fy} master the scenario file was built from, but the file has no row for it`);
+    return [ccn, h.name, h.city ?? '', h.state, why];
   });
 }

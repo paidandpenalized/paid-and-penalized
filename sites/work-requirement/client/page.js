@@ -149,9 +149,10 @@ const getJson = async (url) => {
   return res.json();
 };
 
-// A step's own asset (url), fetched once its section first comes within a window's height of the screen (at once where
-// there's no IntersectionObserver), and handed to use(json). A fetch that fails leaves the step as the server drew it
-// and is tried again the next time the step comes near.
+// A step's own asset (url), fetched once its section first comes within a window's height of the screen, and handed to
+// use(json). A fetch that fails leaves the step as the server drew it and is tried again the next time the step comes
+// near. Where there's no IntersectionObserver it is fetched at once, and a failure is tried again on the reader's next
+// scroll (one try at a time), until one succeeds. Returns the first try's promise there (undefined with an observer).
 export function whenNear(section, url, use, { get = getJson, win = window } = {}) {
   let busy = false;
   const go = async (done) => {
@@ -164,7 +165,11 @@ export function whenNear(section, url, use, { get = getJson, win = window } = {}
       busy = false;
     }
   };
-  if (!('IntersectionObserver' in win)) return go(() => {});
+  if (!('IntersectionObserver' in win)) {
+    const again = () => go(() => win.removeEventListener('scroll', again));
+    win.addEventListener('scroll', again, { passive: true });
+    return again();
+  }
   const io = new win.IntersectionObserver((entries) => {
     if (entries.some((e) => e.isIntersecting)) go(() => io.disconnect());
   }, { rootMargin: '100% 0px' });

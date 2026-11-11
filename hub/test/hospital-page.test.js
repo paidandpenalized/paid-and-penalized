@@ -37,7 +37,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp });
+const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: HUB.medicaid });
 // The markup of one element, from its opening tag's attribute to its closing tag (the first after it).
 const block = (text, attr, close) => {
   const at = text.indexOf(attr);
@@ -414,6 +414,8 @@ test('a net one program makes alone shows that program\'s likely range: the HAC 
 // ---------- the Medicaid work-requirement band (hospital/medicaid.js) ----------
 const WR = HUB.medicaid;
 const renderWr = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: WR });
+// The page with the scenario file holding no row for h (medicaidBand's no-band case).
+const renderNoRow = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: { ...WR, hospitals: new Map([...WR.hospitals].filter(([ccn]) => ccn !== h.ccn)) } });
 const wrBand = (page) => /<section class="hh__wb"[\s\S]*?<\/section>\n/.exec(page)?.[0] ?? null;
 const wrOf = (h) => hospitalScenario(WR, h.ccn);
 const wrCol = Object.fromEntries(WR.columns.map((name, i) => [name, i]));
@@ -428,7 +430,7 @@ test('the Medicaid band sits after the what-if, apart from the net: taking it ou
     const page = renderWr(h);
     const band = wrBand(page);
     assert.ok(band, 'the band');
-    assert.equal(page.replace(band, ''), render(h), 'everything else, the net and its rows included, is the page without the band');
+    assert.equal(page.replace(band, ''), renderNoRow(h), 'everything else, the net and its rows included, is the page without the band');
     assert.ok(page.indexOf(band) > page.indexOf('<section class="hh__progs" id="whatif"'), 'after the what-if');
     assert.ok(page.indexOf(band) > page.indexOf('</section>', page.indexOf('<section class="hh__progs"')), 'outside it');
     assert.ok(page.indexOf(band) < page.indexOf('data-peer-table'), 'before the peer table');

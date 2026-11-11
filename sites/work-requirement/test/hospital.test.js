@@ -5,6 +5,7 @@
 // DEFAULT_SKIP_STATE. Fixtures pick hospitals by property, never by name.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { REPO_ROOT, masterPath, readJson } from '../../../pipeline/files.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { money } from '../../../web/render/format.js';
@@ -153,8 +154,10 @@ test('every hospital in the file, every case, the default and the extreme use ra
       }
     }
   }
-  // away_kind and no_share are guards: no hospital in today's file has either.
-  for (const reason of [null, ...REASONS.filter((x) => x !== 'away_kind' && x !== 'no_share')]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
+  // away_kind, away_newer and no_share are guards: no hospital in today's file has any of them (away_newer has its own
+  // test, on a synthetic newer master).
+  const guards = new Set(['away_kind', 'away_newer', 'no_share']);
+  for (const reason of [null, ...REASONS.filter((x) => !guards.has(x))]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
 });
 
 // The hub's hospital pages show each hospital through the engine's hospitalScenario (hub/hospital/medicaid.js), which reads
@@ -232,13 +235,39 @@ test('a ?h= naming a hub hospital the file leaves out keeps it as the page\'s ho
   assert.ok(away.length > 0, 'the hub has hospitals the file leaves out');
   for (const r of away) {
     assert.ok(hubCcns.has(r.ccn) && !data.hospitals.has(r.ccn), r.ccn);
-    assert.ok(['inactive', 'kind'].includes(r.away));
+    assert.ok(['inactive', 'kind', 'newer'].includes(r.away));
   }
   const byCcn = new Map([...rows, ...away].map((r) => [r.ccn, r]));
   const one = away[0];
   assert.equal(pageHospital(`?h=${one.ccn}`, byCcn), one);
   const s = subject(one);
   assert.ok(words(cardHtml(s, { k: MIDDLE, use: 1 }).text).includes(REASON_COPY.stamp_away.text));
+});
+
+// CR2: the file holds every active acute-care and critical access hospital in the master it was built from
+// (meta.hcris.master_fy), so a left-out hub hospital's reason is read from that master, not the newest. Here a newer master
+// lists an active acute hospital the file's own master doesn't: it is 'newer', with its own words, never 'kind'.
+test('a hub hospital only a newer master lists is away as "newer", with its reason line; one the file\'s own master lists as active acute must be in the file', () => {
+  const built = readJson(REPO_ROOT + masterPath(data.meta.hcris.master_fy));
+  const acute = built.hospitals.find((h) => h.kind === 'acute' && !h.inactive && data.hospitals.has(h.ccn));
+  const NEW = '999999';
+  assert.ok(!built.hospitals.some((h) => h.ccn === NEW) && !data.hospitals.has(NEW), 'the synthetic CCN is free');
+  const newest = { ...built, hospitals: [...built.hospitals, { ...acute, ccn: NEW, name: 'Synthetic Newer Hospital' }] };
+  const realAway = loadAway(data, hubCcns);
+  const got = loadAway(data, new Set([...hubCcns, NEW]), { built, newest });
+  assert.deepEqual(got.find(([ccn]) => ccn === NEW), [NEW, 'Synthetic Newer Hospital', acute.city ?? '', acute.state, 'newer']);
+  assert.deepEqual(got.filter(([ccn]) => ccn !== NEW), realAway, 'the other left-out hospitals keep their reasons');
+  // Through step 4: the away stamp and the newer sentence, no number.
+  const [row] = awayRows(got.filter(([ccn]) => ccn === NEW));
+  const s = subject(row);
+  assert.equal(reasonOf(s), 'away_newer');
+  const card = cardHtml(s, { k: MIDDLE, use: 1 }).text;
+  assertClean(card, 'newer card');
+  assert.ok(words(card).includes(REASON_COPY.stamp_away.text));
+  assert.ok(words(card).includes(REASON_COPY.why_away_newer.text));
+  // An active acute hospital in the file's own master with no row in the file is a broken file, not a reason.
+  const without = { ...data, hospitals: new Map([...data.hospitals].filter(([ccn]) => ccn !== acute.ccn)) };
+  assert.throws(() => loadAway(without, new Set([acute.ccn]), { built, newest: built }), /active acute hospital in the FY\d{4} master/);
 });
 
 // A seeded random source (mulberry32), so a draw repeats.
