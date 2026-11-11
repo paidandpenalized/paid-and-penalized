@@ -2,6 +2,7 @@
 // `run.py emit`) and the manifest's entries for its inputs (for the newest date CMS gives any of them). File reads live
 // here; the pages stay pure.
 import { builtOn } from '../../../engine/js/dates.js';
+import { rowsByCcn } from '../../../engine/js/medicaid/hospital.js';
 import { REPO_ROOT, dollarsPath, masterPath, medicaidPath, newestYear, readJson, readManifest } from '../../../pipeline/files.js';
 
 // A pinned input is CMS's when CMS serves it: its download, or the download of the file it was cut from or is a member
@@ -47,12 +48,11 @@ export function loadMedicaid() {
   const dollars = loadDollars(file.hcris.dollars_fy);
   const penaltiesChanged = builtOn(dollars.built_at);
   if (!penaltiesChanged) throw new RangeError(`work requirement: the dollar file's built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(dollars.built_at)}`);
-  const ccn = file.columns.indexOf('ccn');
   loaded = {
     meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, penaltiesChanged, hcris: file.hcris },
     pins: file.sources.map((id) => manifest.get(id)),
     columns: file.columns,
-    hospitals: new Map(file.hospitals.map((row) => [row[ccn], row])),
+    hospitals: rowsByCcn(file.columns, file.hospitals),
     states: file.states,
     national: file.national,
     groups: file.groups,

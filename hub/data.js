@@ -3,6 +3,7 @@
 // work-requirement scenario's newest emitted file (its national roll-ups, the footer's figure) and the US atlas. File
 // reads live here; the model, the asset and the pages stay pure.
 import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
+import { rowsByCcn } from '../engine/js/medicaid/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
@@ -55,8 +56,10 @@ let loaded = null;
 //   hrrp          { fy, hospitals: Map<ccn, record>, national } from the Readmissions site's newest emitted file: a hospital
 //                 in it has a Readmissions page, and its record's factor (paf) is the newer-factor note's; national is its
 //                 history's row for each year CMS published ({ fy, n, nPen, ... }), which the Methods page's counts read
-//   medicaid      { fy, national } from the work-requirement scenario's newest emitted file: fy is its base year (the
-//                 year of its dollars), national its low, middle and high roll-ups, as the file gives them
+//   medicaid      { fy, national, columns, hospitals, states } from the work-requirement scenario's newest emitted file:
+//                 fy is its base year (the year of its dollars), national its low, middle and high roll-ups, columns and
+//                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
+//                 a hospital page's Medicaid band reads (hospital/medicaid.js)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 export function loadHub() {
   if (loaded) return loaded;
@@ -77,7 +80,7 @@ export function loadHub() {
     master: masterByCcn(masterFile),
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
-    medicaid: { fy: medicaid.fy, national: medicaid.national },
+    medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };
   return loaded;

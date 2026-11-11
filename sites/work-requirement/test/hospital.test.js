@@ -10,8 +10,10 @@ import { testAssets } from '../../../pipeline/test/helpers.js';
 import { money } from '../../../web/render/format.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { hospitalPathOf } from '../../../web/site.js';
+import { hospitalScenario } from '../../../engine/js/medicaid/hospital.js';
 import { pageHospital } from '../client/find.js';
 import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
+import { COPY as REASON_COPY } from '../../../web/medicaid/copy.js';
 import { COPY, t as words4 } from '../web/copy.js';
 import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
@@ -123,7 +125,7 @@ test('review focus 1: each class and each reason a scenario hospital has no loss
       assert.equal(parts.wide, null, `${what}: no bar`);
       assert.equal(parts.facs, null, `${what}: no factor rows`);
       assert.doesNotMatch(card, /class="wr-rec__t"/, `${what}: no scenario table`);
-      const why = COPY[`hWhy_${what}`].text.replace('{state}', s.stateName).replace('{fy}', String(data.meta.fy));
+      const why = REASON_COPY[`why_${what}`].text.replace('{state}', s.stateName).replace('{fy}', String(data.meta.fy));
       assert.ok(words(card).includes(why), `${what}: the reason line ("${why}")`);
       assert.ok(words(parts.none).includes(why), `${what}: the figure's reason panel`);
       assert.equal(parts.table, false, `${what}: the figure's table (and its CSV) hidden`);
@@ -151,6 +153,30 @@ test('every hospital in the file, every case, the default and the extreme use ra
   }
   // away_kind and no_share are guards: no hospital in today's file has either.
   for (const reason of [null, ...REASONS.filter((x) => x !== 'away_kind' && x !== 'no_share')]) assert.ok(seen.has(reason), `the file has a hospital with reason ${reason}`);
+});
+
+// The hub's hospital pages show each hospital through the engine's hospitalScenario (hub/hospital/medicaid.js), which reads
+// the file's rows directly: it must give every hospital step 4's reason, and the shares step 4 prints at the default use
+// rate (the file's own middle case), so a hospital reads the same on both.
+test('the engine\'s one-hospital view (the hub\'s band) gives every hospital step 4\'s reason and default-rate shares', () => {
+  let drawnSeen = 0;
+  for (const r of rows) {
+    const s = subject(r);
+    const reason = reasonOf(s);
+    const one = hospitalScenario(data, r.ccn);
+    assert.equal(one.reason, reason, `${r.ccn}: the reason`);
+    assert.equal(one.stateName, s.stateName, `${r.ccn}: the state's name`);
+    if (reason) {
+      assert.equal(one.shares, null, `${r.ccn}: no shares without a loss to draw`);
+      continue;
+    }
+    drawnSeen += 1;
+    const n = numbersOf(s, 1);
+    assert.deepEqual(one.shares, n.share, `${r.ccn}: the shares step 4 prints`);
+    assert.equal(one.shares[MIDDLE], fileRow(r.ccn)[col.middle_lost] / fileRow(r.ccn)[col.net_patient_revenue], `${r.ccn}: the middle case is the file's own`);
+  }
+  assert.equal(drawnSeen, rows.filter((r) => r.share).length);
+  assert.equal(hospitalScenario(data, 'not-a-ccn'), null, 'a CCN the file has no row for');
 });
 
 test('the stamp gives the scenario\'s loss alone: the Medicare penalties sit beside it, never added', () => {
@@ -201,7 +227,7 @@ test('a ?h= naming a hub hospital the file leaves out keeps it as the page\'s ho
   const one = away[0];
   assert.equal(pageHospital(`?h=${one.ccn}`, byCcn), one);
   const s = subject(one);
-  assert.ok(words(cardHtml(s, { k: MIDDLE, use: 1 }).text).includes(COPY.hStamp_away.text));
+  assert.ok(words(cardHtml(s, { k: MIDDLE, use: 1 }).text).includes(REASON_COPY.stamp_away.text));
 });
 
 // A seeded random source (mulberry32), so a draw repeats.

@@ -4,11 +4,12 @@ Every sentence on the hub's pages (the front page, the hospital pages across the
 placeholder pages and the not-found page) and in what every page shares (the shell and footer, the program deks and the
 rule constants they print, the registry's program names) that states a fact about CMS's programs, the law or Medicare's
 payment system carries a claim id (`HUB-NN`), or a list of them when it states more than one, in its copy file
-(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/client/story/copy.js`, `web/copy.js`) or, for a rule
+(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/client/story/copy.js`, `web/copy.js`,
+`web/medicaid/copy.js`) or, for a rule
 constant (`web/programs.js`) or a program's name (`web/site.js` `long`), in the hub's claims map (`hub/claims.js`). The
 copy gate (`pipeline/test/copy-gate.test.js`) holds this register to the same rules as the program sites'. Each id is a row here:
 the claim in this site's own words, the primary source that supports it, a short quotation from that source, and the
-date it was last checked. Shared copy also cites the program sites' rows (`HACRP-NN`, `HRRP-NN`) where one already
+date it was last checked. Shared copy also cites the program sites' rows (`HACRP-NN`, `HRRP-NN`, `WR-NN`) where one already
 supports the sentence; those are listed under "Program rows the hub cites", not repeated here. Sentences that describe
 only this site's own arithmetic or framing carry no id. Statements about the site itself (privacy, accessibility,
 testing, licensing, the feedback form) are checked against the code and config, in the last section.
@@ -61,7 +62,10 @@ already support hub sentences, so the hub cites them instead of repeating them:
   factor multiplies the base; above 1 a bonus, below 1 a cut), HACRP-91 (Maryland's hospitals are not eligible for a
   readmissions penalty).
 - Work requirement: WR-01 (states must make community engagement a condition of eligibility) and WR-02 (the people it
-  applies to are the expansion group's adults), in the scenario's dek (`dekWorkRequirement`).
+  applies to are the expansion group's adults), in the scenario's dek (`dekWorkRequirement`); and, on a hospital page's
+  Medicaid band, WR-05 and WR-18 (Urban's mitigation scenarios and its table of each state's expansion-enrollment
+  decline; `wbHow`), WR-03 (Urban projects the expansion group only; `web/medicaid/copy.js` why_not_expansion) and WR-10
+  (Maryland's all-payer model; why_all_payer), the reasons the work-requirement pages give in the same words.
 
 ## Notes on the sources
 
@@ -197,6 +201,8 @@ labels, or a statement about the site: the next section).
 | `web/copy.js` | dekWorkRequirement | WR-01, WR-02 |
 | `web/copy.js` | yearSplitHrrp, yearSplitCard | HACRP-12 |
 | `web/copy.js` | notInHrrp | HRRP-11, HRRP-12, HRRP-13, HRRP-16 |
+| `web/medicaid/copy.js` | why_not_expansion (the work-requirement pages and the hub's Medicaid band) | WR-03 |
+| `web/medicaid/copy.js` | why_all_payer (the same) | WR-10 |
 | `hub/claims.js` | HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT, HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES (`web/programs.js`) | HRRP-09, HACRP-01, HUB-01, HRRP-23, HACRP-02, HUB-06, HUB-07, HUB-11 |
 | `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team, work-requirement | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25, HUB-26 |
 | `hub/home/copy.js` | hrrpText | HRRP-06, HRRP-09, HRRP-04 |
@@ -229,6 +235,7 @@ labels, or a statement about the site: the next section).
 | `hub/hospital/copy.js` | fyNote, whyHrrpYear, whyHrrpYearOut | HACRP-12 |
 | `hub/hospital/copy.js` | whyHacCut, statusHacCut, partHacCut, partUnscoredCut, wiIfHacOn | HACRP-01 |
 | `hub/hospital/copy.js` | whatifStanding | HRRP-04, HACRP-02, HUB-02 |
+| `hub/hospital/copy.js` | wbHow (the Medicaid band) | WR-05, WR-18 |
 
 ## Statements about this site
 

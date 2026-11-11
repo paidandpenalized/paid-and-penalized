@@ -13,6 +13,7 @@
 // report fields the engine reads, their penalties, whether each has a hub page and whether step 1 draws it, with the
 // state's own numbers. A hospital's dollars come from the engine (engine/js/medicaid/scenario.js) at the reader's use
 // rate, so the default rate prints what the file's arithmetic gives, the same in the build and the browser.
+import { MIDDLE_KEYS, caseResults, reasonOf as reasonFor } from '../../../../engine/js/medicaid/hospital.js';
 import { scenario } from '../../../../engine/js/medicaid/scenario.js';
 import { figure, imagePair, num } from '../../../../web/charts/figure.js';
 import { frame, r2 } from '../../../../web/charts/svg.js';
@@ -22,6 +23,7 @@ import { estTag, fillCopy, formField, formTitle, stamp } from '../../../../web/r
 import { count, dotList, money, pct, placeText, shortIsoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
+import { REASONS, reasonStamp, reasonWhy } from '../../../../web/medicaid/reasons.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
 import { DEFAULT_SCENARIO, DEFAULT_SKIP_STATE, SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
@@ -33,12 +35,8 @@ const caseWord = (k) => scenWord(SCENARIOS[k]).toLowerCase();
 
 // ---------- the data ----------
 
-// The file's own middle-case results at the default use rate (the emitted numbers the hub's band also reads), by the
-// engine's result key: step 4 prints these, not a recomputation from the file's rounded inputs.
-const MIDDLE_KEYS = Object.freeze({
-  middle_lost: 'lost', middle_added_uncompensated: 'addedUncompensated', middle_operating_margin: 'operatingMargin',
-  middle_operating_margin_after: 'operatingMarginAfter', middle_total_margin_after: 'totalMarginAfter',
-});
+// The file's own middle-case results at the default use rate (the engine's MIDDLE_KEYS: the emitted numbers the hub's
+// band also prints): step 4 prints these, not a recomputation from the file's rounded inputs.
 const FILE_MIDDLE = Object.keys(MIDDLE_KEYS);
 
 // What step 4 reads of each hospital in the file: the engine's fields (scenario.js), who it is beyond the strips' row, its
@@ -101,39 +99,12 @@ export function subjectOf(row, chunk) {
   return { ccn: row.ccn, name: row.name, city: row.city, stateName: chunk.name, state: row.state, cls: row.cls, away: null, rec, chunk, hub: rec.hub };
 }
 
-// Why a hospital has no figure, or null when it has a loss to draw: away_<why> (not in the file), its class (outside a
-// scenario state, or no cost report), or, in a scenario state, what its cost report shows: a filing error screened out
-// (negative, exceeds), no Medicaid revenue, no patient revenue, no expansion share (no_share), or a loss too small to
-// draw (tiny: under TINY_SHARE of patient revenue in the low case, which step 1's 7-place shares round to nothing).
-// Anything else step 1 leaves out has no reason here to give, so it throws at the build and in tests; the browser sets
-// s.lenient (client/hospital.js) and gets 'unforeseen', a generic reason, rather than a broken step.
-export const TINY_SHARE = 0.5e-7;
-export function reasonOf(s) {
-  if (s.away) return `away_${s.away}`;
-  if (s.cls !== 'scenario') return s.cls;
-  const r = s.rec;
-  if (r.drawn) return null;
-  if (!r.scored) return (r.flags ?? []).includes('negative_medicaid_revenue') ? 'negative' : 'exceeds';
-  if (!(r.medicaid_net_revenue > 0)) return 'no_medicaid';
-  if (!(r.net_patient_revenue > 0)) return 'no_npr';
-  if (!(r.share > 0)) return 'no_share';
-  if ((r.medicaid_net_revenue * r.share * s.chunk.declines[SCENARIOS[0]]) / r.net_patient_revenue < TINY_SHARE) return 'tiny';
-  if (s.lenient) return 'unforeseen';
-  throw new RangeError(`hospital ${s.ccn}: step 1 leaves it out with no reason step 4 can give`);
-}
-// The stamp a reason gets (copy hStamp_<group>).
-const STAMP = {
-  away_inactive: 'away', away_kind: 'away', not_expansion: 'none', no_viii_group: 'none', all_payer: 'notModeled', territory: 'notModeled',
-  no_cost_report: 'noReport', negative: 'screened', exceeds: 'screened', no_medicaid: 'noLoss', no_npr: 'noLoss', no_share: 'noLoss', tiny: 'noLoss',
-  unforeseen: 'noLoss', // the browser's fallback only (reasonOf)
-};
-export const REASONS = Object.freeze(Object.keys(STAMP).filter((r) => r !== 'unforeseen'));
-// The reason's sentence.
-const WHY_VALUES = {
-  away_inactive: () => ({}), away_kind: () => ({}), all_payer: () => ({}), territory: () => ({}),
-  not_expansion: (s) => ({ state: s.stateName }), no_viii_group: (s) => ({ state: s.stateName }), no_share: () => ({}), unforeseen: () => ({}),
-};
-export const whyOf = (s, reason) => fill(`hWhy_${reason}`, (WHY_VALUES[reason] ?? ((x) => ({ fy: String(x.chunk.fy) })))(s));
+// Why a hospital has no figure, or null when it has a loss to draw: the engine's reasonOf (engine/js/medicaid/hospital.js)
+// for a subject (subjectOf's; the browser sets s.lenient, client/hospital.js, for its generic reason over a broken step).
+export const reasonOf = (s) => reasonFor({ away: s.away, cls: s.cls, rec: s.rec, drawn: s.rec?.drawn, declines: s.chunk?.declines, lenient: s.lenient, ccn: s.ccn });
+export { REASONS };
+// The reason's sentence (web/medicaid/reasons.js, the words the hub's band gives too).
+export const whyOf = (s, reason) => reasonWhy(reason, { stateName: s.stateName, fy: s.chunk?.fy });
 
 // A drawn hospital's numbers at a use rate: patient revenue (npr), Medicaid revenue (m2), Medicaid's share of patient
 // revenue (ms), the expansion share (es), the expansion adults' part (exp, the engine's revenue at risk), the state's
@@ -143,12 +114,7 @@ export const whyOf = (s, reason) => fill(`hWhy_${reason}`, (WHY_VALUES[reason] ?
 export function numbersOf(s, use) {
   const r = s.rec;
   const declines = SCENARIOS.map((sc) => s.chunk.declines[sc]);
-  const results = declines.map((d) => scenario(r, r.share, d, { use }));
-  if (use === 1) {
-    const own = { ...results[MIDDLE] };
-    for (const [col, key] of Object.entries(MIDDLE_KEYS)) if (r[col] !== null && r[col] !== undefined) own[key] = r[col];
-    results[MIDDLE] = own;
-  }
+  const results = caseResults(r, s.chunk.declines, use);
   const npr = r.net_patient_revenue;
   return {
     npr, m2: r.medicaid_net_revenue, ms: r.medicaid_net_revenue / npr, es: r.share, exp: results[0].atRisk, declines, use, results,
@@ -374,7 +340,7 @@ export function figureParts(s, { k, use }) {
       narrow: null,
       wide: null,
       facs: null,
-      none: html`${stamp({ label: t(`hStamp_${STAMP[reason]}`), ink: true })}<p class="wr-hnone__why">${whyOf(s, reason)}</p>`,
+      none: html`${stamp({ label: reasonStamp(reason), ink: true })}<p class="wr-hnone__why">${whyOf(s, reason)}</p>`,
       note: '',
       cells: TABLE_ROWS.flatMap((row) => SCENARIOS.map((_, j) => [row, j, none])),
     };
@@ -428,7 +394,7 @@ function whereOf(s) {
 
 // The stamp: the case's loss a year, in the penalty ink, with its case and the scenario tag; or, in ink, why there is none.
 function stampOf(s, n, k, reason) {
-  if (reason) return stamp({ label: t(`hStamp_${STAMP[reason]}`), ink: true });
+  if (reason) return stamp({ label: reasonStamp(reason), ink: true });
   return stamp({ label: html`${fill('hStampLost', { lost: money(-n.lost[k]) })}<small>${fill('hStampCase', { scenario: scenWord(SCENARIOS[k]) })} · ${scenTagText(s.chunk.fy)}</small>` });
 }
 
@@ -499,7 +465,7 @@ ${n ? scenarioTable(s, n, k) : ''}${s.rec && s.rec.status !== null ? costReport(
 // What the page's live line says when the hospital changes: its name and its stamp's words.
 export function sayOf(s, { k, use }) {
   const reason = reasonOf(s);
-  const verdict = reason ? t(`hStamp_${STAMP[reason]}`) : `${fill('hStampLost', { lost: money(-numbersOf(s, use).lost[k]) })}, ${fill('hStampCase', { scenario: caseWord(k) })}`;
+  const verdict = reason ? reasonStamp(reason) : `${fill('hStampLost', { lost: money(-numbersOf(s, use).lost[k]) })}, ${fill('hStampCase', { scenario: caseWord(k) })}`;
   return `${s.name}: ${verdict}`;
 }
 

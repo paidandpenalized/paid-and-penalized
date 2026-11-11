@@ -6,7 +6,8 @@
 //
 // Rows: each hospital in the emitted file as the strips need it (hospitalRows), and the browser's copy of them (the
 // asset stripsAsset writes and decodeStrips reads), in the file's order, which is the order dots stack in.
-import { rowToBase, scenario } from '../../../../engine/js/medicaid/scenario.js';
+import { drawnShares } from '../../../../engine/js/medicaid/hospital.js';
+import { rowToBase } from '../../../../engine/js/medicaid/scenario.js';
 import { dotsD } from '../../../../web/charts/dots.js';
 import { pathNumbers } from '../../../../web/charts/pathd.js';
 import { isNarrow, r2 } from '../../../../web/charts/svg.js';
@@ -33,24 +34,14 @@ const GROUP_TESTS = {
 export const groupsOf = (base) => GROUPS.reduce((bits, key, i) => (GROUP_TESTS[key](base) ? bits | (1 << i) : bits), 0);
 export const inGroup = (row, key) => Boolean(row.groups & (1 << GROUPS.indexOf(key)));
 
-// Shares are kept to 7 places (a tenth of a basis point) in the build and in the asset, so both lay the dots out from the
-// same numbers.
-const SHARE_PLACES = 1e7;
-const shareOf = (lost, npr) => Math.round((lost / npr) * SHARE_PLACES) / SHARE_PLACES;
-
 // Each hospital in the file: { ccn, name, city, state, cls, groups, share }, share being [low, middle, high], the share of
-// its patient revenue it could lose in each case at the default use rate, or null when it is not drawn: outside a scenario
-// state, or with no loss to draw (no Medicaid revenue, or a loss under SHARE_PLACES's last place; a filing error screened
-// out; or no patient revenue to measure against; the caption counts these). data: loadMedicaid()'s result.
+// its patient revenue it could lose in each case at the default use rate, or null when it is not drawn (the engine's
+// drawnShares: outside a scenario state, or with no loss to draw; the caption counts these). data: loadMedicaid()'s result.
 export function hospitalRows(data) {
   const { columns, states } = data;
   return [...data.hospitals.values()].map((row) => {
     const b = rowToBase(columns, row);
-    let share = null;
-    if (b.cls === 'scenario' && b.scored && b.net_patient_revenue > 0) {
-      const shares = SCENARIOS.map((s) => shareOf(scenario(b, b.share, states[b.state].declines[s]).lost, b.net_patient_revenue));
-      if (shares.every((v) => v > 0)) share = shares;
-    }
+    const share = drawnShares(b, states[b.state].declines);
     return { ccn: b.ccn, name: b.name, city: b.city, state: b.state, cls: b.cls, groups: groupsOf(b), share };
   });
 }

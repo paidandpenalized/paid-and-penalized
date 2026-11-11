@@ -4,17 +4,20 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
+import { COPY as REASON_COPY } from '../../web/medicaid/copy.js';
 import { HAC_CUT_PCT } from '../../web/programs.js';
 import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
+import { placeOf, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';
 import { peerFigures, peersOf } from '../hospital/peers.js';
 import { shareText, signedShareText } from '../hospital/text.js';
@@ -405,4 +408,96 @@ test('a net one program makes alone shows that program\'s likely range: the HAC 
   const [lo, hi] = alone.netRange;
   assert.ok(lo < alone.est.net && alone.est.net < hi && hi < 0);
   assert.ok(mainOf(render(alone)).includes(`<span class="hh__rng-v">${moneyRange(lo, hi)}</span>`));
+});
+
+// ---------- the Medicaid work-requirement band (hospital/medicaid.js) ----------
+const WR = HUB.medicaid;
+const renderWr = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: WR });
+const wrBand = (page) => /<section class="hh__wb"[\s\S]*?<\/section>\n/.exec(page)?.[0] ?? null;
+const wrOf = (h) => hospitalScenario(WR, h.ccn);
+const wrCol = Object.fromEntries(WR.columns.map((name, i) => [name, i]));
+const IN_FILE = HOSPITALS.filter((h) => wrOf(h));
+// Five estimated hospitals with a loss to draw, spread through the dollar file's order.
+const DRAWN = HOSPITALS.filter((h) => h.est && wrOf(h)?.shares);
+const FIVE = [0, 1, 2, 3, 4].map((i) => DRAWN[Math.floor((i * (DRAWN.length - 1)) / 4)]);
+
+test('the Medicaid band sits after the what-if, apart from the net: taking it out leaves the page without it, byte for byte', () => {
+  assert.equal(new Set(FIVE.map((h) => h.ccn)).size, 5, 'five different hospitals');
+  for (const h of FIVE) {
+    const page = renderWr(h);
+    const band = wrBand(page);
+    assert.ok(band, 'the band');
+    assert.equal(page.replace(band, ''), render(h), 'everything else, the net and its rows included, is the page without the band');
+    assert.ok(page.indexOf(band) > page.indexOf('<section class="hh__progs" id="whatif"'), 'after the what-if');
+    assert.ok(page.indexOf(band) > page.indexOf('</section>', page.indexOf('<section class="hh__progs"')), 'outside it');
+    assert.ok(page.indexOf(band) < page.indexOf('data-peer-table'), 'before the peer table');
+    assert.ok(band.includes('Medicaid scenario (not a payment)'), 'named a scenario, not a payment');
+    assert.ok(band.includes(esc('never added to the Medicare net above')), 'and never added to the net');
+    assert.doesNotMatch(band, /\$\d/, 'no dollar figure');
+    assert.doesNotMatch(band, /<script|<button|data-row|data-sum/, 'no script, control or hook the page\'s script reads');
+  }
+});
+
+test('the band for a hospital with a loss to draw: the work-requirement page\'s shares at the default use rate (the file\'s own middle case), a range, the tag, the bar and the link', () => {
+  for (const h of FIVE) {
+    const band = wrBand(renderWr(h));
+    const { shares } = wrOf(h);
+    const row = WR.hospitals.get(h.ccn);
+    assert.equal(shares[1], row[wrCol.middle_lost] / row[wrCol.net_patient_revenue], 'the middle case is the file\'s');
+    assert.ok(shares[0] < shares[1] && shares[1] < shares[2], 'low < middle < high');
+    const [lo, mid, hi] = shares.map((s) => pct(s, 2));
+    assert.ok(band.includes(`<p class="hh__wbv">${lo} to ${hi}</p>`), 'the headline is the range, low to high');
+    assert.ok(band.includes(`<span class="scen-tag">SCENARIO · ${WR.fy} $</span>`), 'the scenario tag');
+    assert.ok(band.includes(`<li>Low case ${lo}</li><li class="hh__wbk--mid">Middle case ${mid}</li><li>High case ${hi}</li>`), 'the three cases');
+    assert.match(band, /<svg class="hh__wbsvg" viewBox="0 0 1000 28" preserveAspectRatio="none" aria-hidden="true"/, 'the server\'s drawing');
+    assert.match(band, /<rect class="hh__wb-band" x="[\d.]+" y="7" width="[\d.]+" height="14"\/><line class="hh__wb-mid" x1="[\d.]+"/, 'the range and the middle case\'s mark');
+    assert.ok(band.includes(`<a class="hh__deep" href="/work-requirement/?h=${h.ccn}">`), 'the link to the hospital on the work-requirement page');
+    assert.ok(!/NaN|undefined|Infinity/.test(band), 'no bad number');
+  }
+  // The scale every band shares: its top over the file's highest high case, its places square-root.
+  const top = scaleTop(WR);
+  const highest = Math.max(...[...WR.hospitals.keys()].map((ccn) => hospitalScenario(WR, ccn).shares?.[2] ?? 0));
+  assert.ok(highest <= top && top - highest < 0.01, 'the top is the highest share, up to the next whole percent');
+  assert.equal(placeOf(top / 4, top), 0.5, 'a quarter of the top sits halfway');
+  assert.deepEqual(scaleTicks(0.14), [0, 0.005, 0.01, 0.02, 0.05, 0.1]);
+});
+
+test('Maryland\'s page: the band says "Not modeled" and why, with no number', () => {
+  const band = wrBand(renderWr(MARYLAND));
+  assert.equal(wrOf(MARYLAND).reason, 'all_payer');
+  assert.ok(band.includes('<p class="stamp stamp--ink">Not modeled</p>'), 'the stamp');
+  assert.ok(band.includes(esc(REASON_COPY.why_all_payer.text)), 'the work-requirement page\'s reason');
+  assert.ok(band.includes(esc('A scenario of what the requirement could cost this hospital, not a payment.')), 'its note names no net (the page has none)');
+  assert.doesNotMatch(band, /%|\$|<svg|hh__wbv|scen-tag/, 'no number, bar or tag');
+  assert.ok(band.includes(`href="/work-requirement/?h=${MARYLAND.ccn}"`), 'the link');
+  assert.ok(renderWr(MARYLAND).indexOf(band) > renderWr(MARYLAND).indexOf('class="hh__status"'), 'after its status');
+});
+
+test('a hospital with no scenario shows its reason line and never a number: no cost report, no expansion group, not an expansion state, a cost report with nothing to take', () => {
+  const fy = String(WR.fy);
+  for (const reason of ['no_cost_report', 'no_viii_group', 'not_expansion', 'no_medicaid']) {
+    const h = pick((x) => x.est && wrOf(x)?.reason === reason, `an estimated hospital whose scenario reason is ${reason}`);
+    const band = wrBand(renderWr(h));
+    const want = REASON_COPY[`why_${reason}`].text.replace('{state}', wrOf(h).stateName).replace('{fy}', fy);
+    assert.ok(textOf(band).includes(want), `${reason}: the reason line`);
+    assert.match(band, /<p class="stamp stamp--ink">[^<]+<\/p>/, `${reason}: the stamp`);
+    assert.doesNotMatch(band, /%|\$\d|<svg|hh__wbv|NaN|undefined/, `${reason}: no number or bar`);
+  }
+  // A hospital with no estimate the file has a row for gets its band too; one the file has none for gets none.
+  const noInputs = pick((x) => x.status === 'no-inputs' && wrOf(x), 'a hospital with no estimate in the scenario file');
+  assert.ok(wrBand(renderWr(noInputs)), 'a no-inputs hospital in the file');
+  for (const h of [pick((x) => x.est && !wrOf(x), 'an estimated hospital the scenario file has no row for'), pick((x) => !x.est && !wrOf(x), 'a hospital with no estimate the file has no row for')]) {
+    assert.equal(renderWr(h), render(h), 'no band, and nothing else changed');
+    assert.doesNotMatch(renderWr(h), /data-medicaid/);
+  }
+  assert.ok(IN_FILE.length > 0 && IN_FILE.length < HOSPITALS.length);
+});
+
+test('the band\'s stylesheet: every scenario mark from a theme token, the bar\'s strokes non-scaling', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  for (const cls of ['hh__wb-grid', 'hh__wb-base', 'hh__wb-band', 'hh__wb-mid']) {
+    const rule = new RegExp(`\\.${cls} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    assert.match(rule, /vector-effect: non-scaling-stroke/, `${cls}: non-scaling`);
+    assert.match(rule, /var\(--[a-z-0-9]+\)/, `${cls}: a token`);
+  }
 });

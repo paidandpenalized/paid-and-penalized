@@ -1,6 +1,7 @@
 // The work-requirement site's fixed choices, and what the copy gate (pipeline/test/copy-gate.test.js) reads: the prefix
 // of this site's claim ids (sites/work-requirement/CLAIMS.md) and the method constants it checks, each with its claim.
 // The scenario's own method constants are the engine's (engine/js/medicaid/scenario.js PARAMS, the emitted file's params).
+import { CASES } from '../../../engine/js/medicaid/hospital.js';
 
 export const CLAIM_PREFIX = 'WR';
 export const METHOD_CONSTANTS = Object.freeze({});
@@ -9,8 +10,9 @@ export const CLAIMS = Object.freeze({});
 // The program page's five steps, in order, by the id each section carries (the section menu links #<id>), then Methods.
 export const SECTIONS = Object.freeze(['finding', 'how', 'states', 'hospital', 'both']);
 
-// The three scenarios, low to high losses (the emitted file's scenarios[].id), and the one a page opens on.
-export const SCENARIOS = Object.freeze(['low', 'middle', 'high']);
+// The three scenarios, low to high losses (the emitted file's scenarios[].id: the engine's CASES), and the one a page
+// opens on.
+export const SCENARIOS = CASES;
 export const DEFAULT_SCENARIO = 'middle';
 
 // The group chips on step 1, in the order they show: the emitted file's group roll-ups (`groups`, built by
