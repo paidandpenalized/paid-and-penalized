@@ -23,8 +23,11 @@ Not covered by either license:
 - data/pinned/medicaid/urban-2026-table-a2-work-requirement.csv holds figures from Appendix Table A.2 of the Urban
   Institute and Robert Wood Johnson Foundation report "Projected Reductions in Medicaid Expansion Enrollment Under
   OBBBA's Work Requirements and Six-Month Redeterminations: National and State Estimates for 2028" (Buettgens,
-  Karpman, Haley, Carter, Kenney; March 2026), transcribed by hand from the report. They are not CMS data and are not
-  covered by this project's CC BY 4.0 grant; they stay under their owners' terms. The report states: "Copyright (c)
+  Karpman, Haley, Carter, Kenney; March 2026), transcribed by hand from the report. They are not CMS data. The same figures, and sums of them, appear
+  in data/emitted/medicaid/fy2023/medicaid.json as `states.*.declines`, `states.*.urban_thousands`,
+  `scenarios[].decline_enrollment` and `scenarios[].decline_enrollment_scenario_states`. All of these are Urban
+  Institute and Robert Wood Johnson Foundation's published figures, or sums of them. This project's CC BY 4.0
+  grant does not extend to them; they remain subject to Urban Institute and RWJF's own terms. The report states: "Copyright (c)
   March 2026. Urban Institute. Permission is granted for reproduction of this file, with attribution to the Urban
   Institute." Cite the Urban Institute wherever the figures appear. The report itself is not included.
 - data/pinned/us-atlas-3.0.1/counties-10m.json is an unmodified copy of us-atlas 3.0.1 by Mike Bostock, TopoJSON
