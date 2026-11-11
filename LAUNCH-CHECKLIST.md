@@ -46,7 +46,7 @@ deploys), the release flag, a change to the domain, making a repository public, 
 | 27 | A release tag, on the owner's OK. | 2 | [ ] |
 | 28 | Sites on contested policy: an outside expert's read is sought. It doesn't gate the launch, and no page says a review happened until one has. | 2 | [ ] |
 | 29 | Announcement drafted; the owner posts it. | 2 | [ ] |
-| 30 | The next data dates noted (when each source is due to be posted again). | 2 | [ ] |
+| 30 | The next data dates noted (when each source is due to be posted again), each on the owner's calendar. | 2 | [ ] |
 
 ## This launch: the work requirement
 

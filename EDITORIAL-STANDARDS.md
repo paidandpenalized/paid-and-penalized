@@ -28,8 +28,8 @@ On every page:
 - The pages say "CMS reports" and "this site recomputes"; never that a hospital was "caught", "failed", "dodged" or
   "cheated", and never "worst hospitals".
 - The standard line for a penalty: "A penalty reflects how CMS's formula scored relative performance; it is not a
-  verdict on the quality of care." The Hospital-Acquired Condition pages and each hospital's page across the programs
-  carry it or a close wording of it.
+  verdict on the quality of care." The Hospital-Acquired Condition pages carry it, and the family's hospital pages
+  (`/hospital/<ccn>/`) a close wording of it.
 - Every page links the general feedback form. Verified errors are corrected and logged in `corrections/`. No page
   promises a reply or fix time.
 
