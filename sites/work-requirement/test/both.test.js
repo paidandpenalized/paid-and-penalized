@@ -14,7 +14,7 @@ import { programPage } from '../web/pages/program.js';
 import {
   DRAWINGS, LABEL_FONTS, bothBody, bothInput, bothLayout, bothModel, countsAt, cutOf, decodeBoth, exposed, covers, headHtml, namedBody, placed, xOf, youHtml,
 } from '../web/program/both.js';
-import { awayRows, serverPick } from '../web/program/hospital.js';
+import { awayRows, decodeChunk, hospChunks, numbersOf, serverPick, subjectOf } from '../web/program/hospital.js';
 import { hospitalRows } from '../web/program/strips.js';
 
 const data = loadMedicaid();
@@ -185,6 +185,49 @@ test('the page\'s hospital: marked in the plot or the strip, or a reason line li
       assert.doesNotMatch(words(out.text), BAD);
     }
   }
+});
+
+// R43: the page's hospital's share in step 5's line prints through step 4's formatter (web/medicaid/format.js
+// caseShareTexts: one decision over the three cases, "under" a share too small to print, never "0.00%"), so the same
+// hospital reads the same string in both steps. Step 5's shares come from step 1's 7-place shares (and the file's whole-dollar
+// middle loss at other use rates), step 4's from the engine, so the two agree to 1e-7 and a dollar of patient revenue;
+// the strings differ only where a printing boundary falls between them (a handful of the thousands of lines).
+test('the page\'s hospital\'s share lost in step 5 is step 4\'s string, at every case and the default and extreme use rates', () => {
+  const chunks = new Map([...hospChunks(data, rows, hubCcns)].map(([code, chunk]) => [code, decodeChunk(JSON.parse(JSON.stringify(chunk)))]));
+  const shareOf = (markup) => /(?:exposed on both|outside the corner): (.+?) of its patient revenue lost/.exec(words(markup))?.[1];
+  const places = (text) => (/\.(\d+)%/.exec(text)?.[1].length ?? 0) + 2;
+  let n = 0;
+  let under = 0;
+  const straddles = [];
+  for (const r of rows) {
+    const at = model.at.get(r.ccn);
+    if (at?.kind !== 'plot') continue;
+    const p = model.pts[at.i];
+    const s = subjectOf(r, chunks.get(r.state));
+    for (const use of [0.75, 1, 1.25]) {
+      const step4 = numbersOf(s, use);
+      const mine = SCENARIOS.map((_, k) => xOf(p, k, use));
+      for (const k of SCENARIOS.keys()) {
+        const got = shareOf(youHtml(model, r, k, use));
+        n += 1;
+        assert.doesNotMatch(got, /^0\.0+%$/, `${r.ccn}: never a zero share`);
+        if (got.startsWith('under')) under += 1;
+        assert.ok(Math.abs(mine[k] - step4.share[k]) < 1e-7 + 1 / p.npr, `${r.ccn} case ${k} use ${use}: the shares agree`);
+        if (got === step4.shareText[k]) continue;
+        // Not the formatter: the same two values, rounded at the printed places, land either side of a boundary.
+        const unit = 10 ** places(got);
+        assert.notEqual(Math.round(mine[k] * unit), Math.round(step4.share[k] * unit), `${r.ccn} case ${k} use ${use}: ${got} vs ${step4.shareText[k]}`);
+        straddles.push(r.ccn);
+      }
+    }
+  }
+  assert.ok(n > 5000, `${n} lines checked`);
+  assert.ok(under > 0, 'a hospital whose share prints as "under" the smallest share is among them');
+  assert.ok(straddles.length <= n / 1000, `${straddles.length} of ${n} lines straddle a boundary`);
+  // The server's own hospital reads the same in both steps.
+  const pick = serverPick(rows);
+  const s = subjectOf(pick, chunks.get(pick.state));
+  if (model.at.get(pick.ccn)?.kind === 'plot') assert.equal(shareOf(youHtml(model, pick, MIDDLE, 1)), numbersOf(s, 1).shareText[MIDDLE]);
 });
 
 // The fit test: a label's box, its font's width estimate (an upper bound on what the browser draws).

@@ -3,6 +3,7 @@
 // gives no loss, or a hub hospital the file leaves out) gets its record card and its reason, never a bar, "$0", NaN or an
 // empty table; a hospital's page across the programs is linked only where it exists; the random pick stays outside
 // DEFAULT_SKIP_STATE. Fixtures pick hospitals by property, never by name.
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REPO_ROOT, masterPath, readJson } from '../../../pipeline/files.js';
@@ -191,6 +192,47 @@ test('the engine\'s one-hospital view (the hub\'s band) gives every hospital ste
   }
   assert.equal(drawnSeen, rows.filter((r) => r.share).length);
   assert.equal(hospitalScenario(data, 'not-a-ccn'), null, 'a CCN the file has no row for');
+});
+
+// Task 12: the "under" decision reads the smallest share and the bound the largest, whatever their order, so a case that
+// prints as zero never leaves a two-number range beside it.
+test('printed shares: a case too small to print makes the range its bound, whichever case it is', () => {
+  const under = (tiny) => REASON_COPY.shareUnder.text.replace('{tiny}', tiny);
+  assert.deepEqual(shareRange([0.002, 0.0025, 0.003]), { low: '0.20%', high: '0.30%' }, 'ordered, printable: two numbers');
+  // Out of order, the middle the smallest and too small to print: the range is the bound above the largest share.
+  const out = [0.002, 0.0000001, 0.003];
+  assert.deepEqual(shareRange(out), { under: under('0.301%') });
+  assert.deepEqual(caseShareTexts(out), [under('0.301%'), under('0.301%'), under('0.301%')]);
+  // The same shares in order read the same.
+  assert.deepEqual(shareRange([0.0000001, 0.002, 0.003]), { under: under('0.301%') });
+});
+
+// R35 pinned: in the record card's scenario table, a value in words (a space: "under 0.001%") gets wr-rec__words and may
+// break between them; a dollar amount or a percent never does. The CSS lets the words wrap, and at 374 px and below tightens
+// the cells and sets the values a step smaller.
+test('R35: a card cell in words wraps (wr-rec__words), a money or percent cell never; the narrow-phone block is in the CSS', () => {
+  const cellsOf = (card, head) => [...(new RegExp(`<th scope="row">${head}</th>(.*?)</tr>`).exec(card)?.[1] ?? '').matchAll(/<td class="([^"]*)">(.*?)<\/td>/g)].map((m) => ({ cls: m[1].split(' ').filter(Boolean), text: m[2] }));
+  const drawn = rows.filter((r) => r.share).map(subject);
+  const tiny = drawn.find((s) => numbersOf(s, 1).shareText.some((x) => x.includes(' ')));
+  const plain = drawn.find((s) => numbersOf(s, 1).shareText.every((x) => !x.includes(' ')));
+  assert.ok(tiny && plain, 'the file has a hospital with a share in words and one without');
+  for (const [s, what] of [[tiny, 'in words'], [plain, 'numbers']]) {
+    const card = cardHtml(s, { k: MIDDLE, use: 1 }).text;
+    const share = cellsOf(card, escapeHtml(words4('hRowShare')));
+    const lost = cellsOf(card, escapeHtml(words4('hRowLost')));
+    assert.equal(share.length, 3, `${what}: three share cells`);
+    assert.equal(lost.length, 3, `${what}: three money cells`);
+    for (const c of share) assert.equal(c.cls.includes('wr-rec__words'), c.text.includes(' '), `${what}: "${c.text}"`);
+    for (const c of lost) assert.ok(!c.cls.includes('wr-rec__words') && /^[−-]?\$[\d,.]+[KMB]?$/.test(c.text), `${what}: a money cell "${c.text}"`);
+    if (what === 'numbers') for (const c of share) assert.match(c.text, /^[\d.]+%$/, 'a percent cell, no words class');
+  }
+  assert.ok(cellsOf(cardHtml(tiny, { k: MIDDLE, use: 1 }).text, escapeHtml(words4('hRowShare'))).some((c) => c.cls.includes('wr-rec__words')), 'a cell in words is marked');
+  const css = readFileSync(REPO_ROOT + 'sites/work-requirement/web/styles.css', 'utf8');
+  assert.match(css, /\.wr-rec__t td\.wr-rec__words \{ white-space: normal; \}/, 'words wrap');
+  assert.match(css, /\.wr-rec__t td \{ white-space: nowrap; \}/, 'numbers never');
+  const narrow = /@media \(max-width: 374px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] ?? '';
+  assert.match(narrow, /\.wr-rec__t :is\(th, td\) \{ padding-inline: 2px; \}/, 'tighter cells at 374 px and below');
+  assert.match(narrow, /\.wr-rec__t td \{ font-size: var\(--fs-xs\); \}/, 'the values a step smaller');
 });
 
 test('the stamp gives the scenario\'s loss alone: the Medicare penalties sit beside it, never added', () => {

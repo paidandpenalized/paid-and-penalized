@@ -17,6 +17,7 @@ import { dotsPath, spread } from '../../../../web/charts/dots.js';
 import { figure, num } from '../../../../web/charts/figure.js';
 import { frame, hatchDefs, hatchFill, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
+import { caseShareTexts } from '../../../../web/medicaid/format.js';
 import { estTag } from '../../../../web/render/components.js';
 import { count, decimal, money, pct, pctExact, placeText } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
@@ -349,7 +350,10 @@ export function youHtml(model, row, k, use) {
   if (!spot) return html`<a href="#hospital">${fill('bYouNone', { name: row.name })}</a>`;
   if (spot.kind === 'strip') return html`${fill('bYouStrip', { name: row.name, pfy: String(model.penaltyFy) })}`;
   const p = model.pts[spot.i];
-  const words = { name: p.name, share: pct(xOf(p, k, use), 2), scenario: caseWord(k), pfy: String(model.penaltyFy) };
+  // The share as step 4 and the hub's band print it (web/medicaid/format.js: one decision over the three cases, "under" a
+  // share too small to print), so the hospital reads the same in both steps.
+  const share = caseShareTexts(SCENARIOS.map((_, i) => xOf(p, i, use)))[k];
+  const words = { name: p.name, share, scenario: caseWord(k), pfy: String(model.penaltyFy) };
   if (isBoth(model, p, k, use)) return html`${fill('bYouIn', { ...words, pshare: pct(p.y, 3) })}`;
   return html`${p.pen > 0 ? fill('bYouOut', { ...words, pshare: pct(p.y, 3) }) : fill('bYouOutZero', words)}`;
 }

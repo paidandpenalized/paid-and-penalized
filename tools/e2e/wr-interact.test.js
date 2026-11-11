@@ -240,7 +240,9 @@ describe('the work-requirement page\'s controls', { concurrency: CONCURRENCY }, 
     assert.ok((await out.textContent()).includes(await chip.getAttribute('data-name')), 'the readout names the group');
     assert.equal(await clear.isVisible(), true, 'Clear shows');
     // A second chip replaces the first.
-    await page.locator('.wr-chip[data-group="rural"]').click();
+    const second = page.locator('.wr-chip[data-group="rural"]');
+    await second.click();
+    assert.equal(await second.getAttribute('aria-pressed'), 'true', 'the second chip is pressed');
     assert.equal(await chip.getAttribute('aria-pressed'), 'false', 'one group at a time');
     await clear.click();
     await eventually(async () => (await outline()) === 0, 'Clear does not put every hospital back');
@@ -316,6 +318,9 @@ describe('the work-requirement page\'s controls', { concurrency: CONCURRENCY }, 
 
 // ---------- the random pick ----------
 
+// Tied to the picker: randomPick (web/program/hospital.js) maps a draw d to the hospital at floor(d × n) of the n it
+// draws from. A picker that maps draws any other way breaks this test (each expected pick is worked out that way), not
+// the page; change both together.
 // The page's Math.random is fed draws chosen in advance (window.__draws, then the browser's own once they run out), so
 // each pick is known: the page opens on POOL[floor(d * POOL.length)], and "Show another at random" draws from the pool
 // without the hospital shown. The draws are those that would land on a Virginia hospital were the pool to keep them
@@ -350,7 +355,9 @@ describe('the random pick never draws a Virginia hospital', () => {
       await button.click();
       await eventually(async () => (await shown()) === next.ccn, 'the card does not show the pool\'s pick for the draw');
       assert.ok(followed(page) === next.ccn, 'the pick is followed in the address');
-      assert.notEqual(next.state, SKIP, 'never a Virginia hospital');
+      // The state of the hospital the page shows (its card's CCN), not of the pick worked out above.
+      const on = await shown();
+      assert.ok(ROWS.find((r) => r.ccn === on)?.state !== SKIP, 'never a Virginia hospital');
       current = next;
     }
     t.diagnostic(`${DRAWS.length + 1} picks (${intoVirginia.length} aimed at Virginia's run), none in Virginia`);
