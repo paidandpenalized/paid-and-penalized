@@ -19,26 +19,28 @@ export function shareDecimals(shares) {
   return DECIMALS.find(ok) ?? DECIMALS[DECIMALS.length - 1];
 }
 
-// Each case's share as printed: at shareDecimals, and a share that still prints as zero as "under" the smallest share the
-// decimals print (copy shareUnder), never "0.000%".
-export function caseShareTexts(shares) {
+// One decision for the headline and the cases (ruling R33). Each case at shareDecimals, a share that still prints as zero
+// as "under" the smallest share the decimals print (copy shareUnder), never "0.000%". When that leaves the low case as
+// "under" or the low and high cases printing alike, the range is too small to print as numbers: the headline is its bound,
+// the smallest share at three decimals above the high case, as "under" it, and every case prints that same bound, so no
+// case reads at or above the headline's. { texts: [low, middle, high], range: { low, high } or { under } }.
+function printed(shares) {
   const dp = shareDecimals(shares);
-  return shares.map((s) => {
+  const texts = shares.map((s) => {
     const text = pct(s, dp);
     return isZero(text) ? fill('shareUnder', { tiny: pct(unit(dp), dp) }) : text;
   });
-}
-
-// The headline's range: { low, high } (the printed low and high cases) when both print as numbers and differ; else
-// { under }, the smallest share at three decimals above the high case, as "under" it (the range is too small to print as
-// two numbers, so the headline gives its bound, never "X to X" or a zero).
-export function shareRange(shares) {
-  const texts = caseShareTexts(shares);
   const low = texts[0];
   const high = texts[texts.length - 1];
-  const dp = DECIMALS[DECIMALS.length - 1];
-  const numbers = !isZero(pct(shares[0], shareDecimals(shares))) && low !== high;
-  if (numbers) return { low, high };
-  const bound = (Math.floor(shares[shares.length - 1] / unit(dp)) + 1) * unit(dp);
-  return { under: fill('shareUnder', { tiny: pct(bound, dp) }) };
+  if (!isZero(pct(shares[0], dp)) && low !== high) return { texts, range: { low, high } };
+  const most = DECIMALS[DECIMALS.length - 1];
+  const bound = (Math.floor(shares[shares.length - 1] / unit(most)) + 1) * unit(most);
+  const under = fill('shareUnder', { tiny: pct(bound, most) });
+  return { texts: shares.map(() => under), range: { under } };
 }
+
+// Each case's share as printed (the band's cases, step 4's share row, table, label and factor).
+export const caseShareTexts = (shares) => printed(shares).texts;
+
+// The headline's range: { low, high } (the printed low and high cases), or { under }, the bound every case also prints.
+export const shareRange = (shares) => printed(shares).range;

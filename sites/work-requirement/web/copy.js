@@ -316,7 +316,7 @@ export const COPY = {
   hStampCase: { text: '{scenario} case', claim: null },
   hScenHead: { text: 'The scenario, a year', claim: null },
   hRowLost: { text: 'Revenue lost', claim: null },
-  hRowShare: { text: 'Share of patient revenue', claim: null },
+  hRowShare: { text: 'Share of patient revenue lost', claim: null },
   hRowAdded: { text: 'Care still given, now uncompensated', claim: null },
   hRowOm: { text: 'Operating margin after', claim: null },
   hRowTm: { text: 'Total margin after', claim: null },

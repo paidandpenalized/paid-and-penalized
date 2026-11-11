@@ -515,14 +515,23 @@ test('every drawn hospital\'s band: a range whose printed low and high differ, n
     const one = hospitalScenario(WR, ccn);
     if (!one.shares) continue;
     const texts = caseShareTexts(one.shares);
-    assert.notEqual(texts[0], texts[2], `${ccn}: the printed low and high differ`);
     for (const t of texts) assert.doesNotMatch(t, /^0\.0+%$/, `${ccn}: no share printed as zero`);
     const range = shareRange(one.shares);
     if (range.under) {
       under += 1;
       assert.match(range.under, /^under 0\.00[1-9]%$/, `${ccn}: the bound`);
-      assert.ok(one.shares[2] < Number(range.under.replace(/[^\d.]/g, '')) / 100, `${ccn}: the bound is above the high case`);
-    } else assert.notEqual(range.low, range.high, `${ccn}: two numbers`);
+      const bound = Number(range.under.replace(/[^\d.]/g, ''));
+      assert.ok(one.shares[2] < bound / 100, `${ccn}: the bound is above the high case`);
+      // Ruling R33: no case label prints the headline's bound or more; each prints the bound itself.
+      for (const t of texts) {
+        assert.ok(t.startsWith('under ') || Number(t.replace(/[^\d.]/g, '')) < bound, `${ccn}: a case printed at or above the bound (${t})`);
+        assert.equal(t, range.under, `${ccn}: the cases print the headline's bound`);
+      }
+    } else {
+      assert.notEqual(texts[0], texts[2], `${ccn}: the printed low and high differ`);
+      assert.deepEqual([range.low, range.high], [texts[0], texts[2]], `${ccn}: the headline is the printed low and high`);
+      assert.ok(!texts.some((t) => t.startsWith('under ')), `${ccn}: numbers only`);
+    }
   }
   assert.ok(under > 0, 'the file has a range too small for two numbers');
   // The pages: a tiny-share hospital's band prints the bound and draws a visible range around its middle mark.
@@ -531,6 +540,7 @@ test('every drawn hospital\'s band: a range whose printed low and high differ, n
   const want = caseShareTexts(wrOf(tiny).shares);
   assert.ok(band.includes(`<p class="hh__wbv">${shareRange(wrOf(tiny).shares).under}</p>`), 'the bound as the headline');
   assert.ok(band.includes(`<li>Low case ${want[0]}</li>`) && band.includes(`High case ${want[2]}</li>`), 'the cases as printed');
+  assert.ok(want.every((t) => t === shareRange(wrOf(tiny).shares).under), 'each case the headline\'s bound');
   assert.doesNotMatch(band, /0\.00%|0\.000%/, 'no zero');
   assert.doesNotMatch(/<p class="hh__wbv">(.*?)<\/p>/.exec(band)[1], / to /, 'no "X to X"');
   const width = Number(/class="hh__wb-band" x="[\d.]+" y="7" width="([\d.]+)"/.exec(band)[1]);
