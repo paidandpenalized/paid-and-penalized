@@ -1,6 +1,7 @@
-// A hospital's three case shares (the share of its patient revenue it could lose, low, middle and high) as both the
-// work-requirement page's step 4 and the hub's Medicaid band print them, so one hospital reads the same on both. Pure.
-import { pct } from '../render/format.js';
+// A hospital's three case shares (the share of its patient revenue it could lose, low, middle and high), and its three
+// cases' dollars, as both the work-requirement page's step 4 and the hub's Medicaid band print them, so one hospital reads
+// the same on both. Pure.
+import { money, pct } from '../render/format.js';
 import { fill } from './copy.js';
 
 // Two decimals, or three where two would print two cases alike or a case as zero; never more.
@@ -45,3 +46,12 @@ export const caseShareTexts = (shares) => printedShares(shares).texts;
 
 // The headline's range: { low, high } (the printed low and high cases), or { under }, the bound every case also prints.
 export const shareRange = (shares) => printedShares(shares).range;
+
+// A hospital's three case losses (its Medicaid revenue lost a year, low, middle and high, at the default use rate) as the
+// hub's band prints them: money() of each, step 4's own strings without the minus its record card prints them with
+// ("−$2.1M" there, "$2.1M" here beside the word "lose"). null when a case prints as "$0" or the low and high cases print
+// alike (no hospital in today's file): the band then prints no dollars, never "$0" or "$X to $X".
+export function printedLost(lost) {
+  const texts = lost.map((x) => money(x));
+  return texts.includes('$0') || texts[0] === texts[texts.length - 1] ? null : texts;
+}

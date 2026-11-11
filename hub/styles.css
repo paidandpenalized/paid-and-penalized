@@ -742,6 +742,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__wbb { min-width: 0; }
 .hh__wblab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; max-width: none; font: 700 13px/1.3 var(--font-body); }
 .hh__wbv { margin-top: 6px; font: 700 22px/1.15 var(--font-type); font-variant-numeric: tabular-nums; }
+.hh__wbd { max-width: none; margin-top: 4px; color: var(--ink-2); font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
 .hh__wbbar { max-width: 40rem; margin-top: 12px; }
 .hh__wbsvg { display: block; width: 100%; height: 28px; overflow: visible; }
 /* The ticks' rules in --ink-3 (3:1 or more on paper in both themes), sparsely dotted so they stay light. */

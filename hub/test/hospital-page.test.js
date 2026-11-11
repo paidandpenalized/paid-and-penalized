@@ -436,7 +436,10 @@ test('the Medicaid band sits after the what-if, apart from the net: taking it ou
     assert.ok(page.indexOf(band) < page.indexOf('data-peer-table'), 'before the peer table');
     assert.ok(band.includes('Medicaid scenario (not a payment)'), 'named a scenario, not a payment');
     assert.ok(band.includes(esc('never added to the Medicare net above')), 'and never added to the net');
-    assert.doesNotMatch(band, /\$\d/, 'no dollar figure');
+    // Its dollars (Dalton's review 11-11) are the scenario's own, in its dollar line and its middle case alone: no
+    // Medicare dollar is repeated in it, and nothing in it is summed with the net (the page without it is byte for byte).
+    const dollarsIn = band.replace(/<p class="hh__wbd">[^<]*<\/p>/, '').replace(/<li class="hh__wbk--mid">[^<]*<\/li>/, '');
+    assert.doesNotMatch(dollarsIn, /\$\d/, 'no dollar figure outside the scenario\'s dollar line and middle case');
     assert.doesNotMatch(band, /<script|<button|data-row|data-sum/, 'no script, control or hook the page\'s script reads');
   }
 });
@@ -453,7 +456,12 @@ test('the band for a hospital with a loss to draw: the work-requirement page\'s 
     assert.ok(band.includes(`<p class="hh__wbv">${lo} to ${hi}</p>`), 'the headline is the range, low to high');
     assert.ok(band.includes(`<p class="hh__wbscale">${esc('Square-root scale, the same on every hospital’s page')}</p>`), 'the scale named under its axis');
     assert.ok(band.includes(`<span class="scen-tag">SCENARIO · ${WR.fy} $</span>`), 'the scenario tag');
-    assert.ok(band.includes(`<li>Low case ${lo}</li><li class="hh__wbk--mid">Middle case ${mid}</li><li>High case ${hi}</li>`), 'the three cases');
+    // The dollars: the same cases' Medicaid revenue lost at the default use rate, each step 4's string without its minus.
+    const lost = wrOf(h).lost.map((x) => money(x));
+    assert.equal(wrOf(h).lost[1], row[wrCol.middle_lost], 'the middle case\'s dollars are the file\'s');
+    assert.ok(band.includes(`<p class="hh__wbd">${lost[0]} to ${lost[2]} a year, in ${WR.fy} dollars</p>`), 'the dollar line under the range');
+    assert.ok(band.indexOf('class="hh__wbd"') > band.indexOf('class="hh__wbv"') && band.indexOf('class="hh__wbd"') < band.indexOf('class="hh__wbbar"'), 'under the headline, over the bar');
+    assert.ok(band.includes(`<li>Low case ${lo}</li><li class="hh__wbk--mid">Middle case ${mid} · ${lost[1]}</li><li>High case ${hi}</li>`), 'the three cases, the middle with its dollars');
     assert.match(band, /<svg class="hh__wbsvg" viewBox="0 0 1000 28" preserveAspectRatio="none" aria-hidden="true"/, 'the server\'s drawing');
     assert.match(band, /<rect class="hh__wb-band" x="[\d.]+" y="7" width="[\d.]+" height="14"\/><line class="hh__wb-mid" x1="[\d.]+"/, 'the range and the middle case\'s mark');
     assert.ok(band.includes(`<a class="hh__deep" href="/work-requirement/?h=${h.ccn}">`), 'the link to the hospital on the work-requirement page');
@@ -544,6 +552,10 @@ test('every drawn hospital\'s band: a range whose printed low and high differ, n
   assert.ok(band.includes(`<li>Low case ${want[0]}</li>`) && band.includes(`High case ${want[2]}</li>`), 'the cases as printed');
   assert.ok(want.every((t) => t === shareRange(wrOf(tiny).shares).under), 'each case the headline\'s bound');
   assert.doesNotMatch(band, /0\.00%|0\.000%/, 'no zero');
+  // Its dollars agree with the bound: tiny amounts, whole dollars, never "$0".
+  const tinyLost = wrOf(tiny).lost.map((x) => money(x));
+  assert.ok(band.includes(`<p class="hh__wbd">${tinyLost[0]} to ${tinyLost[2]} a year, in ${WR.fy} dollars</p>`), 'the dollar line');
+  assert.ok(tinyLost.every((t) => /^\$[1-9]\d{0,2}$/.test(t)), `tiny dollars (${tinyLost})`);
   assert.doesNotMatch(/<p class="hh__wbv">(.*?)<\/p>/.exec(band)[1], / to /, 'no "X to X"');
   const width = Number(/class="hh__wb-band" x="[\d.]+" y="7" width="([\d.]+)"/.exec(band)[1]);
   assert.ok(width >= 12, 'a visible range');

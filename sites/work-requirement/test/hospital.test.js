@@ -13,7 +13,8 @@ import { money } from '../../../web/render/format.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { hospitalScenario } from '../../../engine/js/medicaid/hospital.js';
-import { caseShareTexts, shareRange } from '../../../web/medicaid/format.js';
+import { caseShareTexts, printedLost, shareRange } from '../../../web/medicaid/format.js';
+import { medicaidBand } from '../../../hub/hospital/medicaid.js';
 import { pageHospital } from '../client/find.js';
 import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
 import { COPY as REASON_COPY } from '../../../web/medicaid/copy.js';
@@ -192,6 +193,48 @@ test('the engine\'s one-hospital view (the hub\'s band) gives every hospital ste
   }
   assert.equal(drawnSeen, rows.filter((r) => r.share).length);
   assert.equal(hospitalScenario(data, 'not-a-ccn'), null, 'a CCN the file has no row for');
+});
+
+// Dalton's review 11-11 (D4): the hub's band prints each drawn hospital's dollars, low to high under its share range and
+// the middle case's beside its share, and they are step 4's own strings (its record card's Revenue lost row, its minus
+// aside: the band says "lose"), for every hospital the file draws, the "under" ones included; never "$0", and a hospital
+// with no loss to draw gets no dollars.
+test('the hub band\'s dollars are step 4\'s strings for every drawn hospital at the default use rate, never "$0"; a reason band has none', () => {
+  const file = { fy: data.meta.fy, columns: data.columns, hospitals: data.hospitals, states: data.states };
+  const MINUS = '\u2212';
+  let drawn = 0;
+  let under = 0;
+  for (const r of rows) {
+    const s = subject(r);
+    const reason = reasonOf(s);
+    const band = String(medicaidBand({ ccn: r.ccn }, file, { net: true }));
+    assert.doesNotMatch(textOf(band), /(?<![\d.,])\$0(?![\d.,])/, `${r.ccn}: no "$0"`);
+    if (reason) {
+      assert.doesNotMatch(band, /\$\d|hh__wbd/, `${r.ccn}: a reason band has no dollars`);
+      continue;
+    }
+    drawn += 1;
+    const lostRow = /<th scope="row">Revenue lost<\/th>(.*?)<\/tr>/.exec(cardHtml(s, { k: MIDDLE, use: 1 }).text)?.[1] ?? '';
+    const card = [...lostRow.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((m) => m[1]);
+    assert.equal(card.length, 3, `${r.ccn}: step 4's three cases`);
+    assert.ok(card.every((t) => t.startsWith(`${MINUS}$`)), `${r.ccn}: step 4 prints each as lost`);
+    const want = card.map((t) => t.slice(1));
+    assert.deepEqual(printedLost(hospitalScenario(data, r.ccn).lost), want, `${r.ccn}: the band's strings are step 4's`);
+    assert.ok(band.includes(`<p class="hh__wbd">${want[0]} to ${want[2]} a year, in ${data.meta.fy} dollars</p>`), `${r.ccn}: the dollar line`);
+    const shares = caseShareTexts(hospitalScenario(data, r.ccn).shares);
+    assert.ok(band.includes(`<li class="hh__wbk--mid">${escapeHtml(`Middle case ${shares[1]} · ${want[1]}`)}</li>`), `${r.ccn}: the middle case's dollars`);
+    if (shareRange(hospitalScenario(data, r.ccn).shares).under) {
+      under += 1;
+      // A range too small for two shares: its dollars are tiny amounts, whole dollars under a thousand, never "$0".
+      assert.ok(want.every((t) => /^\$[1-9]\d{0,2}$/.test(t)), `${r.ccn}: tiny dollars under an "under" headline (${want})`);
+    }
+  }
+  assert.equal(drawn, rows.filter((r) => r.share).length, 'every drawn hospital');
+  assert.ok(under > 0, 'the "under" hospitals among them');
+  // The guard: a case that prints as "$0", or a low and high that print alike, leave the band with no dollars.
+  assert.equal(printedLost([0.4, 300, 500]), null);
+  assert.equal(printedLost([1.21e6, 1.22e6, 1.24e6]), null);
+  assert.deepEqual(printedLost([230.3, 378, 526.4]), ['$230', '$378', '$526']);
 });
 
 // Task 12: the "under" decision reads the smallest share and the bound the largest, whatever their order, so a case that

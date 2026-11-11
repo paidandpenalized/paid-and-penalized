@@ -5,14 +5,16 @@
 // work-requirement page. For one with no loss to draw: the reason's stamp and sentence (web/medicaid/reasons.js, the
 // work-requirement page's own words) and the link. For one the scenario file has no row for: no band. Server-drawn, no
 // script. The numbers are the work-requirement page's at the default use rate (engine/js/medicaid/hospital.js
-// hospitalScenario: the file's own middle case, the engine's low and high), unsigned, beside the word "lose".
+// hospitalScenario: the file's own middle case, the engine's low and high), unsigned, beside the word "lose": the shares,
+// and under their range the same cases' dollars, low to high, the middle case's beside its share, each as step 4 prints
+// it (web/medicaid/format.js).
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { fillCopy, stamp } from '../../web/render/components.js';
 import { pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { r1 } from '../../web/charts/svg.js';
 import { scenarioTag } from '../../web/render/shell.js';
-import { printedShares } from '../../web/medicaid/format.js';
+import { printedLost, printedShares } from '../../web/medicaid/format.js';
 import { reasonStamp, reasonWhy } from '../../web/medicaid/reasons.js';
 import { SITE } from '../../web/site.js';
 import { arrow } from '../parts.js';
@@ -104,12 +106,15 @@ export function medicaidBand(h, medicaid, { net }) {
   if (!one) return '';
   const fy = String(medicaid.fy);
   const { texts, range } = one.shares ? printedShares(one.shares) : {};
+  const lost = one.lost && printedLost(one.lost);
+  const caseText = (key, i) => (i === 1 && lost ? fill('wbMiddleLost', { share: texts[i], lost: lost[i] }) : fill(key, { share: texts[i] }));
   const body = one.reason
     ? html`<div class="hh__wbr">${stamp({ label: reasonStamp(one.reason), ink: true })}<p class="hh__why">${reasonWhy(one.reason, { stateName: one.stateName, fy })}</p></div>`
     : html`<p class="hh__wblab">${fill('wbLabel')} ${scenarioTag(fy)}</p>
 <p class="hh__wbv">${range.under ?? fill('wbRange', { low: range.low, high: range.high })}</p>
+${lost ? html`<p class="hh__wbd">${fill('wbDollars', { low: lost[0], high: lost[2], fy })}</p>` : ''}
 ${bar(one.shares, top)}
-<ul class="hh__wbk" role="list">${['wbLow', 'wbMiddle', 'wbHigh'].map((key, i) => html`<li${i === 1 ? html` class="hh__wbk--mid"` : ''}>${fill(key, { share: texts[i] })}</li>`)}</ul>
+<ul class="hh__wbk" role="list">${['wbLow', 'wbMiddle', 'wbHigh'].map((key, i) => html`<li${i === 1 ? html` class="hh__wbk--mid"` : ''}>${caseText(key, i)}</li>`)}</ul>
 <p class="hh__why">${fill('wbHow', { fy })}</p>`;
   return html`<section class="hh__wb" aria-labelledby="hh-wb-h" data-medicaid>
 <div class="wrap"><div class="hh__wbi">

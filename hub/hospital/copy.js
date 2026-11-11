@@ -199,10 +199,14 @@ export const COPY = typesetCopy({
   wbNoteReasonAlone: 'The work-requirement pages model the Medicaid revenue a hospital could lose: not a payment.',
   wbLabel: 'Share of its patient revenue it could lose a year',
   wbRange: '{low} to {high}',
+  // Under the range, the same cases' dollars, low to high (Dalton's review 11-11), and the middle case's beside its share:
+  // step 4's own strings, unsigned beside "lose".
+  wbDollars: '{low} to {high} a year, in {fy} dollars',
   // Under the range's axis: how it is drawn.
   wbScale: "Square-root scale, the same on every hospital's page",
   wbLow: 'Low case {share}',
   wbMiddle: 'Middle case {share}',
+  wbMiddleLost: 'Middle case {share} · {lost}',
   wbHigh: 'High case {share}',
   wbHow: { text: "The three cases follow the Urban Institute's three state mitigation scenarios for the drop in each state's Medicaid expansion enrollment, applied to this hospital's FY{fy} Medicare cost report.", claim: ['WR-05', 'WR-18'] },
   wbLink: 'This hospital on the work-requirement page',

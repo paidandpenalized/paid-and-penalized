@@ -87,8 +87,9 @@ export function reasonOf({ away = null, cls, rec, drawn, declines, lenient = fal
 
 // A hospital of the file as a page shows it at the default use rate, or null when the file has no row for it. file:
 // { columns, hospitals (rowsByCcn's map), states } (the file's, as its readers decode it). { ccn, state, stateName, cls,
-// reason, shares }: reason as reasonOf gives it (null with a loss to draw); shares, with a loss to draw, the share of its
-// patient revenue lost in each case, [low, middle, high], from caseResults (the file's own middle case), else null.
+// reason, shares, lost }: reason as reasonOf gives it (null with a loss to draw); with a loss to draw, lost, the Medicaid
+// revenue lost in each case, [low, middle, high], from caseResults (the file's own middle case), and shares, each over
+// its patient revenue; else both null.
 export function hospitalScenario(file, ccn) {
   const row = file.hospitals.get(ccn);
   if (!row) return null;
@@ -100,6 +101,7 @@ export function hospitalScenario(file, ccn) {
   const resultsOf = () => (results ??= engineResults(rec, st.declines));
   const drawn = drawnFrom(rec, resultsOf) !== null;
   const reason = reasonOf({ cls: rec.cls, rec, drawn, declines: st.declines, ccn });
-  const shares = reason ? null : withOwnMiddle(rec, resultsOf(), PARAMS.useDefault).map((x) => x.lost / rec.net_patient_revenue);
-  return { ccn, state: rec.state, stateName: st.name, cls: rec.cls, reason, shares };
+  const lost = reason ? null : withOwnMiddle(rec, resultsOf(), PARAMS.useDefault).map((x) => x.lost);
+  const shares = lost && lost.map((x) => x / rec.net_patient_revenue);
+  return { ccn, state: rec.state, stateName: st.name, cls: rec.cls, reason, shares, lost };
 }
