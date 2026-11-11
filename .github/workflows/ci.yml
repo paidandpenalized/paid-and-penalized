@@ -60,6 +60,10 @@ jobs:
   browser:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -78,10 +82,11 @@ jobs:
         run: make build
       # Actions sets CI=true, so tools/e2e/lib.js runs this Chromium, not an installed Google Chrome. One file and one tab
       # at a time (tools/e2e/concurrency.js): the runner's core count changes with the repository's visibility, and more
-      # at once timed out the heaviest pages. About 17 minutes; the limit leaves room.
+      # at once timed out the heaviest pages. Two shards by file (tools/e2e/shard.js), each about 10 minutes locally (13 to 15 projected on CI); the limit leaves room.
       - name: Browser checks (pages, interaction, watch, accessibility)
         env:
           E2E_CONCURRENCY: '1'
+          E2E_SHARD: '${{ matrix.shard }}/2'
         run: npm run e2e
 
   python:
