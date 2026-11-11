@@ -7,12 +7,13 @@ import assert from 'node:assert/strict';
 import { rowToBase, scenario } from '../../../engine/js/medicaid/scenario.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
+import { money } from '../../../web/render/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { BOTH_QUANTILE, BOTH_SHARE, NAMED_FIRST, SCENARIOS } from '../web/constants.js';
 import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import {
-  DRAWINGS, LABEL_FONTS, bothBody, bothInput, bothLayout, bothModel, countsAt, cutOf, decodeBoth, exposed, covers, headHtml, namedBody, placed, xOf, youHtml,
+  DRAWINGS, LABEL_FONTS, bothBody, bothInput, bothLayout, bothModel, countsAt, cutOf, decodeBoth, exposed, covers, headHtml, namedBody, placed, readHtml, sumsOf, xOf, youHtml,
 } from '../web/program/both.js';
 import { awayRows, decodeChunk, hospChunks, numbersOf, serverPick, subjectOf } from '../web/program/hospital.js';
 import { hospitalRows } from '../web/program/strips.js';
@@ -155,6 +156,43 @@ test('the server\'s figure, words and table equal the browser\'s for the server\
   assert.ok(section.includes(String(headHtml(browser, MIDDLE, 1))));
   assert.ok(section.includes(String(namedBody(browser, MIDDLE, 1))));
   assert.ok(section.includes(String(youHtml(browser, pick, MIDDLE, 1))));
+});
+
+// Dalton's review 11-11 (D1): the penalties' sum moves with the case because the group crossing the loss line changes, not
+// any hospital's penalty. Its label names the group (the count) and a line under it says so, on the server's step and in
+// what the browser redraws (client/both.js sets readHtml's markup) at every case and use rate.
+test('the corner\'s penalties are labeled as these hospitals\', with their count, and a line says a case moves the group, not the penalties', () => {
+  const read = /<div class="wr-both__read" data-b-read>([\s\S]*?)<\/div>/.exec(section)?.[1];
+  assert.ok(read, 'the server\'s readout');
+  assert.equal(read, String(readHtml(browser, MIDDLE, 1)), 'the server\'s readout is the browser\'s at the middle case and default use rate');
+  const shift = 'Another case or use rate changes which hospitals cross the 1% line, not any hospital’s penalties.';
+  for (const use of [0.75, 1, 1.25]) {
+    for (const [k] of SCENARIOS.entries()) {
+      const list = exposed(model, k, use);
+      const out = readHtml(model, k, use, list);
+      assert.equal(typeof out.text, 'string', 'markup the browser sets');
+      const dts = [...out.text.matchAll(/<dt>([\s\S]*?)<\/dt>/g)].map((m) => words(m[1]));
+      assert.ok(list.length > 1, `the corner holds more than one hospital at case ${k}, use ${use}`);
+      assert.ok(dts[1].startsWith(`Medicare penalties of these ${list.length.toLocaleString('en-US')} hospitals, FY${model.penaltyFy}`), `case ${k}, use ${use}: ${dts[1]}`);
+      assert.ok(words(out.text).includes(shift), `case ${k}, use ${use}: the line under the numbers`);
+      // The sum is the listed hospitals' own penalties, the same at any use rate for the same hospitals.
+      assert.ok(out.text.includes(`<dd>${money(-sumsOf(list, k, use).pen)}</dd>`), `case ${k}, use ${use}: their penalties`);
+      assert.doesNotMatch(words(out.text), BAD);
+    }
+  }
+  // The counts move with the case while no hospital's penalty does: a hospital in two cases' corners carries one penalty.
+  const [low, high] = [exposed(model, 0, 1), exposed(model, SCENARIOS.length - 1, 1)];
+  assert.ok(low.length < high.length);
+  for (const p of low) assert.equal(high.find((q) => q.ccn === p.ccn)?.pen, p.pen, p.ccn);
+  // One hospital, or none: the words say "this one" or nothing to count, and never "these 1".
+  const one = { ...model, pts: [exposed(model, MIDDLE, 1)[0]] };
+  assert.match(words(readHtml(one, MIDDLE, 1)), /Medicare penalties of this one hospital, FY\d{4}/);
+  const none = { ...model, pts: [] };
+  const empty = words(readHtml(none, MIDDLE, 1));
+  assert.match(empty, /None exposed on both/);
+  assert.match(empty, /Medicare penalties, FY\d{4}/);
+  assert.ok(empty.includes(shift));
+  assert.doesNotMatch(empty, /these \d/);
 });
 
 test('the page\'s hospital: marked in the plot or the strip, or a reason line linking step 4; never a bad value', () => {

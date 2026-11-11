@@ -192,6 +192,37 @@ describe('the work-requirement page\'s controls', { concurrency: CONCURRENCY }, 
     await assertQuiet(seen, 'the scenario switch');
   }));
 
+  // D1 (11-11): step 5's penalties label names the hospitals the sum is of (the corner's count, as its head gives it), and
+  // the line under it stays, in the browser's redraw at each case as on the server's step.
+  it('step 5\'s penalties label names the corner\'s count in each case, with the line that the case moves the group', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    await ready(page);
+    await scrollToStep(page, 'both');
+    await page.locator(MOUNTED.both).waitFor({ state: 'attached' });
+    const readOf = () => page.evaluate(() => {
+      const read = document.querySelector('#both [data-b-read]');
+      return {
+        count: /; ([\d,]+) in the \w+ case\.$/.exec(document.querySelector('#both .wr-both__lab').textContent.trim())?.[1] ?? null,
+        pen: read.querySelectorAll('dt')[1].textContent.replace(/\s+/g, ' ').trim(),
+        shift: read.querySelector('.wr-both__shift')?.textContent ?? null,
+      };
+    });
+    const seenCounts = new Set();
+    for (const scenario of CASES) {
+      await pickCase(page, scenario);
+      await eventually(async () => {
+        const r = await readOf();
+        return r.count !== null && r.pen.includes(` ${r.count} hospitals`);
+      }, `step 5's label follows the ${scenario} case`);
+      const r = await readOf();
+      assert.ok(r.pen.startsWith(`Medicare penalties of these ${r.count} hospitals, FY`), `${scenario}: the label names the count`);
+      assert.match(r.shift, /changes which hospitals cross the 1% line, not any hospital’s penalties\./, `${scenario}: the line under the numbers`);
+      seenCounts.add(r.count);
+    }
+    assert.equal(seenCounts.size, CASES.length, 'each case its own count');
+    await pickCase(page, 'middle');
+    await assertQuiet(seen, 'step 5\'s readout');
+  }));
+
   it('the use rate at 75% and 125% moves the range rows, cases still in order, and Back to 100% restores them', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
     await ready(page);
     const server = await rangesOf(page);

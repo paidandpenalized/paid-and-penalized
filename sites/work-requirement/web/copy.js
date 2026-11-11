@@ -407,7 +407,12 @@ export const COPY = {
   bReadHeadOne: { text: 'The one exposed on both, {scenario} case', claim: null },
   bReadHeadNone: { text: 'None exposed on both, {scenario} case', claim: null },
   bReadLost: { text: 'Medicaid revenue lost, a year', claim: null },
-  bReadPen: { text: 'Medicare penalties, FY{pfy}', claim: null },
+  // The penalties are these hospitals' own: a case moves which hospitals cross the loss line (and so the sum), never a
+  // hospital's penalty (Dalton's review 11-11, D1).
+  bReadPen: { text: 'Medicare penalties of these {n} hospitals, FY{pfy}', claim: null },
+  bReadPenOne: { text: 'Medicare penalties of this one hospital, FY{pfy}', claim: null },
+  bReadPenNone: { text: 'Medicare penalties, FY{pfy}', claim: null },
+  bReadShift: { text: 'Another case or use rate changes which hospitals cross the {line} line, not any hospital’s penalties.', claim: null },
   bYouIn: { text: '{name} is exposed on both: {share} of its patient revenue lost in the {scenario} case, and FY{pfy} penalties of {pshare} of its patient revenue.', claim: null },
   bYouOut: { text: '{name} is outside the corner: {share} of its patient revenue lost in the {scenario} case, and FY{pfy} penalties of {pshare} of its patient revenue.', claim: null },
   bYouOutZero: { text: '{name} is outside the corner: {share} of its patient revenue lost in the {scenario} case, and no FY{pfy} penalty.', claim: null },

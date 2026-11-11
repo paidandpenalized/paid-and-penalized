@@ -332,13 +332,18 @@ export function headHtml(model, k, use, list = exposed(model, k, use)) {
 
 const estimate = () => estTag({ href: `${SITE.pages.methods}#estimate`, label: t('hEstimateLabel'), text: t('hEstimate') });
 
-// The corner's dollars in the selected case: its Medicaid loss (scenario) and its penalties (estimate), never added.
+// The corner's dollars in the selected case: its Medicaid loss (scenario) and its penalties (estimate), never added. The
+// penalties' label names the hospitals they are (the count), and a line under them says a case moves which hospitals
+// cross the loss line, not their penalties, so the sum moving with the case is not read as penalties changing.
 export function readHtml(model, k, use, list = exposed(model, k, use)) {
   const { lost, pen } = sumsOf(list, k, use);
-  const head = list.length === 0 ? 'bReadHeadNone' : list.length === 1 ? 'bReadHeadOne' : 'bReadHead';
-  return html`<p class="wr-both__rh">${fill(head, { n: count(list.length), scenario: caseWord(k) })}</p>
+  // The count is in the words only past one ("the one", "none" say it).
+  const which = list.length === 0 ? 'None' : list.length === 1 ? 'One' : '';
+  const n = which ? {} : { n: count(list.length) };
+  return html`<p class="wr-both__rh">${fill(`bReadHead${which}`, { ...n, scenario: caseWord(k) })}</p>
 <dl class="wr-both__dl"><dt>${t('bReadLost')} ${scenTag(model.fy)}</dt><dd>${list.length ? money(-lost) : t('stNoNumber')}</dd>
-<dt>${fill('bReadPen', { pfy: String(model.penaltyFy) })} ${estimate()}</dt><dd>${list.length ? money(-pen) : t('stNoNumber')}</dd></dl>
+<dt>${fill(`bReadPen${which}`, { ...n, pfy: String(model.penaltyFy) })} ${estimate()}</dt><dd>${list.length ? money(-pen) : t('stNoNumber')}</dd></dl>
+<p class="small muted wr-both__shift">${fill('bReadShift', { line: pct(BOTH_SHARE, 0) })}</p>
 <p class="small muted wr-both__never">${t('hPenNote')}</p>`;
 }
 
