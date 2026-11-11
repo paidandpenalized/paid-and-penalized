@@ -1,6 +1,5 @@
 """The exposure pipeline (pp_pipeline.medicaid): its pinned inputs, the state table and the hospital records, on
 synthetic rows with invented CCNs."""
-import hashlib
 import json
 import tempfile
 import unittest

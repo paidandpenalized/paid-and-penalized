@@ -6,7 +6,6 @@ Cost reports come from the HCRIS layer's emitted base year (`data/emitted/hcris/
 pp_engine.hcris.reader); the master (FY2027) and the dollar estimates (FY2026) are those years' emitted files, fixed
 constants below, not the newest; the state inputs are pinned (`pp_pipeline.medicaid.inputs`).
 """
-import hashlib
 import json
 from pathlib import Path
 
@@ -101,13 +100,6 @@ def program_dollars(dollars):
         out[h["ccn"]] = {"medicare": h["total"], "hrrp": h["hrrp"], "hac": h["hac"], "hvbp": h["hvbp"], "net": h["net"],
                          "hrrp_factor": h["hrrpFactor"], "hac_cut": h["cut"]}
     return out
-
-
-def _r(value, places=0):
-    if value is None:
-        return None
-    v = round(value, places)
-    return int(v) if places == 0 else v
 
 
 def share_for(rec, st, factor, share_key="share"):

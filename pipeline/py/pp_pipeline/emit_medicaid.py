@@ -44,9 +44,9 @@ DOLLAR_FIELDS = ("medicaid_net_revenue", "medicaid_supplemental", "medicaid_cost
 RATIO_FIELDS = ("cost_ratio", "cost_ratio_line2_5", "miur")
 FLAG_FIELDS = ("has_margin", "scored", "scored_line2_5", "margin_outlier")
 IDENTITY = ("ccn", "name", "city", "state", "kind", "urban", "beds", "own", "lat", "lon")
-# The middle scenario's results, for server-drawn figures (a hospital in a scenario state only).
-MIDDLE = ("lost", "added_uncompensated", "operating_margin", "operating_margin_after", "total_margin",
-          "total_margin_after", "uncompensated_change")
+# The middle scenario's results the pages read (engine/js/medicaid/hospital.js MIDDLE_KEYS), for server-drawn figures (a
+# hospital in a scenario state only).
+MIDDLE = ("lost", "added_uncompensated", "operating_margin", "operating_margin_after", "total_margin_after")
 COLUMNS = (*IDENTITY, "cls", "status", "period_begin", "period_end", "period_days", "flags", *DOLLAR_FIELDS,
            *RATIO_FIELDS, "medicaid_days_all", "days_total", "medicaid_days_every", "medicaid_days_nonmaternity",
            *FLAG_FIELDS, "share", "state_share", "share_factor", "safety_net", "hrrp", "hac", "net",

@@ -642,9 +642,7 @@
         "middle_added_uncompensated",
         "middle_operating_margin",
         "middle_operating_margin_after",
-        "middle_total_margin",
-        "middle_total_margin_after",
-        "middle_uncompensated_change"
+        "middle_total_margin_after"
       ]
     },
     "hospitals": {
@@ -923,7 +921,7 @@
     },
     "row": {
       "type": "array",
-      "minItems": 51,
+      "minItems": 49,
       "items": {
         "type": [
           "string",

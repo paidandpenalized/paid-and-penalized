@@ -39,6 +39,18 @@ class Vectors(unittest.TestCase):
                 self.assertTrue(any(pick(r) for r in picked))
         self.assertGreater(rollup.roll_up([(r["base"], r["results"]["middle"]) for r in picked
                                            if r["cls"] == build.SCENARIO])["into_red"], 0)
+        # The same three branches as the JS port sees them: the capped flag among the picks, the cap in a vector
+        # hospital's base, and the vectors' own middle-case roll-up counting hospitals that fall 1 point and go into
+        # the red, so the port's comparison runs through each.
+        doc = fresh()
+        self.assertTrue(any("cost_ratio_capped" in r["base"]["flags"] for r in picked), "cost_ratio_capped")
+        self.assertTrue(any(h["base"]["cost_ratio"] == params.MAX_COST_RATIO for h in hospitals), "the cap in a vector")
+        middle = next(c["expected"] for c in doc["rollups"]
+                      if c["scenario"] == "middle" and c["use"] == params.USE_DEFAULT and not c["line2_5"])
+        for key in ("falls_1pp", "into_red"):
+            with self.subTest(f"the vectors' middle roll-up: {key}"):
+                self.assertGreater(middle[key], 0)
+                self.assertIsInstance(middle[key], int)
         for label, found in (
                 ("unscored", any(not b["scored"] for b in bases)),
                 ("scored but not lines 2 + 5", any(b["scored"] and not b["scored_line2_5"] for b in bases)),
