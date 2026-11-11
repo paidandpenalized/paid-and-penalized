@@ -321,9 +321,18 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-rec__t { width: 100%; margin-top: 4px; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
 .wr-rec__t :is(th, td) { padding: 4px 5px; border-bottom: 1px solid var(--line); text-align: right; }
 .wr-rec__t td { white-space: nowrap; }
+/* R35: a case's value in words ("under 0.001%") breaks between them, so three of them fit the card at any width. */
+.wr-rec__t td.wr-rec__words { white-space: normal; }
 .wr-rec__t tbody th { color: var(--ink-2); font: 400 var(--fs-sm)/1.3 var(--font-body); text-align: left; }
 .wr-rec__t thead th { color: var(--ink-2); font: 600 var(--fs-xs)/1.2 var(--font-body); }
 .wr-rec__t .on { background: var(--pen-tint); color: var(--ink); font-weight: 700; }
+/* R35: on the narrowest phones (320px, and up to 374px, where a full-size row of three dollar amounts still outgrows the
+   card) the hospital's own numbers still read in place: tighter cells and the three cases' values a step smaller; the row
+   heads keep their size and wrap between words. */
+@media (max-width: 374px) {
+  .wr-rec__t :is(th, td) { padding-inline: 2px; }
+  .wr-rec__t td { font-size: var(--fs-xs); }
+}
 .wr-rec__dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; margin: 4px 0 0; font-size: var(--fs-sm); }
 .wr-rec__dl dt { color: var(--ink-2); }
 .wr-rec__dl dd { margin: 0; font: 400 var(--fs-sm)/1.45 var(--font-type); text-align: right; white-space: nowrap; }

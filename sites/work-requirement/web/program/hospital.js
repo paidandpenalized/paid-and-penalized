@@ -406,7 +406,8 @@ function stampOf(s, n, k, reason) {
 // now uncompensated (none where the cost report gives no Medicaid cost to price it), and the margins after (none without
 // a usable margin).
 function scenarioTable(s, n, k) {
-  const cell = (j, text) => html`<td class="${j === k ? 'on' : ''}">${text}</td>`;
+  // A value in words ("under 0.001%", R33's bound for the tiniest shares) may break between them (R35); a number never.
+  const cell = (j, text) => html`<td class="${[j === k ? 'on' : '', text.includes(' ') ? 'wr-rec__words' : ''].filter(Boolean).join(' ')}">${text}</td>`;
   const row = (key, f) => html`<tr><th scope="row">${t(key)}</th>${n.results.map((x, j) => cell(j, f(x, j)))}</tr>`;
   return html`<div class="field field--wide wr-rec__sec">
 <p class="field__label">${t('hScenHead')} ${scenarioTag(s.chunk.fy)}</p>
