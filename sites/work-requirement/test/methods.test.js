@@ -14,6 +14,9 @@ import { SITE } from '../../../web/site.js';
 import { BOTH_QUANTILE, BOTH_SHARE, S10_LINES, SCENARIOS } from '../web/constants.js';
 import { loadHubCcns, loadMedicaid, loadSourceGroups, sourceGroups } from '../web/data.js';
 import { methodsFacts } from '../web/methods/facts.js';
+import { COPY as MEDICAID_COPY } from '../../../web/medicaid/copy.js';
+import { COPY as METHODS_COPY } from '../web/methods/copy.js';
+import { COPY as PROGRAM_COPY } from '../web/copy.js';
 import { SENSITIVITIES, methodsPage, mostMoved } from '../web/pages/methods.js';
 import { programPage } from '../web/pages/program.js';
 import { bothInput, bothModel } from '../web/program/both.js';
@@ -230,6 +233,16 @@ test('neutral verbs: no "cut" of enrollment, no people "removed", no revenue "ta
   assert.doesNotMatch(text, /removes? from Medicaid|could take from|case shown takes/);
   const ws = words(program);
   assert.doesNotMatch(ws, /Commonwealth Fund.s modelers/);
+});
+
+// The same rule over every word the site and the hospital pages' band print (placeholders aside: {cut} is the corner's
+// threshold): no "cut", "take" or "remove" in any sense, so none can read as the policy's verb (the Medicare penalties beside the scenario say "penalty").
+test('neutral verbs in every copy file of the work-requirement pages: no cut, take or remove', () => {
+  for (const [file, COPY] of [['copy.js', PROGRAM_COPY], ['methods/copy.js', METHODS_COPY], ['web/medicaid/copy.js', MEDICAID_COPY]]) {
+    for (const [key, v] of Object.entries(COPY)) {
+      assert.doesNotMatch((typeof v === 'string' ? v : v.text).replace(/\{\w+\}/g, ''), /\b(cut|cuts|cutting|take|takes|taken|taking|remov\w*)\b/i, `${file} ${key}`);
+    }
+  }
 });
 
 test('the hub\'s statement about the work-requirement pages\' as-of line and source list is no longer pending', () => {

@@ -48,7 +48,9 @@ export function mountStates(section, { store, model, wide, say = () => {}, serve
     if (moved) for (const svg of svgs.values()) svg.setAttribute('aria-label', statesAlt(model, view.k, view.use));
     const headline = headlineOf(model, state.stateCode, view);
     head.innerHTML = headlineHtml(headline).text;
-    card.innerHTML = cardBody(model, state.stateCode, view).text;
+    // A most-exposed list the reader opened stays open across the redraw; closed until then.
+    const open = card.querySelector('[data-st-hits]')?.open === true;
+    card.innerHTML = cardBody(model, state.stateCode, { ...view, open }).text;
     if (changed.has('stateCode')) {
       pick.value = state.stateCode;
       name.textContent = byCode.get(state.stateCode).name;

@@ -273,7 +273,7 @@ describe('the work-requirement page\'s controls', { concurrency: CONCURRENCY }, 
   it('Find sets the hospital in steps 1, 4 and 5, and the address and the chip follow; a pick the hub lacks stops the chip', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
     await ready(page);
     // The random default does not follow (R23): no ?h=, no chip.
-    assert.equal(followed(page), null, 'the random default writes no ?h=');
+    assert.ok(followed(page) === null, 'the random default writes no ?h=');
     assert.equal((await chipOf(page)).shown, false, 'nor fills the chip');
     await scrollToStep(page, 'finding');
     await find(page, FIRST);
@@ -341,7 +341,7 @@ describe('the random pick never draws a Virginia hospital', () => {
     const shown = () => page.locator('[data-h-card] .wr-rec').getAttribute('data-ccn');
     let current = POOL[Math.floor(intoVirginia[0] * POOL.length)];
     assert.ok(await shown() === current.ccn, 'the default is the pool\'s pick for the draw');
-    assert.equal(followed(page), null, 'and is not followed (R23)');
+    assert.ok(followed(page) === null, 'and is not followed (R23)');
     const button = page.locator('[data-h-pick] button');
     for (const d of DRAWS) {
       const from = POOL.filter((r) => r.ccn !== current.ccn);

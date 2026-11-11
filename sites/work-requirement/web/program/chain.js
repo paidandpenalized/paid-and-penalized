@@ -12,7 +12,7 @@ import { fillCopy } from '../../../../web/render/components.js';
 import { count, decimal, money, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { SCENARIOS } from '../constants.js';
-import { fill, t } from '../copy.js';
+import { fill, fillKeep, t } from '../copy.js';
 import { scenWord } from './ranges.js';
 
 // The worksheet's twelve lines, in order: a line's number is its place here. Each link holds a run of them.
@@ -278,7 +278,9 @@ export const measuredTag = ({ wrap = false } = {}) => {
   return html`<span class="wr-tag${wrap ? ' wr-tag--wrap' : ''}"><span class="wr-tag__long">${words('wsMeasured')}</span><span class="wr-tag__short">${words('wsMeasuredShort')}</span></span>`;
 };
 export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
-const rangeOf = (totals, key, sign = 1) => fill('wsRange', { low: money(sign * totals.low[key]), high: money(sign * totals.high[key]) });
+// A range note's two bounds, each kept whole on one line (a signed amount never breaks between its sign and its "$").
+export const rangeText = (low, high) => fillKeep('wsRange', { low, high }, ['low', 'high']);
+const rangeOf = (totals, key, sign = 1) => rangeText(money(sign * totals.low[key]), money(sign * totals.high[key]));
 
 // The lines of link n's worksheet (the inside of its tbody), for a view. The worksheet's head carries its one scenario
 // tag (how.js); line 1, from the cost reports, carries its own measured tag.

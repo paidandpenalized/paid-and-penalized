@@ -167,6 +167,34 @@ test('a card\'s most exposed hospitals: up to four of the state\'s drawn hospita
   assert.match(cardBody(evil, code, { k: MIDDLE, use: 1 }).text, /&lt;b&gt;x&lt;\/b&gt; &amp; y/);
 });
 
+test('a card\'s most exposed hospitals are a closed disclosure until the reader opens it; the script keeps one opened open', () => {
+  assert.match(section, /<details class="wr-hits" data-st-hits><summary class="wr-hits__h">/, 'the server draws it closed');
+  assert.doesNotMatch(section, /data-st-hits open/);
+  const code = model.selected;
+  const closed = cardBody(model, code, { k: MIDDLE, use: 1 }).text;
+  const opened = cardBody(model, code, { k: MIDDLE, use: 1, open: true }).text;
+  assert.match(closed, /<details class="wr-hits" data-st-hits>/);
+  assert.match(opened, /<details class="wr-hits" data-st-hits open>/);
+  assert.equal(opened.replace(' data-st-hits open>', ' data-st-hits>'), closed, 'open changes nothing else');
+  // Still sorted by share, largest first.
+  const shares = [...closed.matchAll(/<span class="wr-hit__v">([^<]+)<\/span>/g)].map((x) => Number.parseFloat(x[1]));
+  assert.deepEqual(shares, [...shares].sort((a, b) => b - a));
+  // A state with no hospital to draw: a line, no disclosure to open.
+  const empty = { ...model, states: model.states.map((s) => (s.code === code ? { ...s, top: [] } : s)) };
+  const none = cardBody(empty, code, { k: MIDDLE, use: 1 }).text;
+  assert.doesNotMatch(none, /<details/);
+  assert.ok(none.includes(COPY.stHitsNone.text));
+});
+
+test('a range note keeps each bound whole on one line, a signed amount never split from its "$"', () => {
+  for (const code of scenarioCodes) {
+    const card = cardBody(model, code, { k: MIDDLE, use: 1 }).text;
+    const notes = [...card.matchAll(/<small class="wr-wl__rg">([\s\S]*?)<\/small>/g)].map((x) => x[1]);
+    assert.ok(notes.length >= 2, code);
+    for (const note of notes) assert.equal((note.match(/<span class="nw">/g) ?? []).length, 2, `${code}: ${note}`);
+  }
+});
+
 test('every state\'s card and headline have numbers or a reason, never "$0", NaN or an empty bar', () => {
   for (const s of model.states) {
     for (const k of [0, 1, 2]) {

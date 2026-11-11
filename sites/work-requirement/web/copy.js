@@ -87,7 +87,7 @@ export const COPY = {
     claim: null,
   },
   figNotPlaced: { text: 'The strips leave out {n} hospitals in scenario states with no loss to draw: no Medicaid revenue on their cost report (or a few dollars of it), no patient revenue to measure against, or a cost report screened out as a filing error.', claim: null },
-  figSource: { text: 'Urban Institute and RWJF state enrollment declines, applied to each hospital’s FY{fy} Medicare cost report (CMS HCRIS)', claim: null },
+  figSource: { text: 'Urban Institute and RWJF state enrollment declines, applied to the Medicaid and all-payer revenue on each hospital’s FY{fy} Medicare cost report (CMS HCRIS)', claim: null },
   stripEnrollees: { text: '{n} million fewer enrollees', claim: 'WR-03' },
   // The low strip's small note: CMS's own projection of the enrollment decline (about the low case's, WR-03) sits there.
   stripOfficial: { text: '◂ CMS’s count sits here', claim: ['WR-03', 'WR-04'] },
@@ -115,7 +115,7 @@ export const COPY = {
   // Step 2, how the scenario works (web/program/how.js): the words column.
   howBig: { text: 'Revenue lost is not income lost', claim: null },
   howLede: {
-    text: 'Four links take the Medicaid revenue on each hospital’s cost report to its operating income, on one dollar scale. In the scenario most of their care is still given, so income falls by less than revenue, and hospitals give more care unpaid.',
+    text: 'Four links lead from the Medicaid revenue on each hospital’s cost report to its operating income, on one dollar scale. In the scenario most of their care is still given, so income falls by less than revenue, and hospitals give more care unpaid.',
     claim: null,
   },
   casesHead: { text: 'Urban Institute’s three cases', claim: null },
@@ -200,7 +200,7 @@ export const COPY = {
   ws9: { text: 'Become uninsured', claim: null },
   // Lines 9 and 10: the share is this site's ratio of CBO's two counts for the requirement (WR-11), and one less the
   // drop in hospital use the Commonwealth Fund's appendix models (WR-12); Methods gives both in full.
-  ws9Note: { text: 'From CBO’s estimate for the requirement: more uninsured over people losing Medicaid. The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: 'WR-11' },
+  ws9Note: { text: 'From CBO’s estimate for the requirement: more uninsured over people losing Medicaid. The rest find other coverage, which is assumed to pay the care’s cost: {v}.', claim: 'WR-11' },
   ws10: { text: 'Care they still use, uninsured', claim: null },
   ws10Note: { text: 'One less the drop in hospital use that Dobson DaVanzo, for the Commonwealth Fund, assumes for people newly uninsured. The rest is care not given, and its cost goes away: {v}.', claim: 'WR-12' },
   wsSplit: { text: 'Line {n}, split three ways', claim: null },
@@ -227,7 +227,7 @@ export const COPY = {
   // to seven) and its most exposed hospitals; for a state with no scenario, the reason instead, and never a number.
   stTop: { text: '{state} is the most exposed', claim: null },
   stRank: { text: '{state} is the {rank} most exposed of {n}', claim: null },
-  stWhy: { text: 'Medicaid is {y} of its hospitals’ patient revenue, and the {scenario} case takes {x} of that: {share} of their patient revenue, {lost} a year.', claim: null },
+  stWhy: { text: 'Medicaid is {y} of its hospitals’ patient revenue, and the {scenario} case reduces it by {x}: a loss of {share} of their patient revenue, {lost} a year.', claim: null },
   stDek: { text: 'Exposure is the two multiplied, so each contour on the figure is one product. Pick a state in the figure, or from the list.', claim: null },
   stNone: { text: '{state}: no scenario', claim: null },
   stNotModeled: { text: '{state}: not modeled', claim: null },
@@ -252,7 +252,7 @@ export const COPY = {
   stL6NoteLess: { text: 'The {n} hospitals that report it, which lose {lost} of line {a}.', claim: null },
   stL7: { text: 'Share of patient revenue lost', claim: null },
   stL7Note: { text: 'Their loss ÷ line {a}.', claim: null },
-  stAxes: { text: 'On the figure, up is Medicaid’s share of their patient revenue, {y}; across is the share of it the case takes, {x}. The two multiply to line {n}.', claim: null },
+  stAxes: { text: 'On the figure, up is Medicaid’s share of their patient revenue, {y}; across is the share of it lost in the case, {x}. The two multiply to line {n}.', claim: null },
   stHitsHead: { text: 'Most exposed hospitals', claim: null },
   stHitsSub: { text: 'Share of their own patient revenue lost, {scenario} case', claim: null },
   stHitsNone: { text: 'No hospital here has a loss to draw.', claim: null },
@@ -263,12 +263,12 @@ export const COPY = {
   // Figure 3: the states on the two numbers their exposure multiplies.
   stTakeaway: { text: 'The {n} jurisdictions with a scenario, on the two numbers their exposure multiplies; whiskers run from the low case to the high.', claim: null },
   stAlt: {
-    text: 'A scatter of the {n} jurisdictions with a scenario: Medicaid’s share of their hospitals’ patient revenue, up, against the share of it the {scenario} case takes, across, over shaded contours of the share of patient revenue lost. Most exposed: {top}. The {m} states with no scenario sit in a hatched column at the left.',
+    text: 'A scatter of the {n} jurisdictions with a scenario: Medicaid’s share of their hospitals’ patient revenue, up, against the share of it lost in the {scenario} case, across, over shaded contours of the share of patient revenue lost. Most exposed: {top}. The {m} states with no scenario sit in a hatched column at the left.',
     claim: null,
   },
   stNote: { text: 'Dot area: dollars lost (under {floor}, the smallest size). Gutter dots sit near their share (the table has it exactly). Territories ({territories}) aren’t modeled.', claim: null },
-  stAxisX: { text: 'Share of the hospitals’ Medicaid revenue the case takes →', claim: null },
-  stAxisXShort: { text: 'Share of Medicaid revenue taken →', claim: null },
+  stAxisX: { text: 'Share of the hospitals’ Medicaid revenue lost →', claim: null },
+  stAxisXShort: { text: 'Share of Medicaid revenue lost →', claim: null },
   stAxisXSub: { text: 'expansion share × the state’s enrollment decline', claim: null },
   stAxisY: { text: '↑ Medicaid share of patient revenue, measured', claim: null },
   stContours: { text: 'Contours: share of patient revenue lost', claim: null },
@@ -334,7 +334,6 @@ export const COPY = {
   hHrrp: { text: 'Readmissions', claim: null },
   hHac: { text: 'Hospital-acquired conditions', claim: null },
   hNoPenalty: { text: 'No penalty', claim: null },
-  hNoCut: { text: 'No cut', claim: null },
   hPenNone: { text: 'This site has no FY{fy} estimate for this hospital.', claim: null },
   hPenNote: { text: 'The Medicare dollars sit beside the scenario and are kept apart from it.', claim: null },
   hEstimate: { text: 'Estimate', claim: null },
@@ -414,7 +413,7 @@ export const COPY = {
   bYouOutZero: { text: '{name} is outside the corner: {share} of its patient revenue lost in the {scenario} case, and no FY{pfy} penalty.', claim: null },
   bYouStrip: { text: '{name} is in the hatched strip: this site has no FY{pfy} penalty estimate for it, so it has no penalty share to plot.', claim: null },
   bYouNone: { text: '{name} has no dot here. The One hospital step, above, says why.', claim: null },
-  bTakeaway: { text: 'The {n} hospitals with a FY{pfy} penalty estimate: scenario loss across, penalties up, both shares of patient revenue.', claim: null },
+  bTakeaway: { text: 'The {n} hospitals with a FY{pfy} Medicare penalty estimate: scenario loss across, penalties up, both shares of all-payer patient revenue.', claim: null },
   bAlt: {
     text: 'Scatter of {n} hospitals: the scenario’s loss across, FY{pfy} Medicare penalties up, both as shares of patient revenue. {k} sit in the exposed-on-both corner in the {scenario} case: a loss of {line} or more and penalties of {cut} or more.',
     claim: null,
@@ -452,7 +451,7 @@ export const COPY = {
   bColPenA: { text: 'Penalties', claim: null },
   bShowAll: { text: 'Show all {n}', claim: null },
   bShowingAll: { text: 'Showing all {n} hospitals exposed on both.', claim: null },
-  bSource: { text: 'Urban Institute and RWJF state declines on FY{fy} cost reports (CMS HCRIS); this site’s FY{pfy} penalty estimates', claim: null },
+  bSource: { text: 'Urban Institute and RWJF state declines on FY{fy} cost reports (CMS HCRIS); this site’s FY{pfy} Medicare penalty estimates', claim: null },
 
   // The as-of line both pages close on (pages/parts.js asOf): each data source and its date.
   asofHeading: { text: 'About this data', claim: null },

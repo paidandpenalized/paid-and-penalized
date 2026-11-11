@@ -264,7 +264,9 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-stcard__lines .wr-tag--wrap { white-space: normal; }
 .wr-tag__part { white-space: nowrap; }
 .wr-stcard__body > * { min-width: 0; }
-.wr-hits__h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.wr-hits__h { min-height: var(--target-min); padding-block: 6px; line-height: 1.3; }
+details.wr-hits > .wr-hits__h { cursor: pointer; }
+.wr-hits__sub { margin-left: 4px; }
 .wr-hits__sub { color: var(--ink-2); font-size: var(--fs-xs); }
 .wr-hits__list { display: grid; margin: 4px 0 0; padding: 0; list-style: none; }
 .wr-hit { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem; gap: 8px; align-items: center; max-width: none; padding: 5px 0; border-top: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.3; }

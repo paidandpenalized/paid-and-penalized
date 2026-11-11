@@ -444,7 +444,7 @@ function penalties(s) {
   const body = r.hrrp === null && r.hac === null
     ? html`<p class="wr-rec__p">${fill('hPenNone', { fy })}</p>`
     : html`<dl class="wr-rec__dl"><dt>${t('hHrrp')}</dt><dd>${penalty(r.hrrp, 'hNoPenalty')}</dd>
-<dt>${t('hHac')}</dt><dd>${penalty(r.hac, 'hNoCut')}</dd></dl>`;
+<dt>${t('hHac')}</dt><dd>${penalty(r.hac, 'hNoPenalty')}</dd></dl>`;
   return html`<div class="field field--wide wr-rec__sec">
 <p class="field__label">${fill('hPenHead', { fy })} ${tag}</p>
 ${body}

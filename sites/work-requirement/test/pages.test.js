@@ -43,6 +43,20 @@ test('loadMedicaid: the newest emitted file, its hospitals by CCN, and its state
   assert.ok(data.national.low.lost < data.national.middle.lost && data.national.middle.lost < data.national.high.lost);
 });
 
+// Every chart on the site says whose money its numbers are: "all-payer" or "Medicare" in its caption (the takeaway, tag,
+// note and source; the chart and its table aside). "Medicare cost report" names the source, not the payer, so it is
+// taken out first.
+test('every figure caption on both pages says "all-payer" or "Medicare", beyond "Medicare cost report"', () => {
+  for (const [name, markup] of [['program', String(program)], ['methods', String(methods)]]) {
+    const figures = markup.match(/<figure\b[\s\S]*?<\/figure>/g) ?? [];
+    assert.ok(figures.length >= (name === 'program' ? 5 : 1), `${name}: figures found`);
+    for (const f of figures) {
+      const cap = words(f.replace(/<svg\b[\s\S]*?<\/svg>/g, '').replace(/<table\b[\s\S]*?<\/table>/g, '')).replace(/Medicare cost reports?/g, '');
+      assert.match(cap, /all-payer|Medicare/, `${name}: ${cap.slice(0, 60)}`);
+    }
+  }
+});
+
 test('the manifest: id, the page script and the kit\'s styles then the site\'s own', () => {
   assert.equal(WR.id, 'work-requirement');
   assert.deepEqual(WR.entries, { 'wr-page': 'sites/work-requirement/client/page.js' });

@@ -25,9 +25,9 @@ export const COPY = {
   why_no_cost_report: { text: 'CMS’s files hold no FY{fy} Medicare cost report for this hospital, so the scenario has nothing to measure.', claim: null },
   why_negative: { text: 'Its FY{fy} cost report shows Medicaid revenue below zero, a filing error the method screens out.', claim: null },
   why_exceeds: { text: 'Its FY{fy} cost report shows more Medicaid revenue than patient revenue, a filing error the method screens out.', claim: null },
-  why_no_medicaid: { text: 'Its FY{fy} cost report shows no Medicaid revenue, so the scenario has none to take.', claim: null },
+  why_no_medicaid: { text: 'Its FY{fy} cost report shows no Medicaid revenue, so the scenario has none to lose.', claim: null },
   why_no_npr: { text: 'Its FY{fy} cost report shows no patient revenue to measure a loss against.', claim: null },
-  why_no_share: { text: 'Its expansion share is zero, so the scenario takes none of its Medicaid revenue.', claim: null },
+  why_no_share: { text: 'Its expansion share is zero, so none of its Medicaid revenue is lost in the scenario.', claim: null },
   why_unforeseen: { text: 'No scenario figure for this hospital.', claim: null },
   why_tiny: { text: 'Its FY{fy} cost report shows only a few dollars of Medicaid revenue, too little for a loss to draw.', claim: null },
 };

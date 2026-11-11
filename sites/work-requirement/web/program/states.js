@@ -25,7 +25,7 @@ import { scenarioTag } from '../../../../web/render/shell.js';
 import { hospitalPathOf } from '../../../../web/site.js';
 import { CONTOURS, DEFAULT_SCENARIO, MOST_EXPOSED, SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
-import { lineRow, measuredTag, scenTag } from './chain.js';
+import { lineRow, measuredTag, rangeText, scenTag } from './chain.js';
 import { scenWord } from './ranges.js';
 import { labelKit, overlap } from './labels.js';
 import { fitText } from './strips.js';
@@ -454,9 +454,19 @@ const kindOf = (kind) => t(`stKind_${kind === 'critical_access' ? 'critical_acce
 // A hospital's name, linked to its page across the programs only when that page exists.
 const nameOf = (h) => (h.hub ? html`<a href="${hospitalPathOf('hub', h.ccn)}">${h.name}</a>` : h.name);
 
+// The card's most exposed hospitals, sorted by share: a disclosure, closed until the reader opens it (open: the script
+// keeps a list the reader opened open across a redraw), so no hospital is named by default; with none to draw, a line.
+function hitsOf(top, { k, use, max, open }) {
+  const sub = html`<span class="wr-hits__sub">${fill('stHitsSub', { scenario: caseWord(k) })}</span>`;
+  if (!top.length) return html`<div class="wr-hits"><p class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> ${sub}</p><p class="small muted">${t('stHitsNone')}</p></div>`;
+  return html`<details class="wr-hits" data-st-hits${open ? html` open` : ''}><summary class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> ${sub}</summary>
+<ol class="wr-hits__list" role="list">${top.map((h) => html`<li class="wr-hit"><span class="wr-hit__name">${nameOf(h)}<small>${fill('stHitPlace', { place: placeText({ city: h.city }), kind: kindOf(h.kind) })}</small></span><span class="wr-hit__bar" aria-hidden="true"><i style="width: ${r2((h.share[k] * use / max) * 100)}%"></i></span><span class="wr-hit__v">${pct(h.share[k] * use, 1)}</span></li>`)}</ol>
+</details>`;
+}
+
 // The card's body for a state: its worksheet's seven lines and its most exposed hospitals, or for a state without a
 // scenario its status and its count of hospitals, with no number of dollars (the headline above it gives the reason).
-export function cardBody(model, code, { k, use }) {
+export function cardBody(model, code, { k, use, open = false }) {
   const s = stateOf(model, code);
   if (s.cls !== 'scenario') {
     const words = { fy: String(model.fy) };
@@ -468,7 +478,7 @@ export function cardBody(model, code, { k, use }) {
   const lo = numbersOf(s, 0, use);
   const hi = numbersOf(s, SCENARIOS.length - 1, use);
   const row = (line) => lineRow({ ...line, inline: true });
-  const range = (f) => fill('wsRange', { low: f(lo), high: f(hi) });
+  const range = (f) => rangeText(f(lo), f(hi));
   const decline = s.declines[k];
   const top = s.top;
   const max = top.length ? top[0].share[k] * use : 1;
@@ -477,14 +487,12 @@ export function cardBody(model, code, { k, use }) {
 <tbody>${row({ n: 1, key: 'ws1', note: fill('stL1Note', { fy: String(model.fy) }), tags: measured(), value: money(s.revenue), raw: s.revenue, cls: ' wr-wl--eq' })}
 ${row({ n: 2, op: '×', key: 'ws2', note: fill('stL2Note', { viii: pct(s.viii, 1) }), value: pct(s.atRisk / s.revenue, 1), raw: s.atRisk / s.revenue })}
 ${row({ n: 3, op: '=', key: 'ws3', value: money(s.atRisk), raw: s.atRisk, cls: ' wr-wl--eq' })}
-${row({ n: 4, op: '×', key: 'ws4', note: fill('stL4Note', { scenario: caseWord(k) }), range: fill('wsRange', { low: pct(s.declines[0], 0), high: pct(s.declines[SCENARIOS.length - 1], 0) }), value: pct(decline, 0), raw: decline })}
+${row({ n: 4, op: '×', key: 'ws4', note: fill('stL4Note', { scenario: caseWord(k) }), range: rangeText(pct(s.declines[0], 0), pct(s.declines[SCENARIOS.length - 1], 0)), value: pct(decline, 0), raw: decline })}
 ${row({ n: 5, op: '=', key: 'stL5', note: use === 1 ? fill('stL5Note', { a: count(3), b: count(4) }) : fill('stL5NoteUse', { a: count(3), b: count(4), use: pct(use, 0) }), range: range((x) => money(-x.lost)), value: money(-n.lost), raw: n.lost, cls: ' wr-wl--eq wr-wl--res' })}
 ${row({ n: 6, key: 'stL6', note: s.nP < s.n ? fill('stL6NoteLess', { n: count(s.nP), lost: money(n.lostP), a: count(5) }) : fill('stL6Note', { n: count(s.nP) }), tags: measured(), value: money(s.nprP), raw: s.nprP })}
 ${row({ n: 7, op: '=', key: 'stL7', note: fill('stL7Note', { a: count(6) }), range: range((x) => pct(-x.share, 2)), value: pct(-n.share, 2), raw: n.share, cls: ' wr-wl--eq wr-wl--res' })}</tbody></table>
 <p class="wr-stcard__axes small muted">${fill('stAxes', { y: pct(n.y, 1), x: pct(n.x, 1), n: count(7) })}</p>
-<div class="wr-hits"><p class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> <span class="wr-hits__sub">${fill('stHitsSub', { scenario: caseWord(k) })}</span></p>
-${top.length ? html`<ol class="wr-hits__list" role="list">${top.map((h) => html`<li class="wr-hit"><span class="wr-hit__name">${nameOf(h)}<small>${fill('stHitPlace', { place: placeText({ city: h.city }), kind: kindOf(h.kind) })}</small></span><span class="wr-hit__bar" aria-hidden="true"><i style="width: ${r2((h.share[k] * use / max) * 100)}%"></i></span><span class="wr-hit__v">${pct(h.share[k] * use, 1)}</span></li>`)}</ol>` : html`<p class="small muted">${t('stHitsNone')}</p>`}
-</div>`;
+${hitsOf(top, { k, use, max, open })}`;
 }
 
 // ---------- the table ----------

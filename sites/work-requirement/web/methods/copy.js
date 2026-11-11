@@ -32,7 +32,7 @@ export const COPY = {
   },
   step3Head: { text: 'Their care, split three ways.', claim: null },
   step3: {
-    text: 'The lost patients’ care is costed at the hospital’s own Medicaid cost per dollar of Medicaid revenue (line {cost} over line {line}, held to at most {cap} dollars of cost a dollar). Of the people who lose coverage, {uninsured} become uninsured; of their care, {still} is still given and becomes uncompensated care, and the other {notUsed} is not given, so its cost goes away. The rest find other coverage, which is taken to pay the care’s cost.',
+    text: 'The lost patients’ care is costed at the hospital’s own Medicaid cost per dollar of Medicaid revenue (line {cost} over line {line}, held to at most {cap} dollars of cost a dollar). Of the people who lose coverage, {uninsured} become uninsured; of their care, {still} is still given and becomes uncompensated care, and the other {notUsed} is not given, so its cost goes away. The rest find other coverage, which is assumed to pay the care’s cost.',
     claim: null,
   },
   step4Head: { text: 'Margins after.', claim: null },
@@ -117,7 +117,7 @@ export const COPY = {
   limMaternityHead: { text: 'Maternity care.', claim: null },
   limMaternity: { text: 'The adjustment counts only the nursery and labor-and-delivery days the cost report lists apart; other maternity days sit among adult days, so it moves few hospitals and may move an obstetric hospital too little.', claim: null },
   limIncomeHead: { text: 'What hospitals will do.', claim: null },
-  limIncome: { text: 'Revenue lost is not income lost: care no longer given takes its cost with it, and care given unpaid stays a cost. The margins after are this arithmetic, not a forecast of hospitals’ budgets.', claim: null },
+  limIncome: { text: 'Revenue lost is not income lost: care no longer given costs the hospital nothing, and care given unpaid stays a cost. The margins after are this arithmetic, not a forecast of hospitals’ budgets.', claim: null },
   limStayHead: { text: 'Hospital stays.', claim: null },
   limStay: {
     text: 'The law lets a state’s plan count a month in which a person receives inpatient hospital care as meeting the requirement, when the person asks. The scenario doesn’t model this choice, so it can’t tell how many patients a state that makes it would keep covered.',
@@ -129,7 +129,7 @@ export const COPY = {
   // Lines 2 + 5.
   linesHeading: { text: 'Counting supplemental payments: lines {a} + {b}', claim: null },
   linesText: {
-    text: 'The scenario takes its loss from Medicaid net revenue, {revSheet} line {a}. Adding the hospital’s Medicaid supplemental payments on line {b} raises revenue at risk, and the revenue lost with it; the hospital’s own share scales line {b} as it does line {a}.',
+    text: 'The scenario’s loss is a share of Medicaid net revenue, {revSheet} line {a}. Adding the hospital’s Medicaid supplemental payments on line {b} raises revenue at risk, and the revenue lost with it; the hospital’s own share scales line {b} as it does line {a}.',
     claim: null,
   },
   linesNumbers: {
@@ -145,7 +145,7 @@ export const COPY = {
   sensHeading: { text: 'Other choices, and how far the totals move', claim: null },
   sensText: { text: 'Each row reruns every hospital with one choice changed and the rest as decided.', claim: null },
   sensDsh: {
-    text: 'The net-of-DSH row takes disproportionate share hospital payments out of each state’s Medicaid spending before the expansion share is worked out, from CMS’s Financial Management Report, which gives each state’s spending by program.',
+    text: 'The net-of-DSH row subtracts disproportionate share hospital payments from each state’s Medicaid spending before the expansion share is worked out, from CMS’s Financial Management Report, which gives each state’s spending by program.',
     claim: 'WR-17',
   },
   sensTakeaway: { text: 'Revenue lost a year, low case to high, under the decided method and each alternative. Of the method’s own choices, the one that moves the middle case most: {most}. The use rate rows are the what-if’s two ends.', claim: null },
@@ -155,7 +155,7 @@ export const COPY = {
   sensTip: { text: '{label}: {low} to {high}; middle {middle}', claim: null },
   sensAxis: { text: 'Revenue lost a year', claim: null },
   sensNote: { text: 'Dot: the middle case; dashed: the decided method’s middle.', claim: null },
-  sensSource: { text: 'This site’s reruns of the scenario file, FY{fy} cost reports (CMS HCRIS)', claim: null },
+  sensSource: { text: 'This site’s reruns of the scenario file on the Medicaid and all-payer revenue of FY{fy} Medicare cost reports (CMS HCRIS)', claim: null },
   sensColVersion: { text: 'Version', claim: null },
   sensColLow: { text: 'Low', claim: null },
   sensColMiddle: { text: 'Middle', claim: null },
@@ -201,7 +201,7 @@ export const COPY = {
     claim: ['WR-10', 'WR-19'],
   },
   mdUcc: {
-    text: 'HSCRC factors the cost of uncompensated care into those rates. The scenario takes each hospital’s loss from its own margin, which doesn’t fit hospitals whose rates carry uncompensated care, so this site doesn’t model Maryland: its {n} hospitals are out of every total and the ranking, and each shows the reason.',
+    text: 'HSCRC factors the cost of uncompensated care into those rates. The scenario counts each hospital’s loss against its own margin, which doesn’t fit hospitals whose rates carry uncompensated care, so this site doesn’t model Maryland: its {n} hospitals are out of every total and the ranking, and each shows the reason.',
     claim: 'WR-20',
   },
   mdHscrc: {
@@ -244,7 +244,7 @@ export const COPY = {
     claim: null,
   },
   bothPop: {
-    text: 'The percentile is taken over the hospitals Figure five plots: the {n} hospitals step one draws that have an FY{pfy} penalty estimate, those with no penalty included. Both lines are this site’s framing, not a rule of CMS’s or Urban’s.',
+    text: 'The percentile is computed over the hospitals Figure five plots: the {n} hospitals step one draws that have an FY{pfy} penalty estimate, those with no penalty included. Both lines are this site’s framing, not a rule of CMS’s or Urban’s.',
     claim: null,
   },
 
