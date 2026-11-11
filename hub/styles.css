@@ -758,7 +758,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__wbk { display: flex; flex-wrap: wrap; gap: 4px 18px; max-width: none; margin: 10px 0 0; padding: 0; list-style: none; color: var(--ink-2); font: 400 13px/1.4 var(--font-type); font-variant-numeric: tabular-nums; }
 .hh__wbk .hh__wbk--mid { color: var(--ink); font-weight: 700; }
 .hh__wbr { display: grid; justify-items: start; gap: 10px; }
-.hh__wbr .hh__why { margin-top: 0; max-width: 46em; }
+.hh__wbr .hh__why { margin-top: 0; }
 .hh__wb .hh__why { max-width: 46em; }
 @media (min-width: 1024px) {
   .hh__wbi { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }

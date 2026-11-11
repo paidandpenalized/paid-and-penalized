@@ -29,9 +29,11 @@ const shareOf = (lost, npr) => Math.round((lost / npr) * SHARE_PLACES) / SHARE_P
 // The share of its patient revenue a hospital could lose in each case at the default use rate, [low, middle, high], or
 // null when step 1 does not draw it: outside a scenario state, a filing error screened out, no patient revenue to
 // measure against, or a loss that rounds to nothing in a case (no Medicaid revenue, no expansion share, or a few dollars).
-export function drawnShares(rec, declines) {
+export const drawnShares = (rec, declines) => drawnFrom(rec, () => engineResults(rec, declines));
+// The same from the engine's results at the default use rate (a thunk, run only for a hospital step 1 may draw).
+function drawnFrom(rec, resultsOf) {
   if (rec.cls !== 'scenario' || !rec.scored || !(rec.net_patient_revenue > 0)) return null;
-  const shares = CASES.map((c) => shareOf(scenario(rec, rec.share, declines[c]).lost, rec.net_patient_revenue));
+  const shares = resultsOf().map((x) => shareOf(x.lost, rec.net_patient_revenue));
   return shares.every((v) => v > 0) ? shares : null;
 }
 
@@ -46,15 +48,16 @@ export const MIDDLE_KEYS = Object.freeze({
 // The engine's result for each case at a use rate, [low, middle, high]. At the default use rate the middle case takes the
 // file's own results (MIDDLE_KEYS) where the file gives them, so a page prints the emitted numbers; the engine's agree
 // with them to the file's rounding.
-export function caseResults(rec, declines, use = PARAMS.useDefault) {
-  const results = CASES.map((c) => scenario(rec, rec.share, declines[c], { use }));
-  if (use === PARAMS.useDefault) {
-    const middle = CASES.indexOf('middle');
-    const own = { ...results[middle] };
-    for (const [col, key] of Object.entries(MIDDLE_KEYS)) if (rec[col] !== null && rec[col] !== undefined) own[key] = rec[col];
-    results[middle] = own;
-  }
-  return results;
+export const caseResults = (rec, declines, use = PARAMS.useDefault) => withOwnMiddle(rec, engineResults(rec, declines, use), use);
+// The engine's own result for each case, [low, middle, high].
+const engineResults = (rec, declines, use = PARAMS.useDefault) => CASES.map((c) => scenario(rec, rec.share, declines[c], { use }));
+// results with the middle case's replaced by the file's own (MIDDLE_KEYS) at the default use rate; a new array.
+function withOwnMiddle(rec, results, use) {
+  if (use !== PARAMS.useDefault) return results;
+  const middle = CASES.indexOf('middle');
+  const own = { ...results[middle] };
+  for (const [col, key] of Object.entries(MIDDLE_KEYS)) if (rec[col] !== null && rec[col] !== undefined) own[key] = rec[col];
+  return results.map((x, i) => (i === middle ? own : x));
 }
 
 // ---------- why a hospital has no loss to draw ----------
@@ -66,7 +69,7 @@ export function caseResults(rec, declines, use = PARAMS.useDefault) {
 // low case, which step 1's 7-place shares round to nothing). Anything else step 1 leaves out has no reason to give, so
 // it throws at the build and in tests; the browser passes lenient and gets 'unforeseen', a generic reason, rather than a
 // broken page.
-export const TINY_SHARE = 0.5e-7;
+const TINY_SHARE = 0.5 / SHARE_PLACES;
 export function reasonOf({ away = null, cls, rec, drawn, declines, lenient = false, ccn }) {
   if (away) return `away_${away}`;
   if (cls !== 'scenario') return cls;
@@ -92,8 +95,11 @@ export function hospitalScenario(file, ccn) {
   const rec = rowToBase(file.columns, row);
   const st = file.states[rec.state];
   if (!st) throw new RangeError(`hospital ${ccn}: its state, ${rec.state}, is not in the file's states`);
-  const drawn = drawnShares(rec, st.declines) !== null;
+  // The engine runs once: step 1's drawn test reads its own results, the shares the file's own middle case.
+  let results = null;
+  const resultsOf = () => (results ??= engineResults(rec, st.declines));
+  const drawn = drawnFrom(rec, resultsOf) !== null;
   const reason = reasonOf({ cls: rec.cls, rec, drawn, declines: st.declines, ccn });
-  const shares = reason ? null : caseResults(rec, st.declines).map((x) => x.lost / rec.net_patient_revenue);
+  const shares = reason ? null : withOwnMiddle(rec, resultsOf(), PARAMS.useDefault).map((x) => x.lost / rec.net_patient_revenue);
   return { ccn, state: rec.state, stateName: st.name, cls: rec.cls, reason, shares };
 }

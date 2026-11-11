@@ -7,8 +7,6 @@
 // howModel: { fy, params: { uninsured_share, care_still_used, use_max }, declines: { case: [low, high] } }) }.
 import { r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
-import { COPY as SHARED } from '../../../../web/copy.js';
-import { fillCopy } from '../../../../web/render/components.js';
 import { count, decimal, money, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { SCENARIOS } from '../constants.js';
@@ -277,7 +275,7 @@ export const measuredTag = ({ wrap = false } = {}) => {
   const words = (key) => (wrap ? halves(t(key)) : t(key));
   return html`<span class="wr-tag${wrap ? ' wr-tag--wrap' : ''}"><span class="wr-tag__long">${words('wsMeasured')}</span><span class="wr-tag__short">${words('wsMeasuredShort')}</span></span>`;
 };
-export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
+export { scenarioTag as scenTag } from '../../../../web/render/shell.js';
 // A range note's two bounds, each kept whole on one line (a signed amount never breaks between its sign and its "$").
 export const rangeText = (low, high) => fillKeep('wsRange', { low, high }, ['low', 'high']);
 const rangeOf = (totals, key, sign = 1) => rangeText(money(sign * totals.low[key]), money(sign * totals.high[key]));

@@ -20,11 +20,11 @@ import { frame, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { estTag, fillCopy, formField, formTitle, stamp } from '../../../../web/render/components.js';
-import { count, dotList, money, pct, placeText, shortIsoDate } from '../../../../web/render/format.js';
+import { count, dotList, money, pct, pctExact, placeText, shortIsoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { caseShareTexts } from '../../../../web/medicaid/format.js';
-import { REASONS, reasonStamp, reasonWhy } from '../../../../web/medicaid/reasons.js';
+import { reasonStamp, reasonWhy } from '../../../../web/medicaid/reasons.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
 import { DEFAULT_SCENARIO, DEFAULT_SKIP_STATE, SCENARIOS } from '../constants.js';
 import { fill, t } from '../copy.js';
@@ -103,7 +103,6 @@ export function subjectOf(row, chunk) {
 // Why a hospital has no figure, or null when it has a loss to draw: the engine's reasonOf (engine/js/medicaid/hospital.js)
 // for a subject (subjectOf's; the browser sets s.lenient, client/hospital.js, for its generic reason over a broken step).
 export const reasonOf = (s) => reasonFor({ away: s.away, cls: s.cls, rec: s.rec, drawn: s.rec?.drawn, declines: s.chunk?.declines, lenient: s.lenient, ccn: s.ccn });
-export { REASONS };
 // The reason's sentence (web/medicaid/reasons.js, the words the hub's band gives too).
 export const whyOf = (s, reason) => reasonWhy(reason, { stateName: s.stateName, fy: s.chunk?.fy });
 
@@ -182,8 +181,6 @@ export const HB_DRAWINGS = Object.freeze({
   },
 });
 
-// A decline at the fewest places that show it (17%, 21.3%).
-const shortPct = (v) => pct(v, [0, 1, 2].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 2);
 const statusWord = (status) => t(`hStatus_${status === 'settled' ? 'settled' : 'as_filed'}`);
 
 // The drawing's layout for a drawn hospital's numbers (numbersOf), in case k at the numbers' use rate: { geo, rects,
@@ -238,9 +235,9 @@ export function barLayout(n, { k, use, drawing, status }) {
   // The loss's label gives the share of the expansion part the block is: the decline, times the use rate off the default.
   const v = money(-n.lost[k]);
   const lost = use === 1
-    ? fill(narrow ? 'hBarLostShort' : 'hBarLost', { v, scenario: caseWord(k), dc: shortPct(d) })
-    : narrow ? fill('hBarLostShortUse', { v, part: shortPct(d * use) })
-      : fill('hBarLostUse', { v, scenario: caseWord(k), dc: shortPct(d), use: pct(use, 0), part: shortPct(d * use) });
+    ? fill(narrow ? 'hBarLostShort' : 'hBarLost', { v, scenario: caseWord(k), dc: pctExact(d) })
+    : narrow ? fill('hBarLostShortUse', { v, part: pctExact(d * use) })
+      : fill('hBarLostUse', { v, scenario: caseWord(k), dc: pctExact(d), use: pct(use, 0), part: pctExact(d * use) });
   const share = use === 1 ? fill('hBarShare', { share: n.shareText[k] }) : fill('hBarShareUse', { share: n.shareText[k], use: pct(use, 0) });
   // The dashed ticks are the other two cases; the label names exactly those, low to high.
   const [a, b] = SCENARIOS.map((_, j) => j).filter((j) => j !== k);
@@ -304,8 +301,8 @@ export function factorsOf(s, n, { k, use }) {
     {
       label: fill(use === 1 ? 'hFac3' : 'hFac3Use', { scenario: caseWord(k) }),
       v: d * use,
-      text: shortPct(d * use),
-      note: use === 1 ? t('hFac3Note') : fill('hFac3NoteUse', { dc: shortPct(d), use: pct(use, 0) }),
+      text: pctExact(d * use),
+      note: use === 1 ? t('hFac3Note') : fill('hFac3NoteUse', { dc: pctExact(d), use: pct(use, 0) }),
       values: null,
     },
     { label: t('hFac4'), v: n.share[k], text: n.shareText[k], note: t('hFac4Note'), values: peers.map((p) => p.lp[k]), fmt: (q) => pct(q, 2), rank: 'hLarger' },

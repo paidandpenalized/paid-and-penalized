@@ -11,7 +11,7 @@ const isZero = (text) => !/[1-9]/.test(text);
 
 // The decimals the three shares print with: the fewest (DECIMALS) that print them all distinct and none as zero, else
 // the most.
-export function shareDecimals(shares) {
+function shareDecimals(shares) {
   const ok = (dp) => {
     const texts = shares.map((s) => pct(s, dp));
     return new Set(texts).size === texts.length && !texts.some(isZero);
@@ -24,7 +24,7 @@ export function shareDecimals(shares) {
 // "under" or the low and high cases printing alike, the range is too small to print as numbers: the headline is its bound,
 // the smallest share at three decimals above the high case, as "under" it, and every case prints that same bound, so no
 // case reads at or above the headline's. { texts: [low, middle, high], range: { low, high } or { under } }.
-function printed(shares) {
+export function printedShares(shares) {
   const dp = shareDecimals(shares);
   const texts = shares.map((s) => {
     const text = pct(s, dp);
@@ -40,7 +40,7 @@ function printed(shares) {
 }
 
 // Each case's share as printed (the band's cases, step 4's share row, table, label and factor).
-export const caseShareTexts = (shares) => printed(shares).texts;
+export const caseShareTexts = (shares) => printedShares(shares).texts;
 
 // The headline's range: { low, high } (the printed low and high cases), or { under }, the bound every case also prints.
-export const shareRange = (shares) => printed(shares).range;
+export const shareRange = (shares) => printedShares(shares).range;

@@ -98,6 +98,12 @@ export function pct(x, dp = 1, { sign = false } = {}) {
 // A log ratio as the size of the change it makes, unsigned: 0.0509 reads 5.2%, -0.25 reads 22% (exp(x) - 1, to dp).
 export const absLogPct = (x, dp) => pct(Math.abs(Math.exp(x) - 1), dp);
 
+// A share at the fewest decimals, up to maxDp, that print it exactly (0.2 reads 20%, 0.035 reads 3.5%), else at maxDp.
+export const pctExact = (x, maxDp = 2) => {
+  const dp = Array.from({ length: maxDp + 1 }, (_, i) => i).find((d) => Math.abs(Math.round(x * 10 ** (d + 2)) - x * 10 ** (d + 2)) < 1e-9);
+  return pct(x, dp ?? maxDp);
+};
+
 // A share as "higher than" or "worse than" may print it: rounded down, never up, so the sentence stays true (74.97%
 // reads 74%, never 75%). A float a hair under a whole step (0.75 computed as 0.7499…) still reads the step.
 export function pctFloor(x, dp = 0) {

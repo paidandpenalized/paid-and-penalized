@@ -24,6 +24,8 @@ import { asOf, asOfPins, shellOf } from './parts.js';
 const para = (text) => html`<p>${text}</p>`;
 const sentence = sentenceOf(fill);
 const lead = (head, body) => html`<p><strong>${t(head)}</strong> ${body}</p>`;
+// A list of lead paragraphs: items [[head key, body]].
+const leadList = (items) => html`<ul class="wr-meth__list">${items.map(([head, body]) => html`<li>${lead(head, body)}</li>`)}</ul>`;
 const sec = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
 <h2 class="doc__h" id="${id}-h">${heading}</h2>
 ${body}
@@ -104,7 +106,7 @@ ${printout(html`<table class="gb wr-meth__params">
 }
 
 function casesSection(data) {
-  const table = /Appendix Table (A\.\d+)/.exec(asOfPins(data).declines.title)[1];
+  const { table } = asOfPins(data);
   const m = Object.fromEntries(data.scenarios.map((s) => [s.id, decimal(s.decline_enrollment / 1000, 1)]));
   return {
     id: 'cases', heading: t('casesHeading'), body: html`${para(fill('casesText', { table, low: m.low, middle: m.middle, high: m.high }))}
@@ -120,7 +122,7 @@ function limitsSection(data) {
     ['limWhenHead', fill('limWhen', { fy })], ['limStatesHead', t('limStates')], ['limWhoHead', t('limWho')], ['limServiceHead', t('limService')],
     ['limMaternityHead', t('limMaternity')], ['limIncomeHead', t('limIncome')], ['limStayHead', t('limStay')], ['limEarlyHead', fill('limEarly', { settled: pct(data.meta.hcris.settled_share, 0), fy })],
   ];
-  return { id: 'limits', heading: t('limitsHeading'), body: html`<ul class="wr-meth__list">${items.map(([head, body]) => html`<li>${lead(head, body)}</li>`)}</ul>` };
+  return { id: 'limits', heading: t('limitsHeading'), body: leadList(items) };
 }
 
 function linesSection(data) {
@@ -143,14 +145,14 @@ ${para(fill('linesWhy', { a }))}`,
 // The sensitivities: the figure (the decided method, then each alternative, a band low to high) with its table.
 function sensSection(data, fig) {
   checkUseKeys(data.params);
-  const versions = [
-    { label: t('sens_decided'), roll: data.national },
-    ...SENSITIVITIES.map(({ key, labelOf, shortOf = labelOf, whatIf = false }) => ({ label: labelOf(data), short: shortOf(data), roll: data.sensitivities[key], whatIf })),
-  ];
-  const rows = versions.map(({ label, short = label, roll, whatIf = false }) => {
+  const row = ({ label, short = label, roll, whatIf = false }) => {
     const [low, middle, high] = SCENARIOS.map((s) => roll[s].lost);
-    return { label, short, low, middle, high, whatIf, tip: fill('sensTip', { label, low: money(low), high: money(high), middle: money(middle) }) };
-  });
+    return { label, short, roll, low, middle, high, whatIf, tip: fill('sensTip', { label, low: money(low), high: money(high), middle: money(middle) }) };
+  };
+  const rows = [
+    row({ label: t('sens_decided'), roll: data.national }),
+    ...SENSITIVITIES.map(({ key, labelOf, shortOf = labelOf, whatIf }) => row({ label: labelOf(data), short: shortOf(data), roll: data.sensitivities[key], whatIf })),
+  ];
   const [base, ...alts] = rows;
   const most = mostMoved(base.middle, alts);
   const fy = data.meta.fy;
@@ -173,7 +175,7 @@ ${figure({
         { name: t('sensColVersion'), numeric: false }, { name: t('sensColLow'), numeric: true }, { name: t('sensColMiddle'), numeric: true },
         { name: t('sensColHigh'), numeric: true }, { name: t('sensColAdded'), numeric: true }, { name: t('sensColFalls'), numeric: true },
       ],
-      rows: versions.map(({ label, roll }, i) => [label, numCell(rows[i].low), numCell(rows[i].middle), numCell(rows[i].high),
+      rows: rows.map(({ label, roll, low, middle, high }) => [label, numCell(low), numCell(middle), numCell(high),
         numCell(roll.middle.added_uncompensated), num(count(roll.middle.falls_1pp), roll.middle.falls_1pp)]),
     },
   })}
@@ -193,7 +195,7 @@ ${(facts.states.no_viii_group ?? []).map((state) => para(fill('noneWisconsin', {
 ${territories.length ? para(fill('noneTerritories', { list: listText(territories), n: hospitalsOf('territory') })) : ''}
 ${para(fill('noneNoReport', { n: hospitalsOf('no_cost_report'), fy }))}
 ${facts.latest4.length ? para(fill('noneQuarters', { states: listText(facts.latest4), fy })) : ''}
-${para(html`${t('noneMaryland')}`)}`,
+${para(t('noneMaryland'))}`,
   };
 }
 
@@ -218,7 +220,7 @@ function screensSection(data, facts) {
   ];
   return {
     id: 'screens', heading: t('scrHeading'), body: html`${para(fill('scrIntro', { total: count(facts.scenario) }))}
-<ul class="wr-meth__list">${items.map(([head, body]) => html`<li>${lead(head, body)}</li>`)}</ul>`,
+${leadList(items)}`,
   };
 }
 
@@ -286,7 +288,7 @@ function citeBlock(data) {
 // robots: null for an indexable page, else the meta robots value; assets: the build's paths; data: loadMedicaid()'s
 // result; sources: the file's sources grouped (data.js loadSourceGroups; tests may pass sourceGroups'); both: step 5's
 // model (both.js bothModel; built here from data when not given).
-export function methodsPage({ data, robots, assets, sources, both = undefined }) {
+export function methodsPage({ data, robots, assets, sources, both }) {
   if (!sources) throw new TypeError('work requirement Methods: sources (data.js loadSourceGroups) is required');
   const rows = both ? null : hospitalRows(data);
   const model = both ?? bothModel(rows, bothInput(data, rows));

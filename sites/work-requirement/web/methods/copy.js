@@ -1,7 +1,7 @@
 // The work-requirement Methods page's words (pages/methods.js, methods/sens.js), built into the page and never shipped to
 // a browser. Same rules as the site's copy.js: no digit characters, every number through a {placeholder}; `claim` names
-// a row of sites/work-requirement/CLAIMS.md, or a list of them (null for this site's own framing or arithmetic). fill,
-// fillKeep and t read here, then the site's copy.js.
+// a row of sites/work-requirement/CLAIMS.md, or a list of them (null for this site's own framing or arithmetic). fill
+// and t read here, then the site's copy.js.
 import { copyOf, copyText } from '../../../../web/render/components.js';
 import { FORM_NAMES } from '../constants.js';
 import { COPY as SHARED } from '../copy.js';
@@ -298,5 +298,4 @@ const named = (key, values = {}) => {
   return { ...Object.fromEntries(Object.entries(FORM_NAMES).filter(([name]) => text.includes(`{${name}}`))), ...values };
 };
 export const fill = (key, values) => base.fill(key, named(key, values));
-export const fillKeep = (key, values, keep) => base.fillKeep(key, named(key, values), keep);
 export const t = (key) => fill(key);

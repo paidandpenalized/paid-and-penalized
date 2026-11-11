@@ -29,35 +29,37 @@ export const searchBox = (src) => searchForm({
 // The pinned inputs the as-of line dates, found among the scenario file's pins (data.js loadMedicaid's pins): the cost
 // reports' cells (their CMS file's date is the HCRIS zip's Last-Modified), CMS-64's new adult group spending (the
 // dataset's modified date) and Urban's state table (the day it was copied: the report carries a month, not a date).
-// Throws when one is missing, so a renamed pin can't drop a line silently.
+// Throws when one is missing, so a renamed pin can't drop a line silently. table: the appendix table Urban's pin title
+// names (the as-of line and Methods' cases section both give it); throws when the title names none.
 export function asOfPins(data) {
   const find = (what, test) => {
     const pin = data.pins.find(test);
     if (!pin) throw new RangeError(`work requirement: no ${what} among the scenario file's pins`);
     return pin;
   };
+  const declines = find('Urban table', (p) => p.id.startsWith('urban-'));
+  const table = /Appendix Table (A\.\d+)/.exec(declines.title)?.[1];
+  if (!table) throw new RangeError(`work requirement: the Urban pin's title names no appendix table: ${declines.title}`);
   return {
     cells: find('cost report cells', (p) => p.id === `hcris-fy${data.meta.fy}-cells`),
     spend: find('CMS-64 new adult group file', (p) => p.id.startsWith('cms64-viii')),
-    declines: find('Urban table', (p) => p.id.startsWith('urban-')),
+    declines,
+    table,
   };
 }
 
 // The as-of line (the family's as-of bar, components.js asofBar): each data source and its date (the Medicare penalty
 // estimates': the day their file last changed). data: loadMedicaid()'s.
 export function asOf(data) {
-  const { cells, spend, declines } = asOfPins(data);
-  const table = /Appendix Table (A\.\d+)/.exec(declines.title)?.[1];
-  if (!table) throw new RangeError(`work requirement: the Urban pin's title names no appendix table: ${declines.title}`);
-  const date = (d) => isoDate(d);
+  const { cells, spend, declines, table } = asOfPins(data);
   return asofBar({
     label: t('asofHeading'),
     items: [
-      { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: date(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
-      { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: date(spend.datasetModified) }, ['date']) },
-      { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table, date: date(declines.retrieved) }, ['date']) },
-      { label: t('asofPenaltiesLabel'), value: fillKeep('asofPenalties', { fy: String(data.meta.penaltyFy), date: date(data.meta.penaltiesChanged) }, ['date']) },
-      { label: t('asofChangedLabel'), value: fillKeep('asofChanged', { date: date(data.meta.changed) }, ['date']) },
+      { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: isoDate(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
+      { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: isoDate(spend.datasetModified) }, ['date']) },
+      { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table, date: isoDate(declines.retrieved) }, ['date']) },
+      { label: t('asofPenaltiesLabel'), value: fillKeep('asofPenalties', { fy: String(data.meta.penaltyFy), date: isoDate(data.meta.penaltiesChanged) }, ['date']) },
+      { label: t('asofChangedLabel'), value: fillKeep('asofChanged', { date: isoDate(data.meta.changed) }, ['date']) },
     ],
   });
 }

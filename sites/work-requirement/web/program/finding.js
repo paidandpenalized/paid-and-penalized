@@ -5,7 +5,7 @@
 // (`national`, every counted hospital, Maryland out), through model.js's totals.
 import { figure, num } from '../../../../web/charts/figure.js';
 import { frame } from '../../../../web/charts/svg.js';
-import { count, pct } from '../../../../web/render/format.js';
+import { count, pct, pctExact } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { DEFAULT_SCENARIO, GROUPS, BEDS, SCENARIOS } from '../constants.js';
@@ -36,9 +36,6 @@ function chips(states) {
 
 // ---------- Figure 1 ----------
 
-// A share at the fewest places that show it (0.25%, 0.5%, 1%).
-const shareText = (v) => pct(v, [0, 1, 2].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 2);
-
 // The table: each bin's count by case, then the medians. Each number cell carries data-bin ("<bin> <case index>", "m" for
 // the median row), so the page's script rewrites it as the use rate moves (binsOf at that rate).
 function tableOf(items, top) {
@@ -46,7 +43,7 @@ function tableOf(items, top) {
   return {
     columns: [{ name: t('tableShare') }, ...SCENARIOS.map((s) => ({ name: scenWord(s), numeric: true }))],
     rows: [
-      ...edges.slice(0, -1).map((from, b) => [fill('tableBin', { from: shareText(from), to: shareText(edges[b + 1]) }), ...counts.map((c, k) => ({ ...num(count(c[b]), c[b]), data: { bin: `${b} ${k}` } }))]),
+      ...edges.slice(0, -1).map((from, b) => [fill('tableBin', { from: pctExact(from), to: pctExact(edges[b + 1]) }), ...counts.map((c, k) => ({ ...num(count(c[b]), c[b]), data: { bin: `${b} ${k}` } }))]),
       [t('tableMedian'), ...medians.map((m, k) => ({ ...num(pct(m, 2), m), data: { bin: `m ${k}` } }))],
     ],
   };

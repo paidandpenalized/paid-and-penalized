@@ -10,8 +10,9 @@ import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { fillCopy, stamp } from '../../web/render/components.js';
 import { pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
+import { r1 } from '../../web/charts/svg.js';
 import { scenarioTag } from '../../web/render/shell.js';
-import { caseShareTexts, shareRange } from '../../web/medicaid/format.js';
+import { printedShares } from '../../web/medicaid/format.js';
 import { reasonStamp, reasonWhy } from '../../web/medicaid/reasons.js';
 import { SITE } from '../../web/site.js';
 import { arrow } from '../parts.js';
@@ -21,43 +22,39 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 
 // ---------- the scale ----------
 
-// The scale's top: the largest high-case share of any hospital in the file, up to the next whole percent, worked out once
-// per file (medicaid: loadHub().medicaid). Every hospital's band shares it, so two pages' bars compare.
-const TOPS = new WeakMap();
-export function scaleTop(medicaid) {
-  if (!TOPS.has(medicaid)) {
+// Every hospital of the file as hospitalScenario gives it, by CCN, and the scale's top: the largest high-case share of any
+// of them, up to the next whole percent. Worked out once per file (medicaid: loadHub().medicaid); every hospital's band
+// shares the top, so two pages' bars compare.
+const FILES = new WeakMap();
+function fileOf(medicaid) {
+  if (!FILES.has(medicaid)) {
+    const byCcn = new Map();
     let max = 0;
     for (const ccn of medicaid.hospitals.keys()) {
       const one = hospitalScenario(medicaid, ccn);
+      byCcn.set(ccn, one);
       if (one.shares) max = Math.max(max, one.shares[2]);
     }
     if (!(max > 0)) throw new RangeError('hub: the Medicaid scenario file has no hospital with a loss to draw');
     // A share of patient revenue lost is at most all of it, so the top is at most 100% and scaleTicks's decades reach it.
     if (max > 1) throw new RangeError(`hub: a Medicaid scenario share of patient revenue over 100% (${max})`);
-    TOPS.set(medicaid, Math.ceil(max * 100) / 100);
+    FILES.set(medicaid, { byCcn, top: Math.ceil(max * 100) / 100 });
   }
-  return TOPS.get(medicaid);
+  return FILES.get(medicaid);
 }
+export const scaleTop = (medicaid) => fileOf(medicaid).top;
 
 // A share's place along the bar, 0 to 1, on the square-root scale (as the work-requirement page's strips draw shares), so
 // the many small shares stay apart and the few large ones fit.
 export const placeOf = (share, top) => Math.sqrt(Math.max(0, share) / top);
 
-// The labeled ticks: zero, then 1, 2 and 5 times each power of ten from TICK_FROM up to the top. TICK_FROM, half a
-// percent, is a reading aid (the scale's first label), not a method constant. The decades run from a tenth of a percent
-// (below TICK_FROM) to 100%, the most a share can be (scaleTop throws past it), so they cover any top; a top outside
-// them throws.
-const TICK_FROM = 0.005;
+// The labeled ticks: zero, then 1, 2 and 5 times each power of ten from half a percent (a reading aid, the scale's first
+// label, not a method constant) up to the top. They reach 100%, the most a share can be (scaleTop throws past it), so
+// they cover any top; a top outside them throws.
+const TICKS = [0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1];
 export function scaleTicks(top) {
-  if (!(top > TICK_FROM && top <= 1)) throw new RangeError(`hub: a Medicaid scale top of ${top} is outside the ticks' decades`);
-  const ticks = [0];
-  for (let exp = -3; exp <= 0; exp += 1) {
-    for (const m of [1, 2, 5]) {
-      const v = m * 10 ** exp;
-      if (v >= TICK_FROM - 1e-12 && v <= top + 1e-12) ticks.push(v);
-    }
-  }
-  return ticks;
+  if (!(top > TICKS[0] && top <= 1)) throw new RangeError(`hub: a Medicaid scale top of ${top} is outside the ticks' decades`);
+  return [0, ...TICKS.filter((v) => v <= top + 1e-12)];
 }
 const tickText = (v) => pct(v, v > 0 && v < 0.01 ? 1 : 0);
 
@@ -71,7 +68,6 @@ const tickText = (v) => pct(v, v > 0 && v < 0.01 ? 1 : 0);
 const W = 1000;
 const H = 28;
 const MIN_W = 12;
-const r1 = (v) => Math.round(v * 10) / 10;
 export function rangeBox(lo, hi) {
   if (hi - lo >= MIN_W) return { x: r1(lo), width: r1(hi - lo) };
   const x = Math.min(Math.max(0, (lo + hi) / 2 - MIN_W / 2), W - MIN_W);
@@ -97,21 +93,23 @@ function bar(shares, top) {
 
 const link = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
 
-// The band for a hospital (h: the hub's), ending its line, or '' when the scenario file has no row for it. medicaid:
-// loadHub().medicaid ({ fy, columns, hospitals, states }); net: whether the page shows a Medicare net above (its note says
+// The band for a hospital (h: the hub's), ending its line, or '' with no scenario file (medicaid null) or no row for it in
+// the file (the page is then exactly as it was before the band). medicaid: loadHub().medicaid ({ fy, columns, hospitals,
+// states }); net: whether the page shows a Medicare net above (its note says
 // the band is never part of it). The shares print as the work-requirement page prints them (web/medicaid/format.js); the
 // headline is their range, or, too small to print as two numbers, its bound.
 export function medicaidBand(h, medicaid, { net }) {
-  const one = hospitalScenario(medicaid, h.ccn);
+  if (!medicaid) return '';
+  const { byCcn, top } = fileOf(medicaid);
+  const one = byCcn.get(h.ccn);
   if (!one) return '';
   const fy = String(medicaid.fy);
-  const texts = one.shares ? caseShareTexts(one.shares) : null;
-  const range = one.shares ? shareRange(one.shares) : null;
+  const { texts, range } = one.shares ? printedShares(one.shares) : {};
   const body = one.reason
     ? html`<div class="hh__wbr">${stamp({ label: reasonStamp(one.reason), ink: true })}<p class="hh__why">${reasonWhy(one.reason, { stateName: one.stateName, fy })}</p></div>`
     : html`<p class="hh__wblab">${fill('wbLabel')} ${scenarioTag(fy)}</p>
 <p class="hh__wbv">${range.under ?? fill('wbRange', { low: range.low, high: range.high })}</p>
-${bar(one.shares, scaleTop(medicaid))}
+${bar(one.shares, top)}
 <ul class="hh__wbk" role="list">${['wbLow', 'wbMiddle', 'wbHigh'].map((key, i) => html`<li${i === 1 ? html` class="hh__wbk--mid"` : ''}>${fill(key, { share: texts[i] })}</li>`)}</ul>
 <p class="hh__why">${fill('wbHow', { fy })}</p>`;
   return html`<section class="hh__wb" aria-labelledby="hh-wb-h" data-medicaid>

@@ -48,9 +48,10 @@ export function loadMedicaid() {
   const dollars = loadDollars(file.hcris.dollars_fy);
   const penaltiesChanged = builtOn(dollars.built_at);
   if (!penaltiesChanged) throw new RangeError(`work requirement: the dollar file's built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(dollars.built_at)}`);
+  const pins = file.sources.map((id) => manifest.get(id));
   loaded = {
-    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, penaltiesChanged, hcris: file.hcris },
-    pins: file.sources.map((id) => manifest.get(id)),
+    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(pins), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, penaltiesChanged, hcris: file.hcris },
+    pins,
     columns: file.columns,
     hospitals: rowsByCcn(file.columns, file.hospitals),
     states: file.states,

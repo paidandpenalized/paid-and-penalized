@@ -271,10 +271,6 @@ const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
 <p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
 ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
-// The Medicaid band and its line's end, or '' with no scenario file (medicaid null) or no row for the hospital in it (the
-// page is then exactly as it was before the band).
-const medicaidOf = (h, medicaid, net) => (medicaid ? medicaidBand(h, medicaid, { net }) : '');
-
 function estimatedBody(h, master, group, { fy, all, sets, hrrp, medicaid }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
@@ -287,7 +283,7 @@ ${netBlock(h, master, group.figures, fy, sets)}
 ${figure(h, group, { fy, all })}
 </div>
 ${whatifSection(h, group, { fy, hrrp })}
-${medicaidOf(h, medicaid, true)}<div class="wrap"><div class="hh__tbl">
+${medicaidBand(h, medicaid, { net: true })}<div class="wrap"><div class="hh__tbl">
 <details class="hh__det" data-peer-table><summary>${fill('tableSummary')} <span>${fill('tableCount', { n: count(peers.length), group: group.group })}</span></summary></details>
 </div></div>
 ${notes(fy, true)}
@@ -314,7 +310,7 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 </section>` : ''}
 </div>
 </div>
-${medicaidOf(h, medicaid, false)}${notes(fy, false)}
+${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
 </article>`;
 }
 

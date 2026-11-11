@@ -19,7 +19,7 @@ import { rowToBase, scenario } from '../../../../engine/js/medicaid/scenario.js'
 import { figure, num } from '../../../../web/charts/figure.js';
 import { frame, hatchDefs, hatchFill, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
-import { count, listText, money, ordinal, pct, placeText } from '../../../../web/render/format.js';
+import { count, listText, money, ordinal, pct, pctExact, placeText } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { hospitalPathOf } from '../../../../web/site.js';
@@ -168,9 +168,6 @@ function scalesOf(model) {
 // The loss under which a dot keeps the smallest size (the figure's note says it).
 export const floorLost = (model) => scalesOf(model).lostTop * R_FLOOR ** 2;
 
-// A share at the fewest places that show it (0.25%, 0.5%, 1%).
-const shortPct = (v) => pct(v, [0, 1, 2].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 2);
-
 const hitsCircle = (box, c) => {
   const nx = Math.max(box[0], Math.min(c.x, box[0] + box[2]));
   const ny = Math.max(box[1], Math.min(c.y, box[1] + box[3]));
@@ -233,7 +230,7 @@ function contourLabels({ levels, S, sx, sy, plot, drawing, dots, whiskers }) {
   for (const level of [...levels].reverse()) {
     const pts = contour(level, S, (x, y) => [sx(x), sy(y)]);
     if (!pts) continue;
-    const text = shortPct(level);
+    const text = pctExact(level);
     const w = textWidth(text, size, { mono });
     const spots = [[pts[0][0] + 3, plot.y0 + 2], ...pts.slice(1).map(([px, py]) => [px + 3, py - size / 2])];
     for (const [x, y] of spots) {
@@ -457,9 +454,9 @@ const nameOf = (h) => (h.hub ? html`<a href="${hospitalPathOf('hub', h.ccn)}">${
 // The card's most exposed hospitals, sorted by share: a disclosure, closed until the reader opens it (open: the script
 // keeps a list the reader opened open across a redraw), so no hospital is named by default; with none to draw, a line.
 function hitsOf(top, { k, use, max, open }) {
-  const sub = html`<span class="wr-hits__sub">${fill('stHitsSub', { scenario: caseWord(k) })}</span>`;
-  if (!top.length) return html`<div class="wr-hits"><p class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> ${sub}</p><p class="small muted">${t('stHitsNone')}</p></div>`;
-  return html`<details class="wr-hits" data-st-hits${open ? html` open` : ''}><summary class="wr-hits__h"><span class="cap">${t('stHitsHead')}</span> ${sub}</summary>
+  const head = html`<span class="cap">${t('stHitsHead')}</span> <span class="wr-hits__sub">${fill('stHitsSub', { scenario: caseWord(k) })}</span>`;
+  if (!top.length) return html`<div class="wr-hits"><p class="wr-hits__h">${head}</p><p class="small muted">${t('stHitsNone')}</p></div>`;
+  return html`<details class="wr-hits" data-st-hits${open ? html` open` : ''}><summary class="wr-hits__h">${head}</summary>
 <ol class="wr-hits__list" role="list">${top.map((h) => html`<li class="wr-hit"><span class="wr-hit__name">${nameOf(h)}<small>${fill('stHitPlace', { place: placeText({ city: h.city }), kind: kindOf(h.kind) })}</small></span><span class="wr-hit__bar" aria-hidden="true"><i style="width: ${r2((h.share[k] * use / max) * 100)}%"></i></span><span class="wr-hit__v">${pct(h.share[k] * use, 1)}</span></li>`)}</ol>
 </details>`;
 }

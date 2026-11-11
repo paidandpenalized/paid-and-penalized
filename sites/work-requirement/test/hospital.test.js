@@ -15,11 +15,12 @@ import { caseShareTexts, shareRange } from '../../../web/medicaid/format.js';
 import { pageHospital } from '../client/find.js';
 import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
 import { COPY as REASON_COPY } from '../../../web/medicaid/copy.js';
+import { REASONS } from '../../../web/medicaid/reasons.js';
 import { COPY, t as words4 } from '../web/copy.js';
 import { loadAway, loadHubCcns, loadMedicaid } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 import {
-  HB_DRAWINGS, HB_FONTS, REASONS, awayRows, barLayout, cardHtml, decodeChunk, defaultPool, figureParts, hospChunks, numbersOf, randomPick, reasonOf,
+  HB_DRAWINGS, HB_FONTS, awayRows, barLayout, cardHtml, decodeChunk, defaultPool, figureParts, hospChunks, numbersOf, randomPick, reasonOf,
   sayOf, serverPick, subjectOf,
 } from '../web/program/hospital.js';
 import { hospitalRows } from '../web/program/strips.js';

@@ -18,7 +18,7 @@ import { figure, num } from '../../../../web/charts/figure.js';
 import { frame, hatchDefs, hatchFill, r2 } from '../../../../web/charts/svg.js';
 import { textWidth } from '../../../../web/charts/text.js';
 import { estTag } from '../../../../web/render/components.js';
-import { count, decimal, money, pct, placeText } from '../../../../web/render/format.js';
+import { count, decimal, money, pct, pctExact, placeText } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
@@ -143,7 +143,7 @@ export const LABEL_FONTS = Object.freeze({
 const { fontOf, labelAt } = labelKit(LABEL_FONTS);
 
 // A share at the fewest places that show it (0.5%, 0.25%, 0.01%).
-const shortPct = (v) => pct(v, [0, 1, 2, 3].find((dp) => Math.abs(Math.round(v * 10 ** (dp + 2)) - v * 10 ** (dp + 2)) < 1e-9) ?? 3);
+const shortPct = (v) => pctExact(v, 3);
 const cutText = (cut) => pct(cut, 3);
 
 // The layout for a drawing, a case (k) and a use rate; ccn: the page's hospital (null: none).

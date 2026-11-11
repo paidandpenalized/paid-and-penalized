@@ -3,8 +3,7 @@
 import { existsSync } from 'node:fs';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
-import { loadHub } from '../../hub/data.js';
-import { hubHospitals } from '../../hub/model.js';
+import { hubModel } from '../../hub/data.js';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
@@ -16,6 +15,7 @@ import { groupLabel } from '../../sites/hacrp/web/groups.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { DICTIONARY_PAGE as HRRP_DICTIONARY_PAGE, KINDS as HRRP_KINDS, METHODS_PATH as HRRP_METHODS_PATH, PROGRAM_PATH as HRRP_PROGRAM_PATH, hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { buildPlaces } from '../../sites/hrrp/web/places.js';
+import { DEFAULT_SKIP_STATE } from '../../sites/work-requirement/web/constants.js';
 import { METHODS_PATH as WR_METHODS_PATH, PROGRAM_PATH as WR_PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
@@ -87,17 +87,18 @@ export const hospitalSample = (type, all = readNewestEmitted().hospitals) => sam
 // it has none for a class the scenario can't reach (no expansion group in CMS-64, or no cost report; the net-cut sample
 // above already shows a non-expansion state's): [type, what it is, the test (h, its scenario: hospitalScenario's, or
 // null)].
+const bandSample = (h) => h.est !== null && h.state !== DEFAULT_SKIP_STATE;
 const HUB_HOSPITALS = [
   ['hub-hospital-cut', 'with a net cut and the HAC cut', (h) => h.est !== null && h.est.cut && h.est.net < 0],
   ['hub-hospital-maryland', 'in Maryland', (h) => h.status === 'maryland'],
-  ['hub-hospital-medicaid', 'with a Medicaid scenario band', (h, one) => h.est !== null && h.state !== 'VA' && Boolean(one?.shares)],
+  ['hub-hospital-medicaid', 'with a Medicaid scenario band', (h, one) => bandSample(h) && Boolean(one?.shares)],
   ['hub-hospital-medicaid-reason', 'with a Medicaid band giving only its reason (no expansion group or no cost report)',
-    (h, one) => h.est !== null && h.state !== 'VA' && ['no_viii_group', 'no_cost_report'].includes(one?.reason)],
+    (h, one) => bandSample(h) && ['no_viii_group', 'no_cost_report'].includes(one?.reason)],
 ];
 
 // The sample hospital's page across the programs of a type (HUB_HOSPITALS), { type, name, path, hospital: its hub
-// record }, from the emitted data alone. hub: loadHub()'s answer, when the caller has read it.
-export const hubHospitalSample = (type, hub = loadHub()) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, hubHospitals(hub), (h) => hospitalPathOf('hub', h.ccn), (h) => hospitalScenario(hub.medicaid, h.ccn));
+// record }, from the emitted data alone. model: hubModel()'s answer (its hub and hospitals, worked out once per process).
+export const hubHospitalSample = (type, { hub, hospitals } = hubModel()) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, hospitals, (h) => hospitalPathOf('hub', h.ccn), (h) => hospitalScenario(hub.medicaid, h.ccn));
 
 // The sample Readmissions hospital pages (sites/hrrp/), by type, each the first hospital in the newest Readmissions file
 // with a payment cut and an estimate of its dollars, with no cut, or with no estimate: [type, what it is, the test].
@@ -153,7 +154,6 @@ export function peerChartSamples() {
 // emitted data, whichever site the browser visits.
 export function samplePages() {
   const all = readNewestEmitted().hospitals;
-  const hub = loadHub();
   const hrrpData = loadHrrp();
   const page = (type, path) => ({ type, name: type, path });
   const places = firstPlaces();
@@ -166,7 +166,7 @@ export function samplePages() {
     ...KINDS.map((kind) => page(kind, places.get(kind))),
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
-    ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type, hub)),
+    ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type)),
     page('hrrp-program', HRRP_PROGRAM_PATH),
     ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hrrpData.hospitals)),
     ...hrrpPlaceSamples(hrrpData),
