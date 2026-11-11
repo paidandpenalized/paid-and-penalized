@@ -31,14 +31,15 @@ ${body}
 
 // The file's alternatives (its `sensitivities`, schemas/medicaid.schema.json), in the order the table lists them after
 // the decided method, each with its row's words (labelOf: the row's label, from the file's params where it names one;
-// shortOf: the phone drawing's, where the label is too long for it).
+// shortOf: the phone drawing's, where the label is too long for it). whatIf: the row is an end of the reader's use-rate
+// what-if, not a choice of the method's, so it never counts as the choice that moves the totals most.
 const next = (data) => ({ next: String(data.meta.fy + 1) });
 export const SENSITIVITIES = Object.freeze([
   { key: 'line2_5', labelOf: () => fill('sens_line2_5', { a: String(S10_LINES.revenue), b: String(S10_LINES.supplemental) }) },
   { key: 'share_next_year', labelOf: (data) => fill('sens_share_next_year', next(data)), shortOf: (data) => fill('sensShort_share_next_year', next(data)) },
   { key: 'share_net_of_dsh', labelOf: () => t('sens_share_net_of_dsh') },
-  { key: 'use_0.75', labelOf: (data) => fill('sens_use_low', { pct: pct(data.params.use_min, 0) }) },
-  { key: 'use_1.25', labelOf: (data) => fill('sens_use_high', { pct: pct(data.params.use_max, 0) }) },
+  { key: 'use_0.75', labelOf: (data) => fill('sens_use_low', { pct: pct(data.params.use_min, 0) }), whatIf: true },
+  { key: 'use_1.25', labelOf: (data) => fill('sens_use_high', { pct: pct(data.params.use_max, 0) }), whatIf: true },
   { key: 'state_share_only', labelOf: () => t('sens_state_share_only'), shortOf: () => t('sensShort_state_share_only') },
 ]);
 
@@ -50,9 +51,20 @@ function checkUseKeys(params) {
   }
 }
 
+// The method's own choices (not the what-if's ends) that move the middle case's revenue lost most from the decided
+// method's: one label, or two when the top two moves print as the same amount (money(), as the table prints them), so
+// rounding noise never names one. base: the decided method's middle; alts: [{ label, middle, whatIf }]. Pure.
+export function mostMoved(base, alts) {
+  const moves = alts.filter((r) => !r.whatIf).map((r) => ({ label: r.label, by: Math.abs(r.middle - base) }))
+    .sort((a, b) => b.by - a.by);
+  if (!moves.length) throw new RangeError('work requirement Methods: no method alternative to compare');
+  const [first, second] = moves;
+  return second && money(first.by) === money(second.by) ? [first.label, second.label] : [first.label];
+}
+
 // ---------- the sections ----------
 
-function stepsSection(data) {
+function stepsSection(data, facts) {
   const p = data.params;
   const v = {
     fy: String(data.meta.fy), line: String(S10_LINES.revenue), cost: String(S10_LINES.cost), days: count(p.min_medicaid_days),
@@ -72,7 +84,7 @@ function stepsSection(data) {
     ['pRev', fill('pRevV', { share: pct(p.low_income_share, 0) }), 'pFlagFrom'],
   ];
   return {
-    id: 'steps', heading: t('stepsHeading'), body: html`${para(fill('stepsText', { fy: v.fy }))}
+    id: 'steps', heading: t('stepsHeading'), body: html`${para(fill('stepsText', { fy: v.fy, n: count(facts.scenario) }))}
 <ol class="wr-meth__steps">
 <li>${lead('step1Head', fill('step1', { line: v.line, fy: v.fy, days: v.days }))}</li>
 <li>${lead('step2Head', fill('step2', { useDefault: v.useDefault, useMin: v.useMin, useMax: v.useMax }))}</li>
@@ -106,7 +118,7 @@ function limitsSection(data) {
   const fy = String(data.meta.fy);
   const items = [
     ['limWhenHead', fill('limWhen', { fy })], ['limStatesHead', t('limStates')], ['limWhoHead', t('limWho')], ['limServiceHead', t('limService')],
-    ['limMaternityHead', t('limMaternity')], ['limIncomeHead', t('limIncome')], ['limEarlyHead', fill('limEarly', { settled: pct(data.meta.hcris.settled_share, 0), fy })],
+    ['limMaternityHead', t('limMaternity')], ['limIncomeHead', t('limIncome')], ['limStayHead', t('limStay')], ['limEarlyHead', fill('limEarly', { settled: pct(data.meta.hcris.settled_share, 0), fy })],
   ];
   return { id: 'limits', heading: t('limitsHeading'), body: html`<ul class="wr-meth__list">${items.map(([head, body]) => html`<li>${lead(head, body)}</li>`)}</ul>` };
 }
@@ -133,14 +145,14 @@ function sensSection(data, fig) {
   checkUseKeys(data.params);
   const versions = [
     { label: t('sens_decided'), roll: data.national },
-    ...SENSITIVITIES.map(({ key, labelOf, shortOf = labelOf }) => ({ label: labelOf(data), short: shortOf(data), roll: data.sensitivities[key] })),
+    ...SENSITIVITIES.map(({ key, labelOf, shortOf = labelOf, whatIf = false }) => ({ label: labelOf(data), short: shortOf(data), roll: data.sensitivities[key], whatIf })),
   ];
-  const rows = versions.map(({ label, short = label, roll }) => {
+  const rows = versions.map(({ label, short = label, roll, whatIf = false }) => {
     const [low, middle, high] = SCENARIOS.map((s) => roll[s].lost);
-    return { label, short, low, middle, high, tip: fill('sensTip', { label, low: money(low), high: money(high), middle: money(middle) }) };
+    return { label, short, low, middle, high, whatIf, tip: fill('sensTip', { label, low: money(low), high: money(high), middle: money(middle) }) };
   });
   const [base, ...alts] = rows;
-  const most = alts.reduce((a, r) => (Math.abs(r.middle - base.middle) > Math.abs(a.middle - base.middle) ? r : a));
+  const most = mostMoved(base.middle, alts);
   const fy = data.meta.fy;
   const chart = drawn((width) => sensChart({ rows, labels: { axis: t('sensAxis') }, width }));
   const numCell = (v) => num(money(v), v);
@@ -148,7 +160,7 @@ function sensSection(data, fig) {
     id: 'sensitivities', heading: t('sensHeading'), body: html`${para(t('sensText'))}
 ${figure({
     n: fig(),
-    takeaway: fill('sensTakeaway', { most: most.label }),
+    takeaway: most.length === 1 ? fill('sensTakeaway', { most: most[0] }) : fill('sensTakeawayTie', { a: most[0], b: most[1] }),
     capTag: scenarioTag(fy),
     ...chart,
     alt: fill('sensAlt', { low: money(base.low), high: money(base.high), middle: money(base.middle), rows: alts.map((r) => fill('sensAltRow', { label: r.label, low: money(r.low), high: money(r.high), middle: money(r.middle) })).join(' ') }),
@@ -210,14 +222,12 @@ function screensSection(data, facts) {
   };
 }
 
-function safetySection(data) {
-  const col = Object.fromEntries(data.columns.map((name, i) => [name, i]));
-  const inScenario = [...data.hospitals.values()].filter((r) => r[col.cls] === 'scenario' && r[col.safety_net]).length;
+function safetySection(data, facts) {
   return {
     id: 'safety', heading: t('safetyHeading'), body: html`${para(fill('safetyText', {
       sds: count(data.params.miur_sds), a: String(S10_LINES.revenue), b: String(S10_LINES.supplemental), share: pct(data.params.low_income_share, 0),
     }))}
-${para(fill('safetyCount', { n: count(data.groups.safety_net.middle.hospitals), s: count(inScenario) }))}`,
+${para(fill('safetyCount', { n: count(facts.safetyNet.all), s: count(facts.safetyNet.scenario) }))}`,
   };
 }
 
@@ -281,8 +291,8 @@ export function methodsPage({ data, robots, assets, sources, both = undefined })
   const facts = methodsFacts(data);
   const fig = counter();
   const sections = [
-    stepsSection(data), casesSection(data), limitsSection(data), linesSection(data), sensSection(data, fig), noneSection(data, facts),
-    marylandSection(facts), screensSection(data, facts), safetySection(data), bothSection(data, model), sourcesSection(data, sources), changesSection(data),
+    stepsSection(data, facts), casesSection(data), limitsSection(data), linesSection(data), sensSection(data, fig), noneSection(data, facts),
+    marylandSection(facts), screensSection(data, facts), safetySection(data, facts), bothSection(data, model), sourcesSection(data, sources), changesSection(data),
   ];
   const body = html`<article class="wrap page wr-meth">
 <header class="page__head">

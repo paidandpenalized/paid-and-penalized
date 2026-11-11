@@ -27,8 +27,9 @@ let loaded = null;
 // The scenario file, read once per build:
 //   meta        { fy (the base year: the HCRIS year, the year of the dollars), builtAt, changed (builtAt's day,
 //               YYYY-MM-DD, UTC), cmsReleased (newestCmsDate over the file's sources), methodsVersion, sources,
-//               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net), hcris (the
-//               file's `hcris`: the cost reports' settled share and whether the year is early) }
+//               penaltyFy (the fiscal year of the Medicare penalty estimates the rows carry: hrrp, hac, net),
+//               penaltiesChanged (the day that year's dollar file was built: YYYY-MM-DD, UTC),
+//               hcris (the file's `hcris`: the cost reports' settled share and whether the year is early) }
 //   pins        the manifest's entry for each of the file's sources, in the file's order (Methods lists them; the as-of
 //               line reads their dates)
 //   columns     the hospital rows' column names, in order (engine/js/medicaid/scenario.js rowToBase reads a row by them)
@@ -43,9 +44,12 @@ export function loadMedicaid() {
   const manifest = new Map(readManifest().map((e) => [e.id, e]));
   const missing = file.sources.filter((id) => !manifest.has(id));
   if (missing.length) throw new RangeError(`work requirement: ${path}: sources not in the manifest: ${missing.join(', ')}`);
+  const dollars = loadDollars(file.hcris.dollars_fy);
+  const penaltiesChanged = builtOn(dollars.built_at);
+  if (!penaltiesChanged) throw new RangeError(`work requirement: the dollar file's built_at is not a UTC timestamp in whole seconds: ${JSON.stringify(dollars.built_at)}`);
   const ccn = file.columns.indexOf('ccn');
   loaded = {
-    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, hcris: file.hcris },
+    meta: { fy: file.fy, builtAt: file.built_at, changed, cmsReleased: newestCmsDate(file.sources.map((id) => manifest.get(id))), methodsVersion: file.methods_version, sources: file.sources, penaltyFy: file.hcris.dollars_fy, penaltiesChanged, hcris: file.hcris },
     pins: file.sources.map((id) => manifest.get(id)),
     columns: file.columns,
     hospitals: new Map(file.hospitals.map((row) => [row[ccn], row])),
@@ -59,6 +63,14 @@ export function loadMedicaid() {
   return loaded;
 }
 
+// A year's dollar file (the Medicare penalty estimates; the newest without fy), each read once per build (loadMedicaid
+// reads its penalty year's for the as-of line; loadSourceGroups and loadHubCcns read the newest).
+const dollarFiles = new Map();
+function loadDollars(fy = newestYear('data/emitted/dollars')) {
+  if (!dollarFiles.has(fy)) dollarFiles.set(fy, readJson(REPO_ROOT + dollarsPath(fy)));
+  return dollarFiles.get(fy);
+}
+
 // The newest hospital master, read once per build (loadAway and loadSourceGroups read it).
 let master = null;
 const loadMaster = () => (master ??= readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))));
@@ -69,7 +81,7 @@ const loadMaster = () => (master ??= readJson(REPO_ROOT + masterPath(newestYear(
 // inputs and the cost reports). data: loadMedicaid()'s result.
 export function loadSourceGroups(data) {
   const hospitals = new Set(loadMaster().sources);
-  const penalties = new Set(readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars'))).sources);
+  const penalties = new Set(loadDollars().sources);
   return sourceGroups(data.meta.sources, hospitals, penalties);
 }
 // The grouping, pure: sources (the file's ids), hospitals and penalties (sets of ids).
@@ -84,7 +96,7 @@ export const sourceGroups = (sources, hospitals, penalties) => ({
 // file, as the Readmissions site does (sites/hrrp/web/view.js inHubOf).
 let hub = null;
 export function loadHubCcns() {
-  hub ??= new Set(readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars'))).hospitals.map((r) => r.ccn));
+  hub ??= new Set(loadDollars().hospitals.map((r) => r.ccn));
   return hub;
 }
 

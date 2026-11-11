@@ -43,7 +43,8 @@ export function asOfPins(data) {
   };
 }
 
-// The as-of line (the family's as-of bar, components.js asofBar): each data source and its date. data: loadMedicaid()'s.
+// The as-of line (the family's as-of bar, components.js asofBar): each data source and its date (the Medicare penalty
+// estimates': the day their file last changed). data: loadMedicaid()'s.
 export function asOf(data) {
   const { cells, spend, declines } = asOfPins(data);
   const table = /Appendix Table (A\.\d+)/.exec(declines.title)?.[1];
@@ -55,7 +56,7 @@ export function asOf(data) {
       { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: date(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
       { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: date(spend.datasetModified) }, ['date']) },
       { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table, date: date(declines.retrieved) }, ['date']) },
-      { label: t('asofPenaltiesLabel'), value: fill('asofPenalties', { fy: String(data.meta.penaltyFy) }) },
+      { label: t('asofPenaltiesLabel'), value: fillKeep('asofPenalties', { fy: String(data.meta.penaltyFy), date: date(data.meta.penaltiesChanged) }, ['date']) },
       { label: t('asofChangedLabel'), value: fillKeep('asofChanged', { date: date(data.meta.changed) }, ['date']) },
     ],
   });

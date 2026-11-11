@@ -22,7 +22,7 @@ A claim marked `unverified` may not be used in copy.
 | WR-08 | In Urban's medium mitigation scenario, the scope and effectiveness of data matching and the exemptions fall between the high and low scenarios. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "the scope and effectiveness of automatic data-matching and definitions of exemptions are between the high and low mitigation scenarios" | 2026-11-10 |
 | WR-09 | Urban assumes every state makes the same implementation choices within a scenario, so its state estimates differ only with the makeup of each state's expansion enrollees. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "uniform implementation choices across states within each scenario" … "differences in the composition of each state's Medicaid expansion enrollees" | 2026-11-10 |
 | WR-10 | Maryland's hospitals are paid under an all-payer model, a model under section 1115A of the Social Security Act. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "exclude hospitals in Maryland (because these hospitals are paid under an all payer model under section 1115A of the Act)" | 2026-11-10 |
-| WR-11 | CBO estimates that under section 71119 about 2.9 million people will lose Medicaid coverage in 2034 for not meeting the requirement and about 2.8 million more because of its added application steps, and that the number of people without health insurance will rise by 5.3 million in 2034. | https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | "about 2.9 million in 2034, will lose coverage" … "about 2.8 million additional people will lose Medicaid coverage" … "increase by 5.3 million in 2034" | 2026-11-10 |
+| WR-11 | CBO estimates that under section 71119 about 2.9 million people will lose Medicaid coverage in 2034 for not meeting the requirement and about 2.8 million more because of its added application steps, and that the number of people without health insurance will rise by 5.3 million in 2034. | https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | "2.9 million in 2034, will lose coverage" … "2.8 million additional people" … "the number of people without health insurance will increase by 5.3 million" | 2026-11-10 |
 | WR-12 | Dobson DaVanzo's technical appendix for the Commonwealth Fund (June 2017) estimates, by working back from earlier studies of the uninsured, that a newly uninsured population uses about 44 percent less hospital care. | https://www.commonwealthfund.org/sites/default/files/documents/___media_files_publications_fund_report_2017_jun_dobson_ahca_impact_safety_net_hosps_technical_appendix.pdf | "we reverse engineered the results of those studies" … "a newly uninsured population will reduce utilization of hospital services by about 44 percent" | 2026-11-10 |
 | WR-13 | Urban Institute and RWJF expect the work requirements to apply to Medicaid waiver programs in some states that did not expand Medicaid, and their projections leave out Georgia's Pathways program. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "will also apply to Medicaid waiver programs in some nonexpansion states" … "do not assess potential changes in enrollment in Georgia’s Pathways program" | 2026-11-10 |
 | WR-14 | Georgia Pathways to Coverage, a section 1115 demonstration, extends coverage to Georgians with incomes up to 100% of the federal poverty level. | https://www.medicaid.gov/medicaid/section-1115-demonstrations/downloads/ga-pathway-pa-04282025.pdf | "Under the Georgia Pathways to Coverage® Section 1115 Demonstration" … "extends healthcare coverage to individuals with incomes up to 100% of the Federal Poverty Level" | 2026-11-10 |
@@ -32,7 +32,9 @@ A claim marked `unverified` may not be used in copy.
 | WR-18 | Urban Institute and RWJF's Appendix Table A.2 gives, by state and mitigation scenario, the projected change in average monthly Medicaid expansion enrollment in 2028. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "Projected Changes in Average Monthly Medicaid Expansion Enrollment" … "in 2028" … "by State and Mitigation Scenario" | 2026-11-10 |
 | WR-19 | All payers pay Maryland's hospitals at the rates Maryland's Health Services Cost Review Commission (HSCRC) sets. | https://hscrc.maryland.gov/Pages/About-Us.aspx | "all payers pay Maryland hospitals on the basis of the rates established by the HSCRC" | 2026-11-10 |
 | WR-20 | Maryland's rate setting builds the cost of hospitals' uncompensated care into their rates. | https://hscrc.maryland.gov/Pages/UCC.aspx | "Maryland’s rate setting system factors the cost of UCC into the State’s hospital rate setting structure" | 2026-11-10 |
-| WR-21 | HSCRC estimated the effect of H.R. 1's coverage losses on Maryland hospitals' uncompensated care in FY2027 and expects the inpatient part from the work requirement to be near zero, because an inpatient stay creates an exemption from it. | https://hscrc.maryland.gov/Documents/DanielaT%20Uploads/5%20-%20Payment%20Models%20Workgroup%20-PayMods/RY27%20(2026)/PMWG040126.pptx.pdf | "Estimated Impact of HR 1 on Medicaid Uncompensated Care in FY 2027" … "near-zero, as inpatient stays create an exemption from work requirements" | 2026-11-10 |
+| WR-21 | HSCRC estimated the effect of H.R. 1's coverage losses on Maryland hospitals' uncompensated care in FY2027 and expects the inpatient part from the work requirement to be near zero, reasoning that an inpatient stay creates an exemption from it. | https://hscrc.maryland.gov/Documents/DanielaT%20Uploads/5%20-%20Payment%20Models%20Workgroup%20-PayMods/RY27%20(2026)/PMWG040126.pptx.pdf | "Estimated Impact of HR 1 on Medicaid Uncompensated Care in FY 2027" … "near-zero, as inpatient stays create an exemption from work requirements" | 2026-11-10 |
+| WR-22 | Public Law 119-21 lets a state's plan (or waiver), at the person's request, count a month in which a person receives inpatient hospital services as a month of demonstrated community engagement: an optional exception for short-term hardship, not a requirement. | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "may provide" … "upon the request of such individual" … "deem such individual to have demonstrated community engagement" … "receives inpatient hospital services" | 2026-11-10 |
+| WR-23 | Urban Institute and RWJF's projections include waiver enrollment in one state that did not expand Medicaid, Wisconsin, whose section 1115 waiver program they project at about 166,000 enrollees; Appendix Table A.2 has a Wisconsin row. | https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | "we only consider waiver enrollment in one nonexpansion state, Wisconsin" … "enrollment in Wisconsin’s Section 1115 waiver program will be about 166,000" | 2026-11-10 |
 
 ## Notes on the sources
 
@@ -86,7 +88,14 @@ A claim marked `unverified` may not be used in copy.
   uninsured. The worksheet's line 9 and Methods' "become uninsured" share (the scenario file's `params.uninsured_share`,
   0.93) is this site's ratio of the two counts, 5.3 ÷ (2.9 + 2.8); CBO does not state the ratio. cbo.gov answers scripted
   requests with a 403, so the PDF was read in a browser on 2026-11-10 and its text extracted there; the quotation matched.
-  The page links the publication page, which links the PDF.
+  The page links the publication page, which links the PDF. Re-read 2026-11-10 from a downloaded copy of the PDF
+  (pdftotext, page 6), and the quotation narrowed so its last fragment names its subject. The full sentences: "the rest,
+  about 2.9 million in 2034, will lose coverage"; "CBO anticipates that about 2.8 million additional people will lose
+  Medicaid coverage in 2034 because the requirement will add steps to the application process" (the claim's "added
+  application steps"); and, in the paragraph on section 71119's totals, "CBO also estimates that the number of people
+  without health insurance will increase by 5.3 million in 2034." The 5.3 million is section 71119's alone: the next
+  paragraph says the chapter's remaining Medicaid policies "result in no additional net effects on the number of people
+  without health insurance in 2034."
 - **WR-12.** Dobson DaVanzo & Associates (Allen Dobson, Joan DaVanzo, Randy Haught), "The Financial Impact of the American
   Health Care Act's Medicaid Provisions on Safety-Net Hospitals: Technical Appendix" (June 26, 2017), prepared for the
   Commonwealth Fund, PDF page 23, "Impact on revenues and costs for persons becoming uninsured" (the PDF's SHA-256 as
@@ -123,7 +132,22 @@ A claim marked `unverified` may not be used in copy.
   `adf27bd5b868ed5b67e31b2796c9f5f4b96381079cc26c7b178347078a3f3b87`). HSCRC's estimate covers all of H.R. 1's coverage
   losses (immigration-related ones too), states its assumptions as of March 17, 2026, and says FY2028 can't yet be
   estimated; its dollar figures are not in this site's data, so Methods prints none of them and links the deck. Methods
-  says only that HSCRC made its own estimate and expects the inpatient part to be near zero.
+  says only that HSCRC made its own estimate and expects the inpatient part to be near zero, and gives the exemption as
+  HSCRC's reasoning: under the law it is a state's option, at the person's request (WR-22).
+- **WR-22.** The enrolled law (WR-01), section 71119, new subsection 1902(xx)(3)(B) of the Social Security Act, "Optional
+  exception for short-term hardship events", fetched again 2026-11-10 (`curl -sL`, 200) and the quotation matched.
+  Clause (i): "The State plan (or waiver of such plan) may provide" that the state shall, for a hardship event in clause
+  (ii)(II) and, "upon the request of such individual", one in subclause (I) or (III), deem the individual to have
+  demonstrated community engagement for the month. Subclause (ii)(I): the individual "receives inpatient hospital
+  services, nursing facility services" (and other listed services of similar acuity) for part or all of the month.
+  Methods' "What the method can't tell you" says the scenario doesn't model this choice, and its Maryland section calls
+  the exemption a state's option at the person's request.
+- **WR-23.** The Urban Institute and RWJF report (WR-03), page 8 (the PDF's SHA-256 equal to the manifest's
+  `urban-2026-a2-wr` `derivedFrom.sha256`, downloaded again 2026-11-10), in the same passage as WR-13's Georgia fragment;
+  the executive summary's figures note "Estimates include waiver enrollment in Wisconsin", and Appendix Table A.2 (page
+  46, its second page) has a Wisconsin row. Wisconsin's CMS-64 reports show no new adult group (WR-16), so the
+  method has no expansion share for it; Methods says Urban's table includes Wisconsin's waiver enrollees but its hospitals
+  have no scenario.
 
 ## Link check (2026-11-10)
 
@@ -131,11 +155,11 @@ Each source above, fetched with `curl -sL`.
 
 | URL | status | via |
 |---|---|---|
-| https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
-| https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | 200 (the report PDF, SHA-256 equal to the manifest's; executive summary read) | direct |
+| https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full; fetched again for WR-22, 200) | direct |
+| https://www.rwjf.org/content/dam/farm/reports/reports/2026/rwjf485284 | 200 (the report PDF, SHA-256 equal to the manifest's; executive summary read; fetched again for WR-23, 200, same SHA-256, page 8 read) | direct |
 | https://www.federalregister.gov/documents/2026/06/03/2026-11094/medicaid-program-community-engagement-requirement-for-certain-individuals | 200 on the first fetch (the rule's page; its full text read at federalregister.gov/documents/full_text/text/2026/06/03/2026-11094.txt, page 33461); a later scripted fetch was sent to the site's bot check | direct |
 | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | 200 (about 4.8 MB, the rule's text; the WR-10 passage found, once) | direct |
-| https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | 403 to `curl`; 200 in a browser on 2026-11-10 (the publication page, cbo.gov/publication/61837, and the PDF; text read there) | browser |
+| https://www.cbo.gov/system/files/2025-10/PL-119-21-Medicaid%20_0.pdf | 403 to `curl`; 200 in a browser on 2026-11-10 (the publication page, cbo.gov/publication/61837, and the PDF; text read there); re-read the same day from a downloaded copy (pdftotext, page 6) | browser |
 | https://www.commonwealthfund.org/sites/default/files/documents/___media_files_publications_fund_report_2017_jun_dobson_ahca_impact_safety_net_hosps_technical_appendix.pdf | 200 (the appendix PDF, 34 pages; page 23 read) | direct |
 | https://www.medicaid.gov/medicaid/section-1115-demonstrations/downloads/ga-pathway-pa-04282025.pdf | 200 (Georgia's extension request PDF; pages 3 and 4 read) | direct |
 | https://data.medicaid.gov/api/1/metastore/schemas/dataset/items/00505e90-f8ac-5921-b12f-5e23ba7ffcf3 | 200 (the dataset's catalog record, its description read) | direct |

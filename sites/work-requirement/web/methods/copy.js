@@ -9,7 +9,7 @@ import { COPY as SHARED } from '../copy.js';
 export const COPY = {
   // The top.
   methodsLede: {
-    text: 'A scenario, not a payment: what the Medicaid work requirement could take from each hospital’s Medicaid revenue, in FY{fy} dollars. Below: the four steps and every number they use, what the method can’t tell you, how far the totals move under other choices, who has no scenario and why, and every file the build reads.',
+    text: 'A scenario, not a payment: how much Medicaid revenue each hospital could lose under the Medicaid work requirement, in FY{fy} dollars. Below: the four steps and every number they use, what the method can’t tell you, how far the totals move under other choices, who has no scenario and why, and every file the build reads.',
     claim: null,
   },
   contentsHeading: { text: 'On this page', claim: null },
@@ -17,7 +17,7 @@ export const COPY = {
   // The steps and their numbers.
   stepsHeading: { text: 'The steps and their numbers', claim: null },
   stepsText: {
-    text: 'Each active acute-care or critical access hospital with an FY{fy} Medicare cost report goes through four steps. Every number here is the scenario file’s own, as the build reads it.',
+    text: 'Each active acute-care or critical access hospital in a scenario state with an FY{fy} Medicare cost report, {n} hospitals, goes through the four steps; the rest show why they have no scenario, below. Every number here is the scenario file’s own, as the build reads it.',
     claim: null,
   },
   step1Head: { text: 'Revenue at risk.', claim: null },
@@ -42,7 +42,7 @@ export const COPY = {
   },
   sharesSub: { text: 'Where the two shares in step three come from', claim: null },
   sharesUninsured: {
-    text: '{uninsured} become uninsured: the Congressional Budget Office’s estimate of how many more people the requirement leaves uninsured, over its count of the people it removes from Medicaid, both in the last year of CBO’s ten-year window. The ratio is this site’s.',
+    text: '{uninsured} become uninsured: the Congressional Budget Office’s estimate of how many more people the requirement leaves uninsured, over its count of the people who lose Medicaid coverage under it, both in the last year of CBO’s ten-year window. The ratio is this site’s.',
     claim: 'WR-11',
   },
   sharesStill: {
@@ -88,7 +88,7 @@ export const COPY = {
   // The three cases.
   casesHeading: { text: 'The three cases', claim: null },
   casesText: {
-    text: 'Low, middle and high are Urban Institute and RWJF’s high, medium and low state mitigation: their projections of how much the work requirement alone cuts average monthly expansion enrollment, state by state (Appendix Table {table}). Nationally that is {low}, {middle} and {high} million fewer enrollees.',
+    text: 'Low, middle and high are Urban Institute and RWJF’s high, medium and low state mitigation: their projections of how much the work requirement alone reduces average monthly expansion enrollment, state by state (Appendix Table {table}). Nationally that is {low}, {middle} and {high} million fewer enrollees.',
     claim: ['WR-03', 'WR-18'],
   },
   casesMap: {
@@ -97,18 +97,18 @@ export const COPY = {
   },
   casesSame: { text: 'Within a case every state makes the same choices; states differ only in who their expansion enrollees are.', claim: 'WR-09' },
   casesOfficial: {
-    text: 'CMS’s rule projects an enrollment cut about the size of the low case’s in each year after the first, so the page marks it on the low case as a small note. Middle is the page’s default, not a forecast of what is most likely.',
+    text: 'CMS’s rule projects an enrollment decline about the size of the low case’s in each year after the first, so the page marks it on the low case as a small note. Middle is the page’s default, not a forecast of what is most likely.',
     claim: ['WR-03', 'WR-04'],
   },
 
   // What the method can't tell you.
   limitsHeading: { text: 'What the method can’t tell you', claim: null },
   limWhenHead: { text: 'When, or how much in later years.', claim: null },
-  limWhen: { text: 'It applies a projected cut to the base year’s cost reports, in FY{fy} dollars: no growth, no inflation, and no change in how hospitals or states respond.', claim: null },
+  limWhen: { text: 'It applies a projected decline to the base year’s cost reports, in FY{fy} dollars: no growth, no inflation, and no change in how hospitals or states respond.', claim: null },
   limStatesHead: { text: 'What each state will do.', claim: null },
-  limStates: { text: 'Urban gives every state the same choices within a case; a state that does more or less to keep people covered will see a smaller or larger cut.', claim: 'WR-09' },
+  limStates: { text: 'Urban gives every state the same choices within a case; a state that does more or less to keep people covered will see a smaller or larger decline.', claim: 'WR-09' },
   limWhoHead: { text: 'Who loses coverage.', claim: null },
-  limWho: { text: 'A state’s cut is an average. The people who lose coverage may use more or less hospital care than the average expansion adult; the use rate lets you test that, and nothing here measures it.', claim: null },
+  limWho: { text: 'A state’s decline is an average. The people who lose coverage may use more or less hospital care than the average expansion adult; the use rate lets you test that, and nothing here measures it.', claim: null },
   limServiceHead: { text: 'How the share splits by service.', claim: null },
   limService: {
     text: '{spendForm} gives the expansion group’s spending as a summary, not by service, so a hospital’s share comes from all the state’s Medicaid spending, scaled by its inpatient days, though much of its Medicaid revenue is outpatient.',
@@ -118,6 +118,11 @@ export const COPY = {
   limMaternity: { text: 'The adjustment counts only the nursery and labor-and-delivery days the cost report lists apart; other maternity days sit among adult days, so it moves few hospitals and may move an obstetric hospital too little.', claim: null },
   limIncomeHead: { text: 'What hospitals will do.', claim: null },
   limIncome: { text: 'Revenue lost is not income lost: care no longer given takes its cost with it, and care given unpaid stays a cost. The margins after are this arithmetic, not a forecast of hospitals’ budgets.', claim: null },
+  limStayHead: { text: 'Hospital stays.', claim: null },
+  limStay: {
+    text: 'The law lets a state’s plan count a month in which a person receives inpatient hospital care as meeting the requirement, when the person asks. The scenario doesn’t model this choice, so it can’t tell how many patients a state that makes it would keep covered.',
+    claim: 'WR-22',
+  },
   limEarlyHead: { text: 'Early cost reports.', claim: null },
   limEarly: { text: '{settled} of the FY{fy} reports were settled when the file was built; the rest are as filed and may change when settled. Each hospital’s record says which.', claim: null },
 
@@ -143,7 +148,8 @@ export const COPY = {
     text: 'The net-of-DSH row takes disproportionate share hospital payments out of each state’s Medicaid spending before the expansion share is worked out, from CMS’s Financial Management Report, which gives each state’s spending by program.',
     claim: 'WR-17',
   },
-  sensTakeaway: { text: 'Revenue lost a year, low case to high, under the decided method and each alternative. The middle case moves most with this choice: {most}.', claim: null },
+  sensTakeaway: { text: 'Revenue lost a year, low case to high, under the decided method and each alternative. Of the method’s own choices, the one that moves the middle case most: {most}. The use rate rows are the what-if’s two ends.', claim: null },
+  sensTakeawayTie: { text: 'Revenue lost a year, low case to high, under the decided method and each alternative. Of the method’s own choices, two move the middle case about equally, more than the rest: {a} and {b}. The use rate rows are the what-if’s two ends.', claim: null },
   sensAlt: { text: 'Bands of revenue lost a year, low case to high, one row per version of the method. Decided method: {low} to {high}, middle {middle}. {rows}', claim: null },
   sensAltRow: { text: '{label}: {low} to {high}, middle {middle}.', claim: null },
   sensTip: { text: '{label}: {low} to {high}; middle {middle}', claim: null },
@@ -169,18 +175,21 @@ export const COPY = {
   // Who has no scenario.
   noneHeading: { text: 'Who has no scenario', claim: null },
   noneText: {
-    text: 'The requirement applies to adults in Medicaid’s expansion group and to adults covered by a waiver that gives equivalent coverage. Urban projects declines for expansion enrollees, so the {n} states that did not expand Medicaid ({list}) have no scenario: their {h} hospitals show the reason and no number.',
+    text: 'The requirement applies to adults in Medicaid’s expansion group and to adults covered by a waiver whose coverage is equivalent to minimum essential coverage. Urban projects declines for expansion enrollees, so the {n} states that did not expand Medicaid ({list}) have no scenario: their {h} hospitals show the reason and no number.',
     claim: ['WR-02', 'WR-03'],
   },
   noneGeorgia: {
-    text: 'Georgia covers adults with incomes up to the poverty line through Georgia Pathways to Coverage, a waiver demonstration, and is the only state that already makes community engagement a condition of Medicaid eligibility for some adults. Urban expects the law to reach waiver programs in some states that did not expand Medicaid, but leaves Pathways out of its projections, so Georgia’s hospitals have no scenario either.',
+    text: 'Through Georgia Pathways to Coverage, a waiver demonstration, Georgia covers some adults with incomes up to the poverty line, on the condition that they meet a community engagement requirement; it is the only state that already makes community engagement a condition of Medicaid eligibility for some adults. Urban expects the law to reach waiver programs in some states that did not expand Medicaid, but leaves Pathways out of its projections, so Georgia’s hospitals have no scenario either.',
     claim: ['WR-13', 'WR-14', 'WR-15'],
   },
-  noneWisconsin: { text: '{state}’s {spendForm} reports show no expansion group, so the method has no expansion share to apply, and its {n} hospitals have no scenario.', claim: 'WR-16' },
-  noneTerritories: { text: 'The territories ({list}) are not in Urban’s state table, so their {n} hospitals have no scenario.', claim: null },
+  noneWisconsin: {
+    text: 'Urban’s table includes {state}’s waiver enrollees, but {state}’s {spendForm} reports show no expansion group, so the method has no expansion share to apply, and its {n} hospitals have no scenario.',
+    claim: ['WR-16', 'WR-23'],
+  },
+  noneTerritories: { text: 'The territories ({list}) are not in Urban’s state table, so their {n} hospitals have no scenario.', claim: 'WR-18' },
   noneNoReport: { text: '{n} hospitals have no FY{fy} cost report in CMS’s file, so the scenario has nothing to measure; each shows the reason, never a number.', claim: null },
   noneQuarters: {
-    text: '{states}: {spendForm} has no complete federal FY{fy} for them, so their latest four quarters stand in, and their next-year and net-of-DSH shares equal the base share.',
+    text: '{states}: the pinned {spendForm} file has no complete federal FY{fy} for them, so their latest four quarters stand in, and their next-year and net-of-DSH shares equal the base share.',
     claim: null,
   },
   noneMaryland: { text: 'Maryland is left out for another reason, below.', claim: null },
@@ -196,8 +205,8 @@ export const COPY = {
     claim: 'WR-20',
   },
   mdHscrc: {
-    text: 'HSCRC has made its own estimate of what the law’s coverage changes add to its hospitals’ uncompensated care, and expects the work requirement’s inpatient part to be near zero, since an inpatient stay creates an exemption from it. For Maryland, read {link}.',
-    claim: 'WR-21',
+    text: 'HSCRC has made its own estimate of what the law’s coverage changes add to its hospitals’ uncompensated care, and expects the work requirement’s inpatient part to be near zero, reasoning that an inpatient stay can exempt a person from it. Under the law that is a state’s option, at the person’s request. For Maryland, read {link}.',
+    claim: ['WR-21', 'WR-22'],
   },
   mdHscrcLink: { text: 'HSCRC’s estimate', claim: null },
 
@@ -226,12 +235,12 @@ export const COPY = {
     text: 'The safety-net chip in step one is this site’s flag, not an official list. A hospital is flagged when its Medicaid share of inpatient days is at least {sds} standard deviation above its state’s mean (over every hospital in the state’s cost report file with Medicaid days, of any type), or when its Medicaid revenue, lines {a} + {b}, is more than {share} of its patient revenue.',
     claim: null,
   },
-  safetyCount: { text: '{n} hospitals with a cost report are flagged; {s} of them are in scenario states.', claim: null },
+  safetyCount: { text: 'Across every state and territory, Maryland’s included, the flag marks {n} hospitals with a cost report; {s} of them are in scenario states and go through the four steps.', claim: null },
 
   // Exposed on both.
   bothHeading: { text: 'Exposed on both', claim: null },
   bothText: {
-    text: 'Step five’s corner holds the hospitals exposed on both. A hospital is in it when the case shown takes {share} or more of its patient revenue, at your use rate, and its FY{pfy} Medicare penalties (readmissions plus hospital-acquired conditions, this site’s estimates) as a share of the same patient revenue are in the top quarter: at or above the {pctile} percentile of that share, {cut} today.',
+    text: 'Step five’s corner holds the hospitals exposed on both. A hospital is in it when its loss in the case shown is {share} or more of its patient revenue, at your use rate, and its FY{pfy} Medicare penalties (readmissions plus hospital-acquired conditions, this site’s estimates) as a share of the same patient revenue are in the top quarter: at or above the {pctile} percentile of that share, {cut} today.',
     claim: null,
   },
   bothPop: {
@@ -242,7 +251,7 @@ export const COPY = {
   // The sources.
   srcHeading: { text: 'Sources and files', claim: null },
   srcText: {
-    text: 'Every input is a public file or an extract of one, pinned byte for byte in this site’s repository: the build reads only these copies, and a test fails if a byte changes. Each {hash} is the pinned copy’s.',
+    text: 'Every input is a public file or an extract of one, pinned byte for byte in this site’s repository: the build reads only these copies, and a test fails if a byte changes. Each {hash} is the pinned copy’s. A dash for the source’s date means the source gives no date of its own; the day this site retrieved it is always shown.',
     claim: null,
   },
   srcGroup_scenario: { text: 'The scenario’s inputs', claim: null },

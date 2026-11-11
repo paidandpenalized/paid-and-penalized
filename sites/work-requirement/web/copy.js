@@ -202,7 +202,7 @@ export const COPY = {
   // drop in hospital use the Commonwealth Fund's appendix models (WR-12); Methods gives both in full.
   ws9Note: { text: 'From CBO’s estimate for the requirement: more uninsured over people losing Medicaid. The rest find other coverage, which is taken to pay the care’s cost: {v}.', claim: 'WR-11' },
   ws10: { text: 'Care they still use, uninsured', claim: null },
-  ws10Note: { text: 'One less the drop in hospital use the Commonwealth Fund’s modelers assume for people newly uninsured. The rest is care not given, and its cost goes away: {v}.', claim: 'WR-12' },
+  ws10Note: { text: 'One less the drop in hospital use that Dobson DaVanzo, for the Commonwealth Fund, assumes for people newly uninsured. The rest is care not given, and its cost goes away: {v}.', claim: 'WR-12' },
   wsSplit: { text: 'Line {n}, split three ways', claim: null },
   wsSplitStill: { text: 'Still given, unpaid (line {n})', claim: null },
   wsSplitNotGiven: { text: 'Care not given', claim: null },
@@ -484,7 +484,7 @@ export const COPY = {
   asofDeclinesLabel: { text: 'Enrollment declines', claim: null },
   asofDeclines: { text: 'Urban Institute and RWJF, Appendix Table {table}; copied {date}', claim: 'WR-18' },
   asofPenaltiesLabel: { text: 'Medicare penalties', claim: null },
-  asofPenalties: { text: 'This site’s FY{fy} estimates', claim: null },
+  asofPenalties: { text: 'This site’s FY{fy} estimates, last changed {date}', claim: null },
   asofChangedLabel: { text: 'Numbers last changed', claim: null },
   asofChanged: { text: '{date}', claim: null },
 

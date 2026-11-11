@@ -7,6 +7,8 @@
 //   flagged(f)    the scenario hospitals whose flags include f
 //   filingErrors  the scenario hospitals screened out as filing errors: Medicaid revenue below zero, or above the
 //                 hospital's patient revenue (engine: exposure.py hospital_base, `scored` false)
+//   safetyNet     hospitals our safety-net flag marks (a non-empty `safety_net` list of reasons; null without a cost
+//                 report): { all: every class, Maryland's included; scenario: those in a scenario state }
 export function methodsFacts(data) {
   const col = Object.fromEntries(data.columns.map((name, i) => [name, i]));
   const rows = [...data.hospitals.values()];
@@ -17,6 +19,7 @@ export function methodsFacts(data) {
   for (const list of Object.values(states)) list.sort((a, b) => a.localeCompare(b, 'en-US'));
   const scenario = rows.filter((r) => r[col.cls] === 'scenario');
   const flagged = (flag) => scenario.filter((r) => r[col.flags].includes(flag)).length;
+  const isSafetyNet = (r) => Array.isArray(r[col.safety_net]) && r[col.safety_net].length > 0;
   return {
     scenario: scenario.length,
     byClass,
@@ -24,5 +27,6 @@ export function methodsFacts(data) {
     latest4: Object.values(data.states).filter((st) => st.viii_basis === 'latest4').map((st) => st.name).sort((a, b) => a.localeCompare(b, 'en-US')),
     flagged,
     filingErrors: scenario.filter((r) => !r[col.scored]).length,
+    safetyNet: { all: rows.filter(isSafetyNet).length, scenario: scenario.filter(isSafetyNet).length },
   };
 }

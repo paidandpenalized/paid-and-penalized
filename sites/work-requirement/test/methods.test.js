@@ -14,7 +14,7 @@ import { SITE } from '../../../web/site.js';
 import { BOTH_QUANTILE, BOTH_SHARE, S10_LINES, SCENARIOS } from '../web/constants.js';
 import { loadHubCcns, loadMedicaid, loadSourceGroups, sourceGroups } from '../web/data.js';
 import { methodsFacts } from '../web/methods/facts.js';
-import { SENSITIVITIES, methodsPage } from '../web/pages/methods.js';
+import { SENSITIVITIES, methodsPage, mostMoved } from '../web/pages/methods.js';
 import { programPage } from '../web/pages/program.js';
 import { bothInput, bothModel } from '../web/program/both.js';
 import { hospitalRows } from '../web/program/strips.js';
@@ -58,6 +58,16 @@ test('the steps print every parameter from the file\'s params', () => {
   // Lines 9 and 10 cite their sources: CBO for the uninsured share, the Commonwealth Fund's appendix for care still used.
   assert.match(steps, /Congressional Budget Office/);
   assert.match(steps, /Commonwealth Fund/);
+  // Only the scenario-state hospitals go through the steps, and the page says how many.
+  assert.equal(methodsFacts(data).scenario, scenarioRows.length);
+  assert.ok(steps.includes(`${count(scenarioRows.length)} hospitals, goes through the four steps`), count(scenarioRows.length));
+});
+
+test('what the method can\'t tell you: the law\'s optional inpatient-stay exception, which the scenario doesn\'t model', () => {
+  const s = sectionOf('limits');
+  assert.match(s, /Hospital stays\./);
+  assert.match(s, /inpatient hospital care as meeting the requirement, when the person asks/);
+  assert.match(s, /doesn.t model this choice/);
 });
 
 test('the lines 2 + 5 version: its numbers against the decided method\'s', () => {
@@ -83,12 +93,31 @@ test('the sensitivities table: every alternative in the file, low, middle and hi
   assert.match(s, /class="scen-tag"/, 'the figure carries the scenario tag');
 });
 
+// The takeaway names the method choice that moves the middle case most: never a use-rate end (the reader's what-if,
+// whose two ends move it by the same amount either way), and never one of two that print as the same move.
+test('the sensitivities\' takeaway: the method choice that moves the middle case most, never the use rate, two when they tie', () => {
+  const alt = (label, middle, whatIf = false) => ({ label, middle, whatIf });
+  assert.deepEqual(mostMoved(100e6, [alt('a', 120e6), alt('b', 60e6), alt('use', 900e6, true)]), ['b']);
+  assert.deepEqual(mostMoved(100e6, [alt('a', 140e6), alt('b', 60.01e6)]), ['a', 'b'], 'the same move as printed');
+  assert.deepEqual(mostMoved(1e9, [alt('a', 1.5e9), alt('b', 1.4e9)]), ['a']);
+  assert.throws(() => mostMoved(1, [alt('use', 2, true)]), /no method alternative/);
+  const takeaway = words(/<figcaption class="fig__cap"[\s\S]*?<\/figcaption>/.exec(/<section class="doc__sec[^"]*" id="sensitivities"[\s\S]*?<\/section>/.exec(page)[0])[0]);
+  const deltas = Object.entries(data.sensitivities).filter(([k]) => !k.startsWith('use_')).map(([k, v]) => [k, Math.abs(v.middle.lost - data.national.middle.lost)]).sort((a, b) => b[1] - a[1]);
+  assert.equal(deltas[0][0], 'line2_5', 'the file\'s largest method move');
+  assert.ok(takeaway.includes(`Lines ${S10_LINES.revenue} + ${S10_LINES.supplemental} counted`), takeaway);
+  assert.doesNotMatch(takeaway, /: Use rate/);
+});
+
 test('who has no scenario: the states by class, Georgia\'s Pathways and Urban\'s expansion-only scope, the territories, NC and SD\'s quarters', () => {
   const s = sectionOf('none');
   const names = (cls) => Object.values(data.states).filter((st) => st.cls === cls).map((st) => st.name);
   for (const name of [...names('not_expansion'), ...names('territory'), ...names('no_viii_group')]) assert.ok(s.includes(name), name);
   assert.match(s, /Georgia Pathways/);
+  assert.match(s, /covers some adults with incomes up to the poverty line, on the condition that they meet a community engagement requirement/);
+  assert.match(s, /equivalent to minimum essential coverage/);
   assert.match(s, /expansion enrollees/);
+  for (const name of names('no_viii_group')) assert.match(s, new RegExp(`Urban.s table includes ${name}.s waiver enrollees, but`));
+  assert.match(s, /the pinned .+ file has no complete federal FY/);
   const latest = Object.values(data.states).filter((st) => st.viii_basis === 'latest4').map((st) => st.name);
   assert.equal(latest.length, 2);
   for (const name of latest) assert.ok(text.includes(name), `latest four quarters: ${name}`);
@@ -103,6 +132,10 @@ test('Maryland: not modeled, its hospitals counted, HSCRC named and linked', () 
   assert.ok(s.includes(count(md)));
   assert.match(s, /Health Services Cost Review Commission/);
   assert.match(page, /href="https:\/\/hscrc\.maryland\.gov\//);
+  // The inpatient exemption is HSCRC's reasoning; under the law it is a state's option, at the person's request.
+  assert.match(s, /reasoning that an inpatient stay can exempt a person from it/);
+  assert.match(s, /a state.s option, at the person.s request/);
+  assert.doesNotMatch(s, /creates an exemption/);
 });
 
 test('the screens: filing errors, margin outliers (on hospital records, out of the margin roll-ups), the day floor, the part year, the cost cap', () => {
@@ -116,10 +149,21 @@ test('the screens: filing errors, margin outliers (on hospital records, out of t
   assert.ok(s.includes(count(data.params.min_medicaid_days)));
 });
 
-test('the safety-net flag: our rule with its constants, how many it flags', () => {
+// The flag's column is a list of reasons ([] for none, null with no cost report), so a hospital is flagged when its list
+// is non-empty; counted from the rows, Maryland's included (the groups' roll-up leaves Maryland out).
+test('the safety-net flag: our rule with its constants, how many it flags in all and in scenario states', () => {
   const s = sectionOf('safety');
   assert.ok(s.includes(count(data.params.miur_sds)) && s.includes(pct(data.params.low_income_share, 0)));
-  assert.ok(s.includes(count(data.groups.safety_net.middle.hospitals)));
+  const flagged = (r) => Array.isArray(r[col.safety_net]) && r[col.safety_net].length > 0;
+  const all = [...data.hospitals.values()].filter(flagged).length;
+  const inScenario = scenarioRows.filter(flagged).length;
+  assert.deepEqual(methodsFacts(data).safetyNet, { all, scenario: inScenario });
+  assert.ok(inScenario < scenarioRows.length, 'an empty list is not a flag');
+  // Pinned to the FY2023 file (task 11 review): 775 flagged in all, 598 of them in scenario states.
+  assert.equal(all, 775);
+  assert.equal(inScenario, 598);
+  assert.ok(s.includes(`the flag marks ${count(all)} hospitals with a cost report; ${count(inScenario)} of them are in scenario states`), s);
+  assert.match(s, /Maryland.s included/);
   assert.match(s, /not an official list/i);
 });
 
@@ -144,6 +188,7 @@ test('the sources: every pin of the file, each with its full SHA-256, in three g
     assert.ok(s.includes(pin.sha256), `${pin.id}: its SHA-256`);
     assert.ok(s.includes(isoDate(pin.retrieved)), `${pin.id}: retrieved`);
   }
+  assert.match(words(s), /A dash for the source.s date means the source gives no date of its own/);
   assert.deepEqual([...groups.scenario, ...groups.hospitals, ...groups.penalties].sort(), [...data.meta.sources].sort());
   assert.ok(groups.scenario.length && groups.hospitals.length && groups.penalties.length);
   assert.deepEqual(sourceGroups(['a', 'b', 'c', 'd'], new Set(['b']), new Set(['b', 'c'])), { scenario: ['a', 'd'], hospitals: ['b'], penalties: ['c'] });
@@ -172,9 +217,19 @@ test('the as-of line on both pages: the cost reports\' CMS date and settled shar
     assert.ok(t.includes(pct(data.meta.hcris.settled_share, 0)), 'settled share');
     assert.ok(t.includes(isoDate(cms64.datasetModified)), 'CMS-64 date');
     assert.ok(t.includes(`FY${data.meta.penaltyFy}`), 'penalty year');
+    assert.equal(data.meta.penaltiesChanged, '2026-10-23', 'the FY2026 dollar file\'s day');
+    assert.ok(t.includes(`estimates, last changed ${isoDate(data.meta.penaltiesChanged)}`), 'the penalty estimates\' date');
     assert.ok(t.includes(isoDate(data.meta.changed)), 'numbers changed');
     assert.match(t, /Table A\.2/);
   }
+});
+
+// DES-47: neutral verbs for what the requirement does to enrollment and revenue.
+test('neutral verbs: no "cut" of enrollment, no people "removed", no revenue "taken"; the Commonwealth Fund\'s modeler named', () => {
+  assert.doesNotMatch(text, /\bcuts?\b(?! today)/i);
+  assert.doesNotMatch(text, /removes? from Medicaid|could take from|case shown takes/);
+  const ws = words(program);
+  assert.doesNotMatch(ws, /Commonwealth Fund.s modelers/);
 });
 
 test('the hub\'s statement about the work-requirement pages\' as-of line and source list is no longer pending', () => {
