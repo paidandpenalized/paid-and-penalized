@@ -93,13 +93,20 @@ export const searchForm = ({ id, src, label, find, findRest, placeholder, hero =
 <p class="vh" role="status" aria-live="polite"></p>
 </form>`;
 
-// Each listed program's figure in the footer, from the shell's facts: the estimated dollars, or for value-based
-// purchasing the bonuses it moves, or for a scenario its national range of Medicaid revenue lost, low to high, with its
-// tag (the base year of its dollars).
+// The tag every scenario number carries (the base year of its dollars).
 export const scenarioTag = (year) => html`<span class="scen-tag">${fill('scenarioTag', { year: String(year) })}</span>`;
-function figureOf({ dollars, moved, scenario }) {
-  if (scenario) return html`${fill('footScenario', { range: moneyRange(scenario.lost.low, scenario.lost.high) })} ${scenarioTag(scenario.year)}`;
-  return moved === undefined ? money(dollars) : fill('footMoved', { amount: money(moved) });
+
+// Each listed program's figure in the footer, from the shell's facts: the estimated dollars (said to a screen reader as
+// an estimate for the fiscal year), or for value-based purchasing the bonuses it moves, or for a scenario its national
+// range of Medicaid revenue lost, low to high, and the word "scenario", on the row's one line like the others (Dalton's
+// review 11-11: no tag box here, the one place a scenario number goes without it); what it is in full, in its dollars'
+// base year, is its title and, for a screen reader, hidden words after it.
+function figureOf({ dollars, moved, scenario }, estimated) {
+  if (scenario) {
+    const full = fill('footScenarioFull', { year: String(scenario.year) });
+    return html`<span class="ft__v" title="${full}">${fill('footScenario', { range: moneyRange(scenario.lost.low, scenario.lost.high) })}<span class="vh">, ${full}</span></span>`;
+  }
+  return html`<span class="ft__v"><span class="vh">${estimated} </span>${moved === undefined ? money(dollars) : fill('footMoved', { amount: money(moved) })}</span>`;
 }
 
 // One field of the footer's form: its number and label (a heading, so a screen reader can jump to it), then its body.
@@ -124,9 +131,7 @@ export function familyFooter({ feedback, shell }) {
     const link = html`<a href="${p.path}" title="${p.name}">${p.ab}</a>`;
     return i ? html` <span class="nw">· ${link}</span>` : link;
   });
-  // A scenario's figure is no estimate for the fiscal year: its tag says what it is. It is longer, so it takes a line of
-  // its own under the name.
-  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li${p.scenario ? html` class="ft__scen"` : ''}><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> <span class="ft__v">${p.scenario ? '' : html`<span class="vh">${estimated} </span>`}${figureOf(programs[p.id])}</span></li>`)}</ul>
+  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> ${figureOf(programs[p.id], estimated)}</li>`)}</ul>
 <p class="ft__soon">${COPY.footConsidered} ${considered}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
   const asOf = html`<p>${fillAround((marks) => fill('footEstimates', marks), { hospitals: html`<span class="ft__lead">${fill('footHospitals', { n: count(hospitals) })}</span>` })}</p>

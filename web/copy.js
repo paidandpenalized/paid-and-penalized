@@ -33,9 +33,11 @@ export const COPY = typesetCopy({
   footFeedback: 'Feedback',
   footEstimated: 'Estimated FY{fy}:',
   footMoved: '{amount} moved',
-  // A scenario's figure (web/site.js scenario): its national range of Medicaid revenue lost, low to high, and the tag
-  // every scenario number carries (the base year of its dollars).
-  footScenario: '{range} Medicaid revenue could be lost a year',
+  // A scenario's figure (web/site.js scenario): its national range of Medicaid revenue lost, low to high, on one line
+  // with the word "scenario"; what it is in full (R14: "could", a policy not yet in effect) is its title and hidden words.
+  footScenario: '{range} scenario',
+  footScenarioFull: 'Medicaid revenue hospitals could lose a year, a scenario in {year} dollars',
+  // The tag every scenario number carries (the base year of its dollars).
   scenarioTag: 'SCENARIO · {year} $',
   footConsidered: 'Under consideration:',
   footHospitals: '{n} hospitals',

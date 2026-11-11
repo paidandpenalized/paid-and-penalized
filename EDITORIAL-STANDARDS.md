@@ -14,7 +14,9 @@ On every page, each number is one of these, and the page says which:
   CMS publishes one.
 - **Estimate**: dollars the site works out from CMS's files, labeled "Estimate", with how it is worked out on Methods.
 - **Scenario**: what a policy could do under stated assumptions. Every scenario number carries the tag
-  `SCENARIO · 2023 $` (the year is the one its dollars are in), and its charts are labeled "Hypothetical".
+  `SCENARIO · 2023 $` (the year is the one its dollars are in), and its charts are labeled "Hypothetical". The one
+  exception is the family footer's Programs list, where the range sits on one line with the word "scenario" and its
+  full meaning, with the year of its dollars, is the figure's title and hidden words for screen readers.
 - **Measured**: a number read from a hospital's own cost report, tagged `MEASURED` with "as filed" or "settled",
   the report's status in the CMS file the page was built from.
 
