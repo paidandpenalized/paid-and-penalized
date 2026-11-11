@@ -11,13 +11,14 @@ import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
 import { COPY as REASON_COPY } from '../../web/medicaid/copy.js';
+import { caseShareTexts, shareRange } from '../../web/medicaid/format.js';
 import { HAC_CUT_PCT } from '../../web/programs.js';
 import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
-import { placeOf, scaleTicks, scaleTop } from '../hospital/medicaid.js';
+import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';
 import { peerFigures, peersOf } from '../hospital/peers.js';
 import { shareText, signedShareText } from '../hospital/text.js';
@@ -445,8 +446,10 @@ test('the band for a hospital with a loss to draw: the work-requirement page\'s 
     const row = WR.hospitals.get(h.ccn);
     assert.equal(shares[1], row[wrCol.middle_lost] / row[wrCol.net_patient_revenue], 'the middle case is the file\'s');
     assert.ok(shares[0] < shares[1] && shares[1] < shares[2], 'low < middle < high');
-    const [lo, mid, hi] = shares.map((s) => pct(s, 2));
+    const [lo, mid, hi] = caseShareTexts(shares);
+    assert.deepEqual(shareRange(shares), { low: lo, high: hi }, 'these print as two numbers');
     assert.ok(band.includes(`<p class="hh__wbv">${lo} to ${hi}</p>`), 'the headline is the range, low to high');
+    assert.ok(band.includes(`<p class="hh__wbscale">${esc('Square-root scale, the same on every hospital’s page')}</p>`), 'the scale named under its axis');
     assert.ok(band.includes(`<span class="scen-tag">SCENARIO · ${WR.fy} $</span>`), 'the scenario tag');
     assert.ok(band.includes(`<li>Low case ${lo}</li><li class="hh__wbk--mid">Middle case ${mid}</li><li>High case ${hi}</li>`), 'the three cases');
     assert.match(band, /<svg class="hh__wbsvg" viewBox="0 0 1000 28" preserveAspectRatio="none" aria-hidden="true"/, 'the server\'s drawing');
@@ -467,7 +470,8 @@ test('Maryland\'s page: the band says "Not modeled" and why, with no number', ()
   assert.equal(wrOf(MARYLAND).reason, 'all_payer');
   assert.ok(band.includes('<p class="stamp stamp--ink">Not modeled</p>'), 'the stamp');
   assert.ok(band.includes(esc(REASON_COPY.why_all_payer.text)), 'the work-requirement page\'s reason');
-  assert.ok(band.includes(esc('A scenario of what the requirement could cost this hospital, not a payment.')), 'its note names no net (the page has none)');
+  assert.ok(band.includes(esc('The work-requirement pages model the Medicaid revenue a hospital could lose: not a payment.')), 'its note promises no scenario and names no net (the page has none)');
+  assert.doesNotMatch(band, /A scenario of what/, 'no promise of a scenario');
   assert.doesNotMatch(band, /%|\$|<svg|hh__wbv|scen-tag/, 'no number, bar or tag');
   assert.ok(band.includes(`href="/work-requirement/?h=${MARYLAND.ccn}"`), 'the link');
   assert.ok(renderWr(MARYLAND).indexOf(band) > renderWr(MARYLAND).indexOf('class="hh__status"'), 'after its status');
@@ -482,6 +486,7 @@ test('a hospital with no scenario shows its reason line and never a number: no c
     assert.ok(textOf(band).includes(want), `${reason}: the reason line`);
     assert.match(band, /<p class="stamp stamp--ink">[^<]+<\/p>/, `${reason}: the stamp`);
     assert.doesNotMatch(band, /%|\$\d|<svg|hh__wbv|NaN|undefined/, `${reason}: no number or bar`);
+    assert.ok(band.includes(esc('not a payment, and never added to the Medicare net above.')) && !band.includes('A scenario of what'), `${reason}: a note that promises no scenario`);
   }
   // A hospital with no estimate the file has a row for gets its band too; one the file has none for gets none.
   const noInputs = pick((x) => x.status === 'no-inputs' && wrOf(x), 'a hospital with no estimate in the scenario file');
@@ -500,4 +505,37 @@ test('the band\'s stylesheet: every scenario mark from a theme token, the bar\'s
     assert.match(rule, /vector-effect: non-scaling-stroke/, `${cls}: non-scaling`);
     assert.match(rule, /var\(--[a-z-0-9]+\)/, `${cls}: a token`);
   }
+});
+
+// Ruling R32: the shares print with the fewest decimals (two, at most three) that keep the cases apart and off zero; one
+// still zero at three prints "under" the smallest it can; a range too small for two numbers heads the band as its bound.
+test('every drawn hospital\'s band: a range whose printed low and high differ, no share printed as zero, the work-requirement page\'s strings', () => {
+  let under = 0;
+  for (const ccn of WR.hospitals.keys()) {
+    const one = hospitalScenario(WR, ccn);
+    if (!one.shares) continue;
+    const texts = caseShareTexts(one.shares);
+    assert.notEqual(texts[0], texts[2], `${ccn}: the printed low and high differ`);
+    for (const t of texts) assert.doesNotMatch(t, /^0\.0+%$/, `${ccn}: no share printed as zero`);
+    const range = shareRange(one.shares);
+    if (range.under) {
+      under += 1;
+      assert.match(range.under, /^under 0\.00[1-9]%$/, `${ccn}: the bound`);
+      assert.ok(one.shares[2] < Number(range.under.replace(/[^\d.]/g, '')) / 100, `${ccn}: the bound is above the high case`);
+    } else assert.notEqual(range.low, range.high, `${ccn}: two numbers`);
+  }
+  assert.ok(under > 0, 'the file has a range too small for two numbers');
+  // The pages: a tiny-share hospital's band prints the bound and draws a visible range around its middle mark.
+  const tiny = pick((h) => h.est && wrOf(h)?.shares && shareRange(wrOf(h).shares).under, 'an estimated hospital whose range is too small for two numbers');
+  const band = wrBand(renderWr(tiny));
+  const want = caseShareTexts(wrOf(tiny).shares);
+  assert.ok(band.includes(`<p class="hh__wbv">${shareRange(wrOf(tiny).shares).under}</p>`), 'the bound as the headline');
+  assert.ok(band.includes(`<li>Low case ${want[0]}</li>`) && band.includes(`High case ${want[2]}</li>`), 'the cases as printed');
+  assert.doesNotMatch(band, /0\.00%|0\.000%/, 'no zero');
+  assert.doesNotMatch(/<p class="hh__wbv">(.*?)<\/p>/.exec(band)[1], / to /, 'no "X to X"');
+  const width = Number(/class="hh__wb-band" x="[\d.]+" y="7" width="([\d.]+)"/.exec(band)[1]);
+  assert.ok(width >= 12, 'a visible range');
+  assert.deepEqual(rangeBox(0, 0), { x: 0, width: 12 });
+  assert.deepEqual(rangeBox(995, 1000), { x: 988, width: 12 });
+  assert.deepEqual(rangeBox(100, 300), { x: 100, width: 200 });
 });

@@ -23,6 +23,7 @@ import { estTag, fillCopy, formField, formTitle, stamp } from '../../../../web/r
 import { count, dotList, money, pct, placeText, shortIsoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { scenarioTag } from '../../../../web/render/shell.js';
+import { caseShareTexts } from '../../../../web/medicaid/format.js';
 import { REASONS, reasonStamp, reasonWhy } from '../../../../web/medicaid/reasons.js';
 import { SITE, hospitalPathOf } from '../../../../web/site.js';
 import { DEFAULT_SCENARIO, DEFAULT_SKIP_STATE, SCENARIOS } from '../constants.js';
@@ -108,7 +109,8 @@ export const whyOf = (s, reason) => reasonWhy(reason, { stateName: s.stateName, 
 
 // A drawn hospital's numbers at a use rate: patient revenue (npr), Medicaid revenue (m2), Medicaid's share of patient
 // revenue (ms), the expansion share (es), the expansion adults' part (exp, the engine's revenue at risk), the state's
-// declines and the engine's result for each case, its loss and its share of patient revenue lost by case. At the default
+// declines and the engine's result for each case, its loss and its share of patient revenue lost by case (shareText: the
+// shares as printed, web/medicaid/format.js, the words the hub's band prints too). At the default
 // use rate the middle case takes the file's own results (FILE_MIDDLE) where the file gives them, so the page prints the
 // emitted numbers; the engine's agree to the file's rounding.
 export function numbersOf(s, use) {
@@ -116,9 +118,10 @@ export function numbersOf(s, use) {
   const declines = SCENARIOS.map((sc) => s.chunk.declines[sc]);
   const results = caseResults(r, s.chunk.declines, use);
   const npr = r.net_patient_revenue;
+  const share = results.map((x) => x.lost / npr);
   return {
     npr, m2: r.medicaid_net_revenue, ms: r.medicaid_net_revenue / npr, es: r.share, exp: results[0].atRisk, declines, use, results,
-    lost: results.map((x) => x.lost), share: results.map((x) => x.lost / npr),
+    lost: results.map((x) => x.lost), share, shareText: caseShareTexts(share),
   };
 }
 
@@ -238,7 +241,7 @@ export function barLayout(n, { k, use, drawing, status }) {
     ? fill(narrow ? 'hBarLostShort' : 'hBarLost', { v, scenario: caseWord(k), dc: shortPct(d) })
     : narrow ? fill('hBarLostShortUse', { v, part: shortPct(d * use) })
       : fill('hBarLostUse', { v, scenario: caseWord(k), dc: shortPct(d), use: pct(use, 0), part: shortPct(d * use) });
-  const share = use === 1 ? fill('hBarShare', { share: pct(n.share[k], 2) }) : fill('hBarShareUse', { share: pct(n.share[k], 2), use: pct(use, 0) });
+  const share = use === 1 ? fill('hBarShare', { share: n.shareText[k] }) : fill('hBarShareUse', { share: n.shareText[k], use: pct(use, 0) });
   // The dashed ticks are the other two cases; the label names exactly those, low to high.
   const [a, b] = SCENARIOS.map((_, j) => j).filter((j) => j !== k);
   const range = fill('hBarRange', { a: caseWord(a), x: money(-n.lost[a]), b: caseWord(b), y: money(-n.lost[b]) });
@@ -305,7 +308,7 @@ export function factorsOf(s, n, { k, use }) {
       note: use === 1 ? t('hFac3Note') : fill('hFac3NoteUse', { dc: shortPct(d), use: pct(use, 0) }),
       values: null,
     },
-    { label: t('hFac4'), v: n.share[k], text: pct(n.share[k], 2), note: t('hFac4Note'), values: peers.map((p) => p.lp[k]), fmt: (q) => pct(q, 2), rank: 'hLarger' },
+    { label: t('hFac4'), v: n.share[k], text: n.shareText[k], note: t('hFac4Note'), values: peers.map((p) => p.lp[k]), fmt: (q) => pct(q, 2), rank: 'hLarger' },
   ];
 }
 
@@ -350,13 +353,14 @@ export function figureParts(s, { k, use }) {
   const peers = [...s.chunk.recs.values()].filter((r) => r.drawn && r.ccn !== s.ccn).length;
   const noteWords = { n: count(peers), state: s.stateName };
   const value = { npr: () => n.npr, m2: () => n.m2, exp: () => n.exp, lost: (j) => -n.lost[j], share: (j) => -n.share[j] };
-  const text = { npr: money, m2: money, exp: money, lost: money, share: (v) => pct(v, 2) };
+  // A share prints as the record card and the hub's band print it (numbersOf's shareText), its value signed as lost.
+  const text = { npr: money, m2: money, exp: money, lost: money, share: (v, j) => n.shareText[j] };
   return {
     reason: null,
     table: true,
     cap: fill('hTakeaway', { name: s.name }),
     alt: fill('hAlt', {
-      npr: money(n.npr), medicaid: money(n.m2), ms: pct(n.ms, 1), exp: money(n.exp), es: pct(n.es, 1), lost: money(-n.lost[k]), scenario: caseWord(k), share: pct(n.share[k], 2),
+      npr: money(n.npr), medicaid: money(n.m2), ms: pct(n.ms, 1), exp: money(n.exp), es: pct(n.es, 1), lost: money(-n.lost[k]), scenario: caseWord(k), share: n.shareText[k],
     }),
     narrow: barBody(barLayout(n, { k, use, drawing: 'narrow', status })),
     wide: barBody(barLayout(n, { k, use, drawing: 'wide', status })),
@@ -365,7 +369,7 @@ export function figureParts(s, { k, use }) {
     note: fill(peers === 0 ? 'hNoteAlone' : peers === 1 ? 'hNoteOne' : 'hNote', noteWords),
     cells: TABLE_ROWS.flatMap((row) => SCENARIOS.map((_, j) => {
       const v = value[row](j);
-      return [row, j, num(text[row](v), v)];
+      return [row, j, num(text[row](v, j), v)];
     })),
   };
 }
@@ -408,7 +412,7 @@ function scenarioTable(s, n, k) {
 <p class="field__label">${t('hScenHead')} ${scenarioTag(s.chunk.fy)}</p>
 <table class="wr-rec__t"><thead><tr><td></td>${SCENARIOS.map((sc, j) => html`<th scope="col" class="${j === k ? 'on' : ''}">${scenWord(sc)}</th>`)}</tr></thead>
 <tbody>${row('hRowLost', (x) => money(-x.lost))}
-${row('hRowShare', (x) => pct(-x.lost / n.npr, 2))}
+${row('hRowShare', (x, j) => n.shareText[j])}
 ${row('hRowAdded', (x) => (x.addedUncompensated > 0 ? money(x.addedUncompensated, { sign: true }) : t('stNoNumber')))}
 ${row('hRowOm', (x) => marginText(x.operatingMarginAfter))}
 ${row('hRowTm', (x) => marginText(x.totalMarginAfter))}</tbody></table>

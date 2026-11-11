@@ -11,6 +11,7 @@ import { fillCopy, stamp } from '../../web/render/components.js';
 import { pct } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { scenarioTag } from '../../web/render/shell.js';
+import { caseShareTexts, shareRange } from '../../web/medicaid/format.js';
 import { reasonStamp, reasonWhy } from '../../web/medicaid/reasons.js';
 import { SITE } from '../../web/site.js';
 import { arrow } from '../parts.js';
@@ -31,6 +32,8 @@ export function scaleTop(medicaid) {
       if (one.shares) max = Math.max(max, one.shares[2]);
     }
     if (!(max > 0)) throw new RangeError('hub: the Medicaid scenario file has no hospital with a loss to draw');
+    // A share of patient revenue lost is at most all of it, so the top is at most 100% and scaleTicks's decades reach it.
+    if (max > 1) throw new RangeError(`hub: a Medicaid scenario share of patient revenue over 100% (${max})`);
     TOPS.set(medicaid, Math.ceil(max * 100) / 100);
   }
   return TOPS.get(medicaid);
@@ -41,9 +44,12 @@ export function scaleTop(medicaid) {
 export const placeOf = (share, top) => Math.sqrt(Math.max(0, share) / top);
 
 // The labeled ticks: zero, then 1, 2 and 5 times each power of ten from TICK_FROM up to the top. TICK_FROM, half a
-// percent, is a reading aid (the scale's first label), not a method constant.
+// percent, is a reading aid (the scale's first label), not a method constant. The decades run from a tenth of a percent
+// (below TICK_FROM) to 100%, the most a share can be (scaleTop throws past it), so they cover any top; a top outside
+// them throws.
 const TICK_FROM = 0.005;
 export function scaleTicks(top) {
+  if (!(top > TICK_FROM && top <= 1)) throw new RangeError(`hub: a Medicaid scale top of ${top} is outside the ticks' decades`);
   const ticks = [0];
   for (let exp = -3; exp <= 0; exp += 1) {
     for (const m of [1, 2, 5]) {
@@ -57,17 +63,27 @@ const tickText = (v) => pct(v, v > 0 && v < 0.01 ? 1 : 0);
 
 // ---------- the band ----------
 
-// The drawing (aria-hidden: the words around it give every number): the ticks' rules, the base, the low-to-high band and
+// The drawing (aria-hidden: the words around it give every number): the ticks' rules, the base, the low-to-high range and
 // the middle case's mark, on a 1,000-unit-wide box the page stretches to its column (preserveAspectRatio none, every
-// stroke non-scaling), so it keeps its height and its lines' weight at any width.
+// stroke non-scaling), so it keeps its height and its lines' weight at any width. A range narrower than MIN_W (a few
+// pixels on a phone) draws MIN_W wide about its centre, so the smallest shares still show a range around their mark; then
+// the square-root scale's caption.
 const W = 1000;
 const H = 28;
+const MIN_W = 12;
+const r1 = (v) => Math.round(v * 10) / 10;
+export function rangeBox(lo, hi) {
+  if (hi - lo >= MIN_W) return { x: r1(lo), width: r1(hi - lo) };
+  const x = Math.min(Math.max(0, (lo + hi) / 2 - MIN_W / 2), W - MIN_W);
+  return { x: r1(x), width: MIN_W };
+}
 function bar(shares, top) {
-  const x = (v) => Math.round(placeOf(v, top) * W * 10) / 10;
+  const x = (v) => r1(placeOf(v, top) * W);
   const [lo, mid, hi] = shares.map(x);
+  const box = rangeBox(lo, hi);
   const ticks = scaleTicks(top);
   return html`<div class="hh__wbbar">
-<svg class="hh__wbsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${ticks.map((t) => html`<line class="hh__wb-grid" x1="${x(t)}" x2="${x(t)}" y1="0" y2="${H}"/>`)}<line class="hh__wb-base" x1="0" x2="${W}" y1="${H - 0.5}" y2="${H - 0.5}"/><rect class="hh__wb-band" x="${lo}" y="7" width="${Math.round(Math.max(hi - lo, 0) * 10) / 10}" height="14"/><line class="hh__wb-mid" x1="${mid}" x2="${mid}" y1="2" y2="${H - 2}"/></svg>
+<svg class="hh__wbsvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true" focusable="false">${ticks.map((t) => html`<line class="hh__wb-grid" x1="${x(t)}" x2="${x(t)}" y1="0" y2="${H}"/>`)}<line class="hh__wb-base" x1="0" x2="${W}" y1="${H - 0.5}" y2="${H - 0.5}"/><rect class="hh__wb-band" x="${box.x}" y="7" width="${box.width}" height="14"/><line class="hh__wb-mid" x1="${mid}" x2="${mid}" y1="2" y2="${H - 2}"/></svg>
 <p class="hh__wbax" aria-hidden="true">${ticks.map((t, i) => {
     const at = placeOf(t, top);
     // The first label starts at zero and one near the top ends at its tick, so neither leaves the column; the label under
@@ -75,31 +91,35 @@ function bar(shares, top) {
     const cls = i === 0 ? html` class="hh__wbax--start"` : at > 0.94 ? html` class="hh__wbax--end"` : t < 0.01 ? html` class="hh__wbax--minor"` : '';
     return html`<span${cls} style="--x:${Math.round(at * 10000) / 10000}">${tickText(t)}</span>`;
   })}</p>
+<p class="hh__wbscale">${fill('wbScale')}</p>
 </div>`;
 }
 
 const link = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
 
-// The band for a hospital (h: the hub's), ending its line, or '' when the scenario file has no row for it. medicaid: loadHub().medicaid
-// ({ fy, columns, hospitals, states }); net: whether the page shows a Medicare net above (its note says the band is never
-// part of it).
+// The band for a hospital (h: the hub's), ending its line, or '' when the scenario file has no row for it. medicaid:
+// loadHub().medicaid ({ fy, columns, hospitals, states }); net: whether the page shows a Medicare net above (its note says
+// the band is never part of it). The shares print as the work-requirement page prints them (web/medicaid/format.js); the
+// headline is their range, or, too small to print as two numbers, its bound.
 export function medicaidBand(h, medicaid, { net }) {
   const one = hospitalScenario(medicaid, h.ccn);
   if (!one) return '';
   const fy = String(medicaid.fy);
+  const texts = one.shares ? caseShareTexts(one.shares) : null;
+  const range = one.shares ? shareRange(one.shares) : null;
   const body = one.reason
     ? html`<div class="hh__wbr">${stamp({ label: reasonStamp(one.reason), ink: true })}<p class="hh__why">${reasonWhy(one.reason, { stateName: one.stateName, fy })}</p></div>`
     : html`<p class="hh__wblab">${fill('wbLabel')} ${scenarioTag(fy)}</p>
-<p class="hh__wbv">${fill('wbRange', { low: pct(one.shares[0], 2), high: pct(one.shares[2], 2) })}</p>
+<p class="hh__wbv">${range.under ?? fill('wbRange', { low: range.low, high: range.high })}</p>
 ${bar(one.shares, scaleTop(medicaid))}
-<ul class="hh__wbk" role="list">${['wbLow', 'wbMiddle', 'wbHigh'].map((key, i) => html`<li${i === 1 ? html` class="hh__wbk--mid"` : ''}>${fill(key, { share: pct(one.shares[i], 2) })}</li>`)}</ul>
+<ul class="hh__wbk" role="list">${['wbLow', 'wbMiddle', 'wbHigh'].map((key, i) => html`<li${i === 1 ? html` class="hh__wbk--mid"` : ''}>${fill(key, { share: texts[i] })}</li>`)}</ul>
 <p class="hh__why">${fill('wbHow', { fy })}</p>`;
   return html`<section class="hh__wb" aria-labelledby="hh-wb-h" data-medicaid>
 <div class="wrap"><div class="hh__wbi">
 <div class="hh__wbh">
 <p class="cap kicker">${fill('wbKicker')}</p>
 <h2 id="hh-wb-h">${fill('wbHeading')}</h2>
-<p class="hh__wbnote">${fill(net ? 'wbNote' : 'wbNoteAlone')}</p>
+<p class="hh__wbnote">${fill(`${one.reason ? 'wbNoteReason' : 'wbNote'}${net ? '' : 'Alone'}`)}</p>
 </div>
 <div class="hh__wbb">
 ${body}

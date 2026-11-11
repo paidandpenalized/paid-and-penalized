@@ -187,19 +187,24 @@ export const COPY = typesetCopy({
   wiSharedReset: 'Show the actual figures',
 
   // The Medicaid work-requirement band (medicaid.js): a scenario, not a payment, never part of the net. Its heading and
-  // note; for a hospital with a loss to draw, its label (the scenario tag follows), the range, each case's share and how the
-  // cases are made; the link to the hospital on the work-requirement page. A hospital with no loss to draw gets the
+  // note (a hospital with no scenario gets one that promises none); for a hospital with a loss to draw, its label (the
+  // scenario tag follows), the range, its axis's scale, each case's share and how the cases are made; the link to the hospital on the work-requirement page. A hospital with no loss to draw gets the
   // reason's stamp and sentence instead (web/medicaid/copy.js, the work-requirement page's words).
   wbKicker: 'Medicaid scenario (not a payment)',
   wbHeading: 'The Medicaid work requirement',
   wbNote: 'A scenario of what the requirement could cost this hospital, not a payment, so it is never added to the Medicare net above.',
   wbNoteAlone: 'A scenario of what the requirement could cost this hospital, not a payment.',
+  // A hospital with no scenario: the note promises none.
+  wbNoteReason: 'The work-requirement pages model the Medicaid revenue a hospital could lose: not a payment, and never added to the Medicare net above.',
+  wbNoteReasonAlone: 'The work-requirement pages model the Medicaid revenue a hospital could lose: not a payment.',
   wbLabel: 'Share of its patient revenue it could lose a year',
   wbRange: '{low} to {high}',
+  // Under the range's axis: how it is drawn.
+  wbScale: "Square-root scale, the same on every hospital's page",
   wbLow: 'Low case {share}',
   wbMiddle: 'Middle case {share}',
   wbHigh: 'High case {share}',
-  wbHow: { text: "The three cases follow the Urban Institute's three state mitigation scenarios for the drop in each state's Medicaid expansion enrollment, applied to this hospital's FY{fy} Medicare cost report. Every hospital's bar is drawn on the same square-root scale.", claim: ['WR-05', 'WR-18'] },
+  wbHow: { text: "The three cases follow the Urban Institute's three state mitigation scenarios for the drop in each state's Medicaid expansion enrollment, applied to this hospital's FY{fy} Medicare cost report.", claim: ['WR-05', 'WR-18'] },
   wbLink: 'This hospital on the work-requirement page',
 
   // The peer table the page's script fills when it is opened.

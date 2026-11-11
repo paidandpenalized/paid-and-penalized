@@ -13,6 +13,8 @@ export const COPY = {
   stamp_noReport: { text: 'No cost report', claim: null },
   stamp_screened: { text: 'Screened out', claim: null },
   stamp_noLoss: { text: 'No loss to draw', claim: null },
+  // A share of patient revenue too small to print at the decimals shown (format.js): under the smallest it can print.
+  shareUnder: { text: 'under {tiny}', claim: null },
   // The reason's sentence, by reason: its class, or what its cost report shows.
   why_away_inactive: { text: 'CMS’s records list this hospital as closed, merged or changed in status. The scenario covers active acute-care and critical access hospitals, so it has no row here.', claim: null },
   why_away_kind: { text: 'The scenario covers active acute-care and critical access hospitals, and CMS’s records list this one as neither, so it has no row here.', claim: null },

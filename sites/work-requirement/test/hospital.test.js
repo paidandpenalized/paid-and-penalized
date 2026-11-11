@@ -11,6 +11,7 @@ import { money } from '../../../web/render/format.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { hospitalScenario } from '../../../engine/js/medicaid/hospital.js';
+import { caseShareTexts } from '../../../web/medicaid/format.js';
 import { pageHospital } from '../client/find.js';
 import { DEFAULT_SKIP_STATE, SCENARIOS } from '../web/constants.js';
 import { COPY as REASON_COPY } from '../../../web/medicaid/copy.js';
@@ -173,6 +174,13 @@ test('the engine\'s one-hospital view (the hub\'s band) gives every hospital ste
     drawnSeen += 1;
     const n = numbersOf(s, 1);
     assert.deepEqual(one.shares, n.share, `${r.ccn}: the shares step 4 prints`);
+    // The strings: the record card's share row is the band's three cases, word for word (ruling R32).
+    const printed = caseShareTexts(one.shares);
+    assert.deepEqual(n.shareText, printed, `${r.ccn}: the shares as printed`);
+    const shareRow = /<th scope="row">Share of patient revenue<\/th>(.*?)<\/tr>/.exec(cardHtml(s, { k: MIDDLE, use: 1 }).text)?.[1] ?? '';
+    assert.deepEqual([...shareRow.matchAll(/<td[^>]*>(.*?)<\/td>/g)].map((m) => m[1]), printed, `${r.ccn}: the card's share row`);
+    assert.notEqual(printed[0], printed[2], `${r.ccn}: low and high print apart`);
+    for (const t of printed) assert.doesNotMatch(t, /^0\.0+%$/, `${r.ccn}: no zero share`);
     assert.equal(one.shares[MIDDLE], fileRow(r.ccn)[col.middle_lost] / fileRow(r.ccn)[col.net_patient_revenue], `${r.ccn}: the middle case is the file's own`);
   }
   assert.equal(drawnSeen, rows.filter((r) => r.share).length);
