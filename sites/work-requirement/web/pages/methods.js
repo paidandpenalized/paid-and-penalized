@@ -96,7 +96,7 @@ ${para(fill('sharesUninsured', { uninsured: v.uninsured }))}
 ${para(fill('sharesStill', { still: v.still, drop: v.notUsed }))}
 ${para(fill('sharesUse', { useDefault: v.useDefault }))}
 ${printout(html`<table class="gb wr-meth__params">
-<caption class="vh">${t('paramsCaption')}</caption>
+<caption class="vh" id="wr-params-cap">${t('paramsCaption')}</caption>
 <thead><tr><th scope="col">${t('paramsColName')}</th><th scope="col">${t('paramsColValue')}</th><th scope="col">${t('paramsColFrom')}</th></tr></thead>
 <tbody>${rows.map(([name, value, from]) => html`<tr><th scope="row">${t(name)}</th><td>${value}</td><td>${t(from)}</td></tr>`)}</tbody>
 </table>`)}`,
@@ -240,15 +240,17 @@ ${para(fill('bothPop', { n: count(both.pts.length), pfy }))}`,
 }
 
 // The sources: the file's pins in three groups (data.js loadSourceGroups), each a table of file, the source's own date,
-// the day it was retrieved and its full SHA-256; then the published sources the claims quote, and the code.
+// the day it was retrieved and its full SHA-256, labeled by its heading (as the parameters table by its caption's id: the
+// family's figure script makes a table's scroll box a keyboard stop only when the table is named); then the published
+// sources the claims quote, and the code.
 function sourcesSection(data, sources) {
   const byId = new Map(data.pins.map((p) => [p.id, p]));
   const fileCell = (p) => {
     const href = p.landingPage || p.downloadUrl;
     return href ? externalLink(href, p.title) : p.title;
   };
-  const group = (key) => (sources[key].length ? html`<h3 class="wr-meth__sub">${t(`srcGroup_${key}`)}</h3>
-${printout(html`<table class="gb wr-meth__pins">
+  const group = (key) => (sources[key].length ? html`<h3 class="wr-meth__sub" id="wr-src-${key}">${t(`srcGroup_${key}`)}</h3>
+${printout(html`<table class="gb wr-meth__pins" aria-labelledby="wr-src-${key}">
 <thead><tr><th scope="col">${t('srcColFile')}</th><th scope="col">${t('srcColDate')}</th><th scope="col">${t('srcColGot')}</th><th scope="col">${t('srcColHash')}</th></tr></thead>
 <tbody>${sources[key].map((id) => {
     const p = byId.get(id);
