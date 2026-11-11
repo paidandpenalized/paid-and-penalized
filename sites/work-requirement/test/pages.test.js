@@ -164,12 +164,25 @@ test('the program page\'s chip is marked plain; the Methods page\'s is not', () 
 });
 
 // The measured tag keeps to one line on a phone: its shorter words there (the same facts), the full words from 480px.
-test('the cost reports\' measured tag carries its phone words, and the stylesheet shows one at a time, never wrapped', () => {
-  const tags = program.match(/<span class="wr-tag"><span class="wr-tag__long">[^<]*<\/span><span class="wr-tag__short">[^<]*<\/span><\/span>/g) ?? [];
-  assert.ok(tags.length >= 2, 'the worksheet\'s line 1 and the state card\'s');
-  const css = readFileSync(join(REPO_ROOT, 'sites/work-requirement/web/styles.css'), 'utf8');
+// One exception (R34): in step 3's state card the label column is narrower than the tag's words at 320px, so there the
+// tag may take two lines, breaking only at the " · " between its halves, each half kept whole; nowhere else.
+test('the cost reports\' measured tag carries its phone words, shows one at a time, and wraps only in the state card, at its separator', () => {
+  const plain = /<span class="wr-tag"><span class="wr-tag__long">[^<]*<\/span><span class="wr-tag__short">[^<]*<\/span><\/span>/g;
+  const part = '<span class="wr-tag__part">[^<]+ ·</span> <span class="wr-tag__part">[^<]+</span>';
+  const wrapping = new RegExp(`<span class="wr-tag wr-tag--wrap"><span class="wr-tag__long">${part}</span><span class="wr-tag__short">${part}</span></span>`, 'g');
+  const card = /<table class="wr-ws__lines wr-stcard__lines">[\s\S]*?<\/table>/.exec(program)[0];
+  const outside = program.replace(card, '');
+  assert.ok((outside.match(plain) ?? []).length >= 1, 'the worksheet\'s line 1: the one-line tag');
+  assert.doesNotMatch(outside, /wr-tag--wrap|wr-tag__part/, 'no tag outside the state card may wrap');
+  const inCard = card.match(/class="wr-tag[ "]/g) ?? [];
+  assert.ok(inCard.length >= 2, 'the state card\'s lines 1 and 6 carry the tag');
+  assert.equal((card.match(wrapping) ?? []).length, inCard.length, 'each of the card\'s tags is the one that breaks at its separator only');
+  const css = readFileSync(join(REPO_ROOT, 'sites/work-requirement/web/styles.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   assert.match(css, /^\.wr-tag \{[^}]*white-space: nowrap;/m);
   assert.match(css, /^\.wr-tag__short \{ display: none; \}/m);
   assert.match(css, /@media \(max-width: 479px\) \{\s*\.wr-tag__long \{ display: none; \}\s*\.wr-tag__short \{ display: inline; \}/);
-  assert.doesNotMatch(css, /\.wr-tag\)[^{]*\{[^}]*white-space: normal/);
+  // The halves never break inside; the only tag rule that lets a tag wrap is the card's.
+  assert.match(css, /^\.wr-tag__part \{ white-space: nowrap; \}/m);
+  const wraps = [...css.matchAll(/([^{}]*wr-tag[^{}]*)\{([^}]*)\}/g)].filter(([, , body]) => /white-space:\s*normal/.test(body)).map(([, sel]) => sel.trim());
+  assert.deepEqual(wraps, ['.wr-stcard__lines .wr-tag--wrap']);
 });

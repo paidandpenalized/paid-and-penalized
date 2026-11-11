@@ -267,7 +267,16 @@ const partRow = ({ kind, name, label, value, raw }) => html`<tr class="wr-wl wr-
 const headRow = (text) => html`<tr class="wr-wl wr-wl--head"><td class="wr-wl__n"></td><th scope="row" colspan="2" class="wr-wl__d">${text}</th></tr>`;
 
 // The cost reports' tag (measured, as filed or settled), in its shorter words on a phone, so it keeps to one line.
-export const measuredTag = () => html`<span class="wr-tag"><span class="wr-tag__long">${t('wsMeasured')}</span><span class="wr-tag__short">${t('wsMeasuredShort')}</span></span>`;
+// wrap: the one place it may take two (R34, step 3's card on the narrowest phones): its words as two halves, each kept
+// whole (styles.css .wr-tag__part), split at the " · " between them, the only place the line may break.
+const halves = (text) => {
+  const at = text.indexOf(' · ');
+  return at < 0 ? text : html`<span class="wr-tag__part">${text.slice(0, at)} ·</span> <span class="wr-tag__part">${text.slice(at + 3)}</span>`;
+};
+export const measuredTag = ({ wrap = false } = {}) => {
+  const words = (key) => (wrap ? halves(t(key)) : t(key));
+  return html`<span class="wr-tag${wrap ? ' wr-tag--wrap' : ''}"><span class="wr-tag__long">${words('wsMeasured')}</span><span class="wr-tag__short">${words('wsMeasuredShort')}</span></span>`;
+};
 export const scenTag = (fy) => html`<span class="scen-tag">${fillCopy(SHARED, 'scenarioTag', { year: String(fy) })}</span>`;
 const rangeOf = (totals, key, sign = 1) => fill('wsRange', { low: money(sign * totals.low[key]), high: money(sign * totals.high[key]) });
 

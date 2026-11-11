@@ -447,7 +447,8 @@ export function headlineOf(model, code, { k, use }) {
   };
 }
 
-const measured = () => html` ${measuredTag()}`;
+// The card's tag may wrap at its separator (R34): at 320px the card's label column is narrower than its words.
+const measured = () => html` ${measuredTag({ wrap: true })}`;
 const kindOf = (kind) => t(`stKind_${kind === 'critical_access' ? 'critical_access' : 'acute'}`);
 
 // A hospital's name, linked to its page across the programs only when that page exists.

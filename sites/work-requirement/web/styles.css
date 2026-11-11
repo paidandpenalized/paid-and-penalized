@@ -259,6 +259,10 @@ select.wr-chip { min-height: 32px; padding-right: 6px; }
 .wr-stcard__why { font-size: var(--fs-sm); line-height: 1.5; }
 .wr-stcard__lines .wr-wl > * { padding-block: 5px; }
 .wr-stcard__lines .wr-wl__d > :is(.scen-tag, .wr-tag) { margin: 0 0 0 6px; vertical-align: 1px; }
+/* R34: the one tag that may take two lines, the card's measured tag, where at 320px the label column is narrower than its
+   words: it breaks only at the " · " between its halves (chain.js measuredTag wrap), each half kept whole. */
+.wr-stcard__lines .wr-tag--wrap { white-space: normal; }
+.wr-tag__part { white-space: nowrap; }
 .wr-stcard__body > * { min-width: 0; }
 .wr-hits__h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
 .wr-hits__sub { color: var(--ink-2); font-size: var(--fs-xs); }
