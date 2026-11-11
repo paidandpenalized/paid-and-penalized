@@ -17,10 +17,10 @@ deploys), the release flag, a change to the domain, making a repository public, 
 | 2 | `data/emitted/` equals a fresh build from `data/pinned/`. Every new source is in `manifest.json` with its SHA-256, in `DATA-TERMS.md` with its terms and the date they were checked, and, if it is not a U.S. government work, in `NOTICE`. | 1 | [ ] |
 | 3 | Methods page: every step, parameter, limit and source. Each page closes on its sources' dates. | 1 | [ ] |
 | 4 | Claims register: each sentence that states a fact about the law or a program has a checked row with a quotation and a date. No row is marked unverified. | 1 | [ ] |
-| 5 | Labels follow `EDITORIAL-STANDARDS.md`: every number's kind is marked (scenario, measured, estimate, recomputed), and every chart's caption says "all-payer" or "Medicare". | 1 | [ ] |
+| 5 | Labels follow `EDITORIAL-STANDARDS.md`: every number's kind is marked (scenario, measured, estimate, recomputed), and, on the pages that rule covers, every chart's caption says "all-payer" or "Medicare". | 1 | [ ] |
 | | **Words and named hospitals** | | |
 | 6 | A read of every new page's words against `EDITORIAL-STANDARDS.md`: named hospitals, neutral verbs, ranges, no promised reply, fix time or date. The house word test passes. | 1 | [ ] |
-| 7 | Default views: no top or worst list of hospitals; a named table is sorted by share and collapsed; a hospital shown to explain the method is picked at random. | 1 | [ ] |
+| 7 | Default views, on the pages the named-hospital rules cover: no top or worst list of hospitals; a named table is sorted by share and collapsed; a hospital shown to explain the method is picked at random. | 1 | [ ] |
 | 8 | A hospital or state with no number shows its reason: no $0, no NaN, no empty bar, and no link to a page that doesn't exist. | 1 | [ ] |
 | 9 | Every page carries the not-affiliated line, the Terms line, the feedback link (its form warns against patient information), and the corrections page in the footer. | 1 | [ ] |
 | 10 | No new third-party request: fonts self-hosted, the security policy (CSP) unchanged or reviewed, no analytics beyond what the privacy page describes. | 1 | [ ] |
@@ -50,7 +50,7 @@ deploys), the release flag, a change to the domain, making a repository public, 
 
 ## This launch: the work requirement
 
-Three pull requests, each merged on the owner's OK. PR 2 and PR 3 merge together, in the week of 2026-12-21.
+Three pull requests, each merged on the owner's OK. PR 2 and PR 3 merge together.
 
 - [ ] **PR 1, the HCRIS layer:** the Medicare cost-report data and its reader.
 - [ ] **PR 2, the Medicaid data, the site and the band:** the scenario data, the work-requirement pages

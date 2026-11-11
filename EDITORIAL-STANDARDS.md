@@ -1,13 +1,13 @@
 # Editorial standards
 
-How Paid & Penalized words and shows what it publishes. These rules hold on every page. Tests enforce the ones a
-test can check: the house word list (`web/test/house-words.test.js`) and the copy gate
+How Paid & Penalized words and shows what it publishes. Each section says which pages it covers. Tests enforce the
+rules a test can check: the house word list (`web/test/house-words.test.js`) and the copy gate
 (`pipeline/test/copy-gate.test.js`: no digits in copy, every sourced sentence tied to a checked claim). A person
 checks the rest before each launch (`LAUNCH-CHECKLIST.md`).
 
 ## What kind of number it is
 
-Every number is one of these, and the page says which:
+On every page, each number is one of these, and the page says which:
 
 - **CMS's value**, shown exactly as CMS published it. It carries no label.
 - **Recomputed**: "This site recomputes". The site's arithmetic on CMS's files, tested to equal CMS's value wherever
@@ -20,6 +20,18 @@ Every number is one of these, and the page says which:
 
 No number in the pages' words or code is typed by hand: each comes from data, except method constants and stated
 tolerances.
+
+## House words
+
+On every page:
+
+- The pages say "CMS reports" and "this site recomputes"; never that a hospital was "caught", "failed", "dodged" or
+  "cheated", and never "worst hospitals".
+- The standard line for a penalty: "A penalty reflects how CMS's formula scored relative performance; it is not a
+  verdict on the quality of care." The Hospital-Acquired Condition pages and each hospital's page across the programs
+  carry it or a close wording of it.
+- Every page links the general feedback form. Verified errors are corrected and logged in `corrections/`. No page
+  promises a reply or fix time.
 
 ## Politically sensitive sites
 
@@ -44,22 +56,22 @@ These rules apply to sites about contested policy, such as the Medicaid work req
 
 ## Named hospitals
 
+These rules apply to the scenario and finance pages: the work-requirement site and the sites built after it.
+
 - **The same rule for every hospital.** No hospital is singled out by hand.
 - **A named hospital appears only** when a reader looks it up (Find, or its page), when a reader picks it (a click in
   a chart, a random pick), or in a table sorted by share and collapsed until the reader opens it. A table sorted by
   share orders hospitals by the share of their own revenue, largest first, then by name, so size alone puts no
   hospital at the top. A page that needs one hospital to show its method opens on one picked at random, never one
   chosen for its result.
-- **No published top or worst lists**, and no ranked headline about a hospital. Tables that list every hospital sort
-  alphabetically or by state; a reader may re-sort any table.
-- **Words.** A hospital is "exposed", never "worst". The pages say "CMS reports" and "this site recomputes"; never
-  "caught", "failed", "dodged" or "cheated". The standard line: "A cut is a program's formula at work, not a verdict
-  on a hospital's care." Where a measure has few cases, the page says so.
+- **No published top or worst lists**, and no ranked headline about a hospital. A table that lists every hospital
+  sorts alphabetically or by state; a reader may re-sort any table.
+- **Words.** A hospital is "exposed", never "worst". Where a number rests on few cases, the page says so.
 - **States are not covered by this rule.** States may be compared and ranked.
-- **Corrections.** Every page links the general feedback form. Verified errors are corrected and logged in
-  `corrections/`. No page promises a reply or fix time.
 
 ## Medicare or all-payer
+
+These rules apply to the same scenario and finance pages.
 
 Every chart's caption says whether its numbers are "all-payer" or "Medicare", and a chart with both says both. A
 hospital's cost report is filed with Medicare but covers every payer: its patient revenue, margins and
