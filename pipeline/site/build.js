@@ -1,6 +1,6 @@
 // make build: write the static site to dist/. Empties the output directory, builds the assets (shared ones plus each
 // site's scripts and styles), writes the hub's data asset and computes the shell's facts, runs each site's generator in
-// order, then writes Cloudflare's _headers (headers.js).
+// order, then writes Cloudflare's _headers (headers.js) and _redirects (redirects.js).
 // A production build (PP_ENV=production, or Workers Builds' build of main: buildEnv in context.js) is the only one that
 // may be indexed (robotsFor in context.js holds the rule for pages).
 import { mkdirSync, readdirSync, rmSync } from 'node:fs';
@@ -17,6 +17,7 @@ import { SITE } from '../../web/site.js';
 import { buildAssets, writeHashed } from './assets.js';
 import { buildEnv, createContext, siteDates } from './context.js';
 import { headersFile } from './headers.js';
+import { redirectsFile } from './redirects.js';
 
 // Every site, in build order. Each exports a manifest { id, entries, styles, generate(ctx, { updated }) }: entries are
 // its browser JS ({ name: path }, each becoming /assets/<name>.<hash>.js), styles its own CSS files, a stylesheet of
@@ -91,11 +92,12 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
     const result = await site.generate(ctx, { updated });
     if (Object.hasOwn(SITE.sites, site.id)) updated.set(site.id, siteDates(site.id, result));
   }
-  // Not through emit: _headers is no page and no asset, and Cloudflare reads it rather than serving it. Every file in dist/ is
-  // listed for it (emitted or copied), so no noindex splat covers a file that may be indexed.
+  // Not through emit: _headers and _redirects are no page and no asset, and Cloudflare reads them rather than serving them.
+  // Every file in dist/ is listed for _headers (emitted or copied), so no noindex splat covers a file that may be indexed.
   const written = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile())
     .map((e) => '/' + relative(dir, join(e.parentPath, e.name)).split(sep).join('/'));
   writeFileMkdir(join(dir, '_headers'), headersFile({ env, noindexFiles: ctx.noindexFiles, emitted: written }));
+  writeFileMkdir(join(dir, '_redirects'), redirectsFile());
   return { pages: ctx.pages, env };
 }
 
