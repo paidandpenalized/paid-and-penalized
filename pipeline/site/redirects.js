@@ -31,20 +31,22 @@ export function redirectsFile(rules = REDIRECTS) {
 const CODES = new Set([301, 302, 303, 307, 308]);
 
 // _redirects text as rules [{ from, to, status }], in file order. A line is "source destination [code]" (302 when
-// the code is left out); blank lines and # comments are skipped. Anything Cloudflare would skip or read otherwise than
-// meant, or that this reader does not support (a splat, a :placeholder, a source with a host, a destination that is
-// not an absolute http(s) URL), throws, naming the line.
+// the code is left out); blank lines and lines starting with # are skipped (a # later in a line is no comment to
+// Cloudflare, so a trailing note throws as an extra word). Anything Cloudflare would skip or read otherwise than meant,
+// or that this reader does not support (a splat, a :placeholder, a source with a host, a query or a fragment, which
+// a match on the path never meets, a destination that is not an absolute http(s) URL), throws, naming the line.
 export function parseRedirects(text) {
   const out = [];
   String(text).split(/\r?\n/).forEach((raw, i) => {
     const line = raw.trim();
     if (!line || line.startsWith('#')) return;
     const where = `_redirects line ${i + 1}`;
-    const tokens = line.replace(/\s+#.*$/, '').split(/\s+/);
+    const tokens = line.split(/\s+/);
     if (tokens.length < 2 || tokens.length > 3) throw new RangeError(`${where}: expected "source destination [code]", got "${line}"`);
     const [from, to, code = '302'] = tokens;
     if (!from.startsWith('/')) throw new RangeError(`${where}: a source must be a path starting with "/", not "${from}"`);
     if (from.includes('*') || /:[A-Za-z]/.test(from)) throw new RangeError(`${where}: splats and ":placeholder" sources are not supported, "${from}"`);
+    if (/[?#]/.test(from)) throw new RangeError(`${where}: a source is matched on its path alone, so it holds no "?" or "#", "${from}"`);
     if (!/^https?:\/\/[^/]/.test(to)) throw new RangeError(`${where}: a destination must be an absolute http(s) URL, not "${to}"`);
     const status = Number(code);
     if (!CODES.has(status)) throw new RangeError(`${where}: the code must be one of ${[...CODES].join(', ')}, not "${code}"`);
@@ -56,11 +58,10 @@ export function parseRedirects(text) {
 
 // How the rules answer a request: { status, location } for the rule whose source is the path (as sent, percent-encoded),
 // or null. location is the destination with the request's query string (search, "?..." or "") when it has none of its
-// own, as Cloudflare builds it.
+// own, as Cloudflare builds it. The destination is spliced as written, not normalized, since Cloudflare sends it so.
 export function redirectFor(rules, pathname, search = '') {
   const rule = rules.find((r) => r.from === pathname);
   if (!rule) return null;
-  const to = new URL(rule.to);
-  const bare = to.href.slice(0, to.href.length - to.search.length - to.hash.length);
-  return { status: rule.status, location: `${bare}${to.search || search}${to.hash}` };
+  const [, bare, query, hash] = /^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(rule.to);
+  return { status: rule.status, location: `${bare}${query ?? search}${hash ?? ''}` };
 }

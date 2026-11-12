@@ -27,7 +27,7 @@ test('redirectsFile: each short link, without and with its "/", as a 302, under 
 });
 
 test('parseRedirects: a line is "source destination [code]", 302 when left out; comments and blank lines are skipped', () => {
-  const text = '# a comment\n\n/a https://x.example/a\n  /b   https://x.example/b   301  # trailing note\n';
+  const text = '# a comment\n\n/a https://x.example/a\n  /b   https://x.example/b   301  \n';
   assert.deepEqual(parseRedirects(text), [
     { from: '/a', to: 'https://x.example/a', status: 302 },
     { from: '/b', to: 'https://x.example/b', status: 301 },
@@ -38,6 +38,9 @@ test('parseRedirects refuses what Cloudflare would skip or read otherwise, and w
   for (const [line, why] of [
     ['/a', /expected "source destination \[code\]"/],
     ['/a https://x.example/ 302 extra', /expected "source destination \[code\]"/],
+    ['/a https://x.example/ 301 # a trailing note is no comment to Cloudflare', /expected "source destination \[code\]"/],
+    ['/a?x=1 https://x.example/', /holds no "\?" or "#"/],
+    ['/a#b https://x.example/', /holds no "\?" or "#"/],
     ['a https://x.example/', /a source must be a path/],
     ['https://host/a https://x.example/', /a source must be a path/],
     ['/a/* https://x.example/:splat', /splats and ":placeholder"/],
@@ -61,6 +64,10 @@ test('redirectFor: the source matched whole, in its letter case, with no "/" fol
   const own = parseRedirects('/q https://x.example/p?x=1#top\n/f https://x.example/p#top\n');
   assert.equal(redirectFor(own, '/q', '?y=2').location, 'https://x.example/p?x=1#top');
   assert.equal(redirectFor(own, '/f', '?y=2').location, 'https://x.example/p?y=2#top');
+  // The destination goes out as written, as Cloudflare sends it: no host lowercased, no "/" added.
+  const raw = parseRedirects('/r https://X.example\n');
+  assert.equal(redirectFor(raw, '/r').location, 'https://X.example');
+  assert.equal(redirectFor(raw, '/r', '?y=2').location, 'https://X.example?y=2');
 });
 
 test('the local server answers each short link with its 302 and Location, query kept, carrying _headers\' headers; never serves _redirects', () =>
