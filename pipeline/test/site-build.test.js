@@ -17,7 +17,8 @@ import { loadHacrp } from '../../sites/hacrp/web/data.js';
 import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
 import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
-import { addressOf } from '../site/address.js';
+import { addressOf, filesAt, lookup } from '../site/address.js';
+import { REDIRECTS, redirectsFile } from '../site/redirects.js';
 import { htmlPages, tags } from '../site/html.js';
 import { pageProgram, pageType } from '../../tools/ci/page-types.js';
 import { SHARE_CARDS, cardFile, shareCardOf } from '../../web/share-card.js';
@@ -409,14 +410,28 @@ test('every page\'s share card is a built file: HACRP\'s pages show HACRP\'s car
   }
 });
 
-test('build writes Cloudflare\'s _headers for its env, beside the pages', () =>
+test('build writes Cloudflare\'s _headers for its env and _redirects, beside the pages', () =>
   withTemp(async (dir) => {
     for (const env of ['preview', 'production']) {
       const out = join(dir, env);
       await build({ outDir: out, env, sites: [] });
       assert.equal(readFileSync(join(out, '_headers'), 'utf8'), headersFile({ env }), env);
+      assert.equal(readFileSync(join(out, '_redirects'), 'utf8'), redirectsFile(), env);
     }
   }));
+
+// Cloudflare answers a short link before it looks for a file, so a page at a short link's address, or one the address
+// would redirect to (a folder's page without its "/"), would never be seen, and nothing would say so.
+test('no short link shadows a built page or file, or a program\'s folder', async () => {
+  const out = await builtSlice();
+  const at = filesAt(filesUnder(out));
+  for (const { from } of REDIRECTS) {
+    assert.deepEqual(lookup(from, at), { status: 404 }, from);
+    for (const { path } of [...SITE.programs, ...Object.values(SITE.sites)]) {
+      assert.ok(from !== path.slice(0, -1) && !from.startsWith(path), `${from} is in ${path}`);
+    }
+  }
+});
 
 // What a page holds that runs as inline script or style: a script with no src of the site's own runs inline unless it
 // is a data block; an on* attribute and a javascript: URL are inline script too. script-src 'self' blocks all three,

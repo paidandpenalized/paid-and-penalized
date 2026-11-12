@@ -20,7 +20,8 @@ exactly.
 - `sites/<program>/`: each program's site. `hub/`: the family's own pages (the front page, each hospital's page across
   the programs, Methods and the policy pages). `web/`: what every page shares (the page shell, styles, fonts, charts,
   the what-if, the search box).
-- `pipeline/site/`: the page build, which writes the whole site to `dist/`. `tools/`: the browser checks, CI helpers
+- `pipeline/site/`: the page build, which writes the whole site to `dist/`, with Cloudflare's `_headers` and the short
+  links' `_redirects`. `tools/`: the browser checks, CI helpers
   and the share cards' generator.
 
 `CLAUDE.md` holds the working rules and the full map of the code.

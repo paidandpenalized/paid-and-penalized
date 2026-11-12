@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { headersFile, headersFor, parseHeaders } from '../../pipeline/site/headers.js';
+import { parseRedirects } from '../../pipeline/site/redirects.js';
 import { checksFor, compareResponse, formatReport, killSuites, parseCounts, stopSuites, verdict } from '../e2e/launch.js';
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
@@ -62,6 +63,20 @@ test('checksFor: a rule\'s request goes to an address served with a 200, never _
   // And a page at _headers' address would be expected to be a 404, as the server answers.
   const odd = PAGES.map((p) => (p.type === 'not-found' ? { ...p, path: '/_headers' } : p));
   assert.equal(checksFor(RULES, odd, files).find((c) => c.label === 'unknown path').status, 404);
+});
+
+test('checksFor: each short link in _redirects, last, expecting its code and destination; a short link wins over a page at its address', () => {
+  const redirects = parseRedirects('/go https://x.example/ 302\n/go/ https://x.example/ 302\n/prog/ https://x.example/p 307\n');
+  const checks = checksFor(RULES, PAGES, FILES, redirects);
+  assert.deepEqual(checks.slice(-3), [
+    { label: 'short link', path: '/go', status: 302, location: 'https://x.example/' },
+    { label: 'short link', path: '/go/', status: 302, location: 'https://x.example/' },
+    { label: 'short link', path: '/prog/', status: 307, location: 'https://x.example/p' },
+  ]);
+  // As Cloudflare answers it: the program page's own check expects the short link's redirect too.
+  assert.deepEqual(checks.find((c) => c.label === 'program page'), { label: 'program page', path: '/prog/', status: 307, location: 'https://x.example/p' });
+  // None given: none checked, as before.
+  assert.equal(checksFor(RULES, PAGES, FILES).some((c) => c.label === 'short link'), false);
 });
 
 test('checksFor throws when a page type is missing, or a rule matches nothing in dist/', () => {

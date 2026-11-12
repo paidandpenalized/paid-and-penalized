@@ -5,9 +5,10 @@
 //   1. The live response headers of a request for each rule in dist/_headers (the first sample page or file in dist/
 //      that the rule matches), the home, program and hospital pages, a path no page has (the 404 page), a hashed
 //      asset that does not exist (so whether Cloudflare keeps a missing file's 404 for a year is on record) and two
-//      addresses Cloudflare redirects (the program page without its "/", and the not-found page's file name), each
-//      compared name by name with what the file says the request gets (headersFor in pipeline/site/headers.js, which
-//      reads the file as Cloudflare does), and a redirect's Location with where address.js lookup sends it. Only
+//      addresses Cloudflare redirects (the program page without its "/", and the not-found page's file name), and each
+//      short link in dist/_redirects, each compared name by name with what the file says the request gets (headersFor
+//      in pipeline/site/headers.js, which reads the file as Cloudflare does), and a redirect's Location with where
+//      address.js lookup or the short link (redirects.js redirectFor) sends it. Only
 //      headers the file sets are compared; Cloudflare's own (date, server, cf-ray, etag, ...) are not. Its report
 //      prints at once, before the half hour of browser checks.
 //   2. The browser checks (npm run e2e, tools/e2e/) once per engine: Chromium, Firefox and WebKit (E2E_ENGINE).
@@ -26,6 +27,7 @@ import { constants } from 'node:os';
 import { DIST_DIR as DIST, REPO_ROOT, filesUnder, isMain } from '../../pipeline/files.js';
 import { NOT_FOUND_PATH, addressOf, filesAt, lookup } from '../../pipeline/site/address.js';
 import { headersFor, parseHeaders } from '../../pipeline/site/headers.js';
+import { parseRedirects, redirectFor } from '../../pipeline/site/redirects.js';
 import { ENGINES, baseUrlFromEnv, samplePages } from './site.js';
 
 // A hashed asset that no build has (a hash of eight zeros); were a build ever to write it, its check expects a 200.
@@ -38,10 +40,10 @@ const STOP_GRACE_MS = 5_000;
 // parsed. pages: samplePages()'s answer. files: every file in dist/, as filesUnder lists them. The home, program and
 // hospital pages, then one request per rule (the first of those pages, else of the files' addresses (addressOf), that
 // the rule matches and that is served with a 200; a page already listed gains the rule in its label), the unknown
-// path, the missing asset and the two redirects. A request expects what the server answers, by the lookup rule
-// serve.js uses (address.js: lookup over filesAt, which never serves _headers). The pages are picked by type, so none
-// is named here.
-export function checksFor(rules, pages, files) {
+// path, the missing asset, the two redirects and each short link. redirects: dist/_redirects, parsed. A request expects
+// what the server answers, by the rules serve.js uses: a short link first (redirects.js redirectFor), then address.js
+// lookup over filesAt, which never serves _headers or _redirects. The pages are picked by type, so none is named here.
+export function checksFor(rules, pages, files, redirects = []) {
   const pathOf = (type) => {
     const page = pages.find((p) => p.type === type);
     if (!page) throw new Error(`checksFor: no "${type}" page among the sample pages`);
@@ -68,8 +70,11 @@ export function checksFor(rules, pages, files) {
     { label: 'missing hashed asset', path: MISSING_ASSET },
     { label: 'folder without its "/"', path: program.replace(/\/$/, '') },
     { label: 'not-found page by file name', path: NOT_FOUND_PATH },
+    ...redirects.map((r) => ({ label: 'short link', path: r.from })),
   );
   return checks.map((check) => {
+    const short = redirectFor(redirects, check.path);
+    if (short) return { ...check, status: short.status, location: short.location };
     const { status, to } = lookup(check.path, at);
     return { ...check, status, ...(to !== undefined && { location: to }) };
   });
@@ -80,7 +85,7 @@ const lowercased = (headers) => Object.fromEntries(Object.entries(headers).map((
 // One check's result: the live response ({ status, headers }) against the rules. `rows` has one entry per header
 // compared, { name, file, live, ok } (null: not sent), plus the status as ':status' and a redirect's Location as
 // ':location'; `live` is all the response's headers, names lowercased, and `liveStatus` its status. Every header the
-// file sets for the path is compared, and a redirect's Location with where lookup sends it. On a 404 a header may also
+// file sets for the path is compared, and a redirect's Location with the check's (checksFor). On a 404 a header may also
 // be absent: the deployed Worker sends the file's headers there, but a preview URL sends none (headersFor in
 // pipeline/site/headers.js).
 export function compareResponse(rules, check, response) {
@@ -216,7 +221,8 @@ async function main() {
   }
   // Read before the suites start, so a missing or malformed dist/ fails in a second, not after thirty minutes.
   const rules = parseHeaders(readFileSync(DIST + '_headers', 'utf8'));
-  const checks = checksFor(rules, samplePages(), filesUnder(DIST));
+  const redirects = parseRedirects(readFileSync(DIST + '_redirects', 'utf8'));
+  const checks = checksFor(rules, samplePages(), filesUnder(DIST), redirects);
 
   // Stopped (a SIGTERM; Ctrl-C, which reaches only this command now that each suite has a group of its own; or a
   // SIGHUP, the terminal closed): stop the suite running, then exit as the signal would have (128 + its number).
