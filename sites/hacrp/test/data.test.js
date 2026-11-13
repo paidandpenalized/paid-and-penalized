@@ -1,8 +1,9 @@
 // The build-time loader's own checks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
-import { BASELINE_PINS, baselineShift, changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
+import { BASELINE_PINS, HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
+import { baselineShift, changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
+import { DATA } from './pinned.js';
 
 test('the master must be built for the same HACRP year as the HACRP file; the message names both years', () => {
   checkMasterYear({ programYears: { hacrp: 2026 } }, 2026);
@@ -103,30 +104,34 @@ test('changedOn: the newest built_at date (UTC) among the files given; a file th
   assert.throws(() => changedOn([['a.json', null]]), RangeError);
 });
 
-// A synthetic extract row: C. diff's SIR, observed and predicted cells (CMS's text), the other measures not available.
-const cdiRow = (ccn, sir, observed, predicted) => ({
-  ccn, ...Object.fromEntries(HAI_MEASURES.flatMap(([, k]) => ['sir', 'observed', 'predicted'].map((f) => [`hai_${k}_${f}`, 'Not Available']))),
+// A synthetic extract row for calendar year cy: C. diff's SIR, observed and predicted cells (CMS's text), the other
+// measures not available.
+const cdiRow = (cy, ccn, sir, observed, predicted) => ({
+  ccn, start: `${cy}-01-01`, end: `${cy}-12-31`,
+  ...Object.fromEntries(HAI_MEASURES.flatMap(([, k]) => ['sir', 'observed', 'predicted'].map((f) => [`hai_${k}_${f}`, 'Not Available']))),
   hai_6_sir: sir, hai_6_observed: observed, hai_6_predicted: predicted,
 });
 
 test('baselineShift: only hospitals with a C. diff SIR in both years; above one, the median and the summed counts on each side', () => {
-  const before = { cy: 2024, rows: [cdiRow('990001', '0.500', '5', '10.000'), cdiRow('990002', '1.500', '3', '2.000'), cdiRow('990003', '0.200', '1', '5.000'), cdiRow('990004', 'Not Available', '0', '0.500')] };
-  const after = { cy: 2025, rows: [cdiRow('990001', '1.000', '4', '4.000'), cdiRow('990002', '2.000', '2', '1.000'), cdiRow('990004', '0.800', '4', '5.000'), cdiRow('990005', '3.000', '3', '1.000')] };
+  const before = { cy: 2024, id: 'hai-a', rows: [cdiRow(2024, '990001', '0.500', '5', '10.000'), cdiRow(2024, '990002', '1.500', '3', '2.000'), cdiRow(2024, '990003', '0.200', '1', '5.000'), cdiRow(2024, '990004', 'Not Available', '0', '0.500')] };
+  const after = { cy: 2025, id: 'hai-b', rows: [cdiRow(2025, '990001', '1.000', '4', '4.000'), cdiRow(2025, '990002', '2.000', '2', '1.000'), cdiRow(2025, '990004', '0.800', '4', '5.000'), cdiRow(2025, '990005', '3.000', '3', '1.000')] };
   assert.deepEqual(baselineShift(before, after), {
     hospitals: 2,
     before: { cy: 2024, above: 1, median: 1, observed: 8, predicted: 12 },
     after: { cy: 2025, above: 1, median: 1.5, observed: 6, predicted: 5 },
+    sources: ['hai-a', 'hai-b'],
   });
-  assert.throws(() => baselineShift(before, { cy: 2025, rows: [cdiRow('990009', '1.000', '1', '1.000')] }), /no hospital/);
-  assert.throws(() => baselineShift(before, { cy: 2025, rows: [cdiRow('990001', '1.000', 'Not Available', '1.000')] }), /CY2025 990001 .*observed/);
+  assert.throws(() => baselineShift(before, { ...after, rows: [cdiRow(2025, '990009', '1.000', '1', '1.000')] }), /no hospital/);
+  assert.throws(() => baselineShift(before, { ...after, rows: [cdiRow(2025, '990001', '1.000', 'Not Available', '1.000')] }), /CY2025 has 1 hospitals with a C. diff SIR but not both counts/);
+  assert.throws(() => baselineShift(before, { ...after, cy: 2026 }), /HAI CY2026/);
 });
 
 // The figures Methods prints, on the pinned files. Hand-checked once against a separate sum over the extracts; held here so
 // a change to the code or the pins is seen.
 test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, the median and the counts', () => {
-  const data = loadHacrp();
-  const s = data.baselineShift;
+  const s = DATA.baselineShift;
   assert.deepEqual([s.before.cy, s.after.cy], [BASELINE_PINS.before.cy, BASELINE_PINS.after.cy]);
+  assert.deepEqual(s.sources, [BASELINE_PINS.before.id, BASELINE_PINS.after.id]);
   assert.equal(s.hospitals, 2637);
   assert.deepEqual([s.before.above, s.after.above], [143, 625]);
   assert.deepEqual([s.before.median, s.after.median], [0.328, 0.61]);
@@ -136,8 +141,8 @@ test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, th
   assert.ok(s.after.observed < s.before.observed);
   const rise = s.after.median / s.before.median;
   assert.ok(rise > 1.75 && rise < 2, `the median rose ${rise}x`);
-  assert.equal(data.baselineSource.pdcReleased, '2026-11-12');
-  // The history's lines stay on the old baseline: the newer year is not one of its pins.
+  assert.equal(s.released, '2026-11-12');
+  // The history's lines stay on the old baseline: it ends at the earlier year and leaves out the newer.
+  assert.equal(HAI_PINS.at(-1), BASELINE_PINS.before);
   assert.ok(!HAI_PINS.some((p) => p.id === BASELINE_PINS.after.id));
-  assert.ok(HAI_PINS.some((p) => p.id === BASELINE_PINS.before.id));
 });

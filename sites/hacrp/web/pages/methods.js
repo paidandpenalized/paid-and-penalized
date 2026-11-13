@@ -179,8 +179,8 @@ const GLOSSARY = (v) => [
 // boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
-// The baseline section's paragraph on Care Compare's first release on the new baseline, from data.js baselineShift
-// plus the newer file's release date (shift: { ...baselineShift(), released: 'YYYY-MM-DD' }).
+// The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
+// baselineShift, data.js, with the newer file's release date, YYYY-MM-DD).
 export function shiftPara({ hospitals, before: b, after: a, released }) {
   const fell = (from, to) => pct(1 - to / from, 0);
   const whole = (x) => count(Math.round(x));
