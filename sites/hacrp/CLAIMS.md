@@ -214,7 +214,8 @@ A claim marked `unverified` may not be used in copy.
   against reported infections' 12%. The baseline is the likeliest cause, and CDC's source gives its direction, but each
   year's predicted count also moves with that year's patients and the public files can't separate the two: hence
   "most", not "all" (HACRP-20: the model adjusts for factors at each hospital). The words were written for the pinned
-  figures, which a test holds (`sites/hacrp/test/data.test.js`); a re-pin that moves them fails it.
+  figures; `sites/hacrp/test/data.test.js` holds both the figures and what the words say of them (reported cases fell,
+  the predicted count fell further, the printed medians nearly doubled), so a re-pin that breaks the words fails CI.
 - **HACRP-49:** the FAQ's sentence ends "unless otherwise specified". The exceptions: FY2018's and FY2019's PSI 90
   periods (15 and 21 months, the ICD-10 change; 81 FR 57020), and the COVID-19 years: FY2022 (PSI 90 18 months,
   infections calendar 2019 only), FY2023 (no scores) and FY2024 (PSI 90 18 months, infections calendar 2022 only)

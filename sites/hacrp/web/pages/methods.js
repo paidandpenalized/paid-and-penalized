@@ -181,9 +181,9 @@ const GLOSSARY = (v) => [
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
 // The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
 // baselineShift, data.js, with the newer file's release date, YYYY-MM-DD). Its words were written for the pinned
-// figures; a test holds those figures (sites/hacrp/test/data.test.js), so a re-pin that moves them fails until someone
-// re-reads the words.
-export function shiftPara({ hospitals, before: b, after: a, released }) {
+// figures. sites/hacrp/test/data.test.js holds the figures and the words' meaning (fewer, fell further, nearly
+// doubled), and CI runs it on every change to main, a re-pin included.
+function shiftPara({ hospitals, before: b, after: a, released }) {
   const fell = (from, to) => pct(1 - to / from, 0);
   const whole = (x) => count(Math.round(x));
   const years = { before: String(b.cy), after: String(a.cy) };

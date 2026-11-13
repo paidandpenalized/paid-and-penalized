@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { BASELINE_PINS, HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
 import { baselineShift, changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
 import { DATA } from './pinned.js';
+import { decimal } from '../../../web/render/format.js';
 
 test('the master must be built for the same HACRP year as the HACRP file; the message names both years', () => {
   checkMasterYear({ programYears: { hacrp: 2026 } }, 2026);
@@ -129,6 +130,7 @@ test('baselineShift: only hospitals with a C. diff SIR in both years; above one,
 // The figures Methods prints, on the pinned files. Hand-checked once against a separate sum over the extracts. The
 // paragraph's words (methods/copy.js baselineShift3 and 4: "fewer", "fell", "nearly doubled", "most") were written for
 // these figures: when a re-pin or a code change moves them, re-read those sentences before updating the numbers here.
+// The checks after the numbers hold the words themselves, so they keep failing when only the numbers are updated.
 test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, the median and the counts', () => {
   const s = DATA.baselineShift;
   assert.deepEqual([s.before.cy, s.after.cy], [BASELINE_PINS.before.cy, BASELINE_PINS.after.cy]);
@@ -138,6 +140,12 @@ test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, th
   assert.deepEqual([s.before.median, s.after.median], [0.328, 0.61]);
   assert.deepEqual([s.before.observed, s.after.observed], [30231, 26658]);
   assert.deepEqual([Math.round(s.before.predicted), Math.round(s.after.predicted)], [81511, 37550]);
+  // The words: reported cases fell, the predicted count fell further (so the SIR's rise came through it: "most"), and
+  // the medians as printed (to two decimals) nearly doubled.
+  assert.ok(s.after.observed < s.before.observed, 'reported cases "fewer"');
+  assert.ok(s.after.predicted / s.before.predicted < s.after.observed / s.before.observed, 'the predicted count "fell" further');
+  const printed = [s.before.median, s.after.median].map((x) => Number(decimal(x, 2)));
+  assert.ok(printed[1] / printed[0] > 1.75 && printed[1] / printed[0] < 2, `"nearly doubled": ${printed.join(' to ')}`);
   assert.equal(s.released, '2026-11-12');
   // The history's lines stay on the old baseline: it ends at the earlier year and leaves out the newer.
   assert.equal(HAI_PINS.at(-1), BASELINE_PINS.before);
