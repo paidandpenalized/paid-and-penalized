@@ -217,7 +217,7 @@ test('production, released: every hospital page and every place page plus /hacrp
     assert.ok(sir, 'the SIR term opens a box, inside its sentence');
     assert.match(sir[0], /SIR = infections reported ÷ infections predicted/);
     assert.match(sir[0], /national data for 2015, its baseline year/);
-    assert.match(sir[0], /CDC has since moved it to 2022 data, a change that reaches this program in fiscal year 2028\./);
+    assert.match(sir[0], /CDC has since added one built on 2022 data, a change that reaches this program in fiscal year 2028\./);
     // The score rule names its ends' scores and marks the average.
     const scores = decided.map((h) => h.total).sort((a, b) => a - b);
     assert.ok(program.includes(`Lowest score: ${decimal(scores[0], 4)}`) && program.includes(`Highest score: ${decimal(scores.at(-1), 4)}`));

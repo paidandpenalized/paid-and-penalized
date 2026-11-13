@@ -6,9 +6,9 @@ corrections log.
 ## 2026-11-13
 - Care Compare's infection results moved to CDC's 2022 baseline with its November 12 release (calendar year 2025).
   Methods' section on the infection baseline says so, and says what the change did to C. diff results for the hospitals
-  with a C. diff result in both years: reported cases fell while the ratio rose, mostly from the new baseline. The program's scores keep the
-  2015 baseline until fiscal year 2028, so no number on this site changes. The history's infection lines stay on the
-  2015 baseline and say so.
+  with a C. diff result in both years: reported cases fell while the ratio rose, mostly from the new baseline. The
+  program's scores keep the 2015 baseline until fiscal year 2028, so no number on this site changes. The history's
+  infection lines stay on the 2015 baseline and say so.
 
 ## 2026-11-02
 - The what-if's ramp marks CMS's line in earlier years scored by the same formula as faint ticks, and a line under it

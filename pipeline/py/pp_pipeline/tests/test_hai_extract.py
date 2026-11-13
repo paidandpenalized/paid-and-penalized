@@ -288,7 +288,9 @@ class Committed(unittest.TestCase):
                          "set PP_HAI_ZIP_DIR to a folder holding the raw CMS zips and CSVs to re-derive the extracts")
     def test_extracts_rederive_from_the_zips(self):
         zips = {}
-        for p in (p for p in Path(os.environ["PP_HAI_ZIP_DIR"]).iterdir() if p.is_file()):
+        for p in Path(os.environ["PP_HAI_ZIP_DIR"]).iterdir():
+            if not p.is_file():
+                continue  # a zip or a CSV; subfolders are skipped
             zips.setdefault(p.stat().st_size, []).append(p)
         for entry in hai_entries():
             source = entry["derivedFrom"]

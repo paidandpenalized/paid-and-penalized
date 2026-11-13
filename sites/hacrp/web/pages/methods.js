@@ -181,12 +181,20 @@ const GLOSSARY = (v) => [
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
 // The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
 // baselineShift, data.js, with the newer file's release date, YYYY-MM-DD).
-// The words say which way the numbers went (fewer, fell, nearly doubled); a shift they no longer describe stops the build.
+// Whether the shift still fits the paragraph's words (methods/copy.js baselineShift3 and 4): reported cases "fewer" by
+// at least the 1% the page rounds to, the predicted count "fell", the middle SIR "nearly doubled" (a rise between
+// SHIFT_RISE's ends), and "most" of that rise from the baseline: the predicted count fell by more than twice the share
+// reported cases did. A shift the words no longer describe stops the build (shiftPara).
 export const SHIFT_RISE = Object.freeze({ above: 1.75, below: 2 });
-export function shiftPara({ hospitals, before: b, after: a, released }) {
+export function shiftFits({ before: b, after: a }) {
+  const fell = (from, to) => 1 - to / from;
   const rise = a.median / b.median;
-  if (!(a.observed < b.observed && a.predicted < b.predicted && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below)) {
-    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, median x${rise}); rewrite baselineShift3`);
+  return fell(b.observed, a.observed) >= 0.005 && fell(b.predicted, a.predicted) > 2 * fell(b.observed, a.observed)
+    && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below;
+}
+export function shiftPara({ hospitals, before: b, after: a, released }) {
+  if (!shiftFits({ before: b, after: a })) {
+    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, median x${a.median / b.median}); rewrite baselineShift3 and 4 and shiftFits together`);
   }
   const fell = (from, to) => pct(1 - to / from, 0);
   const whole = (x) => count(Math.round(x));

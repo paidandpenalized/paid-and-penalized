@@ -20,7 +20,7 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH, shiftPara } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH, SHIFT_RISE, shiftFits, shiftPara } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
@@ -63,12 +63,19 @@ test('the baseline section says Care Compare now shows the new baseline, and pri
   assert.ok(strip(/<section class="doc__sec msec" id="baseline"[\s\S]*?<\/section>/.exec(WITHOUT.page)[0]) === section);
 });
 
-test('the baseline paragraph stops the build when its words (fewer, fell, nearly doubled) no longer fit the numbers', () => {
+test('the baseline paragraph stops the build when its words (fewer, fell, nearly doubled, most) no longer fit the numbers', () => {
   const s = DATA.baselineShift;
+  const { before: b, after: a } = s;
   assert.doesNotThrow(() => shiftPara(s));
-  for (const after of [{ observed: s.before.observed + 1 }, { predicted: s.before.predicted }, { median: s.before.median * 2 }, { median: s.before.median * 1.5 }]) {
-    assert.throws(() => shiftPara({ ...s, after: { ...s.after, ...after } }), /no longer fit/, JSON.stringify(after));
-  }
+  const at = (k) => b.median * k;
+  const cases = [
+    { observed: b.observed + 1 }, // reported cases rose
+    { observed: b.observed * 0.999 }, // fell by less than the page's 1%
+    { predicted: b.predicted * (1 - 2 * (1 - a.observed / b.observed)) }, // predicted fell only twice as much: not "most"
+    { median: at(SHIFT_RISE.above * (1 - 1e-9)) }, { median: at(SHIFT_RISE.below * (1 + 1e-9)) }, // a rise past either end is not "nearly doubled"
+  ];
+  for (const change of cases) assert.throws(() => shiftPara({ ...s, after: { ...a, ...change } }), /no longer fit/, JSON.stringify(change));
+  for (const k of [SHIFT_RISE.above + 0.01, SHIFT_RISE.below - 0.01]) assert.equal(shiftFits({ before: b, after: { ...a, median: at(k) } }), true, `x${k}`);
 });
 
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {
