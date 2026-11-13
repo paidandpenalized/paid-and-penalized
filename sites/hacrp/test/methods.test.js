@@ -20,7 +20,7 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH, shiftFits, shiftPara } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
@@ -61,23 +61,6 @@ test('the baseline section says Care Compare now shows the new baseline, and pri
   assert.match(section, /keep the 2015 baseline until fiscal year 2028/);
   // The page without the history says the same.
   assert.ok(strip(/<section class="doc__sec msec" id="baseline"[\s\S]*?<\/section>/.exec(WITHOUT.page)[0]) === section);
-});
-
-test('the baseline paragraph stops the build when its words (fewer, fell, nearly doubled, most) no longer fit the numbers', () => {
-  const s = DATA.baselineShift;
-  const { before: b, after: a } = s;
-  assert.doesNotThrow(() => shiftPara(s));
-  const cases = [
-    { observed: b.observed + 1 }, // reported cases rose
-    { observed: b.observed * 0.999 }, // fell, but prints as 0%
-    { predicted: b.predicted }, // the predicted count did not fall
-  ];
-  for (const change of cases) assert.throws(() => shiftPara({ ...s, after: { ...a, ...change } }), /no longer fit/, JSON.stringify(change));
-  // "Nearly doubled", on the printed medians: from 0.40, 0.71 to 0.79 fit; 0.70 (x1.75) and 0.80 (x2) don't, and
-  // 0.334 to 0.665 prints 0.33 to 0.67, more than double.
-  const medians = (from, to) => shiftFits({ before: { ...b, median: from }, after: { ...a, median: to } });
-  assert.deepEqual([0.70, 0.71, 0.79, 0.80].map((to) => medians(0.4, to)), [false, true, true, false]);
-  assert.equal(medians(0.334, 0.665), false);
 });
 
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {

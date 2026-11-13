@@ -176,12 +176,12 @@ export const COPY = {
   baselineText2: { text: "CDC has added a {nextBase} baseline, which CMS says reaches this program's scores in fiscal year {nextFy}. Care Compare now shows infection results on the new baseline, and it shows one year at a time where this program uses two, so its numbers differ from the ones here.", claim: ['HACRP-21', 'HACRP-98', 'HACRP-48', 'HACRP-46'] },
   // The November release, the first on the new baseline: C. diff across the hospitals with an SIR in both years (data.js
   // baselineShift). One paragraph, a sentence per entry. Shifts 3 and 4 say which way the numbers went and by how much
-  // ("fewer", "fell", "nearly doubled", "most"): pages/methods.js shiftFits holds the numbers to those words, so change
-  // both together.
+  // ("fewer", "fell", "nearly doubled", "most"), written for the pinned figures that sites/hacrp/test/data.test.js
+  // holds.
   baselineShift1: { text: "Care Compare's release of {released}, for calendar year {after}, is the first on the new baseline.", claim: ['HACRP-99', 'HACRP-48', 'HACRP-47'] },
   baselineShift2: { text: "Across the {n} hospitals with a C. diff SIR in both {before} and {after}, this site counts {aboveBefore} above {one} in {before} and {aboveAfter} in {after}, and the middle hospital's SIR went from {medianBefore} to {medianAfter}.", claim: 'HACRP-97' },
   baselineShift3: { text: "Those hospitals reported {observedPct} fewer C. diff infections ({observedBefore} to {observedAfter}), while the number CDC's model predicted for them fell {predictedPct} ({predictedBefore} to {predictedAfter}): reported cases fell while the middle SIR nearly doubled.", claim: 'HACRP-97' },
-  baselineShift4: { text: "Most of that rise comes from the new baseline, on which CDC says C. diff SIRs run generally higher; the predicted count also moves with each year's patients, so not all of it.", claim: 'HACRP-98' },
+  baselineShift4: { text: "Most of that rise comes from the new baseline, on which CDC says C. diff SIRs run generally higher; the predicted count also moves with each year's patients, so not all of it.", claim: ['HACRP-98', 'HACRP-20'] },
   baselineShift5: { text: "The program's penalties keep the {baseYear} baseline until fiscal year {nextFy}, so no number CMS has published for this program changes, and none on this site.", claim: 'HACRP-21' },
 
   // §8, reading a penalty.

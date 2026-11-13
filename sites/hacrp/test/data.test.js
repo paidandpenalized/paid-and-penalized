@@ -126,8 +126,9 @@ test('baselineShift: only hospitals with a C. diff SIR in both years; above one,
   assert.throws(() => baselineShift(before, { ...after, cy: 2026 }), /HAI CY2026/);
 });
 
-// The figures Methods prints, on the pinned files. Hand-checked once against a separate sum over the extracts; held here so
-// a change to the code or the pins is seen.
+// The figures Methods prints, on the pinned files. Hand-checked once against a separate sum over the extracts. The
+// paragraph's words (methods/copy.js baselineShift3 and 4: "fewer", "fell", "nearly doubled", "most") were written for
+// these figures: when a re-pin or a code change moves them, re-read those sentences before updating the numbers here.
 test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, the median and the counts', () => {
   const s = DATA.baselineShift;
   assert.deepEqual([s.before.cy, s.after.cy], [BASELINE_PINS.before.cy, BASELINE_PINS.after.cy]);
@@ -137,10 +138,6 @@ test('baselineShift on the pinned CY2024 and CY2025 files: C. diff above one, th
   assert.deepEqual([s.before.median, s.after.median], [0.328, 0.61]);
   assert.deepEqual([s.before.observed, s.after.observed], [30231, 26658]);
   assert.deepEqual([Math.round(s.before.predicted), Math.round(s.after.predicted)], [81511, 37550]);
-  // Methods says reported cases fell while the middle SIR "nearly doubled": hold that to the median's rise.
-  assert.ok(s.after.observed < s.before.observed);
-  const rise = s.after.median / s.before.median;
-  assert.ok(rise > 1.75 && rise < 2, `the median rose ${rise}x`);
   assert.equal(s.released, '2026-11-12');
   // The history's lines stay on the old baseline: it ends at the earlier year and leaves out the newer.
   assert.equal(HAI_PINS.at(-1), BASELINE_PINS.before);

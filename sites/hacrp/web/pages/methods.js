@@ -180,31 +180,17 @@ const GLOSSARY = (v) => [
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
 // The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
-// baselineShift, data.js, with the newer file's release date, YYYY-MM-DD).
-// The shift's printed figures: the share each count fell ("12%") and the medians to two decimals.
-const fellText = (from, to) => pct(1 - to / from, 0);
-const hundredths = (x) => Math.round(x * 100) / 100;
-// Whether the shift still fits the paragraph's words (methods/copy.js baselineShift3 and 4), on the figures the page
-// prints: reported cases "fewer" (by at least a printed 1%), the predicted count "fell", and the printed middle SIR
-// "nearly doubled" (a rise strictly between SHIFT_RISE's ends). "Most of that rise comes from the new baseline" follows:
-// with reported cases down and the SIR up, the rise came through the predicted count. A shift the words no longer
-// describe stops the build (shiftPara).
-const SHIFT_RISE = Object.freeze({ above: 1.75, below: 2 });
-export function shiftFits({ before: b, after: a }) {
-  const rise = hundredths(a.median) / hundredths(b.median);
-  return Math.round(100 * (1 - a.observed / b.observed)) >= 1 && a.predicted < b.predicted
-    && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below;
-}
+// baselineShift, data.js, with the newer file's release date, YYYY-MM-DD). Its words were written for the pinned
+// figures; a test holds those figures (sites/hacrp/test/data.test.js), so a re-pin that moves them fails until someone
+// re-reads the words.
 export function shiftPara({ hospitals, before: b, after: a, released }) {
-  if (!shiftFits({ before: b, after: a })) {
-    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, printed median x${hundredths(a.median) / hundredths(b.median)}); rewrite baselineShift3 and 4 and shiftFits together`);
-  }
+  const fell = (from, to) => pct(1 - to / from, 0);
   const whole = (x) => count(Math.round(x));
   const years = { before: String(b.cy), after: String(a.cy) };
   return para(html`${[
     fill('baselineShift1', { released: isoDate(released), after: years.after }),
     fill('baselineShift2', { ...years, n: count(hospitals), one: SIR_EXPECTED_TEXT, aboveBefore: count(b.above), aboveAfter: count(a.above), medianBefore: decimal(b.median, 2), medianAfter: decimal(a.median, 2) }),
-    fill('baselineShift3', { observedPct: fellText(b.observed, a.observed), observedBefore: whole(b.observed), observedAfter: whole(a.observed), predictedPct: fellText(b.predicted, a.predicted), predictedBefore: whole(b.predicted), predictedAfter: whole(a.predicted) }),
+    fill('baselineShift3', { observedPct: fell(b.observed, a.observed), observedBefore: whole(b.observed), observedAfter: whole(a.observed), predictedPct: fell(b.predicted, a.predicted), predictedBefore: whole(b.predicted), predictedAfter: whole(a.predicted) }),
     t('baselineShift4'),
     fill('baselineShift5', { baseYear: String(SIR_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }),
   ].map((sentence, i) => html`${i ? ' ' : ''}${sentence}`)}`);
