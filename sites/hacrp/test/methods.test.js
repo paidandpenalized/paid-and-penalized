@@ -68,14 +68,17 @@ test('the baseline paragraph stops the build when its words (fewer, fell, nearly
   const { before: b, after: a } = s;
   assert.doesNotThrow(() => shiftPara(s));
   const at = (k) => b.median * k;
+  const rise = a.median / b.median;
   const cases = [
     { observed: b.observed + 1 }, // reported cases rose
-    { observed: b.observed * 0.999 }, // fell by less than the page's 1%
-    { predicted: b.predicted * (1 - 2 * (1 - a.observed / b.observed)) }, // predicted fell only twice as much: not "most"
-    { median: at(SHIFT_RISE.above * (1 - 1e-9)) }, { median: at(SHIFT_RISE.below * (1 + 1e-9)) }, // a rise past either end is not "nearly doubled"
+    { observed: b.observed * 0.999 }, // fell, but prints as 0%
+    { predicted: b.predicted / Math.exp(0.4 * Math.log(rise)) }, // the predicted count's fall covers 40% of the rise: not "most"
+    { median: at(SHIFT_RISE.above * 0.98) }, { median: at(SHIFT_RISE.below * 1.02) }, // past either end: not "nearly doubled"
   ];
   for (const change of cases) assert.throws(() => shiftPara({ ...s, after: { ...a, ...change } }), /no longer fit/, JSON.stringify(change));
-  for (const k of [SHIFT_RISE.above + 0.01, SHIFT_RISE.below - 0.01]) assert.equal(shiftFits({ before: b, after: { ...a, median: at(k) } }), true, `x${k}`);
+  // Judged on the printed medians: 0.33 to 0.67 reads as more than double, though 0.334 to 0.665 is not.
+  assert.equal(shiftFits({ before: { ...b, median: 0.334 }, after: { ...a, median: 0.665 } }), false);
+  for (const k of [SHIFT_RISE.above + 0.03, SHIFT_RISE.below - 0.03]) assert.equal(shiftFits({ before: b, after: { ...a, median: at(k) } }), true, `x${k}`);
 });
 
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {

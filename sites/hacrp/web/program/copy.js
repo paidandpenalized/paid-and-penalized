@@ -72,7 +72,7 @@ export const COPY = {
   sirMore: { text: '(how CDC figures it)', claim: null },
   sirBoxMath: { text: 'SIR = infections reported ÷ infections predicted', claim: 'HACRP-14' },
   sirBoxPredicted: { text: "CDC predicts each hospital's number from national data for {base}, its baseline year, adjusted for what predicts infections: the kind of unit, for example, or a surgical patient's age and health.", claim: ['HACRP-20', 'HACRP-45'] },
-  sirBoxBaseline: { text: "This year's SIRs use the {base} baseline. CDC has since added one built on {next} data, a change that reaches this program in fiscal year {nextFy}.", claim: ['HACRP-20', 'HACRP-98', 'HACRP-21'] },
+  sirBoxBaseline: { text: "This year's SIRs use the {base} baseline. CDC has since added one built on {next} data, which this program switches to in fiscal year {nextFy}.", claim: ['HACRP-20', 'HACRP-98', 'HACRP-21'] },
   step2b: { text: "{short} reads the same way: a value of {one} matches the national composite value, and higher is worse.", claim: 'HACRP-31' },
   step2c: { text: "When CDC's model predicts less than a single infection, the hospital gets no result on that measure. Many hospitals with a result reported no infections at all: see the column at zero.", claim: 'HACRP-35' },
   fig2Takeaway: { text: "Every hospital's value on each measure, a dot for every few hospitals. Pick a measure.", claim: null },
