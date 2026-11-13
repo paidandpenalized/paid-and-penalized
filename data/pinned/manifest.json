@@ -641,5 +641,23 @@
     "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
     "landingPage": "https://data.cms.gov/provider-data/archived-data/hospitals",
     "retrieved": "2026-10-22"
+  },
+  {
+    "id": "hai-cy2025",
+    "title": "Care Compare healthcare-associated infection results, calendar year 2025: per-hospital SIR, observed and predicted counts for the six HAI measures",
+    "path": "hai-cy2025/hai_hospital_cy2025.csv",
+    "bytes": 838026,
+    "sha256": "2e9531b294715885935c6c0b55d0c6884fef8e7bce9646a7dd669f1885a948ae",
+    "derivedFrom": {
+      "bytes": 38533341,
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv",
+      "file": "Healthcare_Associated_Infections-Hospital.csv",
+      "sha256": "586b831541f567106c438c7f72cb312786282a55fe8a98559e8d990fa8144001"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/77hc-ibv8",
+    "pdcModified": "2026-10-19",
+    "pdcReleased": "2026-11-12",
+    "retrieved": "2026-11-13"
   }
 ]

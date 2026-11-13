@@ -3,7 +3,7 @@
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
 then the dollar estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
-pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip> <pin id>` (see
+pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip or csv> <pin id>` (see
 pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and two that call the
 network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
 `refresh <site> [--pr]` (`make refresh SITE=<site> [PR=1]`), which fetches the site's CMS files from data.cms.gov, pins

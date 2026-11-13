@@ -16,8 +16,8 @@ export const WINSOR_HIGH = 95;
 // An SIR of this value means as many infections as NHSN's model predicted; the what-if's helper text says so.
 export const SIR_EXPECTED = 1;
 export const SIR_EXPECTED_TEXT = decimal(SIR_EXPECTED, 1);
-// CDC's SIRs predict each hospital's infections from one national baseline year; CDC is moving to a newer one, which
-// first reaches this program's scores in SIR_NEXT_FY.
+// CDC's SIRs predict each hospital's infections from one national baseline year. CDC has moved to a newer one, which
+// Care Compare now shows (data.js BASELINE_PINS) and which first reaches this program's scores in SIR_NEXT_FY.
 export const SIR_BASE_YEAR = 2015;
 export const SIR_NEXT_BASE_YEAR = 2022;
 export const SIR_NEXT_FY = 2028;

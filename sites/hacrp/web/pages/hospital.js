@@ -14,7 +14,7 @@ import { closedNote } from '../../../../web/render/closed.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
+import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT, SIR_BASE_YEAR } from '../constants.js';
 import { biggestLever } from '../compare.js';
 import { distanceSentence, leadSentence, measureNote, noteSentences, smallNumber, whySentences } from '../sentences.js';
 import { fill, fillKeep, sourceText, t } from '../copy.js';
@@ -326,7 +326,7 @@ ${history.rec.run > 1 ? html`<p class="hsec__stat">${hfill('yearsRun', { run: St
 ${infections && section({
     id: 'infections',
     text: html`<h2 id="infections-h">${ht('hinfHeading')}</h2>
-<p>${ht('hinfIntro')}</p>`,
+<p>${hfill('hinfIntro', { base: String(SIR_BASE_YEAR) })}</p>`,
     figure: infections,
   })}
 ${peers && section({

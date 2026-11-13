@@ -29,7 +29,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-18 | The hospitals CMS scores are subsection (d) hospitals: general acute care hospitals paid under Medicare's inpatient prospective payment system, with Maryland's included. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-payment-reduction-methodology.pdf | "CMS includes all subsection (d) hospitals (that is, general acute care hospitals paid under the Inpatient Prospective Payment System), including Maryland hospitals" | 2026-10-20 |
 | HACRP-19 | CMS calculates every hospital's Total HAC Score by one set of steps: measure results, winsorized z-scores, the equal-weight average, then the line. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CMS follows these steps to calculate Total HAC Scores and the worst-performing quartile" | 2026-10-20 |
 | HACRP-20 | CDC predicts each hospital's infections from national data for a baseline year, 2015 for this year's SIRs, adjusted for factors that predict infections at that hospital. | https://www.cdc.gov/nhsn/pdfs/ps-analysis-resources/nhsn-sir-guide.pdf | "calculated based on the 2015 national HAI aggregate data and is adjusted for each facility using variables found to be significant predictors" | 2026-10-22 |
-| HACRP-21 | CDC is moving the SIR baseline from 2015 to 2022 data, a change that first affects the HAC Reduction Program in fiscal year 2028. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-fiscal-year-2027-key-dates.pdf | "CDC is updating the baseline to CY 2022 data" … "which will affect the HAC Reduction Program beginning in FY 2028." | 2026-10-22 |
+| HACRP-21 | CDC has moved the SIR baseline from 2015 to 2022 data, a change that first affects the HAC Reduction Program in fiscal year 2028; until then the program's scores keep the 2015 baseline. | https://www.cms.gov/files/document/hospital-readmissions-reduction-program-fiscal-year-2027-key-dates.pdf | "CDC is updating the baseline to CY 2022 data" … "which will affect the HAC Reduction Program beginning in FY 2028." | 2026-11-13 |
 | HACRP-22 | Maryland sets what its hospitals are paid, by Medicare as well as other payers; its authority over Medicare's hospital rates runs until January 1, 2028. | https://www.cms.gov/priorities/innovation/files/ahead-fin-specs-ffs-hgb-md-add-v3-2.pdf | "Because of MD’s existing global budget policies and Medicare rate-setting authority (until January 1, 2028)" | 2026-10-22 |
 | HACRP-23 | CMS cuts the hospitals above the 75th percentile of the Total HAC Scores of hospitals outside Maryland: Maryland's scores are left out of the distribution that sets the line. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CMS calculates the 75th percentile across all non-Maryland subsection (d) hospitals (that is, general acute care hospitals paid under IPPS) with Total HAC Scores." | 2026-10-22 |
 | HACRP-24 | The cut applies to every traditional Medicare (fee-for-service) inpatient discharge in the fiscal year, which runs from October 1 of the year before through September 30. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "applies to all Medicare FFS Part A discharges in the corresponding FY (October 1 of the prior year through September 30 of the program year)" | 2026-10-22 |
@@ -55,7 +55,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-45 | CDC adjusts the central line and catheter infection predictions for the kind of unit a patient is in. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CLABSI and CAUTI are risk adjusted at the hospital and the patient-care-unit levels." | 2026-10-22 |
 | HACRP-46 | Care Compare shows one year of infection results, where this program uses two, and lists hospitals outside the program, such as critical access hospitals, so their numbers can differ. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "may differ slightly from the results reported in the HAC Reduction Program dataset reported on the data catalog on Data.cms.gov" | 2026-10-22 |
 | HACRP-47 | CDC has calculated SIRs against its 2015 baseline since 2016, so the Care Compare results this site draws for calendar years 2017 to 2024 share one baseline. | https://qualitynet.cms.gov/inpatient/measures/hai | "Since 2016, CDC has been using data collected in calendar year (CY) 2015 to determine the standard population." | 2026-10-22 |
-| HACRP-48 | Care Compare is moving its infection results to SIRs on the 2022 baseline. | https://mp.qualityreportingcenter.com/globalassets/listserves/2026/iqr/2026-74-ip.pdf | "standardized infection ratios calculated using the 2022 baseline for healthcare-associated infection (HAI) measures that will publicly appear on the Compare tool on Medicare.gov" | 2026-10-22 |
+| HACRP-48 | Care Compare now shows infection results as SIRs on the 2022 baseline, starting with its calendar year 2025 results, released November 12, 2026. | https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/77hc-ibv8 | "title":"Healthcare Associated Infections - Hospital" … "released":"2026-11-12" | 2026-11-13 |
 | HACRP-49 | Each measure normally covers two years of care, and the window moves forward a year each program year. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "uses a standard two-year performance period for the CMS PSI 90 and CDC’s NHSN HAI measures, advanced by one year every subsequent program year" | 2026-10-22 |
 | HACRP-50 | Early in the COVID-19 pandemic, CMS excused hospitals from reporting their infection data for the first half of 2020. | https://www.federalregister.gov/documents/2020/09/02/2020-19150/medicare-and-medicaid-programs-clinical-laboratory-improvement-amendments-clia-and-patient | "we excepted hospitals from the requirement to report first and second quarter of CY 2020 HAC Reduction Program chart-abstracted measures" | 2026-10-22 |
 | HACRP-51 | CMS did not publish hospitals' infection data from the first half of 2020. | https://www.qualityreportingcenter.com/globalassets/2020/12/pch/hospital-compare_care-compare-refresh-and-overall-hospital-quality-star-rating-2021-updates.pdf | "CMS will not publicly report data collected during 1st and 2nd quarter 2020." | 2026-10-22 |
@@ -103,6 +103,8 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-94 | In the base the readmissions and value-based programs adjust, a Medicare-dependent hospital's gain from its hospital-specific rate (the difference from the federal rate) is included and a sole community hospital's is left out. | https://www.law.cornell.edu/cfr/text/42/412.152 | "sole community hospital … this amount also does not include the difference" … "Medicare-dependent, small rural hospital … this amount includes the difference" | 2026-10-23 |
 | HACRP-95 | CMS adds an eligible Indian Health Service or Tribal hospital's supplemental payment to each claim's payment, along with the uncompensated care payment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "we add the uncompensated care payment and supplemental payment for eligible IHS/Tribal hospitals and Puerto Rico hospitals to the total claim payment amount" | 2026-10-23 |
 | HACRP-96 | CMS figures the teaching (IME) and low-income-patient (DSH) payments as percentage add-ons to the federal DRG payment: a claim's operating payment is the DRG payment times one plus the IME adjustment plus a quarter of the DSH adjustment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Federal Payment Rate for Operating Costs = MS-DRG Relative Weight x [ … ] x (1 + IME + (DSH * 0.25))" | 2026-10-23 |
+| HACRP-97 | Care Compare's infection files give each hospital's C. diff SIR with its observed and predicted cases, so the counts of the hospitals scored in both 2024 and 2025 can be added up year by year. | https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv | "Clostridium Difficile (C.Diff): Observed Cases" … "Clostridium Difficile (C.Diff): Predicted Cases" | 2026-11-13 |
+| HACRP-98 | CDC says C. diff SIRs on the 2022 baseline run generally higher than on the 2015 baseline; the observed count is the same under both, only the predicted count changes. | https://www.cdc.gov/nhsn/2022rebaseline/How-Will-My-SIR-Change.pdf | "The distribution of Lab-Identified CDI SIRs using the 2022 baseline is generally higher compared to that from when the 2015 baseline is used" | 2026-11-13 |
 
 ## Notes on the sources
 
@@ -138,7 +140,9 @@ A claim marked `unverified` may not be used in copy.
 - **HACRP-21** cites footnote e of CMS's HAC Reduction Program FY2027 key dates (August 2026), which begins "Since
   2016, CDC has used CY 2015 data as the baseline to calculate the SIR for its HAI measures." and cites the FY 2026
   IPPS/LTCH PPS final rule, pages 36963–36965. The same table puts the FY2026 program's HAI period at 1/1/23 to
-  12/31/24, inside the 2015-baseline years.
+  12/31/24, inside the 2015-baseline years. Re-checked 2026-11-13: CDC's move is done (Care Compare's calendar year 2025
+  results are on the 2022 baseline, HACRP-48), and nothing CMS has published since moves the program's switch from
+  FY2028.
 - **HACRP-01** cites the statute, 42 U.S.C. 1395ww(p)(1), at Cornell's Legal Information Institute. The CMS rule
   says the same at 42 CFR 412.172(b).
 
@@ -187,9 +191,22 @@ A claim marked `unverified` may not be used in copy.
   yearly; Care Compare has one year (four quarters), updated quarterly.
 - **HACRP-47** cites QualityNet's HAI overview, which also says the 2015-baselined SIRs were shared for the last time in
   the summer 2026 preview. That Care Compare's calendar-year 2017 to 2024 results all used the 2015 baseline rests on
-  these statements: no CMS sentence names those years. **HACRP-48** (CMS listserv 2026-74-IP, August 20, 2026): on
-  2026-10-22 the Care Compare HAI dataset (77hc-ibv8) still held the last 2015-baseline release (October 2024 to
-  September 2025). Re-check when it changes.
+  these statements: no CMS sentence names those years. **HACRP-48** cites the Provider Data Catalog record of Care
+  Compare's HAI dataset (77hc-ibv8), released 2026-11-12 with calendar year 2025 results. The file doesn't name its
+  baseline; CMS announced the switch in listserv 2026-74-IP (August 20, 2026: "standardized infection ratios calculated
+  using the 2022 baseline for healthcare-associated infection (HAI) measures that will publicly appear on the Compare
+  tool on Medicare.gov", https://mp.qualityreportingcenter.com/globalassets/listserves/2026/iqr/2026-74-ip.pdf), and the
+  predicted counts show it: summed over all hospitals, C. diff's fell from about 82,700 in calendar year 2024 to about
+  38,200 in 2025, and CAUTI's by a third, where reported infections moved far less. On 2026-10-22 the dataset still held
+  the last 2015-baseline release (October 2024 to September 2025). **HACRP-97** cites the file itself (pinned as
+  `hai-cy2025`; the 2024 file is `hai-cy2024`); the site's sums over the hospitals scored in both years are
+  `sites/hacrp/web/data.js` `baselineShift`, and a test holds them. **HACRP-98** is slide 18 of CDC's "How Will My
+  SIRs Change?" (2022 rebaseline training, September 2024), which compares acute care hospitals' 2022 data under both
+  baselines; CDC's note for groups that publish SIRs says "The numerator of the SIR, number of observed HAIs, has not
+  changed between the 2015 and 2022 baseline"
+  (https://www.cdc.gov/nhsn/pdfs/rebaseline/Groups-Organizations-Use-Publish-SIRs.pdf), and that SIRs under the two
+  baselines "should not be displayed together, visually, in a single graph or plot": Methods compares them in words
+  only, and the history's lines stop at calendar year 2024.
 - **HACRP-49:** the FAQ's sentence ends "unless otherwise specified". The exceptions: FY2018's and FY2019's PSI 90
   periods (15 and 21 months, the ICD-10 change; 81 FR 57020), and the COVID-19 years: FY2022 (PSI 90 18 months,
   infections calendar 2019 only), FY2023 (no scores) and FY2024 (PSI 90 18 months, infections calendar 2022 only)
@@ -350,7 +367,7 @@ A claim marked `unverified` may not be used in copy.
     sum of lines 1.01, 1.02, 1.03, 1.04 and line 4", the DRG payment lines, and its line 11 (the DSH payment) is
     "(line 10 times the sum of lines 1.01, 1.02 1.03, and 1.04) times 25 percent".
 
-## Link check (2026-10-22; extended 2026-10-23)
+## Link check (2026-10-22; extended 2026-10-23 and 2026-11-13)
 
 Each URL the HACRP site links to (`sites/hacrp/web/links.js`), each dataset landing page in
 `data/pinned/manifest.json` and each source above, fetched with redirects followed. The Federal Register addresses redirect to the same document's
@@ -365,6 +382,11 @@ browser.
 | https://data.cms.gov/provider-data/dataset/y9us-9xdf | 200 | direct |
 | https://data.cms.gov/provider-data/sites/default/files/resources/f29bb7c812e242f6edfef0a4b7d0eaca_1760630713/Footnote_Crosswalk.csv | 200 | direct |
 | https://mp.qualityreportingcenter.com/globalassets/listserves/2026/iqr/2026-74-ip.pdf | 200 | direct |
+| https://data.cms.gov/provider-data/dataset/77hc-ibv8 | 200 | direct |
+| https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/77hc-ibv8 | 200 | direct |
+| https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv | 200 | direct |
+| https://www.cdc.gov/nhsn/2022rebaseline/How-Will-My-SIR-Change.pdf | 200 | direct |
+| https://www.cdc.gov/nhsn/pdfs/rebaseline/Groups-Organizations-Use-Publish-SIRs.pdf | 200 | direct |
 | https://qualityindicators.ahrq.gov/Downloads/Modules/PSI/V2024/TechSpecs/PSI_03_Pressure_Ulcer_Rate.pdf | 200 | direct |
 | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | 200 (a download; read from the identical file) | direct |
 | https://qualitynet.cms.gov/inpatient/measures/hai | 200 (application shell; read in a browser) | browser |

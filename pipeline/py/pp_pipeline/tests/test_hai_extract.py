@@ -213,8 +213,16 @@ class Derive(unittest.TestCase):
         data = self.zipped(raw(full_hospital("990001")))
         for wrong in ({"bytes": len(data) + 1}, {"sha256": "0" * 64}):
             with self.subTest(wrong):
-                with self.assertRaisesRegex(ValueError, "not the zip the manifest names"):
+                with self.assertRaisesRegex(ValueError, "not the file the manifest names"):
                     derive(data, self.source(data, **wrong), 2024)
+
+    def test_a_source_without_a_member_is_the_csv_itself(self):
+        text = raw(full_hospital("990001"))
+        data = text.encode("ascii")
+        source = {k: v for k, v in self.source(data).items() if k != "member"}
+        self.assertEqual(derive(data, source, 2024), (extract(text, 2024).encode("utf-8"), "ascii"))
+        with self.assertRaisesRegex(ValueError, "not the file the manifest names"):
+            derive(data + b"\n", source, 2024)
 
     def test_missing_member_raises(self):
         data = self.zipped(raw(full_hospital("990001")))
@@ -229,7 +237,7 @@ def hai_entries():
 class Committed(unittest.TestCase):
     def test_every_year_is_pinned(self):
         self.assertEqual([e["id"] for e in hai_entries()],
-                         [f"hai-cy{y}" for y in (2017, 2018, 2019, 2021, 2022, 2023, 2024)])
+                         [f"hai-cy{y}" for y in (2017, 2018, 2019, 2021, 2022, 2023, 2024, 2025)])
 
     def test_manifest_entries_are_well_formed(self):
         for entry in hai_entries():
@@ -239,11 +247,13 @@ class Committed(unittest.TestCase):
                 self.assertEqual(entry["derivedBy"], "pipeline/py/pp_pipeline/hai_extract.py")
                 self.assertLess(entry["bytes"], 10 * 1024 * 1024)
                 source = entry["derivedFrom"]
+                # an archived year is a zip and its member; the current year is the CSV itself
+                csv_itself = "member" not in source
                 self.assertEqual(sorted(k for k in source if k not in ("originalUrl",)),
-                                 ["bytes", "downloadUrl", "file", "member", "sha256"])
+                                 ["bytes", "downloadUrl", "file", *([] if csv_itself else ["member"]), "sha256"])
                 self.assertRegex(source["sha256"], r"[0-9a-f]{64}")
                 self.assertTrue(source["downloadUrl"].startswith("https://"))
-                self.assertTrue(source["member"].endswith(".csv"))
+                self.assertTrue((source["file"] if csv_itself else source["member"]).endswith(".csv"))
 
     def test_extract_shape_and_values(self):
         for entry in hai_entries():
@@ -275,17 +285,17 @@ class Committed(unittest.TestCase):
                 self.assertEqual(bad, [])
 
     @unittest.skipUnless(os.environ.get("PP_HAI_ZIP_DIR"),
-                         "set PP_HAI_ZIP_DIR to a folder holding the raw CMS zips to re-derive the extracts")
+                         "set PP_HAI_ZIP_DIR to a folder holding the raw CMS zips and CSVs to re-derive the extracts")
     def test_extracts_rederive_from_the_zips(self):
         zips = {}
-        for p in Path(os.environ["PP_HAI_ZIP_DIR"]).glob("*.zip"):
+        for p in Path(os.environ["PP_HAI_ZIP_DIR"]).iterdir():
             zips.setdefault(p.stat().st_size, []).append(p)
         for entry in hai_entries():
             source = entry["derivedFrom"]
             with self.subTest(entry["id"]):
                 found = [p for p in zips.get(source["bytes"], [])
                          if hashlib.sha256(p.read_bytes()).hexdigest() == source["sha256"]]
-                self.assertTrue(found, f"no zip in PP_HAI_ZIP_DIR matches {source['file']}")
+                self.assertTrue(found, f"no file in PP_HAI_ZIP_DIR matches {source['file']}")
                 year = int(PIN_ID_PATTERN.fullmatch(entry["id"]).group(1))
                 out, _ = derive(found[0].read_bytes(), source, year)
                 self.assertEqual(out, (PINNED_DIR / entry["path"]).read_bytes())

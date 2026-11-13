@@ -9,12 +9,14 @@ import { builtOn } from '../../../engine/js/dates.js';
 import { SHOWN_STATUSES } from '../../../engine/js/dollars/status.js';
 import { footnoteList, parseFootnotes } from '../../../engine/js/footnotes.js';
 import { numberOf } from '../../../engine/js/hacrp/eras.js';
+import { median } from '../../../engine/js/stats.js';
 import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { masterByCcn } from '../../../pipeline/master.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
 import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
 import { checkNetBands, netRangeOf, rangeOf, rangeShare } from './money.js';
+import { SIR_EXPECTED } from './constants.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
@@ -66,6 +68,34 @@ export function infectionsByHospital(files) {
     }
   }
   return out;
+}
+
+// Care Compare's infection results either side of CDC's baseline change (pinned extracts): the last calendar year on
+// the 2015 baseline and the first on the 2022 one. The history's lines stop at `before` (HAI_PINS): the two baselines
+// don't share a scale. Methods compares the two years once, in words (baselineShift).
+export const BASELINE_PINS = Object.freeze({ before: { cy: 2024, id: 'hai-cy2024' }, after: { cy: 2025, id: 'hai-cy2025' } });
+
+// What the baseline change did to C. diff results, over the hospitals with a C. diff SIR in both years (before, after:
+// { cy, rows } of the extracts): { hospitals, before, after }, each side { cy, above (SIRs over SIR_EXPECTED), median
+// (of the SIRs), observed, predicted (summed over the same hospitals) }. A hospital with an SIR but no counts fails.
+export function baselineShift(before, after) {
+  const [, k] = HAI_MEASURES.find(([id]) => id === 'CDI');
+  const col = (name) => `hai_${k}_${name}`;
+  const results = (rows) => new Map(rows.map((r) => [r.ccn, r]).filter(([, r]) => numberOf(r[col('sir')], col('sir')) !== null));
+  const [a, b] = [results(before.rows), results(after.rows)];
+  const ccns = [...a.keys()].filter((ccn) => b.has(ccn));
+  if (!ccns.length) throw new RangeError('baseline shift: no hospital has a C. diff SIR in both years');
+  const side = ({ cy }, rows) => {
+    const values = (name) => ccns.map((ccn) => {
+      const v = numberOf(rows.get(ccn)[col(name)], col(name));
+      if (v === null) throw new RangeError(`baseline shift: CY${cy} ${ccn} has a C. diff SIR but no ${name} count`);
+      return v;
+    });
+    const sirs = values('sir');
+    const sum = (xs) => xs.reduce((n, x) => n + x, 0);
+    return { cy, above: sirs.filter((v) => v > SIR_EXPECTED).length, median: median(sirs), observed: sum(values('observed')), predicted: sum(values('predicted')) };
+  };
+  return { hospitals: ccns.length, before: side(before, a), after: side(after, b) };
 }
 
 // The history, when there is one, must end with the HACRP file's year.
@@ -190,9 +220,13 @@ export function loadHacrp() {
     // Every program year's file, when the build has them (the history; null without).
     history,
     infections: history ? infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))) : new Map(),
+    // Care Compare's C. diff results either side of the baseline change (Methods § The infection baseline), and the
+    // newer file's manifest entry (its release date).
+    baselineShift: baselineShift(...[BASELINE_PINS.before, BASELINE_PINS.after].map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))),
+    baselineSource: manifest.find((e) => e.id === BASELINE_PINS.after.id),
     // Every pinned input the pages rest on: the HACRP file's, the history's, the hospital master's and the dollar
     // estimates' sources, and the files the pages read directly.
-    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
+    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID, BASELINE_PINS.before.id, BASELINE_PINS.after.id]).has(e.id)),
     manifest,
     // The emitted file keeps every row of CMS's file.
     sourceRows: data.hospitals.length,
