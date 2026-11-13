@@ -181,7 +181,7 @@ export const COPY = {
   baselineShift1: { text: "Care Compare's release of {released}, for calendar year {after}, is the first on the new baseline.", claim: ['HACRP-99', 'HACRP-48', 'HACRP-47'] },
   baselineShift2: { text: "Across the {n} hospitals with a C. diff SIR in both {before} and {after}, this site counts {aboveBefore} above {one} in {before} and {aboveAfter} in {after}, and the middle hospital's SIR went from {medianBefore} to {medianAfter}.", claim: 'HACRP-97' },
   baselineShift3: { text: "Those hospitals reported {observedPct} fewer C. diff infections ({observedBefore} to {observedAfter}), while the number CDC's model predicted for them fell {predictedPct} ({predictedBefore} to {predictedAfter}): reported cases fell while the middle SIR nearly doubled.", claim: 'HACRP-97' },
-  baselineShift4: { text: "Most of that rise comes from the new baseline, on which CDC says C. diff SIRs run generally higher; the predicted count also tracks factors at each hospital that change from year to year, so not all of it.", claim: ['HACRP-98', 'HACRP-20'] },
+  baselineShift4: { text: "Most of that rise comes from the new baseline, on which CDC says C. diff SIRs run generally higher; the two years differ in other ways too, so not all of it.", claim: 'HACRP-98' },
   baselineShift5: { text: "The program's penalties keep the {baseYear} baseline until fiscal year {nextFy}, so no number CMS has published for this program changes, and none on this site.", claim: 'HACRP-21' },
 
   // §8, reading a penalty.

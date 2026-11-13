@@ -1,10 +1,10 @@
 // The build-time loader's own checks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { decimal } from '../../../web/render/format.js';
 import { BASELINE_PINS, HAI_MEASURES, HAI_PINS } from '../pipeline/history.js';
 import { baselineShift, changedOn, changelogEntries, checkMasterYear, infectionsByHospital, loadHacrp } from '../web/data.js';
 import { DATA } from './pinned.js';
-import { decimal } from '../../../web/render/format.js';
 
 test('the master must be built for the same HACRP year as the HACRP file; the message names both years', () => {
   checkMasterYear({ programYears: { hacrp: 2026 } }, 2026);

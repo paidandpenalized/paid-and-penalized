@@ -211,11 +211,11 @@ A claim marked `unverified` may not be used in copy.
   baselines "should not be displayed together, visually, in a single graph or plot": Methods compares them in words
   only, and the history's lines stop at calendar year 2024. Methods' "most of that rise" is this site's reading of its
   own sums, printed beside it: reported cases fell, so the SIR's rise came through the predicted count, which fell 54%
-  against reported infections' 12%. The baseline is the likeliest cause, and CDC's source gives its direction, but each
-  year's predicted count also moves with that year's patients and the public files can't separate the two: hence
-  "most", not "all" (HACRP-20: the model adjusts for factors at each hospital). The words were written for the pinned
-  figures; `sites/hacrp/test/data.test.js` holds both the figures and what the words say of them (reported cases fell,
-  the predicted count fell further, the printed medians nearly doubled), so a re-pin that breaks the words fails CI.
+  against reported infections' 12%. The baseline is the likeliest cause, and CDC's source gives its direction, but the two years
+  differ in other ways too (each year's patients and hospital factors feed the predicted count) and the public files
+  can't separate them: hence "most", not "all". The words were written for the pinned figures;
+  `sites/hacrp/test/data.test.js` holds both the figures and what the words say of them (reported cases fell, the
+  predicted count fell further, the printed medians nearly doubled), so a re-pin that breaks the words fails CI's tests.
 - **HACRP-49:** the FAQ's sentence ends "unless otherwise specified". The exceptions: FY2018's and FY2019's PSI 90
   periods (15 and 21 months, the ICD-10 change; 81 FR 57020), and the COVID-19 years: FY2022 (PSI 90 18 months,
   infections calendar 2019 only), FY2023 (no scores) and FY2024 (PSI 90 18 months, infections calendar 2022 only)
