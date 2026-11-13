@@ -206,8 +206,8 @@ export async function generateHacrp(ctx, { released = SITE.sites.hacrp.released,
       assets,
       searchUrl,
       dollars,
-      // The cut hospitals in the dollar totals (scored, cut, estimated) whose Medicare agreement had ended by the year's end.
       shift: data.baselineShift,
+      // The cut hospitals in the dollar totals (scored, cut, estimated) whose Medicare agreement had ended by the year's end.
       closedCut: hospitals.filter((h) => isDecided(h) && h.paymentReduction === 'Yes' && dollars.byCcn.get(h.ccn)?.status === 'estimated' && endedBy(master.get(h.ccn)?.inactive ?? null, fy)).length,
       names: (ccn) => {
         const m = master.get(ccn);

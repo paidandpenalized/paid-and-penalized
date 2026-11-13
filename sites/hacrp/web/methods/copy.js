@@ -173,10 +173,10 @@ export const COPY = {
   // §7, the baseline.
   baselineHeading: { text: 'The infection baseline', claim: null },
   baselineText: { text: "An infection score compares a hospital's infections with the number CDC's model predicted, built on national data from {baseYear}.", claim: 'HACRP-20' },
-  baselineText2: { text: "CDC has moved to a {nextBase} baseline, which CMS says reaches this program's scores in fiscal year {nextFy}. Care Compare now shows infection results on the new baseline, and it shows one year at a time where this program uses two, so its numbers differ from the ones here.", claim: ['HACRP-21', 'HACRP-48', 'HACRP-46'] },
+  baselineText2: { text: "CDC has moved to a {nextBase} baseline, which CMS says reaches this program's scores in fiscal year {nextFy}. Care Compare now shows infection results on the new baseline, and it shows one year at a time where this program uses two, so its numbers differ from the ones here.", claim: ['HACRP-21', 'HACRP-98', 'HACRP-48', 'HACRP-46'] },
   // The November release, the first on the new baseline: C. diff across the hospitals scored in both years (data.js
   // baselineShift). One paragraph, a sentence per entry.
-  baselineShift1: { text: "Care Compare's release of {released}, for calendar year {after}, is the first on the new baseline.", claim: 'HACRP-48' },
+  baselineShift1: { text: "Care Compare's release of {released}, for calendar year {after}, is the first on the new baseline.", claim: ['HACRP-99', 'HACRP-48'] },
   baselineShift2: { text: "Across the {n} hospitals with a C. diff SIR in both {before} and {after}, this site counts {aboveBefore} above {one} in {before} and {aboveAfter} in {after}, and the middle hospital's SIR went from {medianBefore} to {medianAfter}.", claim: 'HACRP-97' },
   baselineShift3: { text: "Those hospitals reported {observedPct} fewer C. diff infections ({observedBefore} to {observedAfter}), while the number CDC's model predicted for them fell {predictedPct} ({predictedBefore} to {predictedAfter}): reported cases fell while the middle SIR nearly doubled.", claim: 'HACRP-97' },
   baselineShift4: { text: "Most of that rise comes from the new baseline, on which CDC says C. diff SIRs run generally higher; the two years' care differs too, so not all of it.", claim: 'HACRP-98' },

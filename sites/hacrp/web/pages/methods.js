@@ -181,7 +181,13 @@ const GLOSSARY = (v) => [
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
 // The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
 // baselineShift, data.js, with the newer file's release date, YYYY-MM-DD).
+// The words say which way the numbers went (fewer, fell, nearly doubled); a shift they no longer describe stops the build.
+export const SHIFT_RISE = Object.freeze({ above: 1.75, below: 2 });
 export function shiftPara({ hospitals, before: b, after: a, released }) {
+  const rise = a.median / b.median;
+  if (!(a.observed < b.observed && a.predicted < b.predicted && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below)) {
+    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, median x${rise}); rewrite baselineShift3`);
+  }
   const fell = (from, to) => pct(1 - to / from, 0);
   const whole = (x) => count(Math.round(x));
   const years = { before: String(b.cy), after: String(a.cy) };

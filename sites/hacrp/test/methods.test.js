@@ -20,7 +20,7 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH, shiftPara } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
@@ -61,6 +61,14 @@ test('the baseline section says Care Compare now shows the new baseline, and pri
   assert.match(section, /keep the 2015 baseline until fiscal year 2028/);
   // The page without the history says the same.
   assert.ok(strip(/<section class="doc__sec msec" id="baseline"[\s\S]*?<\/section>/.exec(WITHOUT.page)[0]) === section);
+});
+
+test('the baseline paragraph stops the build when its words (fewer, fell, nearly doubled) no longer fit the numbers', () => {
+  const s = DATA.baselineShift;
+  assert.doesNotThrow(() => shiftPara(s));
+  for (const after of [{ observed: s.before.observed + 1 }, { predicted: s.before.predicted }, { median: s.before.median * 2 }, { median: s.before.median * 1.5 }]) {
+    assert.throws(() => shiftPara({ ...s, after: { ...s.after, ...after } }), /no longer fit/, JSON.stringify(after));
+  }
 });
 
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {
