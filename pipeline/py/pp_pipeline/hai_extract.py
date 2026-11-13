@@ -3,11 +3,12 @@
 One calendar year of the six hospital-onset infection measures (HAI_1 CLABSI, HAI_2 CAUTI, HAI_3 SSI colon, HAI_4 SSI
 abdominal hysterectomy, HAI_5 MRSA bacteremia, HAI_6 C. difficile), one row per CCN: the standardized infection ratio
 (SIR), the observed count and the predicted count, each exactly as CMS wrote the Score cell ("Not Available" stays
-that text). The raw member is 38 to 48 MB, over the repo's 10 MiB limit, so the repo pins this subset. The manifest
-entry's `derivedFrom` records the zip's size, SHA-256, member name and CMS URL; anyone with that zip can re-run this
-and get the same bytes:
+that text). The raw file is 38 to 48 MB, over the repo's 10 MiB limit, so the repo pins this subset. The manifest
+entry's `derivedFrom` records the source's size, SHA-256 and CMS URL: for an archived year, a zip and the member it
+holds; for the year Care Compare shows now, the CSV itself (no `member`). Anyone with that file can re-run this and get
+the same bytes:
 
-    python3 -I pipeline/py/run.py extract-hai <path to the zip> <pin id, e.g. hai-cy2024>
+    python3 -I pipeline/py/run.py extract-hai <path to the zip or CSV> <pin id, e.g. hai-cy2024>
 
 CMS changed the file between years, and `extract` accepts exactly the variants seen so far: the CCN column is
 "Provider ID" (2017) or "Facility ID"; the dates are "Measure Start Date"/"Measure End Date" (2017) or "Start
@@ -143,25 +144,29 @@ def extract(raw_text, year=None):
     return out.getvalue()
 
 
-def derive(zip_bytes, source, year):
-    """(extract bytes, raw encoding) from a zip's bytes and the manifest's derivedFrom record; checks the zip first."""
-    if (len(zip_bytes), hashlib.sha256(zip_bytes).hexdigest()) != (source["bytes"], source["sha256"]):
-        raise ValueError(f"not the zip the manifest names ({source['file']}, {source['sha256']})")
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
-        raw = zf.read(source["member"])  # zipfile checks the member's CRC-32 as it reads
+def derive(source_bytes, source, year):
+    """(extract bytes, raw encoding) from the source file's bytes and the manifest's derivedFrom record; checks the
+    file first. With a `member`, the source is a zip holding the CSV; without one, it is the CSV."""
+    if (len(source_bytes), hashlib.sha256(source_bytes).hexdigest()) != (source["bytes"], source["sha256"]):
+        raise ValueError(f"not the file the manifest names ({source['file']}, {source['sha256']})")
+    if "member" in source:
+        with zipfile.ZipFile(io.BytesIO(source_bytes)) as zf:
+            raw = zf.read(source["member"])  # zipfile checks the member's CRC-32 as it reads
+    else:
+        raw = source_bytes
     text, encoding = decode(raw)
     return extract(text, year).encode("utf-8"), encoding
 
 
-def main(zip_path, pin_id):
+def main(source_path, pin_id):
     found = PIN_ID_PATTERN.fullmatch(pin_id)
     if not found:
         print(f"{pin_id!r} is not a pin id like hai-cy2024")
         return 2
     entry = manifest_entry(pin_id)
     try:
-        out, encoding = derive(Path(zip_path).read_bytes(), entry["derivedFrom"], int(found.group(1)))
+        out, encoding = derive(Path(source_path).read_bytes(), entry["derivedFrom"], int(found.group(1)))
     except (ValueError, KeyError, zipfile.BadZipFile) as err:
-        print(f"{zip_path}: {err}")
+        print(f"{source_path}: {err}")
         return 1
     return write_derived_pin(entry, out, note=f" (raw text: {encoding})")

@@ -45,6 +45,24 @@ const PAGE = WITH.page;
 
 // ---------- the page ----------
 
+test('the baseline section says Care Compare now shows the new baseline, and prints the November release\'s C. diff figures from the data', () => {
+  const section = strip(/<section class="doc__sec msec" id="baseline"[\s\S]*?<\/section>/.exec(PAGE)[0]);
+  assert.doesNotMatch(section, /is moving|CDC is moving/);
+  assert.match(section, /Care Compare now shows infection results on the new baseline/);
+  const { hospitals, before: b, after: a } = DATA.baselineShift;
+  const whole = (x) => count(Math.round(x));
+  assert.ok(section.includes(`Care Compare’s release of ${isoDate(DATA.baselineShift.released)}, for calendar year ${a.cy}, is the first on the new baseline.`), section);
+  assert.ok(section.includes(`Across the ${count(hospitals)} hospitals with a C. diff SIR in both ${b.cy} and ${a.cy}, this site counts ${count(b.above)} above 1.0 in ${b.cy} and ${count(a.above)} in ${a.cy}`), section);
+  assert.ok(section.includes(`from ${decimal(b.median, 2)} to ${decimal(a.median, 2)}`));
+  assert.ok(section.includes(`(${whole(b.observed)} to ${whole(a.observed)})`));
+  assert.ok(section.includes(`(${whole(b.predicted)} to ${whole(a.predicted)})`));
+  assert.match(section, /reported cases fell while the middle SIR nearly doubled/);
+  assert.match(section, /Most of that rise comes from the new baseline/);
+  assert.match(section, /keep the 2015 baseline until fiscal year 2028/);
+  // The page without the history says the same.
+  assert.ok(strip(/<section class="doc__sec msec" id="baseline"[\s\S]*?<\/section>/.exec(WITHOUT.page)[0]) === section);
+});
+
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {
   assert.equal(PAGE.match(/<h1[\s>]/g).length, 1);
   assert.ok(PAGE.includes('<h1 class="meth__title">'));

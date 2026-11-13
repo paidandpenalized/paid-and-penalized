@@ -22,7 +22,7 @@ import { CUT, NONE, NOT_CUT, everCut, rollOrder, tallyYears } from '../../../eng
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { groupLabel } from './groups.js';
 import { nameInText } from './places.js';
-import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
+import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES, SIR_BASE_YEAR } from './constants.js';
 import { COUNT_NOTE, METHODS_PATH } from './links.js';
 import { YEAR_CLASSES, yearClass, yearGroups } from './year-classes.js';
 import { fyLabel } from './copy.js';
@@ -389,7 +389,7 @@ export function part4({ hd, figure: fig, rollUrl = null, src = null, shapes = nu
   return html`${psec({ id: 'roll', wide: true, heading: t('rollHeading'), text: html`${para('rollText')}${para('rollText2')}${countLink(hd)}`, figure: rollFigure(hd, { n: fig(), source, rollUrl, src }) })}
 ${psec({ id: 'ever', heading: t('everHeading'), text: para('everText'), figure: everFigure(hd, { n: fig(), source }) })}
 ${shapes && master ? psec({ id: 'spread', wide: true, heading: t('ymapHeading'), text: html`${para('ymapText')}${para('ymapText2')}`, figure: yearMapFigure(hd, { n: fig(), source, shapes, master, rollUrl }) }) : ''}
-${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}
+${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText', { base: String(SIR_BASE_YEAR) })}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}
 ${psec({ id: 'chance', heading: t('chanceHeading'), text: html`${para('chanceText')}${para('chanceText2')}`, figure: chanceFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'again', heading: t('gapHeading'), text: html`${para('gapText')}${para('gapText2')}`, figure: gapFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'kinds', heading: t('kindsHeading'), text: html`${para('kindsText')}${flip ? para('kindsText2', { since: String(flip) }) : para('kindsText2NoFlip')}`, figure: kindsFigure(hd, { n: fig(), source, flip }) })}

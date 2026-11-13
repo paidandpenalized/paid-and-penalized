@@ -179,7 +179,24 @@ const GLOSSARY = (v) => [
 // boundaryText; eqFy, zFy: the fiscal years the equal-weight score and the z-scores began. names(ccn): a hospital's
 // { name, city, state } (the back-test's tooltips), or null. dollars: the dollar
 // estimates (data.js dollarsData), for the section on how this site estimates them; null for none.
-export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null, names = () => null, closedCut = 0 }) {
+// The baseline section's paragraph on Care Compare's first release on the new baseline (shift: loadHacrp's
+// baselineShift, data.js, with the newer file's release date, YYYY-MM-DD). Its words were written for the pinned
+// figures. sites/hacrp/test/data.test.js holds the figures and the words' meaning (fewer, fell further, nearly
+// doubled); CI's tests run it on every pull request to main, a re-pin included.
+function shiftPara({ hospitals, before: b, after: a, released }) {
+  const fell = (from, to) => pct(1 - to / from, 0);
+  const whole = (x) => count(Math.round(x));
+  const years = { before: String(b.cy), after: String(a.cy) };
+  return para(html`${[
+    fill('baselineShift1', { released: isoDate(released), after: years.after }),
+    fill('baselineShift2', { ...years, n: count(hospitals), one: SIR_EXPECTED_TEXT, aboveBefore: count(b.above), aboveAfter: count(a.above), medianBefore: decimal(b.median, 2), medianAfter: decimal(a.median, 2) }),
+    fill('baselineShift3', { observedPct: fell(b.observed, a.observed), observedBefore: whole(b.observed), observedAfter: whole(a.observed), predictedPct: fell(b.predicted, a.predicted), predictedBefore: whole(b.predicted), predictedAfter: whole(a.predicted) }),
+    t('baselineShift4'),
+    fill('baselineShift5', { baseYear: String(SIR_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }),
+  ].map((sentence, i) => html`${i ? ' ' : ''}${sentence}`)}`);
+}
+
+export function methodsPage({ fy, checks, years, newest, pins, changes, estimate, boundaryText, eqFy, zFy, robots, assets, searchUrl, dollars = null, names = () => null, closedCut = 0, shift = null }) {
   const { subtitle } = SITE.sites.hacrp;
   const figureNo = counter();
   const last = checks[checks.length - 1];
@@ -230,7 +247,7 @@ ${para(html`${estimate.tagged ? fill('estimateText', { tolerance: decimal(estima
 <p><a href="${SITE.pages.methods}#estimate">${t('estimateFamily')}</a></p>` },
     ...(dollars ? [dollarsSection(dollars, { fy, fig: figureNo, sourceOf: newest.source, names, pins, closedCut })] : []),
     { id: 'periods', heading: t('periodsHeading'), body: html`${para(fill('periodsText', { short: SHORT_NAMES.PSI90 }))}${para(t('periodsText2'))}`, fig: periodsFigure(years, { n: figureNo(), source }) },
-    { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}` },
+    { id: 'baseline', heading: t('baselineHeading'), body: html`${para(fill('baselineText', { baseYear: String(SIR_BASE_YEAR) }))}${para(fill('baselineText2', { nextBase: String(SIR_NEXT_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }))}${shift ? shiftPara(shift) : ''}` },
     { id: 'reading', heading: t('readHeading'), body: html`<ol class="reading">${['read1', 'read2', 'read3', 'read4', ['read5', { short: SHORT_NAMES.PSI90 }], ['read6', { pct: REDUCTION_TEXT }], 'read7'].map((k) => html`<li>${Array.isArray(k) ? fill(k[0], k[1]) : t(k)}</li>`)}</ol>` },
     { id: 'sources', heading: t('sourcesHeading'), body: html`${para(t('sourcesText'))}${receipts(pins)}${para(sentence('sourcesCode', { repo: externalLink(SITE.repo, t('sourcesCodeLink')) }))}` },
     { id: 'changed', heading: t('changedHeading'), body: html`${para(t('changedText'))}

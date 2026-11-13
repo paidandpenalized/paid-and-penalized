@@ -25,6 +25,10 @@ export const HISTORY_PINS = Object.freeze([
 // one row per hospital, each HAI measure's SIR and its observed and predicted counts, CMS's text. CY2020 has no
 // full-year file (CMS excused the first half of 2020).
 export const HAI_PINS = Object.freeze([2017, 2018, 2019, 2021, 2022, 2023, 2024].map((cy) => ({ cy, id: `hai-cy${cy}` })));
+// Care Compare's results either side of CDC's baseline change: the history's last year, on the 2015 baseline, and the
+// first on the 2022 one, which the history leaves out (the two baselines don't share a scale). Methods compares the two
+// years once, in words (sites/hacrp/web/data.js baselineShift).
+export const BASELINE_PINS = Object.freeze({ before: HAI_PINS.at(-1), after: Object.freeze({ cy: 2025, id: 'hai-cy2025' }) });
 // Care Compare's HAI measure numbers, as this site names them.
 export const HAI_MEASURES = Object.freeze([['CLABSI', 1], ['CAUTI', 2], ['SSI_COLON', 3], ['SSI_HYST', 4], ['MRSA', 5], ['CDI', 6]]);
 
