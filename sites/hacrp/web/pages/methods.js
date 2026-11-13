@@ -183,28 +183,27 @@ const GLOSSARY = (v) => [
 // baselineShift, data.js, with the newer file's release date, YYYY-MM-DD).
 // The shift's printed figures: the share each count fell ("12%") and the medians to two decimals.
 const fellText = (from, to) => pct(1 - to / from, 0);
-const medianText = (x) => decimal(x, 2);
-// Whether the shift still fits the paragraph's words (methods/copy.js baselineShift3 and 4), judged on what the page
-// prints: reported cases "fewer" (fell, and not by a printed 0%), the predicted count "fell", the printed middle SIR
-// "nearly doubled" (a rise strictly between SHIFT_RISE's ends), and "most" of that rise from the baseline (the predicted
-// count's fall covers more than half the rise on a log scale: the SIR is observed over predicted, so the two factors
-// add there). A shift the words no longer describe stops the build (shiftPara).
-export const SHIFT_RISE = Object.freeze({ above: 1.75, below: 2 });
+const hundredths = (x) => Math.round(x * 100) / 100;
+// Whether the shift still fits the paragraph's words (methods/copy.js baselineShift3 and 4), on the figures the page
+// prints: reported cases "fewer" (by at least a printed 1%), the predicted count "fell", and the printed middle SIR
+// "nearly doubled" (a rise strictly between SHIFT_RISE's ends). "Most of that rise comes from the new baseline" follows:
+// with reported cases down and the SIR up, the rise came through the predicted count. A shift the words no longer
+// describe stops the build (shiftPara).
+const SHIFT_RISE = Object.freeze({ above: 1.75, below: 2 });
 export function shiftFits({ before: b, after: a }) {
-  const rise = Number(medianText(a.median)) / Number(medianText(b.median));
-  return a.observed < b.observed && fellText(b.observed, a.observed) !== pct(0, 0) && a.predicted < b.predicted
-    && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below
-    && Math.log(b.predicted / a.predicted) > Math.log(rise) / 2;
+  const rise = hundredths(a.median) / hundredths(b.median);
+  return Math.round(100 * (1 - a.observed / b.observed)) >= 1 && a.predicted < b.predicted
+    && rise > SHIFT_RISE.above && rise < SHIFT_RISE.below;
 }
 export function shiftPara({ hospitals, before: b, after: a, released }) {
   if (!shiftFits({ before: b, after: a })) {
-    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, median ${b.median} -> ${a.median}); rewrite baselineShift3 and 4 and shiftFits together`);
+    throw new RangeError(`baseline shift: the Methods words no longer fit (observed ${b.observed} -> ${a.observed}, predicted ${b.predicted} -> ${a.predicted}, printed median x${hundredths(a.median) / hundredths(b.median)}); rewrite baselineShift3 and 4 and shiftFits together`);
   }
   const whole = (x) => count(Math.round(x));
   const years = { before: String(b.cy), after: String(a.cy) };
   return para(html`${[
     fill('baselineShift1', { released: isoDate(released), after: years.after }),
-    fill('baselineShift2', { ...years, n: count(hospitals), one: SIR_EXPECTED_TEXT, aboveBefore: count(b.above), aboveAfter: count(a.above), medianBefore: medianText(b.median), medianAfter: medianText(a.median) }),
+    fill('baselineShift2', { ...years, n: count(hospitals), one: SIR_EXPECTED_TEXT, aboveBefore: count(b.above), aboveAfter: count(a.above), medianBefore: decimal(b.median, 2), medianAfter: decimal(a.median, 2) }),
     fill('baselineShift3', { observedPct: fellText(b.observed, a.observed), observedBefore: whole(b.observed), observedAfter: whole(a.observed), predictedPct: fellText(b.predicted, a.predicted), predictedBefore: whole(b.predicted), predictedAfter: whole(a.predicted) }),
     t('baselineShift4'),
     fill('baselineShift5', { baseYear: String(SIR_BASE_YEAR), nextFy: String(SIR_NEXT_FY) }),

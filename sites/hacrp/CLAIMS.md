@@ -54,7 +54,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-44 | The MRSA measure counts bloodstream infections found by a lab test that began in the hospital. | https://www.cdc.gov/nhsn/pdfs/ps-analysis-resources/nhsn-sir-guide.pdf | "The SIRs for MRSA bacteremia include only healthcare facility-onset (HO), non-duplicate MRSA blood LabID events in the numerator." | 2026-10-22 |
 | HACRP-45 | CDC adjusts the central line and catheter infection predictions for the kind of unit a patient is in. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "CLABSI and CAUTI are risk adjusted at the hospital and the patient-care-unit levels." | 2026-10-22 |
 | HACRP-46 | Care Compare shows one year of infection results, where this program uses two, and lists hospitals outside the program, such as critical access hospitals, so their numbers can differ. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "may differ slightly from the results reported in the HAC Reduction Program dataset reported on the data catalog on Data.cms.gov" | 2026-10-22 |
-| HACRP-47 | CDC has calculated SIRs against its 2015 baseline since 2016, so Care Compare's results before the 2022 baseline, the calendar years 2017 to 2024 this site draws included, share one baseline. | https://qualitynet.cms.gov/inpatient/measures/hai | "Since 2016, CDC has been using data collected in calendar year (CY) 2015 to determine the standard population." | 2026-11-13 |
+| HACRP-47 | CDC has calculated SIRs against its 2015 baseline since 2016, and CMS shared them for the last time in its summer 2026 preview, so Care Compare's results until the 2022 baseline, the calendar years this site draws included, share one baseline. | https://qualitynet.cms.gov/inpatient/measures/hai | "Since 2016, CDC has been using data collected in calendar year (CY) 2015" … "for the last time during the summer 2026 preview period" | 2026-11-13 |
 | HACRP-48 | Care Compare's infection results for calendar year 2025 are SIRs on the 2022 baseline. | https://mp.qualityreportingcenter.com/globalassets/listserves/2026/iqr/2026-74-ip.pdf | "using the 2022 baseline" … "will publicly appear on the Compare tool" … "Quarter 1 through Quarter 4 of Calendar Year 2025" | 2026-11-13 |
 | HACRP-49 | Each measure normally covers two years of care, and the window moves forward a year each program year. | https://qualitynet.cms.gov/files/6890d895ab2b357912aca798?filename=FY-2026-HACRP-FAQ.pdf | "uses a standard two-year performance period for the CMS PSI 90 and CDC’s NHSN HAI measures, advanced by one year every subsequent program year" | 2026-10-22 |
 | HACRP-50 | Early in the COVID-19 pandemic, CMS excused hospitals from reporting their infection data for the first half of 2020. | https://www.federalregister.gov/documents/2020/09/02/2020-19150/medicare-and-medicaid-programs-clinical-laboratory-improvement-amendments-clia-and-patient | "we excepted hospitals from the requirement to report first and second quarter of CY 2020 HAC Reduction Program chart-abstracted measures" | 2026-10-22 |
@@ -190,8 +190,9 @@ A claim marked `unverified` may not be used in copy.
   risk adjusted at the hospital level." HACRP-20's notes give the SSI model's patient factors.
 - **HACRP-46** cites FAQ question 54 and its Table 6: the program's file has two years of infection data, updated
   yearly; Care Compare has one year (four quarters), updated quarterly.
-- **HACRP-47** cites QualityNet's HAI overview, which also says the 2015-baselined SIRs were shared for the last time in
-  the summer 2026 preview. That Care Compare's calendar-year 2017 to 2024 results all used the 2015 baseline rests on
+- **HACRP-47** cites QualityNet's HAI overview (re-read 2026-11-13). The same page says the fall 2026 Care Compare release
+  "will include Q1–Q4 2025 data" on the 2022 baseline, and that the HAC Reduction Program uses the 2015 baseline for
+  the last time in FY2027 (CY2024 and CY2025 data) and the 2022 baseline from FY2028 (CY2025 and CY2026 data). That Care Compare's calendar-year 2017 to 2024 results all used the 2015 baseline rests on
   these statements: no CMS sentence names those years. **HACRP-48** (CMS listserv 2026-74-IP, August 20, 2026) announced
   the 2022-baseline SIRs for calendar year 2025 for Care Compare and the Data Catalog; the release that carries them is
   **HACRP-99**, the Provider Data Catalog record of the HAI dataset (77hc-ibv8). The file doesn't name its baseline, but
@@ -209,9 +210,10 @@ A claim marked `unverified` may not be used in copy.
   (https://www.cdc.gov/nhsn/pdfs/rebaseline/Groups-Organizations-Use-Publish-SIRs.pdf), and that SIRs under the two
   baselines "should not be displayed together, visually, in a single graph or plot": Methods compares them in words
   only, and the history's lines stop at calendar year 2024. Methods' "most of that rise" is this site's reading of its
-  own sums, which it prints beside it: with the observed count unchanged by the baseline, the SIR rises when the
-  predicted count falls faster than reported infections (54% against 12% for C. diff); CDC's source gives the direction,
-  not the share. The two years' care differs too, so the copy says "most", not "all".
+  own sums, printed beside it: reported cases fell, so the SIR's rise came through the predicted count, which fell 54%
+  against reported infections' 12%. The baseline is the likeliest cause, and CDC's source gives its direction, but each
+  year's predicted count also moves with that year's patients and the public files can't separate the two: hence
+  "most", not "all". The build stops if the counts stop fitting those words (`pages/methods.js` `shiftFits`).
 - **HACRP-49:** the FAQ's sentence ends "unless otherwise specified". The exceptions: FY2018's and FY2019's PSI 90
   periods (15 and 21 months, the ICD-10 change; 81 FR 57020), and the COVID-19 years: FY2022 (PSI 90 18 months,
   infections calendar 2019 only), FY2023 (no scores) and FY2024 (PSI 90 18 months, infections calendar 2022 only)

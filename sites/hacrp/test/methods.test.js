@@ -20,7 +20,7 @@ import { COUNT_NOTE } from '../web/links.js';
 import { generateHacrp } from '../web/generate.js';
 import { historyData, yearRows } from '../web/history-data.js';
 import { periodsFigure, pipeline, proofFigure, receipt, receipts, sidesFigure } from '../web/methods-figures.js';
-import { ABOVE_BY, METHODS_PATH, SHIFT_RISE, shiftFits, shiftPara } from '../web/pages/methods.js';
+import { ABOVE_BY, METHODS_PATH, shiftFits, shiftPara } from '../web/pages/methods.js';
 import { ASSETS, checkAsofBar } from './fixtures.js';
 import { DATA, HD, renderMethods } from './pinned.js';
 import { NO_SCORE_AT, WITHHELD, synthHistory, synthMaster } from './history-fixtures.js';
@@ -67,18 +67,17 @@ test('the baseline paragraph stops the build when its words (fewer, fell, nearly
   const s = DATA.baselineShift;
   const { before: b, after: a } = s;
   assert.doesNotThrow(() => shiftPara(s));
-  const at = (k) => b.median * k;
-  const rise = a.median / b.median;
   const cases = [
     { observed: b.observed + 1 }, // reported cases rose
     { observed: b.observed * 0.999 }, // fell, but prints as 0%
-    { predicted: b.predicted / Math.exp(0.4 * Math.log(rise)) }, // the predicted count's fall covers 40% of the rise: not "most"
-    { median: at(SHIFT_RISE.above * 0.98) }, { median: at(SHIFT_RISE.below * 1.02) }, // past either end: not "nearly doubled"
+    { predicted: b.predicted }, // the predicted count did not fall
   ];
   for (const change of cases) assert.throws(() => shiftPara({ ...s, after: { ...a, ...change } }), /no longer fit/, JSON.stringify(change));
-  // Judged on the printed medians: 0.33 to 0.67 reads as more than double, though 0.334 to 0.665 is not.
-  assert.equal(shiftFits({ before: { ...b, median: 0.334 }, after: { ...a, median: 0.665 } }), false);
-  for (const k of [SHIFT_RISE.above + 0.03, SHIFT_RISE.below - 0.03]) assert.equal(shiftFits({ before: b, after: { ...a, median: at(k) } }), true, `x${k}`);
+  // "Nearly doubled", on the printed medians: from 0.40, 0.71 to 0.79 fit; 0.70 (x1.75) and 0.80 (x2) don't, and
+  // 0.334 to 0.665 prints 0.33 to 0.67, more than double.
+  const medians = (from, to) => shiftFits({ before: { ...b, median: from }, after: { ...a, median: to } });
+  assert.deepEqual([0.70, 0.71, 0.79, 0.80].map((to) => medians(0.4, to)), [false, true, true, false]);
+  assert.equal(medians(0.334, 0.665), false);
 });
 
 test('the Methods page is written, indexable, with one h1, its ids once and every contents link and aria reference resolving', () => {
