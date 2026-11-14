@@ -116,11 +116,16 @@ def cbsa_names():
 
 
 @functools.lru_cache(maxsize=None)
-def tables(hgi=HGI):
-    """The parsed CMS tables the master joins: HGI (the `hgi` pin, and the previous file), the impact file, POS, and
-    each program's listing."""
-    return {"hgi": read_hgi(read_pinned_bytes(hgi).decode("utf-8")),
-            "hgi_prior": read_hgi(read_pinned_bytes(HGI_PRIOR).decode("utf-8")), "impact": read_impact(impact_text()),
+def hgi_table(pin):
+    """A Care Compare Hospital General Information pin, parsed (read_hgi)."""
+    return read_hgi(read_pinned_bytes(pin).decode("utf-8"))
+
+
+@functools.lru_cache(maxsize=None)
+def tables():
+    """The parsed CMS tables the master joins: HGI and the previous HGI, the impact file, POS, and each program's
+    listing."""
+    return {"hgi": hgi_table(HGI), "hgi_prior": hgi_table(HGI_PRIOR), "impact": read_impact(impact_text()),
             "pos": read_pos(read_pinned_bytes(POS).decode("utf-8")),
             "programs": {"hacrp": hacrp_program(), "hrrp": hrrp_program()}}
 
@@ -143,7 +148,7 @@ def build_from_pins(built_at, ref=None, hgi=HGI):
     the golden test fails too when there are more unchecked counties than allowed. `hgi` picks the Care Compare pin:
     the Thirty Day Readmissions checks build on the earlier file, the one that site used."""
     ref = ref or new_ref()
-    t = tables(hgi)
+    t = {**tables(), "hgi": hgi_table(hgi)}
     master = build_master(
         hgi=t["hgi"],
         hgi_prior=t["hgi_prior"],

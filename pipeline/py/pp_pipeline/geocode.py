@@ -26,7 +26,7 @@ import urllib.request
 import uuid
 
 from pp_engine.master import universe
-from pp_engine.parse import read_points
+from pp_engine import parse
 from pp_pipeline.emit_hospital import tables, tdr_points
 from pp_pipeline.files import PINNED_DIR, REPO_ROOT
 
@@ -55,11 +55,18 @@ def gap():
     return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - t["programs"]["hrrp"]["subject"])
 
 
-def added():
-    """The gap's CCNs the current Care Compare file lists, the previous one doesn't, and the pinned CSV has no row for,
-    sorted."""
+def pinned_rows(path=OUT):
+    """The pinned CSV's rows ([ccn, lat, lon, match, source] text, as written), its header checked."""
+    header, *body = parse.rows(path.read_text(encoding="utf-8"), ",")
+    if header != FIELDS:
+        raise SystemExit(f"{path.name}: unexpected header {header}")
+    return body
+
+
+def added(have):
+    """The gap's CCNs the current Care Compare file lists, the previous one doesn't, and `have` (CCNs the pinned CSV
+    already places) doesn't, sorted."""
     t = tables()
-    have = set(read_points(OUT.read_text(encoding="utf-8")))
     return [c for c in gap() if c in t["hgi"] and c not in t["hgi_prior"] and c not in have]
 
 
@@ -152,11 +159,11 @@ def write(found, attempted, path=OUT, keep=()):
 
 
 def main(send=post, only_added=False):
-    ccns = added() if only_added else gap()
+    keep = pinned_rows() if only_added else []
+    ccns = added({r[0] for r in keep}) if only_added else gap()
     t = tables()
     cands = candidates(ccns, t["hgi"], t["pos"])
     found = geocode(cands, send)
-    keep = list(csv.reader(io.StringIO(OUT.read_text(encoding="utf-8"))))[1:] if only_added else ()
     write(found, len(cands), keep=keep)
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
     print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "

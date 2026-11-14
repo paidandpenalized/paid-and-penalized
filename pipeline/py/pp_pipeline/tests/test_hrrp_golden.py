@@ -14,11 +14,10 @@ import unittest
 from unittest import mock
 
 from pp_engine import hrrp
-from pp_engine.hrrp_read import read_hgi_stars
 from pp_engine.parse import SchemaError
 from pp_pipeline import emit_hospital, emit_hrrp
 from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, require_current
-from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, care_compare_changed, july_master
+from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, july_master, unexplained
 
 # meta keys the emitted file sets differently on purpose: `sources` names the manifest's pins; `whatsNew` is page copy,
 # kept with the site's content.
@@ -26,10 +25,9 @@ META_DIFFERS = ("sources", "whatsNew")
 # What the MDH case mix (methods_version 2) moves: an MDH's base and penalty, and the national totals of both.
 MDH_FIELDS = ("base", "pen")
 TOTALS_DIFFER = ("modelBase", "modelPen")
-# A hospital record's fields that come from its Care Compare row (the master's CARE_COMPARE_FIELDS, as the record names
-# them, and the star rating), and the meta that counts them (how many map points came from an address, ZIP or county).
+# A hospital record's fields that come from its Care Compare row: the master's CARE_COMPARE_FIELDS the record copies,
+# and the star rating.
 RECORD_CARE_COMPARE = tuple(f for f in CARE_COMPARE_FIELDS if f in emit_hrrp.MASTER_FIELDS) + ("star",)
-META_CARE_COMPARE = ("geocode",)
 
 
 @functools.lru_cache(maxsize=None)
@@ -42,7 +40,7 @@ def on_the_sites_care_compare(the_sites_case_mix=False):
     """A build on the Care Compare file Thirty Day Readmissions used (its master and star ratings); with
     `the_sites_case_mix`, the MDH add-on also uses the transfer-adjusted case mix, as that site's does."""
     real = emit_hrrp.read_inputs
-    stars = read_hgi_stars(read_pinned_bytes(emit_hospital.HGI_PRIOR).decode("utf-8"))
+    stars = emit_hrrp.care_compare_stars((emit_hospital.HGI_PRIOR,))
 
     def inputs():
         got = {**real(), "stars": stars}
@@ -69,6 +67,10 @@ def differences(mine, theirs):
     a, b = {h["id"]: as_the_site_file_rounds(h) for h in mine}, {h["id"]: h for h in theirs}
     return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
             for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
+
+
+def by_id(data):
+    return {h["id"]: h for h in data["hospitals"]}
 
 
 def assert_none(test, diffs):
@@ -105,18 +107,15 @@ class Golden(unittest.TestCase):
         assert_none(self, [d for d in diffs if not (d[0] in mdh_ids() and d[1] in MDH_FIELDS)])
 
     def test_the_newer_care_compare_moves_only_its_own_fields_of_the_hospitals_it_changed(self):
-        changed = care_compare_changed()
         now, then = fresh(), on_the_sites_care_compare()
-        before = {h["id"]: h for h in then["hospitals"]}
-        self.assertEqual(sorted(before), [h["id"] for h in now["hospitals"]])
-        moved = [f"{h['id']} {k}: {before[h['id']].get(k)!r} -> {h.get(k)!r}" for h in now["hospitals"]
-                 for k in sorted(set(h) | set(before[h["id"]]))
-                 if h.get(k) != before[h["id"]].get(k) and not (h["id"] in changed and k in RECORD_CARE_COMPARE)]
+        self.assertEqual(sorted(by_id(now)), sorted(by_id(then)))
+        moved = unexplained(by_id(now), by_id(then), RECORD_CARE_COMPARE)
         self.assertEqual(moved, [], f"{len(moved)} differences Care Compare does not explain:\n" + "\n".join(moved[:30]))
-        meta = {k for k in now["meta"].keys() | then["meta"].keys() if now["meta"].get(k) != then["meta"].get(k)}
-        self.assertLessEqual(meta, {"sources", *META_CARE_COMPARE})
-        self.assertEqual({k: v for k, v in now.items() if k not in ("meta", "hospitals", "source_manifest", "sources")},
-                         {k: v for k, v in then.items() if k not in ("meta", "hospitals", "source_manifest", "sources")})
+        # Of the meta, only the count of map points by where they came from (address, ZIP or county) may move.
+        self.assertEqual({k for k in now["meta"].keys() | then["meta"].keys() if now["meta"].get(k) != then["meta"].get(k)}
+                         - {"geocode"}, set())
+        self.assertEqual({k: v for k, v in now.items() if k not in ("meta", "hospitals")},
+                         {k: v for k, v in then.items() if k not in ("meta", "hospitals")})
 
 
 class MdhCaseMix(unittest.TestCase):

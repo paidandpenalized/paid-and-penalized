@@ -10,7 +10,7 @@ import unittest
 
 from pp_pipeline.emit_hospital import committed_path, tdr_data
 from pp_pipeline.files import read_json
-from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, care_compare_changed, july_master
+from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, july_master, unexplained
 
 
 # (master field, TDR field) compared for every TDR hospital
@@ -40,10 +40,7 @@ class TdrCheck(unittest.TestCase):
         self.assertEqual(diffs, [], f"{len(diffs)} location differences:\n" + "\n".join(diffs[:50]))
 
     def test_the_newer_care_compare_moves_only_its_own_fields_of_the_hospitals_it_changed(self):
-        changed = care_compare_changed()
-        diffs = [f"{c} {k}: {self.july[c].get(k)!r} -> {h.get(k)!r}" for c, h in sorted(self.master.items())
-                 if c in self.july for k in sorted(set(h) | set(self.july[c]))
-                 if h.get(k) != self.july[c].get(k) and not (c in changed and k in CARE_COMPARE_FIELDS)]
+        diffs = unexplained(self.master, self.july, CARE_COMPARE_FIELDS)
         self.assertEqual(diffs, [], f"{len(diffs)} differences Care Compare does not explain:\n" + "\n".join(diffs[:50]))
 
 

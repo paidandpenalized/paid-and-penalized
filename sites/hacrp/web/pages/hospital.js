@@ -90,7 +90,7 @@ function starsSpec(view, careSource) {
   const value = n !== null && n <= CARE_COMPARE_STARS
     ? html`<span class="stars" aria-hidden="true">${'★'.repeat(n)}<span class="stars__off">${'☆'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
     : cc.rating;
-  const note = html`${fillKeep('starsNote', { date: isoDate(cc.modified ?? careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br>${externalLink(careCompareHref(view.ccn), t('starsLink'))}`;
+  const note = html`${fillKeep('starsNote', { date: isoDate(cc.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br>${externalLink(careCompareHref(view.ccn), t('starsLink'))}`;
   return { label: t('fieldStars'), value, note, size: n === null ? 'sm' : null, fieldCls: 'f-stars' };
 }
 

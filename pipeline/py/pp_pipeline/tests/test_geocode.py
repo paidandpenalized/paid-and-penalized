@@ -118,10 +118,12 @@ class GapTest(unittest.TestCase):
         self.assertFalse(set(gap) & geocode.tables()["programs"]["hrrp"]["subject"])
 
     def test_added_is_the_gap_new_to_care_compare_with_no_point_yet(self):
-        added, t = geocode.added(), geocode.tables()
+        have = {r[0] for r in geocode.pinned_rows()}
+        added, t = geocode.added(have), geocode.tables()
         self.assertLessEqual(set(added), set(geocode.gap()) & set(t["hgi"]))
         self.assertFalse(set(added) & set(t["hgi_prior"]))
-        self.assertFalse(set(added) & set(geocode.read_points(geocode.OUT.read_text(encoding="utf-8"))))
+        self.assertFalse(set(added) & have)
+        self.assertEqual(geocode.added(set()), sorted(set(geocode.gap()) & set(t["hgi"]) - set(t["hgi_prior"])))
 
 
 if __name__ == "__main__":

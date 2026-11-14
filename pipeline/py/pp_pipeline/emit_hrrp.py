@@ -81,6 +81,12 @@ def master_fields(m):
     return out
 
 
+def care_compare_stars(pins=(emit_hospital.HGI_PRIOR, emit_hospital.HGI)):
+    """{ccn: star rating} from Care Compare pins, oldest first: a later file's rating wins, so a hospital the current
+    file dropped keeps its rating from the previous one, as the master keeps its row."""
+    return {c: s for pin in pins for c, s in read_hgi_stars(read_pinned_bytes(pin).decode("utf-8")).items()}
+
+
 def read_inputs():
     """The pinned files, parsed: {supp, pub, t15, impact, rates, stars, fy}."""
     impact_text = emit_hospital.impact_text()
@@ -93,9 +99,7 @@ def read_inputs():
         "t15": read_table15(read_zip_text_cp1252(TABLE15, TABLE15_MEMBER), fy),
         "impact": read_estimate_inputs(impact_text, fy, GROUPER),
         "rates": read_operating_rates(read_zip_text_cp1252(RATES, RATES_MEMBER)),
-        # A hospital the current Care Compare file dropped keeps its rating from the previous one, as in the master.
-        "stars": {**read_hgi_stars(read_pinned_bytes(emit_hospital.HGI_PRIOR).decode("utf-8")),
-                  **read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8"))},
+        "stars": care_compare_stars(),
     }
 
 

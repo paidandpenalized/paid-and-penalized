@@ -27,9 +27,9 @@ export const HGI_ID = 'hgi-2026-11';
 export const HGI_PRIOR_ID = 'hgi-2026-07';
 
 // CCN -> { rating, footnotes, modified }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words
-// when it rates none), its footnotes' text, and `modified`, the date of the file it came from (null: not given). A row
-// without the columns fails the build.
-export function careCompareRatings(csvText, footnotes, modified = null) {
+// when it rates none), its footnotes' text, and `modified`, the date of the file it came from. A row without the
+// columns fails the build.
+export function careCompareRatings(csvText, footnotes, modified) {
   const out = new Map();
   for (const row of parseCsv(csvText)) {
     const ccn = row['Facility ID'];
