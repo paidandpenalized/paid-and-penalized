@@ -28,7 +28,7 @@ TOTALS_DIFFER = ("modelBase", "modelPen")
 # A hospital record's fields that come from its Care Compare row: the master's CARE_COMPARE_FIELDS the record copies,
 # and the star rating (and whether it came from an earlier file).
 RECORD_CARE_COMPARE = tuple(emit_hrrp.RENAMED.get(f, f) for f in CARE_COMPARE_FIELDS
-                            if f in emit_hrrp.MASTER_FIELDS) + ("star", "starPrior")
+                            if f in emit_hrrp.MASTER_FIELDS) + ("star", "careCompareUnlisted")
 
 
 @functools.lru_cache(maxsize=None)
@@ -62,12 +62,16 @@ def as_the_site_file_rounds(h):
     return {**h, "dual": hrrp.rnd(h["dual"], 4, half_up=True)} if "dual" in h else h
 
 
+# Record fields this site adds that Thirty Day Readmissions' file never had.
+ONLY_HERE = ("careCompareUnlisted",)
+
+
 def differences(mine, theirs):
-    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs, the dual proportion compared at
-    the site file's 4 decimals."""
+    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs (ONLY_HERE aside), the dual
+    proportion compared at the site file's 4 decimals."""
     a, b = {h["id"]: as_the_site_file_rounds(h) for h in mine}, {h["id"]: h for h in theirs}
     return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
-            for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
+            for k in sorted((set(h) | set(a[c])) - set(ONLY_HERE)) if a[c].get(k, "absent") != h.get(k, "absent")]
 
 
 def by_id(data):
@@ -136,6 +140,25 @@ class MdhCaseMix(unittest.TestCase):
     def test_meta_sources_name_every_pin(self):
         ids = [s["id"] for s in fresh()["meta"]["sources"] if "id" in s]
         self.assertEqual(ids, list(fresh()["sources"]))
+
+
+class CareCompareStars(unittest.TestCase):
+    """The ratings Readmissions reads: oldest file first, the last file's rating (even none) wins, and a hospital the
+    last file doesn't list is marked unlisted."""
+
+    def test_the_last_file_wins_and_a_dropped_hospital_keeps_its_earlier_rating(self):
+        files = {"old": "Facility ID,Hospital overall rating\n990001,4\n990002,3\n990003,2\n",
+                 "new": "Facility ID,Hospital overall rating\n990002,Not Available\n990003,5\n990004,1\n"}
+        with mock.patch.object(emit_hrrp, "read_pinned_bytes", lambda pin: files[pin].encode("utf-8")):
+            got = emit_hrrp.care_compare_stars(("old", "new"))
+        self.assertEqual(got, {"990001": (4, True), "990002": (None, False), "990003": (5, False),
+                               "990004": (1, False)})
+
+    def test_a_hospital_no_file_lists_is_unlisted_in_the_record(self):
+        listed = set(emit_hrrp.care_compare_stars())
+        records = {h["id"]: h for h in fresh()["hospitals"]}
+        self.assertEqual({c for c, h in records.items() if h.get("careCompareUnlisted")}, set(records) - listed)
+        self.assertTrue(all(h.get("careCompareUnlisted", True) is True for h in records.values()))
 
 
 class DualProportion(unittest.TestCase):

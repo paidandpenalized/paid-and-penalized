@@ -173,9 +173,20 @@ class ChangedFlowTest(unittest.TestCase):
                            "990009,30.00000,-85.00000,Exact,pos\n")
             with mock.patch.object(geocode, "changed", return_value=([], ["990002"])), \
                     mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}):
-                geocode.main(send=lambda batch: "", only_changed=True, out=out)
+                geocode.main(send=lambda batch: "".join(f'"{i}","x","No_Match"\n' for i in batch), only_changed=True,
+                             out=out)
             self.assertEqual(out.read_text().splitlines(), ["ccn,lat,lon,match,source",
                                                             "990009,30.00000,-85.00000,Exact,pos"])
+
+    def test_an_answer_for_no_address_stops_before_anything_is_written(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "geocodes.csv"
+            out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n")
+            with mock.patch.object(geocode, "changed", return_value=([], ["990002"])), \
+                    mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}), \
+                    self.assertRaisesRegex(SystemExit, "answered none"):
+                geocode.main(send=lambda batch: "<html>Service Unavailable</html>", only_changed=True, out=out)
+            self.assertIn("990002,30.00000", out.read_text())
 
     def test_changed_sorts_new_and_moved_and_ignores_a_case_only_edit(self):
         row = lambda street: {"street": street, "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}  # noqa: E731

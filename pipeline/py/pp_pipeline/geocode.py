@@ -38,7 +38,8 @@ USER_AGENT = "paid-and-penalized hospital master geocoding (https://paidandpenal
 MAX_ROWS = 10_000  # the service's batch limit
 MAX_RESPONSE = 10_000_000  # bytes
 MIN_MATCHED = 0.5  # share of hospitals that must match before the CSV is written
-MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own
+MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own (an
+# answer with no row for any address stops geocode() first, so an outage never reaches the writer)
 OUT = PINNED_DIR / "census-geocodes-2026-10" / "geocodes.csv"
 FIELDS = ["ccn", "lat", "lon", "match", "source"]
 # (south, north, west, east): conterminous US, Alaska, Hawaii, Puerto Rico and the U.S. Virgin Islands,
@@ -144,7 +145,10 @@ def geocode(cands, send=post):
     batch = {f"{c}-{n}": a for c, addrs in cands.items() for n, a in enumerate(addrs, 1)}
     if len(batch) > MAX_ROWS:
         raise SystemExit(f"{len(batch)} addresses exceed the geocoder's {MAX_ROWS:,}-row batch limit")
-    got = parse_response(send(batch), batch)
+    text = send(batch)
+    if batch and not any(r and r[0] in batch for r in csv.reader(io.StringIO(text))):
+        raise SystemExit("the geocoder answered none of the addresses (an outage or an error page?); nothing written")
+    got = parse_response(text, batch)
     found = {}
     for c, addrs in cands.items():
         for n, a in enumerate(addrs, 1):

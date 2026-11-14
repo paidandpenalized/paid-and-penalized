@@ -75,8 +75,8 @@ function typeText(h) {
 }
 
 function starsOf(h) {
-  // No link for a rating kept from an earlier Care Compare file: the current one no longer lists the hospital.
-  const href = h.starPrior ? null : careCompareHref(h.id);
+  // No link when the current Care Compare file doesn't list the hospital: there is no profile to open.
+  const href = h.careCompareUnlisted ? null : careCompareHref(h.id);
   if (!h.star) return { n: null, filled: '', empty: '', text: t('starsNone'), href };
   return {
     n: h.star,

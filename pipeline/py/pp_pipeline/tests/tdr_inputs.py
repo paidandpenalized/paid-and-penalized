@@ -47,14 +47,15 @@ def _without_reasons(record):
 def unexplained(now, then, fields):
     """['<id> <field>: then -> now'] for each field that differs between two builds' records ({id: record}, every id
     of `now` in `then` or skipped), unless the hospital's Care Compare row changed and the field is one of `fields`
-    (or is a program's reason, and the hospital's kind changed)."""
+    (or is a program's reason, and the hospital's kind or state changed)."""
     changed = care_compare_changed()
     out = []
     for c, h in sorted(now.items()):
         if c not in then:
             continue
-        # A program's reason may move only with the hospital's kind (its Care Compare type).
-        retyped = c in changed and h.get("kind") != then[c].get("kind")
+        # A program's reason may move only with what it is decided from: the hospital's kind (its Care Compare type) or
+        # state (Maryland).
+        retyped = c in changed and any(h.get(k) != then[c].get(k) for k in ("kind", "state"))
         a, b = (_without_reasons(h), _without_reasons(then[c])) if retyped else (h, then[c])
         out += [f"{c} {k}: {b.get(k)!r} -> {a.get(k)!r}" for k in sorted(a.keys() | b.keys())
                 if a.get(k) != b.get(k) and not (c in changed and k in fields)]
