@@ -680,5 +680,19 @@
     "pdcModified": "2026-10-19",
     "pdcReleased": "2026-11-12",
     "retrieved": "2026-11-13"
+  },
+  {
+    "id": "psi90-fy2027",
+    "title": "CMS Medicare PSI-90 and component measures, six-digit estimates, discharges 07/01/2023 to 06/30/2025",
+    "path": "psi90-fy2027/CMS_PSI_6_decimal_file.csv",
+    "bytes": 8918555,
+    "sha256": "238b483415f7d947d111ef8b6e82ad337863c3623908de589aef63da2eecd7d6",
+    "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/84bd78c1b4e386185bcef2af963d8cf9_1792599552/CMS_PSI_6_decimal_file.csv",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/muwa-iene",
+    "pdcModified": "2026-10-19",
+    "pdcReleased": "2026-11-12",
+    "note": "Staged: an input for the FY2027 HACRP refresh, pinned ahead of use; nothing built from the pins reads it yet. Its period is the FY2027 program's PSI-90 window, so it is not a revision of the FY2026 values.",
+    "staged": true,
+    "retrieved": "2026-11-13"
   }
 ]
