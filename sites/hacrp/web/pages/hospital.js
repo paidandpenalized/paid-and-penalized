@@ -81,8 +81,9 @@ const ledgerScored = (view) => (view.n === view.measures.length
   : fill('ledgerScored', { n: String(view.n), all: String(view.measures.length) }));
 
 // Care Compare's stars: the rating as filled and empty stars (hidden from screen readers, which hear "4 of 5 stars"),
-// or CMS's own words where it published no rating, with CMS's footnotes, as formField options. null when Care
-// Compare doesn't list the hospital.
+// or CMS's own words where it published no rating, with CMS's footnotes and the date of the file it came from, as
+// formField options; the link to the hospital's Care Compare profile only while the current file lists it. null when
+// no Care Compare file the site reads lists the hospital.
 function starsSpec(view, careSource) {
   const cc = view.careCompare;
   if (!cc || !careSource) return null;

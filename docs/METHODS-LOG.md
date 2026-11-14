@@ -72,7 +72,8 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 ## hrrp methods_version 3 (2026-11-13)
 - What changed: the hospital master moved to Care Compare's fall 2026 Hospital General Information file
   (`hgi-2026-11`; hospital methods_version 3), and the star ratings come from it too. The July file (`hgi-2026-07`)
-  stays an input: a hospital the newer file dropped keeps its July row and rating, as in the master.
+  stays an input: a hospital the newer file dropped keeps its July row, as in the master, but no star rating (its Care
+  Compare profile is gone; no Readmissions hospital is in that case now).
 - What moves: names, aliases, ownership, ZIP codes and map points, for the hospitals whose Care Compare row changed
   (hospital methods_version 3 says which points); and the count of map points placed by address, ZIP or county. No
   ratio, factor, penalty or dollar estimate moves.

@@ -41,7 +41,7 @@ def on_the_sites_care_compare(the_sites_case_mix=False):
     """A build on the Care Compare file Thirty Day Readmissions used (its master and star ratings); with
     `the_sites_case_mix`, the MDH add-on also uses the transfer-adjusted case mix, as that site's does."""
     real = emit_hrrp.read_inputs
-    stars = emit_hrrp.care_compare_stars((emit_hospital.HGI_PRIOR,))
+    stars = emit_hrrp.care_compare_stars(emit_hospital.HGI_PRIOR)
 
     def inputs():
         got = {**real(), "stars": stars}

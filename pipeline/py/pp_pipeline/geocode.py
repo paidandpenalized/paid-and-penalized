@@ -30,7 +30,7 @@ import uuid
 from pp_engine.master import universe
 from pp_engine import parse
 from pp_pipeline.emit_hospital import tables, tdr_points
-from pp_pipeline.files import PINNED_DIR, REPO_ROOT
+from pp_pipeline.files import PINNED_DIR
 
 URL = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
 BENCHMARK = "Public_AR_Current"
@@ -57,7 +57,7 @@ def gap():
     return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - t["programs"]["hrrp"]["subject"])
 
 
-def pinned_rows(path=OUT):
+def pinned_rows(path):
     """The pinned CSV's rows ([ccn, lat, lon, match, source] text, as written), its header checked."""
     header, *body = parse.rows(path.read_text(encoding="utf-8"), ",")
     if header != FIELDS:
@@ -69,14 +69,18 @@ ADDRESS = ("street", "city", "state", "zip")
 
 
 def changed(have):
-    """The gap's CCNs whose current Care Compare address is new, sorted: listed now but not in the previous file and
-    not in `have` (CCNs the pinned CSV already places), or listed in both with a different address."""
+    """(new, moved): the gap's CCNs whose current Care Compare address is new, each sorted. `new`: listed now but not
+    in the previous file, and not in `have` (CCNs the pinned CSV already places). `moved`: listed in both, with a
+    different address (compared without case, as candidates() compares). It reads the two files, not what a pinned row
+    was geocoded from, so run it once per Care Compare re-pin: a second run sends the moved hospitals again."""
     t = tables()
     now, before = t["hgi"], t["hgi_prior"]
 
-    def moved(c):
-        return c in before and [now[c][k] for k in ADDRESS] != [before[c][k] for k in ADDRESS]
-    return [c for c in gap() if c in now and ((c not in before and c not in have) or moved(c))]
+    def address(row):
+        return [row[k].upper() for k in ADDRESS]
+    listed = [c for c in gap() if c in now]
+    return ([c for c in listed if c not in before and c not in have],
+            [c for c in listed if c in before and address(now[c]) != address(before[c])])
 
 
 def candidates(ccns, hgi, pos):
@@ -167,17 +171,25 @@ def write(found, attempted, path=OUT, keep=()):
         w.writerows(rows[c] for c in sorted(rows))
 
 
-def main(send=post, only_changed=False):
-    pinned = pinned_rows() if only_changed else []
-    ccns = changed({r[0] for r in pinned}) if only_changed else gap()
+def main(send=post, only_changed=False, out=OUT):
     t = tables()
-    cands = candidates(ccns, t["hgi"], t["pos"])
+    if only_changed:
+        pinned = pinned_rows(out)
+        have = {r[0] for r in pinned}
+        new, moved = changed(have)
+        ccns = sorted(new + moved)
+        # A moved hospital is sent at its new Care Compare address alone: POS may still give the old one.
+        cands = {**candidates(new, t["hgi"], t["pos"]), **candidates(moved, t["hgi"], {})}
+    else:
+        pinned, have, ccns = [], set(), gap()
+        cands = candidates(ccns, t["hgi"], t["pos"])
     found = geocode(cands, send)
-    dropped = sorted({r[0] for r in pinned} & set(ccns) - found.keys())
+    sent = set(ccns)
+    dropped = sorted(have & sent - found.keys())
     if dropped:
         print(f"no match for a new address; old point dropped ({len(dropped)}): {', '.join(dropped)}")
-    write(found, len(cands), keep=[r for r in pinned if r[0] not in set(ccns)])
+    write(found, len(cands), path=out, keep=[r for r in pinned if r[0] not in sent])
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
-    print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
+    print(f"wrote {out.name}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
           f"no address {len(ccns) - len(cands)}, unmatched {len(cands) - len(found)}")
     return 0

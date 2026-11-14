@@ -2,6 +2,7 @@
 addresses, synthetic CCNs, no network."""
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from pp_engine.parse import read_points
@@ -120,13 +121,44 @@ class GapTest(unittest.TestCase):
     def test_changed_is_the_gap_with_a_new_care_compare_address(self):
         t = geocode.tables()
         now, before = t["hgi"], t["hgi_prior"]
-        address = lambda row: [row[k] for k in geocode.ADDRESS]  # noqa: E731
+        address = lambda row: [row[k].upper() for k in geocode.ADDRESS]  # noqa: E731
         gap = set(geocode.gap()) & set(now)
         new = gap - set(before)
         moved = {c for c in gap & set(before) if address(now[c]) != address(before[c])}
         self.assertTrue(new and moved, "the pins have both kinds")
-        self.assertEqual(geocode.changed(set()), sorted(new | moved))
-        self.assertEqual(geocode.changed(new), sorted(moved), "a new hospital already placed is not sent again")
+        self.assertEqual(geocode.changed(set()), (sorted(new), sorted(moved)))
+        self.assertEqual(geocode.changed(new), ([], sorted(moved)), "a new hospital already placed is not sent again")
+
+
+class ChangedFlowTest(unittest.TestCase):
+    """`geocode --changed` end to end on synthetic hospitals and a fake service: a new hospital tries Care Compare then
+    POS; a moved one only its new Care Compare address; a moved one with no match loses its old row; others stay."""
+    HGI = {"990001": {"street": "1 INVENTED WAY", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"},
+           "990002": {"street": "2 NEW RD", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"},
+           "990003": {"street": "3 NEW RD", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}}
+    POS = {c: {"street": "9 OLD RD", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"} for c in HGI}
+
+    def test_rows_replaced_dropped_and_kept(self):
+        sent = []
+
+        def send(batch):
+            sent.extend(batch.values())
+            return "".join(f'"{i}","x","Match","Exact","{a[1]}, {a[2]}, {a[3]}, {a[4]}","-85.10000,31.20000","1","R"\n'
+                           for i, a in batch.items() if i.startswith("990002") or a[0] == "pos")
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "geocodes.csv"
+            out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n"
+                           "990003,30.00000,-85.00000,Exact,hgi\n990009,30.00000,-85.00000,Exact,pos\n")
+            with mock.patch.object(geocode, "changed", return_value=(["990001"], ["990002", "990003"])), \
+                    mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}):
+                geocode.main(send=send, only_changed=True, out=out)
+            self.assertEqual(out.read_text().splitlines(), [
+                "ccn,lat,lon,match,source",
+                "990001,31.20000,-85.10000,Exact,pos",  # new: Care Compare missed, POS matched
+                "990002,31.20000,-85.10000,Exact,hgi",  # moved: replaced
+                "990009,30.00000,-85.00000,Exact,pos",  # untouched
+            ])  # 990003 moved and missed: its old row is gone
+        self.assertEqual(sum(1 for a in sent if a[0] == "pos"), 1, "only the new hospital is offered its POS address")
 
 
 if __name__ == "__main__":

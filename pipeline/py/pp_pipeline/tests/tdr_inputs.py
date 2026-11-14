@@ -13,7 +13,7 @@ from pp_pipeline import emit_hospital, emit_hrrp
 # came from, the county), its state (region, division) or its type (kind, and each program's reason), and so may move
 # when Care Compare changes the row.
 CARE_COMPARE_FIELDS = ("name", "alias", "street", "city", "state", "zip", "county", "fips", "lat", "lon", "geo",
-                       "region", "division", "own", "ownDetail", "kind", "programs")
+                       "region", "division", "own", "ownDetail", "kind")
 
 
 @functools.lru_cache(maxsize=None)
@@ -29,16 +29,31 @@ def care_compare_changed():
     rating), or that only one file lists."""
     t = emit_hospital.tables()
     before, now = t["hgi_prior"], t["hgi"]
-    stars_before, stars_now = (emit_hrrp.care_compare_stars((pin,))
+    stars_before, stars_now = (emit_hrrp.care_compare_stars(pin)
                                for pin in (emit_hospital.HGI_PRIOR, emit_hospital.HGI))
     return frozenset(c for c in before.keys() | now.keys()
                      if before.get(c) != now.get(c) or stars_before.get(c) != stars_now.get(c))
 
 
+def _without_reasons(record):
+    """A master record with each program's reason left out (a reason follows from the hospital's type; whether it is in
+    the program comes from the program's file)."""
+    if "programs" not in record:
+        return record
+    return {**record, "programs": {p: {k: v for k, v in e.items() if k != "reason"}
+                                   for p, e in record["programs"].items()}}
+
+
 def unexplained(now, then, fields):
     """['<id> <field>: then -> now'] for each field that differs between two builds' records ({id: record}, every id
-    of `now` in `then` or skipped), unless the hospital's Care Compare row changed and the field is one of `fields`."""
+    of `now` in `then` or skipped), unless the hospital's Care Compare row changed and the field is one of `fields`,
+    or is a program's reason."""
     changed = care_compare_changed()
-    return [f"{c} {k}: {then[c].get(k)!r} -> {h.get(k)!r}" for c, h in sorted(now.items()) if c in then
-            for k in sorted(h.keys() | then[c].keys())
-            if h.get(k) != then[c].get(k) and not (c in changed and k in fields)]
+    out = []
+    for c, h in sorted(now.items()):
+        if c not in then:
+            continue
+        a, b = (_without_reasons(h), _without_reasons(then[c])) if c in changed else (h, then[c])
+        out += [f"{c} {k}: {b.get(k)!r} -> {a.get(k)!r}" for k in sorted(a.keys() | b.keys())
+                if a.get(k) != b.get(k) and not (c in changed and k in fields)]
+    return out

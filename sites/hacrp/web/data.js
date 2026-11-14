@@ -35,7 +35,7 @@ export function careCompareRatings(csvText, footnotes, modified) {
     const ccn = row['Facility ID'];
     const rating = row['Hospital overall rating'];
     const note = row['Hospital overall rating footnote'];
-    if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError(`${HGI_ID}: missing column`);
+    if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError('Hospital General Information: missing column');
     out.set(ccn, { rating, footnotes: footnoteList(footnotes, note), modified });
   }
   return out;

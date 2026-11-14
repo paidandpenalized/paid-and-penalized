@@ -81,10 +81,11 @@ def master_fields(m):
     return out
 
 
-def care_compare_stars(pins=(emit_hospital.HGI_PRIOR, emit_hospital.HGI)):
-    """{ccn: star rating} from Care Compare pins, oldest first: a later file's rating wins, so a hospital the current
-    file dropped keeps its rating from the previous one, as the master keeps its row."""
-    return {c: s for pin in pins for c, s in read_hgi_stars(read_pinned_bytes(pin).decode("utf-8")).items()}
+def care_compare_stars(pin=emit_hospital.HGI):
+    """{ccn: star rating} from a Care Compare pin, the current one by default. A hospital the current file dropped has
+    no rating here (its Care Compare profile is gone, so the page has nothing to link), though the master keeps its
+    row."""
+    return read_hgi_stars(read_pinned_bytes(pin).decode("utf-8"))
 
 
 def read_inputs():
