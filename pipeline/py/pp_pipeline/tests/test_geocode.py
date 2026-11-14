@@ -100,6 +100,17 @@ class FlowTest(unittest.TestCase):
             self.assertEqual(p.read_text(), "ccn,lat,lon,match,source\n")
 
 
+    def test_a_full_run_with_an_unanswered_hospital_writes_nothing(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "geocodes.csv"
+            out.write_text("ccn,lat,lon,match,source\n990009,30.00000,-85.00000,Exact,pos\n")
+            hgi = {"990001": {"street": "1 INVENTED WAY", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}}
+            with mock.patch.object(geocode, "gap", return_value=["990001"]), \
+                    mock.patch.object(geocode, "tables", return_value={"hgi": hgi, "pos": {}}), \
+                    self.assertRaisesRegex(SystemExit, "unanswered"):
+                geocode.main(send=lambda batch: "", out=out)
+            self.assertIn("990009", out.read_text())
+
     def test_kept_rows_stay_as_written_and_new_matches_join_them_in_ccn_order(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / "geocodes.csv"
@@ -195,10 +206,17 @@ class ChangedFlowTest(unittest.TestCase):
             self.assertEqual(out.read_text().splitlines(), ["ccn,lat,lon,match,source",
                                                             "990003,30.00000,-85.00000,Exact,hgi"])
 
-    def test_a_cut_off_answer_stops_and_an_empty_batch_sends_nothing(self):
-        cands = {"990002": [("hgi", "2 NEW RD", "SPRINGFIELD", "AL", "36301")]}
-        with self.assertRaisesRegex(SystemExit, "cut off"):
-            geocode.geocode(cands, send=lambda batch: OK_ROW.replace("990001-1", "990002-1")[:-20])
+    def test_answered_means_one_complete_row_for_every_address(self):
+        cands = {"990002": [("hgi", "2 NEW RD", "SPRINGFIELD", "AL", "36301")],
+                 "990003": [("hgi", "3 NEW RD", "SPRINGFIELD", "AL", "36301"), ("pos", "9 OLD RD", "SPRINGFIELD", "AL", "36301")]}
+        match = OK_ROW.replace("990001-1", "990002-1").replace("1 INVENTED WAY", "2 NEW RD")
+        for text, unanswered in [
+                ('"990003-1","x","No_Match"\n' + match[:-10], {"990002", "990003"}),  # cut off; 990003-2 never answered
+                (match + "\n" + match + "\n", {"990002", "990003"}),  # answered twice
+                (match + "\n" + '"990003-1","x","No_Match"\n"990003-2","x","Tie"\n', set())]:
+            found, got = geocode.geocode(cands, send=lambda batch: text)
+            self.assertEqual(got, unanswered, text)
+            self.assertEqual(set(found), {"990002"} - unanswered, text)
         self.assertEqual(geocode.geocode({}, send=lambda batch: self.fail("sent")), ({}, set()))
         bom = "\ufeff" + OK_ROW.replace("990001-1", "990002-1").replace("1 INVENTED WAY", "2 NEW RD") + "\n"
         self.assertEqual(set(geocode.geocode(cands, send=lambda batch: bom)[0]), {"990002"})
