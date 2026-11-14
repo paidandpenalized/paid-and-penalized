@@ -144,7 +144,8 @@ class ChangedFlowTest(unittest.TestCase):
         def send(batch):
             sent.extend(batch.values())
             return "".join(f'"{i}","x","Match","Exact","{a[1]}, {a[2]}, {a[3]}, {a[4]}","-85.10000,31.20000","1","R"\n'
-                           for i, a in batch.items() if i.startswith("990002") or a[0] == "pos")
+                           if i.startswith("990002") or a[0] == "pos" else f'"{i}","x","No_Match"\n'
+                           for i, a in batch.items())
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "geocodes.csv"
             out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n"
@@ -184,9 +185,15 @@ class ChangedFlowTest(unittest.TestCase):
             out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n")
             with mock.patch.object(geocode, "changed", return_value=([], ["990002"])), \
                     mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}), \
-                    self.assertRaisesRegex(SystemExit, "answered none"):
+                    self.assertRaisesRegex(SystemExit, "answered 0 of 1"):
                 geocode.main(send=lambda batch: "<html>Service Unavailable</html>", only_changed=True, out=out)
             self.assertIn("990002,30.00000", out.read_text())
+
+    def test_an_answer_missing_some_addresses_stops_too(self):
+        with self.assertRaisesRegex(SystemExit, "answered 1 of 2"):
+            geocode.geocode({"990002": [("hgi", "2 NEW RD", "SPRINGFIELD", "AL", "36301")],
+                             "990003": [("hgi", "3 NEW RD", "SPRINGFIELD", "AL", "36301")]},
+                            send=lambda batch: '"990002-1","x","No_Match"\n')
 
     def test_changed_sorts_new_and_moved_and_ignores_a_case_only_edit(self):
         row = lambda street: {"street": street, "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}  # noqa: E731

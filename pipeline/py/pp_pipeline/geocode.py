@@ -39,7 +39,7 @@ MAX_ROWS = 10_000  # the service's batch limit
 MAX_RESPONSE = 10_000_000  # bytes
 MIN_MATCHED = 0.5  # share of hospitals that must match before the CSV is written
 MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own (an
-# answer with no row for any address stops geocode() first, so an outage never reaches the writer)
+# answer missing any address stops geocode() first, so an outage never reaches the writer)
 OUT = PINNED_DIR / "census-geocodes-2026-10" / "geocodes.csv"
 FIELDS = ["ccn", "lat", "lon", "match", "source"]
 # (south, north, west, east): conterminous US, Alaska, Hawaii, Puerto Rico and the U.S. Virgin Islands,
@@ -146,8 +146,11 @@ def geocode(cands, send=post):
     if len(batch) > MAX_ROWS:
         raise SystemExit(f"{len(batch)} addresses exceed the geocoder's {MAX_ROWS:,}-row batch limit")
     text = send(batch)
-    if batch and not any(r and r[0] in batch for r in csv.reader(io.StringIO(text))):
-        raise SystemExit("the geocoder answered none of the addresses (an outage or an error page?); nothing written")
+    # The service answers every address it was sent (No_Match included): a missing answer is a broken response.
+    missing = set(batch) - {r[0] for r in csv.reader(io.StringIO(text)) if r}
+    if missing:
+        raise SystemExit(f"the geocoder answered {len(batch) - len(missing)} of {len(batch)} addresses (an outage or a "
+                         "cut-off response?); nothing written")
     got = parse_response(text, batch)
     found = {}
     for c, addrs in cands.items():

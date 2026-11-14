@@ -155,7 +155,7 @@ class CareCompareStars(unittest.TestCase):
                                "990004": (1, False)})
 
     def test_a_hospital_no_file_lists_is_unlisted_in_the_record(self):
-        listed = set(emit_hrrp.care_compare_stars())
+        listed = {c for c, (_, unlisted) in emit_hrrp.care_compare_stars().items() if not unlisted}
         records = {h["id"]: h for h in fresh()["hospitals"]}
         self.assertEqual({c for c, h in records.items() if h.get("careCompareUnlisted")}, set(records) - listed)
         self.assertTrue(all(h.get("careCompareUnlisted", True) is True for h in records.values()))
