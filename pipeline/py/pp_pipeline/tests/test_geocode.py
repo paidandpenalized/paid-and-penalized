@@ -100,16 +100,15 @@ class FlowTest(unittest.TestCase):
             self.assertEqual(p.read_text(), "ccn,lat,lon,match,source\n")
 
 
-    def test_a_full_run_with_an_unanswered_hospital_writes_nothing(self):
+    def test_a_full_run_gives_an_unanswered_hospital_no_row(self):
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "geocodes.csv"
-            out.write_text("ccn,lat,lon,match,source\n990009,30.00000,-85.00000,Exact,pos\n")
+            out.write_text("ccn,lat,lon,match,source\n990001,30.00000,-85.00000,Exact,pos\n")
             hgi = {"990001": {"street": "1 INVENTED WAY", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}}
             with mock.patch.object(geocode, "gap", return_value=["990001"]), \
-                    mock.patch.object(geocode, "tables", return_value={"hgi": hgi, "pos": {}}), \
-                    self.assertRaisesRegex(SystemExit, "unanswered"):
+                    mock.patch.object(geocode, "tables", return_value={"hgi": hgi, "pos": {}}):
                 geocode.main(send=lambda batch: "", out=out)
-            self.assertIn("990009", out.read_text())
+            self.assertEqual(out.read_text(), "ccn,lat,lon,match,source\n")
 
     def test_kept_rows_stay_as_written_and_new_matches_join_them_in_ccn_order(self):
         with tempfile.TemporaryDirectory() as d:
@@ -217,6 +216,10 @@ class ChangedFlowTest(unittest.TestCase):
             found, got = geocode.geocode(cands, send=lambda batch: text)
             self.assertEqual(got, unanswered, text)
             self.assertEqual(set(found), {"990002"} - unanswered, text)
+        # The second address matched but the first, which would win, was never answered: unanswered, not found.
+        pos_match = OK_ROW.replace("990001-1", "990003-2").replace("1 INVENTED WAY", "9 OLD RD") + "\n"
+        found, got = geocode.geocode(cands, send=lambda batch: match + "\n" + pos_match)
+        self.assertEqual((set(found), got), ({"990002"}, {"990003"}))
         self.assertEqual(geocode.geocode({}, send=lambda batch: self.fail("sent")), ({}, set()))
         bom = "\ufeff" + OK_ROW.replace("990001-1", "990002-1").replace("1 INVENTED WAY", "2 NEW RD") + "\n"
         self.assertEqual(set(geocode.geocode(cands, send=lambda batch: bom)[0]), {"990002"})
