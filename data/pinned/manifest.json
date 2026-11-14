@@ -132,6 +132,18 @@
     "retrieved": "2026-10-20"
   },
   {
+    "id": "hgi-2026-11",
+    "title": "Hospital General Information (Care Compare), fall 2026 refresh: modified 2026-10-26, released 2026-11-12",
+    "path": "hgi-2026-11/Hospital_General_Information_2.csv",
+    "bytes": 1461350,
+    "sha256": "ff2a82a7149975fb86348e7f901aa3bcd9f3701e8b0ecd0ab34702df193ff559",
+    "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/d3bf87c5505155f549d603688414f3c6_1793059553/Hospital_General_Information_2.csv",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/xubh-q36u",
+    "pdcModified": "2026-10-26",
+    "pdcReleased": "2026-11-12",
+    "retrieved": "2026-11-13"
+  },
+  {
     "id": "ipps-impact-fy2027",
     "title": "FY2027 IPPS final rule and correction notice impact file",
     "path": "ipps-impact-fy2027/fy2027-ipps-fr-impact-file.zip",
@@ -293,10 +305,10 @@
   },
   {
     "id": "census-geocodes-2026-10",
-    "title": "U.S. Census Bureau Geocoder results for the hospital master's hospitals not geocoded by Thirty Day Readmissions",
+    "title": "U.S. Census Bureau Geocoder results for the hospital master's hospitals not geocoded by Thirty Day Readmissions, and for the hospitals new in the fall 2026 Care Compare file",
     "path": "census-geocodes-2026-10/geocodes.csv",
-    "bytes": 79831,
-    "sha256": "fe91dd0450ebbfab7ba862fb1ad8141d4825dc4343ea25592b6bd76721d078cd",
+    "bytes": 81033,
+    "sha256": "81eded37f5c9391bf2dd2cb570fdced24c85bd5ec55c253a0227eb6c24686ac2",
     "derivedBy": "pipeline/py/pp_pipeline/geocode.py",
     "request": {
       "url": "https://geocoding.geo.census.gov/geocoder/locations/addressbatch",
@@ -307,9 +319,18 @@
       "hospitals": 2536,
       "matched": 2147
     },
-    "note": "One batch request. The service's answers change as its address data does, so this result can't be re-fetched byte for byte; it is pinned as made.",
+    "added": {
+      "date": "2026-11-13",
+      "requests": 1,
+      "addresses": 40,
+      "hospitals": 38,
+      "matched": 32,
+      "command": "python3 -I pipeline/py/run.py geocode --added",
+      "what": "the hospitals hgi-2026-11 lists and hgi-2026-07 does not; their rows were added and every earlier row kept as it was"
+    },
+    "note": "Two batch requests (2026-10-20, 2026-11-13). The service's answers change as its address data does, so these results can't be re-fetched byte for byte; they are pinned as made.",
     "landingPage": "https://geocoding.geo.census.gov/geocoder/",
-    "retrieved": "2026-10-20"
+    "retrieved": "2026-11-13"
   },
   {
     "id": "hacrp-fy2015",

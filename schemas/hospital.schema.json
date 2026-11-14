@@ -24,6 +24,7 @@
             "childrens",
             "long_term",
             "rural_emergency",
+            "cancer",
             "federal",
             "maryland",
             "inactive",
@@ -195,6 +196,7 @@
             "childrens",
             "long_term",
             "rural_emergency",
+            "cancer",
             "va",
             "dod",
             "unknown"

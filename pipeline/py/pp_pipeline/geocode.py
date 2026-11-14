@@ -13,6 +13,10 @@ bounds. Everything else is ignored, and those hospitals keep the build's ZIP/cou
 
 Who is sent: every master hospital with a street address, except those with a TDR point and TDR's HRRP hospitals
 (TDR's own call already tried both their addresses with the same benchmark; a new point would break the TDR check).
+
+`run.py geocode --added` sends only the hospitals a newer Care Compare file added (in the gap, not in the previous
+file, and with no row yet) and adds their matches to the pinned CSV, leaving every row already there as it was: a full
+re-run would move points the pages already show, since the service's answers drift.
 """
 import csv
 import io
@@ -22,6 +26,7 @@ import urllib.request
 import uuid
 
 from pp_engine.master import universe
+from pp_engine.parse import read_points
 from pp_pipeline.emit_hospital import tables, tdr_points
 from pp_pipeline.files import PINNED_DIR, REPO_ROOT
 
@@ -48,6 +53,14 @@ def gap():
     """The master's CCNs with no TDR point that aren't HRRP hospitals, sorted."""
     t = tables()
     return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - t["programs"]["hrrp"]["subject"])
+
+
+def added():
+    """The gap's CCNs the current Care Compare file lists, the previous one doesn't, and the pinned CSV has no row for,
+    sorted."""
+    t = tables()
+    have = set(read_points(OUT.read_text(encoding="utf-8")))
+    return [c for c in gap() if c in t["hgi"] and c not in t["hgi_prior"] and c not in have]
 
 
 def candidates(ccns, hgi, pos):
@@ -121,24 +134,30 @@ def geocode(cands, send=post):
     return found
 
 
-def write(found, attempted, path=OUT):
+def write(found, attempted, path=OUT, keep=()):
     """Write the CSV sorted by CCN, unless fewer than MIN_MATCHED of `attempted` hospitals matched (an outage or an
-    error page must not wipe the points)."""
+    error page must not wipe the points). `keep` is rows already written ([ccn, lat, lon, match, source] text), kept
+    as they are; a CCN in both raises."""
     if len(found) < MIN_MATCHED * attempted:
         raise SystemExit(f"only {len(found)} of {attempted} hospitals matched; {path.name} left unchanged")
+    rows = {r[0]: r for r in keep}
+    if rows.keys() & found.keys():
+        raise SystemExit(f"already geocoded: {sorted(rows.keys() & found.keys())[:10]}")
+    rows.update({c: [c, f"{lat:.5f}", f"{lon:.5f}", kind, src] for c, (lat, lon, kind, src) in found.items()})
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(FIELDS)
-        w.writerows([c, f"{lat:.5f}", f"{lon:.5f}", kind, src] for c, (lat, lon, kind, src) in sorted(found.items()))
+        w.writerows(rows[c] for c in sorted(rows))
 
 
-def main(send=post):
-    ccns = gap()
+def main(send=post, only_added=False):
+    ccns = added() if only_added else gap()
     t = tables()
     cands = candidates(ccns, t["hgi"], t["pos"])
     found = geocode(cands, send)
-    write(found, len(cands))
+    keep = list(csv.reader(io.StringIO(OUT.read_text(encoding="utf-8"))))[1:] if only_added else ()
+    write(found, len(cands), keep=keep)
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
     print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
           f"no address {len(ccns) - len(cands)}, unmatched {len(cands) - len(found)}")

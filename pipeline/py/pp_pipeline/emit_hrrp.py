@@ -35,7 +35,7 @@ PROVENANCE = "hrrp-history-provenance"  # how the history was built and checked:
 OWN_SOURCES = (SUPPLEMENTAL, TABLE15, emit_hospital.IMPACT, RATES, emit_hospital.HGI, HISTORY, SUMMARY, PROVENANCE,
                TOTALS, DOLLAR_CHECK)
 SOURCES = OWN_SOURCES + tuple(s for s in emit_hospital.SOURCES if s not in OWN_SOURCES)
-SCHEMA_VERSION, METHODS_VERSION = 1, 2
+SCHEMA_VERSION, METHODS_VERSION = 1, 3
 SCHEMA = "hrrp.schema.json"
 
 SUPP_XLSX = "FY2027_HRRP_Supplemental_File.xlsx"
@@ -93,7 +93,9 @@ def read_inputs():
         "t15": read_table15(read_zip_text_cp1252(TABLE15, TABLE15_MEMBER), fy),
         "impact": read_estimate_inputs(impact_text, fy, GROUPER),
         "rates": read_operating_rates(read_zip_text_cp1252(RATES, RATES_MEMBER)),
-        "stars": read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")),
+        # A hospital the current Care Compare file dropped keeps its rating from the previous one, as in the master.
+        "stars": {**read_hgi_stars(read_pinned_bytes(emit_hospital.HGI_PRIOR).decode("utf-8")),
+                  **read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8"))},
     }
 
 

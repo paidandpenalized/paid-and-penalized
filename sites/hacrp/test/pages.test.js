@@ -8,7 +8,7 @@ import { footnoteList } from '../../../engine/js/footnotes.js';
 import { decidedHospitals } from '../../../engine/js/hacrp/hospital.js';
 import { medianHospital } from '../../../engine/js/hacrp/median.js';
 import { EXAMPLE_CCN } from '../../../hub/model.js';
-import { REPO_ROOT } from '../../../pipeline/files.js';
+import { REPO_ROOT, readPinned } from '../../../pipeline/files.js';
 import { SHARED_ENTRIES, build, mergeEntries } from '../../../pipeline/site/build.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { chipOf, headerOf, withTemp } from '../../../pipeline/test/helpers.js';
@@ -722,12 +722,26 @@ test("careCompareRatings: CMS's rating text and footnotes by CCN; a missing colu
   const { careCompareRatings } = await import('../web/data.js');
   const csv = '"Facility ID","Hospital overall rating","Hospital overall rating footnote"\n"990001","3",""\n"990002","Not Available","16"\n';
   const ratings = careCompareRatings(csv, DATA.footnotes);
-  assert.deepEqual(ratings.get('990001'), { rating: '3', footnotes: [] });
-  assert.deepEqual(ratings.get('990002'), { rating: 'Not Available', footnotes: [{ code: '16', text: FN('16') }] });
+  assert.deepEqual(ratings.get('990001'), { rating: '3', footnotes: [], modified: null });
+  assert.deepEqual(ratings.get('990002'), { rating: 'Not Available', footnotes: [{ code: '16', text: FN('16') }], modified: null });
+  assert.equal(careCompareRatings(csv, DATA.footnotes, '2026-01-02').get('990001').modified, '2026-01-02');
   assert.throws(() => careCompareRatings('"Facility ID","Hospital overall rating"\n"990001","3"\n', DATA.footnotes), /missing column/);
   // The pinned file rates most of HACRP's hospitals.
   const rated = DATA.hospitals.filter((h) => /^[1-5]$/.test(DATA.careCompare.get(h.ccn)?.rating ?? '')).length;
   assert.ok(rated > DATA.hospitals.length / 2, `${rated} rated`);
+});
+
+test('a hospital the current Care Compare file dropped keeps its rating from the previous file, dated by that file', async () => {
+  const { HGI_ID, HGI_PRIOR_ID, careCompareRatings } = await import('../web/data.js');
+  const [now, before] = [HGI_ID, HGI_PRIOR_ID].map((id) => careCompareRatings(readPinned(id), DATA.footnotes));
+  const modified = (id) => DATA.manifest.find((e) => e.id === id).pdcModified;
+  const dropped = DATA.hospitals.find((h) => before.has(h.ccn) && !now.has(h.ccn));
+  const kept = DATA.hospitals.find((h) => now.has(h.ccn));
+  assert.ok(dropped && kept, 'the pins have a hospital of each kind');
+  assert.equal(DATA.careCompare.get(dropped.ccn).rating, before.get(dropped.ccn).rating);
+  assert.equal(DATA.careCompare.get(dropped.ccn).modified, modified(HGI_PRIOR_ID));
+  assert.equal(DATA.careCompare.get(kept.ccn).rating, now.get(kept.ccn).rating);
+  assert.equal(DATA.careCompare.get(kept.ccn).modified, modified(HGI_ID));
 });
 
 test('a section whose words explain a figure splits: each hospital section beside its figure; on the program page each step and each section of the year beside its own', () => {

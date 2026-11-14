@@ -21,18 +21,22 @@ import { boundaryText } from './view.js';
 export const FOOTNOTES_ID = 'y9us-9xdf';
 // Care Compare's Hospital General Information (each hospital's overall star rating); the us-atlas topology (state
 // outlines for the locator maps and the US map) is ATLAS_ID, from web/charts/geo.js.
-export const HGI_ID = 'hgi-2026-07';
+export const HGI_ID = 'hgi-2026-11';
+// The previous Care Compare file: a hospital the current one dropped keeps its last rating, with that file's date, as
+// the hospital master keeps its last row (docs/METHODS-LOG.md, hospital methods_version 3).
+export const HGI_PRIOR_ID = 'hgi-2026-07';
 
-// CCN -> { rating, footnotes }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words when it
-// rates none) and its footnotes' text. A row without the columns fails the build.
-export function careCompareRatings(csvText, footnotes) {
+// CCN -> { rating, footnotes, modified }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words
+// when it rates none), its footnotes' text, and `modified`, the date of the file it came from (null: not given). A row
+// without the columns fails the build.
+export function careCompareRatings(csvText, footnotes, modified = null) {
   const out = new Map();
   for (const row of parseCsv(csvText)) {
     const ccn = row['Facility ID'];
     const rating = row['Hospital overall rating'];
     const note = row['Hospital overall rating footnote'];
     if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError(`${HGI_ID}: missing column`);
-    out.set(ccn, { rating, footnotes: footnoteList(footnotes, note) });
+    out.set(ccn, { rating, footnotes: footnoteList(footnotes, note), modified });
   }
   return out;
 }
@@ -184,6 +188,7 @@ export function loadHacrp() {
   const footnotes = parseFootnotes(readPinned(FOOTNOTES_ID));
   const manifest = readManifest();
   const hgi = manifest.find((e) => e.id === HGI_ID);
+  const hgiPrior = manifest.find((e) => e.id === HGI_PRIOR_ID);
   const topo = JSON.parse(readPinned(ATLAS_ID));
   // A Care Compare infection extract's rows, each pin parsed once (the history and the baseline shift share a year).
   const parsed = new Map();
@@ -209,7 +214,8 @@ export function loadHacrp() {
     // The hospital master's own fiscal year (its IPPS attributes: teaching, urban, special statuses).
     masterFy: masterFile.fy,
     footnotes,
-    careCompare: careCompareRatings(readPinned(HGI_ID), footnotes),
+    careCompare: new Map([...careCompareRatings(readPinned(HGI_PRIOR_ID), footnotes, hgiPrior.pdcModified),
+      ...careCompareRatings(readPinned(HGI_ID), footnotes, hgi.pdcModified)]),
     careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
     shapes: stateShapes(topo),
     counties: countyShapes(topo),
@@ -225,7 +231,7 @@ export function loadHacrp() {
     baselineShift: shift,
     // Every pinned input the pages rest on: the HACRP file's, the history's, the hospital master's and the dollar
     // estimates' sources, and the files the pages read directly.
-    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, ...shift.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
+    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, ...shift.sources, FOOTNOTES_ID, HGI_ID, HGI_PRIOR_ID, ATLAS_ID]).has(e.id)),
     manifest,
     // The emitted file keeps every row of CMS's file.
     sourceRows: data.hospitals.length,

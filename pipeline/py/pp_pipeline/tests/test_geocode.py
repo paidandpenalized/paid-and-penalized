@@ -98,6 +98,17 @@ class FlowTest(unittest.TestCase):
             self.assertEqual(p.read_text(), "ccn,lat,lon,match,source\n")
 
 
+    def test_kept_rows_stay_as_written_and_new_matches_join_them_in_ccn_order(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "geocodes.csv"
+            keep = [["990003", "31.20000", "-85.40000", "Exact", "pos"]]
+            geocode.write({"990001": (64.834607892861, -147.739134283597, "Exact", "hgi")}, 1, p, keep=keep)
+            self.assertEqual(p.read_text().splitlines(), ["ccn,lat,lon,match,source", "990001,64.83461,-147.73913,Exact,hgi",
+                                                          "990003,31.20000,-85.40000,Exact,pos"])
+            with self.assertRaises(SystemExit):
+                geocode.write({"990003": (31.2, -85.4, "Exact", "hgi")}, 1, p, keep=keep)
+
+
 class GapTest(unittest.TestCase):
     def test_the_gap_is_the_master_universe_minus_tdrs_points_and_hrrp_hospitals(self):
         gap = geocode.gap()
@@ -105,6 +116,12 @@ class GapTest(unittest.TestCase):
         self.assertEqual(gap, sorted(gap))
         self.assertFalse(set(gap) & set(geocode.tdr_points()))
         self.assertFalse(set(gap) & geocode.tables()["programs"]["hrrp"]["subject"])
+
+    def test_added_is_the_gap_new_to_care_compare_with_no_point_yet(self):
+        added, t = geocode.added(), geocode.tables()
+        self.assertLessEqual(set(added), set(geocode.gap()) & set(t["hgi"]))
+        self.assertFalse(set(added) & set(t["hgi_prior"]))
+        self.assertFalse(set(added) & set(geocode.read_points(geocode.OUT.read_text(encoding="utf-8"))))
 
 
 if __name__ == "__main__":

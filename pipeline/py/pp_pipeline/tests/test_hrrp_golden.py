@@ -3,7 +3,9 @@ Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every
 reference until the FY2028 refresh. Since methods_version 2 the MDHs' base and pen differ by design (MDH case mix;
 `docs/METHODS-LOG.md`), and a test proves that is the only difference. Since 2026-11-09 the dual proportion is stored to
 more decimals (`hrrp.DUAL_DECIMALS`; corrections/2026-11-09-dual-eligible-share.md): rounded to 4 decimals it is the site
-file's value."""
+file's value. The site file was built on an earlier Care Compare file than the master now is, so the comparisons with it
+build on that file (the master from `tdr_inputs` and its star ratings); a test holds that the newer file moves only the
+fields Care Compare feeds, and only for the hospitals whose Care Compare row changed."""
 import copy
 import functools
 import io
@@ -12,9 +14,11 @@ import unittest
 from unittest import mock
 
 from pp_engine import hrrp
+from pp_engine.hrrp_read import read_hgi_stars
 from pp_engine.parse import SchemaError
-from pp_pipeline import emit_hrrp
+from pp_pipeline import emit_hospital, emit_hrrp
 from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, require_current
+from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, care_compare_changed, july_master
 
 # meta keys the emitted file sets differently on purpose: `sources` names the manifest's pins; `whatsNew` is page copy,
 # kept with the site's content.
@@ -22,6 +26,10 @@ META_DIFFERS = ("sources", "whatsNew")
 # What the MDH case mix (methods_version 2) moves: an MDH's base and penalty, and the national totals of both.
 MDH_FIELDS = ("base", "pen")
 TOTALS_DIFFER = ("modelBase", "modelPen")
+# A hospital record's fields that come from its Care Compare row (the master's CARE_COMPARE_FIELDS, as the record names
+# them, and the star rating), and the meta that counts them (how many map points came from an address, ZIP or county).
+RECORD_CARE_COMPARE = tuple(f for f in CARE_COMPARE_FIELDS if f in emit_hrrp.MASTER_FIELDS) + ("star",)
+META_CARE_COMPARE = ("geocode",)
 
 
 @functools.lru_cache(maxsize=None)
@@ -30,14 +38,18 @@ def fresh():
 
 
 @functools.lru_cache(maxsize=None)
-def fresh_with_the_sites_case_mix():
-    """A build whose MDH add-on uses the transfer-adjusted case mix, as Thirty Day Readmissions' does."""
+def on_the_sites_care_compare(the_sites_case_mix=False):
+    """A build on the Care Compare file Thirty Day Readmissions used (its master and star ratings); with
+    `the_sites_case_mix`, the MDH add-on also uses the transfer-adjusted case mix, as that site's does."""
     real = emit_hrrp.read_inputs
+    stars = read_hgi_stars(read_pinned_bytes(emit_hospital.HGI_PRIOR).decode("utf-8"))
 
     def inputs():
-        got = real()
-        return {**got, "impact": {c: {**r, "cmi_hsp": r["cmi"]} for c, r in got["impact"].items()}}
-    with mock.patch.object(emit_hrrp, "read_inputs", inputs):
+        got = {**real(), "stars": stars}
+        if the_sites_case_mix:
+            got["impact"] = {c: {**r, "cmi_hsp": r["cmi"]} for c, r in got["impact"].items()}
+        return got
+    with mock.patch.object(emit_hrrp, "read_inputs", inputs), mock.patch.object(emit_hrrp, "committed_master", july_master):
         return emit_hrrp.build_from_pins("2000-01-01T00:00:00Z")
 
 
@@ -81,7 +93,7 @@ class Golden(unittest.TestCase):
                          "the committed file is not what the pins build: run `make emit`")
 
     def test_meta_equals_the_site_file_but_the_totals_the_mdh_case_mix_moves(self):
-        self.assertEqual(without(fresh()["meta"], TOTALS_DIFFER), without(site()["meta"], TOTALS_DIFFER))
+        self.assertEqual(without(on_the_sites_care_compare()["meta"], TOTALS_DIFFER), without(site()["meta"], TOTALS_DIFFER))
 
     def test_conditions_and_history_equal_the_site_file(self):
         self.assertEqual(fresh()["conditions"], site()["conditions"])
@@ -89,8 +101,22 @@ class Golden(unittest.TestCase):
 
     def test_every_hospital_equals_the_site_file_but_the_mdhs_base_and_penalty(self):
         self.assertEqual(sorted(h["id"] for h in fresh()["hospitals"]), sorted(h["id"] for h in site()["hospitals"]))
-        diffs = differences(fresh()["hospitals"], site()["hospitals"])
+        diffs = differences(on_the_sites_care_compare()["hospitals"], site()["hospitals"])
         assert_none(self, [d for d in diffs if not (d[0] in mdh_ids() and d[1] in MDH_FIELDS)])
+
+    def test_the_newer_care_compare_moves_only_its_own_fields_of_the_hospitals_it_changed(self):
+        changed = care_compare_changed()
+        now, then = fresh(), on_the_sites_care_compare()
+        before = {h["id"]: h for h in then["hospitals"]}
+        self.assertEqual(sorted(before), [h["id"] for h in now["hospitals"]])
+        moved = [f"{h['id']} {k}: {before[h['id']].get(k)!r} -> {h.get(k)!r}" for h in now["hospitals"]
+                 for k in sorted(set(h) | set(before[h["id"]]))
+                 if h.get(k) != before[h["id"]].get(k) and not (h["id"] in changed and k in RECORD_CARE_COMPARE)]
+        self.assertEqual(moved, [], f"{len(moved)} differences Care Compare does not explain:\n" + "\n".join(moved[:30]))
+        meta = {k for k in now["meta"].keys() | then["meta"].keys() if now["meta"].get(k) != then["meta"].get(k)}
+        self.assertLessEqual(meta, {"sources", *META_CARE_COMPARE})
+        self.assertEqual({k: v for k, v in now.items() if k not in ("meta", "hospitals", "source_manifest", "sources")},
+                         {k: v for k, v in then.items() if k not in ("meta", "hospitals", "source_manifest", "sources")})
 
 
 class MdhCaseMix(unittest.TestCase):
@@ -98,12 +124,12 @@ class MdhCaseMix(unittest.TestCase):
 
     def test_with_the_sites_case_mix_every_hospital_and_the_meta_equal_the_site_file(self):
         theirs = site()
-        mine = fresh_with_the_sites_case_mix()
+        mine = on_the_sites_care_compare(the_sites_case_mix=True)
         assert_none(self, differences(mine["hospitals"], theirs["hospitals"]))
         self.assertEqual(without(mine["meta"]), without(theirs["meta"]))
 
     def test_the_hsp_case_mix_moves_some_mdhs_and_nothing_else(self):
-        moved = {c for c, _, _ in differences(fresh()["hospitals"], site()["hospitals"])}
+        moved = {c for c, _, _ in differences(on_the_sites_care_compare()["hospitals"], site()["hospitals"])}
         self.assertTrue(moved, "no MDH changed: is the add-on still on the transfer-adjusted case mix?")
         self.assertLessEqual(moved, mdh_ids())
 

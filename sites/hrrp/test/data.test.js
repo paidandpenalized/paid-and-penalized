@@ -21,7 +21,9 @@ test('without it, the loader falls back to the pin, with the same body', () => {
   assert.equal(pinned.fy, emitted.fy);
   assert.deepEqual(pinned.conditions, emitted.conditions);
   assert.deepEqual(pinned.hospitals.map((h) => h.id), emitted.hospitals.map((h) => h.id));
-  for (const [i, h] of pinned.hospitals.entries()) assert.deepEqual(keysOf(h), keysOf(emitted.hospitals[i]), h.id);
+  // An alias is there only when a hospital has a second name, which a newer Care Compare file can add or take away.
+  const shape = (h) => keysOf(h).filter((k) => k !== 'alias');
+  for (const [i, h] of pinned.hospitals.entries()) assert.deepEqual(shape(h), shape(emitted.hospitals[i]), h.id);
   assert.deepEqual(pinned.history.years, emitted.history.years);
 });
 
