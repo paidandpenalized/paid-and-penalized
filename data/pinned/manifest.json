@@ -312,10 +312,10 @@
   },
   {
     "id": "census-geocodes-2026-10",
-    "title": "U.S. Census Bureau Geocoder results for the hospital master's hospitals not geocoded by Thirty Day Readmissions, and for the hospitals new in the fall 2026 Care Compare file",
+    "title": "U.S. Census Bureau Geocoder results for the hospital master's hospitals not geocoded by Thirty Day Readmissions, and for those the fall 2026 Care Compare file added or re-addressed",
     "path": "census-geocodes-2026-10/geocodes.csv",
-    "bytes": 81033,
-    "sha256": "81eded37f5c9391bf2dd2cb570fdced24c85bd5ec55c253a0227eb6c24686ac2",
+    "bytes": 80949,
+    "sha256": "cc81ba3a05d15ad623e8148582dafcb8e4dfca3d882f650248bdd266e529665c",
     "derivedBy": "pipeline/py/pp_pipeline/geocode.py",
     "request": {
       "url": "https://geocoding.geo.census.gov/geocoder/locations/addressbatch",
@@ -326,14 +326,14 @@
       "hospitals": 2536,
       "matched": 2147
     },
-    "added": {
+    "changed": {
       "date": "2026-11-13",
       "requests": 1,
-      "addresses": 40,
-      "hospitals": 38,
-      "matched": 32,
-      "command": "python3 -I pipeline/py/run.py geocode --added",
-      "what": "the hospitals hgi-2026-11 lists and hgi-2026-07 does not; their rows were added and every earlier row kept as it was"
+      "addresses": 72,
+      "hospitals": 60,
+      "matched": 51,
+      "command": "python3 -I pipeline/py/run.py geocode --changed",
+      "what": "the hospitals hgi-2026-11 added (38) or gave a new address (22): their old rows replaced, the two re-addressed hospitals with no match dropped to their ZIP, every other row kept as it was"
     },
     "note": "Two batch requests (2026-10-20, 2026-11-13). The service's answers change as its address data does, so these results can't be re-fetched byte for byte; they are pinned as made.",
     "landingPage": "https://geocoding.geo.census.gov/geocoder/",
@@ -681,7 +681,9 @@
       "bytes": 22683505,
       "sha256": "0377210ee87186f4d9fc8113a79173d88d87bc77158e994251374f9f8ea5349f",
       "member": "77hc-ibv8_2026-10-19_Healthcare_Associated_Infections-Hospital.csv",
-      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-11-12.zip"
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-11-12.zip",
+      "memberBytes": 38533341,
+      "memberSha256": "586b831541f567106c438c7f72cb312786282a55fe8a98559e8d990fa8144001"
     },
     "derivedBy": "pipeline/py/pp_pipeline/hai_extract.py",
     "landingPage": "https://data.cms.gov/provider-data/dataset/77hc-ibv8",

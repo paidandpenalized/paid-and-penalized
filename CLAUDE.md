@@ -53,7 +53,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   the IPPS impact file or any program file, with per-program `inProgram` and a reason code (rules and order in
   `pp_engine/master.py` and `docs/METHODS-LOG.md`) and a location (point, county, CBSA, region; rules in
   `pp_engine/location.py`). Sites join on it by CCN. Until Thirty Day Readmissions folds in, a test requires its
-  hospitals' names and locations to equal the master's. Two commands use the network, both run by hand and never by
+  hospitals' names and locations to equal those of a master built on the Care Compare file that site used
+  (`hgi-2026-07`); a second test holds that the shipped master, on the newer file, differs from that build only in
+  Care Compare's own fields, and only for hospitals whose Care Compare row changed. Two commands use the network, both run by hand and never by
   the build or the tests: `run.py geocode` (the Census Geocoder; its output is a pinned input) and `make refresh`
   (CMS's files from data.cms.gov; below).
 - `schemas/`: JSON Schemas for every emitted file (`common.schema.json` holds the envelope and CCN definitions),

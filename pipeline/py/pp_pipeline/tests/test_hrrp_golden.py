@@ -27,7 +27,8 @@ MDH_FIELDS = ("base", "pen")
 TOTALS_DIFFER = ("modelBase", "modelPen")
 # A hospital record's fields that come from its Care Compare row: the master's CARE_COMPARE_FIELDS the record copies,
 # and the star rating.
-RECORD_CARE_COMPARE = tuple(f for f in CARE_COMPARE_FIELDS if f in emit_hrrp.MASTER_FIELDS) + ("star",)
+RECORD_CARE_COMPARE = tuple(emit_hrrp.RENAMED.get(f, f) for f in CARE_COMPARE_FIELDS
+                            if f in emit_hrrp.MASTER_FIELDS) + ("star",)
 
 
 @functools.lru_cache(maxsize=None)

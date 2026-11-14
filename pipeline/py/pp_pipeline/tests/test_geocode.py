@@ -117,13 +117,16 @@ class GapTest(unittest.TestCase):
         self.assertFalse(set(gap) & set(geocode.tdr_points()))
         self.assertFalse(set(gap) & geocode.tables()["programs"]["hrrp"]["subject"])
 
-    def test_added_is_the_gap_new_to_care_compare_with_no_point_yet(self):
-        have = {r[0] for r in geocode.pinned_rows()}
-        added, t = geocode.added(have), geocode.tables()
-        self.assertLessEqual(set(added), set(geocode.gap()) & set(t["hgi"]))
-        self.assertFalse(set(added) & set(t["hgi_prior"]))
-        self.assertFalse(set(added) & have)
-        self.assertEqual(geocode.added(set()), sorted(set(geocode.gap()) & set(t["hgi"]) - set(t["hgi_prior"])))
+    def test_changed_is_the_gap_with_a_new_care_compare_address(self):
+        t = geocode.tables()
+        now, before = t["hgi"], t["hgi_prior"]
+        address = lambda row: [row[k] for k in geocode.ADDRESS]  # noqa: E731
+        gap = set(geocode.gap()) & set(now)
+        new = gap - set(before)
+        moved = {c for c in gap & set(before) if address(now[c]) != address(before[c])}
+        self.assertTrue(new and moved, "the pins have both kinds")
+        self.assertEqual(geocode.changed(set()), sorted(new | moved))
+        self.assertEqual(geocode.changed(new), sorted(moved), "a new hospital already placed is not sent again")
 
 
 if __name__ == "__main__":

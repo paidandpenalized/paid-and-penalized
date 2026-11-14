@@ -710,6 +710,9 @@ test('the record card: Type from the master in the site\'s words, Care Compare\'
   assert.match(none, /<p class="field__value field__value--sm">Not Available<\/p>/);
   assert.ok(none.includes(`CMS footnote 16: ${esc(fn)}`));
   assert.doesNotMatch(page({}), /Care Compare stars/);
+  // A rating kept from the previous Care Compare file (the hospital is no longer listed) has no Care Compare link.
+  assert.match(none, /Open on Care Compare/);
+  assert.doesNotMatch(page({}, { rating: '3', footnotes: [], modified: DATA.careCompareSource.modified, listed: false }), /Open on Care Compare/);
   // No Type field when the master knows nothing; no map for a territory or a missing point.
   const untyped = page({ teach: null, beds: null, own: null, urban: null, types: [] });
   assert.doesNotMatch(untyped, />Type</);
@@ -739,6 +742,8 @@ test('a hospital the current Care Compare file dropped keeps its rating from the
   assert.ok(dropped && kept, 'the pins have a hospital of each kind');
   assert.equal(DATA.careCompare.get(dropped.ccn).rating, before.get(dropped.ccn).rating);
   assert.equal(DATA.careCompare.get(dropped.ccn).modified, modified(HGI_PRIOR_ID));
+  assert.equal(DATA.careCompare.get(dropped.ccn).listed, false);
+  assert.equal(DATA.careCompare.get(kept.ccn).listed, true);
   assert.equal(DATA.careCompare.get(kept.ccn).rating, now.get(kept.ccn).rating);
   assert.equal(DATA.careCompare.get(kept.ccn).modified, modified(HGI_ID));
 });

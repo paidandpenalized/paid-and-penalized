@@ -7,12 +7,13 @@ from that build only where Care Compare itself changed a hospital's row.
 """
 import functools
 
-from pp_pipeline import emit_hospital
+from pp_pipeline import emit_hospital, emit_hrrp
 
-# Master fields that come from a hospital's Care Compare row, directly or through its ZIP or county (the map point,
-# where it came from, and the county), and so may move when Care Compare changes the row.
-CARE_COMPARE_FIELDS = ("name", "alias", "street", "city", "zip", "county", "fips", "lat", "lon", "geo", "own",
-                       "ownDetail")
+# Master fields that come from a hospital's Care Compare row, directly or through its address (the map point, where it
+# came from, the county), its state (region, division) or its type (kind, and each program's reason), and so may move
+# when Care Compare changes the row.
+CARE_COMPARE_FIELDS = ("name", "alias", "street", "city", "state", "zip", "county", "fips", "lat", "lon", "geo",
+                       "region", "division", "own", "ownDetail", "kind", "programs")
 
 
 @functools.lru_cache(maxsize=None)
@@ -24,11 +25,14 @@ def july_master():
 
 @functools.lru_cache(maxsize=None)
 def care_compare_changed():
-    """The CCNs whose Care Compare row differs between the two files (the columns the master reads), or that only one
-    file lists."""
+    """The CCNs whose Care Compare row differs between the two files (the columns the master reads, and the star
+    rating), or that only one file lists."""
     t = emit_hospital.tables()
     before, now = t["hgi_prior"], t["hgi"]
-    return frozenset(c for c in before.keys() | now.keys() if before.get(c) != now.get(c))
+    stars_before, stars_now = (emit_hrrp.care_compare_stars((pin,))
+                               for pin in (emit_hospital.HGI_PRIOR, emit_hospital.HGI))
+    return frozenset(c for c in before.keys() | now.keys()
+                     if before.get(c) != now.get(c) or stars_before.get(c) != stars_now.get(c))
 
 
 def unexplained(now, then, fields):

@@ -214,8 +214,11 @@ export function loadHacrp() {
     // The hospital master's own fiscal year (its IPPS attributes: teaching, urban, special statuses).
     masterFy: masterFile.fy,
     footnotes,
-    careCompare: new Map([...careCompareRatings(readPinned(HGI_PRIOR_ID), footnotes, hgiPrior.pdcModified),
-      ...careCompareRatings(readPinned(HGI_ID), footnotes, hgi.pdcModified)]),
+    // `listed`: the current file lists the hospital (Care Compare still has its profile to link to).
+    careCompare: new Map([
+      ...[...careCompareRatings(readPinned(HGI_PRIOR_ID), footnotes, hgiPrior.pdcModified)].map(([ccn, r]) => [ccn, { ...r, listed: false }]),
+      ...[...careCompareRatings(readPinned(HGI_ID), footnotes, hgi.pdcModified)].map(([ccn, r]) => [ccn, { ...r, listed: true }]),
+    ]),
     careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
     shapes: stateShapes(topo),
     counties: countyShapes(topo),

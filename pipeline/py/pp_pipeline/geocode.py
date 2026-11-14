@@ -14,9 +14,11 @@ bounds. Everything else is ignored, and those hospitals keep the build's ZIP/cou
 Who is sent: every master hospital with a street address, except those with a TDR point and TDR's HRRP hospitals
 (TDR's own call already tried both their addresses with the same benchmark; a new point would break the TDR check).
 
-`run.py geocode --added` sends only the hospitals a newer Care Compare file added (in the gap, not in the previous
-file, and with no row yet) and adds their matches to the pinned CSV, leaving every row already there as it was: a full
-re-run would move points the pages already show, since the service's answers drift.
+`run.py geocode --changed` sends only the gap's hospitals whose Care Compare address is new: those the newer file added
+with no row yet, and those it gave a different street, city, state or ZIP. Their old rows go (a point for an address
+Care Compare no longer gives would be called a street-address match); their matches are written in, and a hospital
+with none falls back to its ZIP. Every other row stays as it was: a full re-run would move points the pages already
+show, since the service's answers drift.
 """
 import csv
 import io
@@ -63,11 +65,18 @@ def pinned_rows(path=OUT):
     return body
 
 
-def added(have):
-    """The gap's CCNs the current Care Compare file lists, the previous one doesn't, and `have` (CCNs the pinned CSV
-    already places) doesn't, sorted."""
+ADDRESS = ("street", "city", "state", "zip")
+
+
+def changed(have):
+    """The gap's CCNs whose current Care Compare address is new, sorted: listed now but not in the previous file and
+    not in `have` (CCNs the pinned CSV already places), or listed in both with a different address."""
     t = tables()
-    return [c for c in gap() if c in t["hgi"] and c not in t["hgi_prior"] and c not in have]
+    now, before = t["hgi"], t["hgi_prior"]
+
+    def moved(c):
+        return c in before and [now[c][k] for k in ADDRESS] != [before[c][k] for k in ADDRESS]
+    return [c for c in gap() if c in now and ((c not in before and c not in have) or moved(c))]
 
 
 def candidates(ccns, hgi, pos):
@@ -158,13 +167,16 @@ def write(found, attempted, path=OUT, keep=()):
         w.writerows(rows[c] for c in sorted(rows))
 
 
-def main(send=post, only_added=False):
-    keep = pinned_rows() if only_added else []
-    ccns = added({r[0] for r in keep}) if only_added else gap()
+def main(send=post, only_changed=False):
+    pinned = pinned_rows() if only_changed else []
+    ccns = changed({r[0] for r in pinned}) if only_changed else gap()
     t = tables()
     cands = candidates(ccns, t["hgi"], t["pos"])
     found = geocode(cands, send)
-    write(found, len(cands), keep=keep)
+    dropped = sorted({r[0] for r in pinned} & set(ccns) - found.keys())
+    if dropped:
+        print(f"no match for a new address; old point dropped ({len(dropped)}): {', '.join(dropped)}")
+    write(found, len(cands), keep=[r for r in pinned if r[0] not in set(ccns)])
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
     print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
           f"no address {len(ccns) - len(cands)}, unmatched {len(cands) - len(found)}")
