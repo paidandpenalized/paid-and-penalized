@@ -173,6 +173,7 @@
         "own": { "type": ["string", "null"] },
         "ownDetail": { "type": ["string", "null"] },
         "star": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 },
+        "starPrior": { "const": true, "description": "The rating is from an earlier Care Compare file: the current one no longer lists the hospital. Absent otherwise." },
         "types": { "type": "array", "items": { "type": "string", "minLength": 1 } },
         "inactive": {
           "type": "object",

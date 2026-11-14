@@ -38,6 +38,7 @@ USER_AGENT = "paid-and-penalized hospital master geocoding (https://paidandpenal
 MAX_ROWS = 10_000  # the service's batch limit
 MAX_RESPONSE = 10_000_000  # bytes
 MIN_MATCHED = 0.5  # share of hospitals that must match before the CSV is written
+MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own
 OUT = PINNED_DIR / "census-geocodes-2026-10" / "geocodes.csv"
 FIELDS = ["ccn", "lat", "lon", "match", "source"]
 # (south, north, west, east): conterminous US, Alaska, Hawaii, Puerto Rico and the U.S. Virgin Islands,
@@ -156,9 +157,10 @@ def geocode(cands, send=post):
 
 def write(found, attempted, path=OUT, keep=()):
     """Write the CSV sorted by CCN, unless fewer than MIN_MATCHED of `attempted` hospitals matched (an outage or an
-    error page must not wipe the points). `keep` is rows already written ([ccn, lat, lon, match, source] text), kept
+    error page must not wipe the points; not checked below MIN_GATED, so `--changed` still drops a re-addressed
+    hospital's stale row when its few new addresses all miss). `keep` is rows already written ([ccn, lat, lon, match, source] text), kept
     as they are; a CCN in both raises."""
-    if len(found) < MIN_MATCHED * attempted:
+    if attempted >= MIN_GATED and len(found) < MIN_MATCHED * attempted:
         raise SystemExit(f"only {len(found)} of {attempted} hospitals matched; {path.name} left unchanged")
     rows = {r[0]: r for r in keep}
     if rows.keys() & found.keys():

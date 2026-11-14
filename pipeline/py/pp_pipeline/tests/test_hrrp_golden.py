@@ -26,9 +26,9 @@ META_DIFFERS = ("sources", "whatsNew")
 MDH_FIELDS = ("base", "pen")
 TOTALS_DIFFER = ("modelBase", "modelPen")
 # A hospital record's fields that come from its Care Compare row: the master's CARE_COMPARE_FIELDS the record copies,
-# and the star rating.
+# and the star rating (and whether it came from an earlier file).
 RECORD_CARE_COMPARE = tuple(emit_hrrp.RENAMED.get(f, f) for f in CARE_COMPARE_FIELDS
-                            if f in emit_hrrp.MASTER_FIELDS) + ("star",)
+                            if f in emit_hrrp.MASTER_FIELDS) + ("star", "starPrior")
 
 
 @functools.lru_cache(maxsize=None)
@@ -41,7 +41,7 @@ def on_the_sites_care_compare(the_sites_case_mix=False):
     """A build on the Care Compare file Thirty Day Readmissions used (its master and star ratings); with
     `the_sites_case_mix`, the MDH add-on also uses the transfer-adjusted case mix, as that site's does."""
     real = emit_hrrp.read_inputs
-    stars = emit_hrrp.care_compare_stars(emit_hospital.HGI_PRIOR)
+    stars = emit_hrrp.care_compare_stars((emit_hospital.HGI_PRIOR,))
 
     def inputs():
         got = {**real(), "stars": stars}

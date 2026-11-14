@@ -149,7 +149,12 @@ class ChangedFlowTest(unittest.TestCase):
             out = Path(d) / "geocodes.csv"
             out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n"
                            "990003,30.00000,-85.00000,Exact,hgi\n990009,30.00000,-85.00000,Exact,pos\n")
-            with mock.patch.object(geocode, "changed", return_value=(["990001"], ["990002", "990003"])), \
+            seen = []
+
+            def changed(have):
+                seen.append(have)
+                return ["990001"], ["990002", "990003"]
+            with mock.patch.object(geocode, "changed", changed), \
                     mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}):
                 geocode.main(send=send, only_changed=True, out=out)
             self.assertEqual(out.read_text().splitlines(), [
@@ -159,6 +164,28 @@ class ChangedFlowTest(unittest.TestCase):
                 "990009,30.00000,-85.00000,Exact,pos",  # untouched
             ])  # 990003 moved and missed: its old row is gone
         self.assertEqual(sum(1 for a in sent if a[0] == "pos"), 1, "only the new hospital is offered its POS address")
+        self.assertEqual(seen, [{"990002", "990003", "990009"}], "changed() is given the CCNs `out` already places")
+
+    def test_a_small_batch_that_all_misses_still_drops_the_stale_rows(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = Path(d) / "geocodes.csv"
+            out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n"
+                           "990009,30.00000,-85.00000,Exact,pos\n")
+            with mock.patch.object(geocode, "changed", return_value=([], ["990002"])), \
+                    mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}):
+                geocode.main(send=lambda batch: "", only_changed=True, out=out)
+            self.assertEqual(out.read_text().splitlines(), ["ccn,lat,lon,match,source",
+                                                            "990009,30.00000,-85.00000,Exact,pos"])
+
+    def test_changed_sorts_new_and_moved_and_ignores_a_case_only_edit(self):
+        row = lambda street: {"street": street, "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}  # noqa: E731
+        now = {"990001": row("1 NEW WAY"), "990002": row("2 Moved Rd"), "990003": row("3 Main St"),
+               "990004": row("4 NEW WAY")}
+        before = {"990002": row("2 OLD RD"), "990003": row("3 MAIN ST")}
+        with mock.patch.object(geocode, "tables", return_value={"hgi": now, "hgi_prior": before}), \
+                mock.patch.object(geocode, "gap", return_value=["990001", "990002", "990003", "990004", "990005"]):
+            self.assertEqual(geocode.changed(set()), (["990001", "990004"], ["990002"]))
+            self.assertEqual(geocode.changed({"990004"}), (["990001"], ["990002"]))
 
 
 if __name__ == "__main__":

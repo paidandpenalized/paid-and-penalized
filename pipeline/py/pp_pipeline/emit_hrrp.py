@@ -64,7 +64,7 @@ assert tuple(CONDITION_INFO) == CONDITIONS
 MASTER_FIELDS = ("name", "alias", "city", "state", "county", "zip", "lat", "lon", "geo", "cbsa", "cbsaName", "urban",
                  "region", "division", "beds", "teach", "own", "ownDetail", "types", "inactive")
 RENAMED = {"state": "st"}  # the master's key -> the record's, where they differ (the record keeps the listed order)
-OPTIONAL = ("alias", "bedsSrc", "inactive")
+OPTIONAL = ("alias", "bedsSrc", "inactive", "starPrior")
 
 
 def committed_master():
@@ -81,11 +81,13 @@ def master_fields(m):
     return out
 
 
-def care_compare_stars(pin=emit_hospital.HGI):
-    """{ccn: star rating} from a Care Compare pin, the current one by default. A hospital the current file dropped has
-    no rating here (its Care Compare profile is gone, so the page has nothing to link), though the master keeps its
-    row."""
-    return read_hgi_stars(read_pinned_bytes(pin).decode("utf-8"))
+def care_compare_stars(pins=(emit_hospital.HGI_PRIOR, emit_hospital.HGI)):
+    """{ccn: (star rating, from an earlier file)} from Care Compare pins, oldest first: a later file's rating wins, so a
+    hospital the last file dropped keeps its rating from an earlier one, as the master keeps its row, marked so the
+    page doesn't link to a Care Compare profile that is gone."""
+    last = pins[-1]
+    return {c: (s, pin != last) for pin in pins
+            for c, s in read_hgi_stars(read_pinned_bytes(pin).decode("utf-8")).items()}
 
 
 def read_inputs():
@@ -155,7 +157,8 @@ def hospital_records(kept, inputs, master, mdh_share):
                                             inputs["rates"], mdh_share)
         if addon is not None:
             addons[ccn] = addon
-        rec = {"id": ccn, **master_fields(master[ccn]), "star": inputs["stars"].get(ccn),
+        star, earlier = inputs["stars"].get(ccn, (None, False))
+        rec = {"id": ccn, **master_fields(master[ccn]), "star": star, "starPrior": earlier or None,
                **fields}
         records.append({k: v for k, v in rec.items() if v is not None or k not in OPTIONAL})
     return records, addons

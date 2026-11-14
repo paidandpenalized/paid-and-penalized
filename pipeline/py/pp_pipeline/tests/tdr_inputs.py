@@ -29,7 +29,7 @@ def care_compare_changed():
     rating), or that only one file lists."""
     t = emit_hospital.tables()
     before, now = t["hgi_prior"], t["hgi"]
-    stars_before, stars_now = (emit_hrrp.care_compare_stars(pin)
+    stars_before, stars_now = (emit_hrrp.care_compare_stars((pin,))
                                for pin in (emit_hospital.HGI_PRIOR, emit_hospital.HGI))
     return frozenset(c for c in before.keys() | now.keys()
                      if before.get(c) != now.get(c) or stars_before.get(c) != stars_now.get(c))
@@ -46,14 +46,16 @@ def _without_reasons(record):
 
 def unexplained(now, then, fields):
     """['<id> <field>: then -> now'] for each field that differs between two builds' records ({id: record}, every id
-    of `now` in `then` or skipped), unless the hospital's Care Compare row changed and the field is one of `fields`,
-    or is a program's reason."""
+    of `now` in `then` or skipped), unless the hospital's Care Compare row changed and the field is one of `fields`
+    (or is a program's reason, and the hospital's kind changed)."""
     changed = care_compare_changed()
     out = []
     for c, h in sorted(now.items()):
         if c not in then:
             continue
-        a, b = (_without_reasons(h), _without_reasons(then[c])) if c in changed else (h, then[c])
+        # A program's reason may move only with the hospital's kind (its Care Compare type).
+        retyped = c in changed and h.get("kind") != then[c].get("kind")
+        a, b = (_without_reasons(h), _without_reasons(then[c])) if retyped else (h, then[c])
         out += [f"{c} {k}: {b.get(k)!r} -> {a.get(k)!r}" for k in sorted(a.keys() | b.keys())
                 if a.get(k) != b.get(k) and not (c in changed and k in fields)]
     return out
