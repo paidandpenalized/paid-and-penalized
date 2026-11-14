@@ -38,8 +38,8 @@ USER_AGENT = "paid-and-penalized hospital master geocoding (https://paidandpenal
 MAX_ROWS = 10_000  # the service's batch limit
 MAX_RESPONSE = 10_000_000  # bytes
 MIN_MATCHED = 0.5  # share of hospitals that must match before the CSV is written
-MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own (a
-# hospital the service didn't answer keeps its row, so an outage drops nothing)
+MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own
+MAX_UNANSWERED = 0.01  # a full run stops when more than this share of hospitals is unanswered (a cut-off response)
 OUT = PINNED_DIR / "census-geocodes-2026-10" / "geocodes.csv"
 FIELDS = ["ccn", "lat", "lon", "match", "source"]
 # (south, north, west, east): conterminous US, Alaska, Hawaii, Puerto Rico and the U.S. Virgin Islands,
@@ -142,8 +142,8 @@ def parse_response(text, batch):
 def geocode(cands, send=post):
     """({ccn: (lat, lon, match, source)}, unanswered CCNs): every candidate address in one request; each hospital's
     first matched address wins. An address is answered by exactly one complete row (a Match row of all 8 columns, or a
-    No_Match or Tie row); a hospital with any address unanswered is unanswered: nothing reliable is known about it, so
-    a caller keeps what it had."""
+    No_Match or Tie row). Walking a hospital's addresses in order, a match wins; an unanswered address before any match
+    makes the hospital unanswered (that address might have won), and the caller decides what it keeps."""
     batch = {f"{c}-{n}": a for c, addrs in cands.items() for n, a in enumerate(addrs, 1)}
     if not batch:
         return {}, set()
@@ -154,13 +154,13 @@ def geocode(cands, send=post):
     times = Counter(r[0] for r in rows)
     answered = {r[0] for r in rows if times[r[0]] == 1 and len(r) >= 3
                 and (r[2] in ("No_Match", "Tie") or (r[2] == "Match" and len(r) >= 8))}
-    unanswered = {c for c, addrs in cands.items() if any(f"{c}-{n}" not in answered for n in range(1, len(addrs) + 1))}
     got = {i: v for i, v in parse_response(text, batch).items() if i in answered}
-    found = {}
+    found, unanswered = {}, set()
     for c, addrs in cands.items():
-        if c in unanswered:  # an unanswered earlier address might have been the match that wins
-            continue
         for n, a in enumerate(addrs, 1):
+            if f"{c}-{n}" not in answered:
+                unanswered.add(c)
+                break
             if f"{c}-{n}" in got:
                 found[c] = (*got[f"{c}-{n}"], a[0])
                 break
@@ -200,15 +200,19 @@ def main(send=post, only_changed=False, out=OUT):
         pinned, have, ccns = [], set(), gap()
         cands = candidates(ccns, t["hgi"], t["pos"])
     found, unanswered = geocode(cands, send)
-    # --changed: an unanswered hospital keeps its row, since nothing is known about its new address. A full run rewrites
-    # every row, so an unanswered hospital gets none, as an unmatched one does (MIN_MATCHED guards an outage).
+    # --changed: an unanswered hospital keeps any row it has, since nothing is known about its new address. A full run
+    # rewrites every row: a few unanswered hospitals get none, as unmatched ones do; more than MAX_UNANSWERED stops it.
+    if not only_changed and len(unanswered) > MAX_UNANSWERED * len(cands):
+        raise SystemExit(f"{len(unanswered)} of {len(cands)} hospitals not fully answered (a cut-off response?); "
+                         f"{out.name} left unchanged")
     replaced = set(ccns) - unanswered if only_changed else set(ccns)
     dropped = sorted(have & replaced - found.keys())
     if dropped:
         print(f"no match for a new address; old point dropped ({len(dropped)}): {', '.join(dropped)}")
     if unanswered:
-        what = "row kept as it was" if only_changed else "no row"
-        print(f"not fully answered; {what}, run again to retry ({len(unanswered)}): {', '.join(sorted(unanswered))}")
+        kept = sorted(unanswered & have) if only_changed else []
+        print(f"not fully answered, run again to retry ({len(unanswered)}): {', '.join(sorted(unanswered))}; "
+              f"row kept as it was: {', '.join(kept) or 'none'}")
     write(found, len(cands), path=out, keep=[r for r in pinned if r[0] not in replaced])
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
     print(f"wrote {out.name}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; no address "

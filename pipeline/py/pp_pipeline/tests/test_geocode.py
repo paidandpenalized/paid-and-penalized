@@ -100,15 +100,23 @@ class FlowTest(unittest.TestCase):
             self.assertEqual(p.read_text(), "ccn,lat,lon,match,source\n")
 
 
-    def test_a_full_run_gives_an_unanswered_hospital_no_row(self):
+    def test_a_full_run_gives_a_few_unanswered_hospitals_no_row_and_stops_on_more(self):
+        hgi = {f"99{i:04d}": {"street": f"{i} INVENTED WAY", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}
+               for i in range(1, 201)}
+
+        def send(skip):
+            return lambda batch: "".join(
+                f'"{i}","x","Match","Exact","{a[1]}, {a[2]}, {a[3]}, {a[4]}","-85.10000,31.20000","1","R"\n'
+                for i, a in batch.items() if int(i[2:6]) > skip)
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "geocodes.csv"
-            out.write_text("ccn,lat,lon,match,source\n990001,30.00000,-85.00000,Exact,pos\n")
-            hgi = {"990001": {"street": "1 INVENTED WAY", "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}}
-            with mock.patch.object(geocode, "gap", return_value=["990001"]), \
+            out.write_text("ccn,lat,lon,match,source\n")
+            with mock.patch.object(geocode, "gap", return_value=sorted(hgi)), \
                     mock.patch.object(geocode, "tables", return_value={"hgi": hgi, "pos": {}}):
-                geocode.main(send=lambda batch: "", out=out)
-            self.assertEqual(out.read_text(), "ccn,lat,lon,match,source\n")
+                geocode.main(send=send(2), out=out)  # 2 of 200 unanswered: 1%, written without them
+                self.assertEqual(len(out.read_text().splitlines()), 1 + 198)
+                with self.assertRaisesRegex(SystemExit, "3 of 200 hospitals not fully answered"):
+                    geocode.main(send=send(3), out=out)
 
     def test_kept_rows_stay_as_written_and_new_matches_join_them_in_ccn_order(self):
         with tempfile.TemporaryDirectory() as d:
@@ -220,6 +228,10 @@ class ChangedFlowTest(unittest.TestCase):
         pos_match = OK_ROW.replace("990001-1", "990003-2").replace("1 INVENTED WAY", "9 OLD RD") + "\n"
         found, got = geocode.geocode(cands, send=lambda batch: match + "\n" + pos_match)
         self.assertEqual((set(found), got), ({"990002"}, {"990003"}))
+        # The first address matched; the second, which it beats, was never answered: found.
+        hgi_match = OK_ROW.replace("990001-1", "990003-1").replace("1 INVENTED WAY", "3 NEW RD") + "\n"
+        found, got = geocode.geocode(cands, send=lambda batch: match + "\n" + hgi_match)
+        self.assertEqual((set(found), got), ({"990002", "990003"}, set()))
         self.assertEqual(geocode.geocode({}, send=lambda batch: self.fail("sent")), ({}, set()))
         bom = "\ufeff" + OK_ROW.replace("990001-1", "990002-1").replace("1 INVENTED WAY", "2 NEW RD") + "\n"
         self.assertEqual(set(geocode.geocode(cands, send=lambda batch: bom)[0]), {"990002"})
