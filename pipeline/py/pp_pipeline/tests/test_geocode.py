@@ -70,7 +70,8 @@ class FlowTest(unittest.TestCase):
                               second, OK_ROW, '"990003-1","x","No_Match"']) + "\n"
         cands = {"990001": [FIRST, ("pos", *FIRST[1:3], "AL", "36301")],
                  "990003": [("hgi", "PO BOX 3", "SPRINGFIELD", "AL", "36301"), ("pos", "3 INVENTED WAY", "SPRINGFIELD", "AL", "36301")]}
-        found = geocode.geocode(cands, send)
+        found, unanswered = geocode.geocode(cands, send)
+        self.assertEqual(unanswered, set())
         self.assertEqual(len(sent), 1)
         self.assertEqual(sorted(sent[0]), ["990001-1", "990001-2", "990003-1", "990003-2"])
         self.assertEqual(found, {"990001": (31.215662945023, -85.361445951887, "Exact", "hgi"),
@@ -179,21 +180,28 @@ class ChangedFlowTest(unittest.TestCase):
             self.assertEqual(out.read_text().splitlines(), ["ccn,lat,lon,match,source",
                                                             "990009,30.00000,-85.00000,Exact,pos"])
 
-    def test_an_answer_for_no_address_stops_before_anything_is_written(self):
+    def test_an_unanswered_hospital_keeps_its_row(self):
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "geocodes.csv"
-            out.write_text("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n")
-            with mock.patch.object(geocode, "changed", return_value=([], ["990002"])), \
-                    mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}), \
-                    self.assertRaisesRegex(SystemExit, "answered 0 of 1"):
-                geocode.main(send=lambda batch: "<html>Service Unavailable</html>", only_changed=True, out=out)
-            self.assertIn("990002,30.00000", out.read_text())
+            before = ("ccn,lat,lon,match,source\n990002,30.00000,-85.00000,Exact,hgi\n"
+                      "990003,30.00000,-85.00000,Exact,hgi\n")
+            out.write_text(before)
+            with mock.patch.object(geocode, "changed", return_value=([], ["990002", "990003"])), \
+                    mock.patch.object(geocode, "tables", return_value={"hgi": self.HGI, "pos": self.POS}):
+                geocode.main(send=lambda batch: "<html>Service Unavailable</html>\n", only_changed=True, out=out)
+                self.assertEqual(out.read_text(), before, "an outage drops nothing")
+                # Only 990002 answered (No_Match): it drops to its ZIP; 990003, not answered, keeps its row.
+                geocode.main(send=lambda batch: '"990002-1","x","No_Match"\n', only_changed=True, out=out)
+            self.assertEqual(out.read_text().splitlines(), ["ccn,lat,lon,match,source",
+                                                            "990003,30.00000,-85.00000,Exact,hgi"])
 
-    def test_an_answer_missing_some_addresses_stops_too(self):
-        with self.assertRaisesRegex(SystemExit, "answered 1 of 2"):
-            geocode.geocode({"990002": [("hgi", "2 NEW RD", "SPRINGFIELD", "AL", "36301")],
-                             "990003": [("hgi", "3 NEW RD", "SPRINGFIELD", "AL", "36301")]},
-                            send=lambda batch: '"990002-1","x","No_Match"\n')
+    def test_a_cut_off_answer_stops_and_an_empty_batch_sends_nothing(self):
+        cands = {"990002": [("hgi", "2 NEW RD", "SPRINGFIELD", "AL", "36301")]}
+        with self.assertRaisesRegex(SystemExit, "cut off"):
+            geocode.geocode(cands, send=lambda batch: OK_ROW.replace("990001-1", "990002-1")[:-20])
+        self.assertEqual(geocode.geocode({}, send=lambda batch: self.fail("sent")), ({}, set()))
+        bom = "\ufeff" + OK_ROW.replace("990001-1", "990002-1").replace("1 INVENTED WAY", "2 NEW RD") + "\n"
+        self.assertEqual(set(geocode.geocode(cands, send=lambda batch: bom)[0]), {"990002"})
 
     def test_changed_sorts_new_and_moved_and_ignores_a_case_only_edit(self):
         row = lambda street: {"street": street, "city": "SPRINGFIELD", "state": "AL", "zip": "36301"}  # noqa: E731

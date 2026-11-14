@@ -15,6 +15,7 @@ from unittest import mock
 
 from pp_engine import hrrp
 from pp_engine.parse import SchemaError
+from pp_engine.hrrp_read import read_hgi_stars
 from pp_pipeline import emit_hospital, emit_hrrp
 from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, require_current
 from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, july_master, unexplained
@@ -154,8 +155,8 @@ class CareCompareStars(unittest.TestCase):
         self.assertEqual(got, {"990001": (4, True), "990002": (None, False), "990003": (5, False),
                                "990004": (1, False)})
 
-    def test_a_hospital_no_file_lists_is_unlisted_in_the_record(self):
-        listed = {c for c, (_, unlisted) in emit_hrrp.care_compare_stars().items() if not unlisted}
+    def test_a_hospital_the_current_file_does_not_list_is_unlisted_in_the_record(self):
+        listed = set(read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")))
         records = {h["id"]: h for h in fresh()["hospitals"]}
         self.assertEqual({c for c, h in records.items() if h.get("careCompareUnlisted")}, set(records) - listed)
         self.assertTrue(all(h.get("careCompareUnlisted", True) is True for h in records.values()))
