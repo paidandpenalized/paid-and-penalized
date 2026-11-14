@@ -117,6 +117,7 @@ class FlowTest(unittest.TestCase):
                 self.assertEqual(len(out.read_text().splitlines()), 1 + 198)
                 with self.assertRaisesRegex(SystemExit, "3 of 200 hospitals not fully answered"):
                     geocode.main(send=send(3), out=out)
+                self.assertEqual(len(out.read_text().splitlines()), 1 + 198, "a stopped run leaves the file as it was")
 
     def test_kept_rows_stay_as_written_and_new_matches_join_them_in_ccn_order(self):
         with tempfile.TemporaryDirectory() as d:
