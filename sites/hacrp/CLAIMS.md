@@ -103,7 +103,7 @@ A claim marked `unverified` may not be used in copy.
 | HACRP-94 | In the base the readmissions and value-based programs adjust, a Medicare-dependent hospital's gain from its hospital-specific rate (the difference from the federal rate) is included and a sole community hospital's is left out. | https://www.law.cornell.edu/cfr/text/42/412.152 | "sole community hospital … this amount also does not include the difference" … "Medicare-dependent, small rural hospital … this amount includes the difference" | 2026-10-23 |
 | HACRP-95 | CMS adds an eligible Indian Health Service or Tribal hospital's supplemental payment to each claim's payment, along with the uncompensated care payment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "we add the uncompensated care payment and supplemental payment for eligible IHS/Tribal hospitals and Puerto Rico hospitals to the total claim payment amount" | 2026-10-23 |
 | HACRP-96 | CMS figures the teaching (IME) and low-income-patient (DSH) payments as percentage add-ons to the federal DRG payment: a claim's operating payment is the DRG payment times one plus the IME adjustment plus a quarter of the DSH adjustment. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Federal Payment Rate for Operating Costs = MS-DRG Relative Weight x [ … ] x (1 + IME + (DSH * 0.25))" | 2026-10-23 |
-| HACRP-97 | Care Compare's infection files give each hospital's C. diff SIR with its observed and predicted cases (critical access and other hospitals outside this program included), so the hospitals with a C. diff SIR in both 2024 and 2025 can be compared year by year. | https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv | "Clostridium Difficile (C.Diff): Observed Cases" … "Clostridium Difficile (C.Diff): Predicted Cases" | 2026-11-13 |
+| HACRP-97 | Care Compare's infection files give each hospital's C. diff SIR with its observed and predicted cases (critical access and other hospitals outside this program included), so the hospitals with a C. diff SIR in both 2024 and 2025 can be compared year by year. | https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-11-12.zip | "Clostridium Difficile (C.Diff): Observed Cases" … "Clostridium Difficile (C.Diff): Predicted Cases" | 2026-11-13 |
 | HACRP-98 | CDC has added a 2022 baseline for its SIRs, and says C. diff SIRs on it run generally higher than on the 2015 baseline; the observed count is the same under both, only the predicted count changes. | https://www.cdc.gov/nhsn/2022rebaseline/How-Will-My-SIR-Change.pdf | "A new National baseline using data from 2022 has been added" … "CDI SIRs using the 2022 baseline is generally higher" | 2026-11-13 |
 | HACRP-99 | CMS released Care Compare's infection results for calendar year 2025 on November 12, 2026. | https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/77hc-ibv8 | "title":"Healthcare Associated Infections - Hospital" … "released":"2026-11-12" | 2026-11-13 |
 
@@ -199,10 +199,10 @@ A claim marked `unverified` may not be used in copy.
   its predicted counts show the switch: summed over all hospitals, C. diff's fell from about 82,700 in calendar year 2024
   to about 38,200 in 2025, and CAUTI's by a third, where reported infections moved far less. On 2026-10-22 the dataset
   still held the last 2015-baseline release (October 2024 to September 2025). The release date in HACRP-99's quote is
-  the record's until CMS's next quarterly refresh replaces it; that refresh also retires the file HACRP-97 cites, which
-  CMS then keeps in its Provider Data Catalog archives: re-point HACRP-97 and the `hai-cy2025` pin's `downloadUrl` to the
-  archive then (as `hai-cy2024`'s is). **HACRP-97** cites the 2025 file (pinned as `hai-cy2025`); the 2024 file is
-  `hai-cy2024`, from CMS's archive (`data/pinned/manifest.json`). The site's sums over the hospitals with a C. diff SIR
+  the record's until CMS's next quarterly refresh replaces it; then cite the archive CMS posted the same day,
+  `hospitals_2026-11-12.zip`, which holds this release's files. **HACRP-97** cites the 2025 file in that archive (the
+  `hai-cy2025` pin is derived from the same member, byte for byte the file Care Compare serves now, so the citation
+  outlasts the next refresh); the 2024 file is `hai-cy2024`, from CMS's archive (`data/pinned/manifest.json`). The site's sums over the hospitals with a C. diff SIR
   in both years are `sites/hacrp/web/data.js` `baselineShift`, and a test holds them. **HACRP-98** cites slides 31 and
   18 of CDC's "How Will My SIRs Change?" (2022 rebaseline training, September 2024); slide 18 compares acute care
   hospitals' 2022 data under both baselines. CDC's note for groups that publish SIRs says "The numerator of the SIR,
@@ -393,7 +393,7 @@ browser.
 | https://mp.qualityreportingcenter.com/globalassets/listserves/2026/iqr/2026-74-ip.pdf | 200 | direct |
 | https://data.cms.gov/provider-data/dataset/77hc-ibv8 | 200 | direct |
 | https://data.cms.gov/provider-data/api/1/metastore/schemas/dataset/items/77hc-ibv8 | 200 | direct |
-| https://data.cms.gov/provider-data/sites/default/files/resources/43825e12dc0c923df9ba5cbdf473c9d5_1792599610/Healthcare_Associated_Infections-Hospital.csv | 200 | direct |
+| https://data.cms.gov/provider-data/sites/default/files/dataset-archives/theme/hospitals/hospitals_2026-11-12.zip | 200 | direct |
 | https://www.cdc.gov/nhsn/2022rebaseline/How-Will-My-SIR-Change.pdf | 200 | direct |
 | https://www.cdc.gov/nhsn/pdfs/rebaseline/Groups-Organizations-Use-Publish-SIRs.pdf | 200 | direct |
 | https://qualityindicators.ahrq.gov/Downloads/Modules/PSI/V2024/TechSpecs/PSI_03_Pressure_Ulcer_Rate.pdf | 200 | direct |
