@@ -12,7 +12,8 @@ from pp_pipeline.files import load_schemas
 SCHEMAS = load_schemas()
 MANIFEST = [{"id": s, "sha256": "0" * 64} for s in ("hgi", "impact", "pos", "hacrp", "hrrp")]
 NOT_IPPS = {"critical_access": "critical_access", "psychiatric": "psychiatric", "childrens": "childrens",
-            "long_term": "long_term", "rural_emergency": "rural_emergency", "va": "federal", "dod": "federal"}
+            "long_term": "long_term", "rural_emergency": "rural_emergency", "cancer": "cancer", "va": "federal",
+            "dod": "federal"}
 
 
 def hgi_row(name="INVENTED GENERAL HOSPITAL", kind="Acute Care Hospitals", state="ZZ", **kw):

@@ -237,6 +237,10 @@ export const COPY = {
     text: 'A Medicare-dependent hospital’s second line in the dollar formula prices its hospital-specific payment with the case-mix index the impact file gives for hospitals paid under that rate, not the transfer-adjusted one. Only those hospitals’ estimates moved.',
     claim: 'HRRP-30',
   },
+  changedV3: {
+    text: 'Hospital names, addresses, ownership and star ratings come from a newer Care Compare hospital file; a hospital it no longer lists keeps its details from the earlier one. No penalty or dollar estimate moved.',
+    claim: null,
+  },
   changedCorrections: { text: 'Corrections of errors are in the family’s dated {log}.', claim: null },
   changedLogLink: { text: 'corrections log', claim: null },
   reuseHeading: { text: 'Reuse', claim: null },

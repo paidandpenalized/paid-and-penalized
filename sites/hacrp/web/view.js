@@ -48,8 +48,9 @@ export function boundaryText(hospitals, { highestNo, lowestYes }) {
   return { highestNo: find('No', highestNo), lowestYes: find('Yes', lowestYes) };
 }
 
-// careCompare: the hospital's Care Compare overall rating ({ rating, footnotes }, data.js careCompareRatings), or null
-// when Care Compare lists it under no rating at all.
+// careCompare: the hospital's Care Compare overall rating ({ rating, footnotes, modified, listed }, data.js
+// careCompareRatings and loadHacrp; from the previous file, `listed: false`, when the current one dropped the hospital),
+// or null when neither file lists it.
 export function hospitalView({ hospital: h, model, estimate, footnotes, master, fy, periods, boundaryText: bt, careCompare = null }) {
   if (master.ccn !== h.ccn) throw new RangeError(`master record ${master.ccn} is not hospital ${h.ccn}`);
   if (!bt) throw new TypeError('hospitalView: boundaryText is required (from boundaryText())');

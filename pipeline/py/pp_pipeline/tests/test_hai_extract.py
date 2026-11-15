@@ -224,6 +224,15 @@ class Derive(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "not the file the manifest names"):
             derive(data + b"\n", source, 2024)
 
+    def test_a_recorded_member_hash_is_checked(self):
+        text = raw(full_hospital("990001"))
+        data = self.zipped(text)
+        member = text.encode("cp1252")
+        good = {"memberBytes": len(member), "memberSha256": hashlib.sha256(member).hexdigest()}
+        self.assertEqual(derive(data, self.source(data, **good), 2024)[0], extract(text, 2024).encode("utf-8"))
+        with self.assertRaisesRegex(ValueError, "not the file the manifest names"):
+            derive(data, self.source(data, **{**good, "memberSha256": "0" * 64}), 2024)
+
     def test_missing_member_raises(self):
         data = self.zipped(raw(full_hospital("990001")))
         with self.assertRaises(KeyError):
@@ -249,8 +258,11 @@ class Committed(unittest.TestCase):
                 source = entry["derivedFrom"]
                 # an archived year is a zip and its member; the current year is the CSV itself
                 csv_itself = "member" not in source
-                self.assertEqual(sorted(k for k in source if k not in ("originalUrl",)),
+                # a member's own size and SHA-256 are optional (memberBytes, memberSha256), recorded together
+                self.assertEqual(sorted(k for k in source if k not in ("originalUrl", "memberBytes", "memberSha256")),
                                  ["bytes", "downloadUrl", "file", *([] if csv_itself else ["member"]), "sha256"])
+                self.assertEqual("memberBytes" in source, "memberSha256" in source)
+                self.assertTrue("memberSha256" not in source or not csv_itself)
                 self.assertRegex(source["sha256"], r"[0-9a-f]{64}")
                 self.assertTrue(source["downloadUrl"].startswith("https://"))
                 self.assertTrue((source["file"] if csv_itself else source["member"]).endswith(".csv"))

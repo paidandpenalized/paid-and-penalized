@@ -69,6 +69,21 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Version 1 equals Thirty Day Readmissions' output on every field; a test holds that a build with `TACMIV44` in this one
   place still does, so the case mix is the only difference.
 
+## hrrp methods_version 3 (2026-11-13)
+- What changed: the hospital master moved to Care Compare's fall 2026 Hospital General Information file
+  (`hgi-2026-11`; hospital methods_version 3), and the star ratings come from it too. The July file (`hgi-2026-07`)
+  stays an input: a hospital the newer file dropped keeps its July row and rating, as in the master (no Readmissions
+  hospital is in that case now).
+- New optional field `careCompareUnlisted: true`: the current Care Compare file doesn't list the hospital, so its page
+  has no Care Compare link. One hospital carries it now, 420117, which no Care Compare file lists; its page linked to a
+  profile that doesn't exist.
+- What moves: names, aliases, ownership, ZIP codes and map points, for the hospitals whose Care Compare row changed
+  (hospital methods_version 3 says which points); and the count of map points placed by address, ZIP or county. No
+  ratio, factor, penalty or dollar estimate moves.
+- Thirty Day Readmissions was built on the July file and keeps its names until its own refresh. The tests compare
+  this file with that site's on a build from the July file, which must still match as before; and they hold that the
+  newer file moves only the fields Care Compare feeds, and only for the hospitals whose row changed.
+
 ## hospital methods_version 1 (2026-10-20)
 - `data/emitted/hospital/fy2027/hospital_master.json` holds one record per CCN listed in Care Compare's Hospital
   General Information, the FY2027 IPPS impact file, or a program file (HACRP FY2026; HRRP FY2027 from Thirty Day
@@ -105,6 +120,26 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   FY2026 file lists Maryland's 43 hospitals with Payment Reduction "N/A"; they are now `inProgram: false` with reason
   `maryland`, as in HRRP (3,012 of 3,055 listed hospitals are in HACRP).
 - `schema_version` 2 (the record's new fields are required).
+
+## hospital methods_version 3 (2026-11-13)
+- Care Compare's fall 2026 Hospital General Information file (`hgi-2026-11`, released 2026-11-12) replaces the July
+  file as the first source of name, address, county, ownership and kind. The universe is unchanged in rule: every CCN
+  in the newer Care Compare file, the impact file or a program file.
+- **Dropped hospitals keep their last row.** The July file (`hgi-2026-07`) stays an input. A hospital the newer file
+  no longer lists, most often one that closed, keeps its July Care Compare row while the impact file or a program
+  file still lists it, so a closed hospital in a program file keeps its kind, county and ownership (18 hospitals). The
+  earlier file adds no hospital: one that no file lists any more leaves the master (4 critical access hospitals, none
+  with a page).
+- **Map points.** One Census Geocoder request on 2026-11-13 (`run.py geocode --changed`) for the hospitals outside
+  Thirty Day Readmissions' coverage that the newer file added (38) or gave a new address (22): matches replace their
+  rows, and a re-addressed hospital with no match drops to its ZIP's centroid rather than keep a point for an address
+  Care Compare no longer gives. Every other point is unchanged. A hospital whose point is Thirty Day Readmissions'
+  keeps it until that site folds in, even when Care Compare moved its address.
+- **New kind, `cancer`.** The newer file adds the type "Dedicated Cancer Care": the hospitals excluded from IPPS as
+  cancer hospitals (42 CFR 412.23(f)). They are not paid under IPPS, so neither program applies; their reason code
+  is `cancer`, tried with the other kinds before `federal`.
+- The county gate allows 38 unchecked counties, one more than before: a DC hospital new in the newer file whose county
+  "THE DISTRICT" takes the impact file's name, as its DC neighbors' do.
 
 ## dollars methods_version 1 (2026-10-22)
 - `data/emitted/dollars/fy2026/dollars.json` is the first emission of the dollar estimates. It is shared by the sites that

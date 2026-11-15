@@ -32,7 +32,7 @@ function recordCard(view) {
     { label: t('fieldMetro'), value: view.metro.value, note: link(view.metro.href, view.metro.linkText), fieldCls: 'f-metro' },
     { label: t('fieldType'), value: view.type, size: 'sm', fieldCls: 'f-type' },
     { label: t('fieldPeer'), value: view.peer.value, note: view.peer.note, fieldCls: 'f-peer' },
-    { label: t('fieldStars'), value: starsValue(view.stars), note: link(view.stars.href, t('starsLink'), true), fieldCls: 'f-stars' },
+    { label: t('fieldStars'), value: starsValue(view.stars), note: view.stars.href ? link(view.stars.href, t('starsLink'), true) : null, fieldCls: 'f-stars' },
   ].map((spec, i) => formField({ no: i + 2, ...spec }));
   return html`<div class="form hosp__id">
 ${formTitle(view.record.left, view.record.right)}

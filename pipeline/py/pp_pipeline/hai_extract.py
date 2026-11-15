@@ -5,7 +5,8 @@ abdominal hysterectomy, HAI_5 MRSA bacteremia, HAI_6 C. difficile), one row per 
 (SIR), the observed count and the predicted count, each exactly as CMS wrote the Score cell ("Not Available" stays
 that text). The raw file is 38 to 48 MB, over the repo's 10 MiB limit, so the repo pins this subset. The manifest
 entry's `derivedFrom` records the source's size, SHA-256 and CMS URL: for an archived year, a zip and the member it
-holds; for the year Care Compare shows now, the CSV itself (no `member`). Anyone with that file can re-run this and get
+holds (with the member's own size and SHA-256 when recorded, `memberBytes`/`memberSha256`); for the year Care Compare
+shows now, the CSV itself (no `member`). Anyone with that file can re-run this and get
 the same bytes:
 
     python3 -I pipeline/py/run.py extract-hai <path to the zip or CSV> <pin id, e.g. hai-cy2024>
@@ -152,6 +153,9 @@ def derive(source_bytes, source, year):
     if "member" in source:
         with zipfile.ZipFile(io.BytesIO(source_bytes)) as zf:
             raw = zf.read(source["member"])  # zipfile checks the member's CRC-32 as it reads
+        if "memberSha256" in source and (len(raw), hashlib.sha256(raw).hexdigest()) != (source["memberBytes"],
+                                                                                       source["memberSha256"]):
+            raise ValueError(f"{source['member']} in {source['file']} is not the file the manifest names")
     else:
         raw = source_bytes
     text, encoding = decode(raw)

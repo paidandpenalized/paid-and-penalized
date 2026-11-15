@@ -265,7 +265,10 @@ test('the changes and the sources: every changelog entry with its date and items
     .filter((id) => !shared.has(id));
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   const listed = new Set([...used, ...otherSites]);
-  assert.deepEqual(manifest.filter((e) => !listed.has(e.id)).map((e) => e.id), []);
+  // A staged pin (`"staged": true`) is pinned ahead of the refresh that will read it, so no page lists it yet; once one
+  // does, it is no longer staged.
+  assert.deepEqual(manifest.filter((e) => !listed.has(e.id) && !e.staged).map((e) => e.id), []);
+  assert.deepEqual(manifest.filter((e) => e.staged && listed.has(e.id)).map((e) => e.id), [], 'a pin a page reads is not staged');
   // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
   // was built from and is not held to the pages' list.
   const dollarsSources = readJson(`${REPO_ROOT}data/emitted/dollars/fy${newestYear('data/emitted/dollars')}/dollars.json`).sources;

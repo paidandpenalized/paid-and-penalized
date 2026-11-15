@@ -5,7 +5,7 @@ here instead, so nothing needs installing. Commands: `test`, `emit` (the hospita
 then the dollar estimates), `backtest` (prints the dollar estimates' back-test against hospitals' cost reports; see
 pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`, `extract-hai <zip or csv> <pin id>` (see
 pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see pp_pipeline/hcris_extract.py), and two that call the
-network, run by hand only: `geocode`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
+network, run by hand only: `geocode [--changed]`, the U.S. Census Bureau Geocoder (see pp_pipeline/geocode.py), and
 `refresh <site> [--pr]` (`make refresh SITE=<site> [PR=1]`), which fetches the site's CMS files from data.cms.gov, pins
 them, rebuilds and checks, and with --pr opens a draft pull request (see pp_pipeline/refresh.py).
 """
@@ -41,9 +41,9 @@ def main(argv):
         return run_tests()
     if command == "emit" and not args:
         return emit()
-    if command == "geocode" and not args:
+    if command == "geocode" and args in ([], ["--changed"]):
         from pp_pipeline import geocode
-        return geocode.main()
+        return geocode.main(only_changed=bool(args))
     if command == "extract-pos" and len(args) == 1:
         from pp_pipeline import pos_extract
         return pos_extract.main(args[0])
