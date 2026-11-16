@@ -14,6 +14,9 @@ const COLS = [
   { key: 'colNet', id: 'net', num: true }, { key: 'colNetPct', num: true },
 ];
 
+// The names' order, built once (a localeCompare with a locale may build a collator per comparison).
+const byName = new Intl.Collator('en-US', { numeric: true }).compare;
+
 // A cell (or any element) holding text, with a class or none.
 const cell = (tag, text, cls = null) => node(tag, { class: cls }, text ? [text] : []);
 
@@ -25,7 +28,7 @@ export function fillPeerTable(details, { peers, h, fill, fy, group }) {
   const table = node('table', { class: 'hh__pt' }, [cell('caption', fill('tableCaption', { fy, n: count(peers.length), group }))]);
   const head = node('thead', {}, [node('tr', {}, COLS.map((col) => node('th', { class: col.num ? 'num' : null, scope: 'col' }, [fill(col.key)])))]);
   const body = node('tbody');
-  const rows = [...peers].sort((a, b) => a.name.localeCompare(b.name, 'en-US') || a.ccn.localeCompare(b.ccn));
+  const rows = [...peers].sort((a, b) => byName(a.name, b.name) || a.ccn.localeCompare(b.ccn));
   for (const x of rows) {
     const me = x === h;
     const th = node('th', { scope: 'row' }, me

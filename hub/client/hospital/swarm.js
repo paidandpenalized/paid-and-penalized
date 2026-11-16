@@ -7,7 +7,8 @@
 // what-if's net past it) moves every dot at once, and the ticks, the gutter, the median and the marks with them.
 //
 // Every dot answers a pointer (its name, city and net in a tooltip, with a hit target larger than the dot) and a click
-// opens its hospital's page; on a touch screen the first tap shows the tooltip and a second opens. The canvas takes focus:
+// opens its hospital's page; on a touch screen the first tap shows the tooltip and a second opens. The pointer can move
+// from a dot onto its tooltip, which stays while the pointer is on it; Escape puts it away. The canvas takes focus:
 // ← and → step through the group from left to right (Home and End to its ends), each step said in a polite live region,
 // Enter opens, Escape lets go. Colors come from the tokens (colors.js) and repaint when the theme changes.
 import { median } from '../../../engine/js/peers.js';
@@ -29,6 +30,9 @@ const ALL_A = 0.62;
 const ALL_A_SMALL = 0.8;
 // The actual's rings during a what-if: a ghost.
 const GHOST_A = 0.4;
+// How long the tooltip stays after the pointer leaves its dot: time to cross onto the tooltip (WCAG 1.4.13; the charts'
+// tooltips wait as long: web/client/figure.js HIDE_MS).
+const HIDE_MS = 150;
 // The frame, in CSS pixels, wide and narrow (under pile.js NARROW_BELOW): the margins, the $0 gutter, where each pile and
 // the axis sit, and everyone's pile's largest pitch (the group's: pile.js peerPitch).
 const WIDE = { x: 6, gutter: 20, H: 452, pTop: 34, pBot: 206, aTop: 284, aBot: 396, allMax: 4.2 };
@@ -412,7 +416,24 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     return s % N === self ? `${line}. ${fill('dotThis')}` : line;
   };
 
+  // A pointer leaving a dot (or the canvas, or the tooltip) puts the tooltip away a moment later, unless it reaches the
+  // tooltip or a dot first.
+  let hiding = 0;
+  const keepTip = () => {
+    clearTimeout(hiding);
+    hiding = 0;
+  };
+  const hideSoon = () => {
+    keepTip();
+    hiding = setTimeout(() => {
+      hiding = 0;
+      canvas.style.cursor = '';
+      onLeave();
+    }, HIDE_MS);
+  };
+
   function showTip(s, touch = false) {
+    keepTip();
     if (s < 0) {
       tip.hidden = true;
       return;
@@ -438,6 +459,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
   function onMove(e) {
     if (e.pointerType === 'touch') return;
     const s = hit(...point(e));
+    // Off the dot shown: the pointer may be on its way to the tooltip.
+    if (s < 0 && hover >= 0) {
+      if (!hiding) hideSoon();
+      return;
+    }
+    keepTip();
     if (s === hover) return;
     hover = s;
     canvas.style.cursor = s >= 0 && s % N !== self ? 'pointer' : '';
@@ -445,6 +472,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
   function onLeave() {
+    keepTip();
     const was = hover;
     hover = -1;
     tip.hidden = true;
@@ -509,12 +537,22 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
 
+  // A tap's pointerleave comes before its click, which shows the tooltip again.
   canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerleave', onLeave);
+  canvas.addEventListener('pointerleave', (e) => (e.pointerType === 'touch' ? onLeave() : hideSoon()));
+  tip.addEventListener('pointerenter', keepTip);
+  tip.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hideSoon(); });
   canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);
   document.addEventListener('pointerdown', onOutside);
+  // Escape puts away a tooltip the pointer shows, wherever the focus is (a dot the keys picked, the canvas's own keys).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || tip.hidden) return;
+    keepTip();
+    letGo();
+    if (!moving) draw();
+  });
 
   function resize() {
     if (el.clientWidth === W) return;
