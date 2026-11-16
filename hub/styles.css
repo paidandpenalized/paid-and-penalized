@@ -406,14 +406,14 @@
 .pc h3 { display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: var(--fs-md); }
 .ab { align-self: start; padding: 2px 5px 1px; border: 1px solid; color: var(--pen-ink); font: 400 var(--fs-cap)/1.2 var(--font-type); text-decoration: none; }
 .pc__dek, .slip { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
-.pc figure { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font: 600 13px/1.35 var(--font-body); }
+.pc figure { display: grid; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); font: 600 0.8125rem/1.35 var(--font-body); }
 /* The histogram's marks stretch across the card (hub/home/below.js); their lines keep their width. */
 .pc__marks { overflow: visible; }
 .pc__marks :is(.st__grid, .st__base) { vector-effect: non-scaling-stroke; }
-.pc__big { margin-top: 12px; font: 700 26px/1 var(--font-type); }
-.pc__sub { margin-bottom: 16px; color: var(--ink-2); font: 400 12.5px/1.4 var(--font-type); }
+.pc__big { margin-top: 12px; font: 700 1.625rem/1 var(--font-type); }
+.pc__sub { margin-bottom: 16px; color: var(--ink-2); font: 400 0.78125rem/1.4 var(--font-type); }
 /* The Readmissions card's year line (below.js yearSplit), under the figure's words: their 16px moves below it. */
-.pc__yr { margin-top: -8px; margin-bottom: 16px; color: var(--ink-2); font: 400 13px/1.45 var(--font-body); }
+.pc__yr { margin-top: -8px; margin-bottom: 16px; color: var(--ink-2); font: 400 0.8125rem/1.45 var(--font-body); }
 .go, .ask__act > a { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 16px 12px; background: var(--pen); color: var(--on-mark); font: 400 1.0625rem/1.25 var(--font-display); text-decoration: none; }
 .go:hover, .ask__act > a:hover { background: var(--ink); color: var(--paper); }
 .pc .go { margin: auto 0 0; }
@@ -424,7 +424,7 @@
 .slip { display: flex; flex-direction: column; gap: 6px; padding: 11px 12px 12px; border: 1.5px dashed var(--line); text-decoration: none; }
 .slip b { color: var(--ink); }
 .slip .ab { color: var(--ink-3); }
-.slip__none { height: 22px; margin-top: auto; }
+.slip__none { margin-top: auto; }
 /* Methods, in brief: three numbered points, and the worksheet as a ruled form whose amounts line up on the right. */
 .nsteps { display: grid; gap: 10px; margin: 18px 0; padding: 0; list-style: none; }
 .nsteps li { display: flex; align-items: baseline; gap: 10px; }
@@ -433,10 +433,10 @@
 .wsx [hidden] { display: none; }
 .wst { width: 100%; border-collapse: collapse; border: solid var(--pen); border-width: 0 var(--rule) var(--rule) 0; }
 .wst :is(th, td) { padding: 9px clamp(6px, 2vw, 10px); border-bottom: 1px solid var(--line); font: 400 var(--fs-sm)/1.35 var(--font-body); text-align: left; vertical-align: baseline; }
-.wst small { display: block; margin-top: 2px; color: var(--ink-3); font: 400 12px/1.35 var(--font-type); }
-.wst td:last-child { font: 400 clamp(15px, 4vw, var(--fs-md))/1.35 var(--font-type); text-align: right; white-space: nowrap; }
+.wst small { display: block; margin-top: 2px; color: var(--ink-3); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.wst td:last-child { font: 400 clamp(0.9375rem, 0.5rem + 2.5vw, var(--fs-md))/1.35 var(--font-type); text-align: right; white-space: nowrap; }
 .wst__net > * { border-top: var(--rule) solid var(--ink); }
-.wst__net td:last-child { font-size: clamp(16px, 5vw, var(--fs-lg)); font-weight: 700; }
+.wst__net td:last-child { font-size: clamp(1rem, 0.5rem + 3vw, var(--fs-lg)); font-weight: 700; }
 .wst td[data-na] { color: var(--ink-3); font: 400 var(--fs-sm)/1.35 var(--font-body); white-space: normal; }
 /* The narrowest phones: each line's amount sits under its words, at the right, so the words and their formula notes take
    the line's whole width instead of a narrow column beside the amounts. */
@@ -486,12 +486,12 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__pin { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding-block: 8px; }
 .hh__plbl { color: var(--ink-2); font-size: var(--fs-sm); white-space: nowrap; }
 .hh__seg { display: inline-flex; }
-.hh__pb { min-height: 32px; padding: 6px 14px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 600 13.5px/1 var(--font-body); cursor: pointer; }
+.hh__pb { min-height: 32px; padding: 6px 14px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-2); font: 600 0.84375rem/1 var(--font-body); cursor: pointer; }
 .hh__pb + .hh__pb { margin-left: -1px; }
 .hh__pb[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 .hh__pb:hover:not([aria-pressed="true"]):not(:disabled) { background: var(--paper-2); color: var(--ink); }
 .hh__pb:disabled { cursor: not-allowed; text-decoration: line-through; }
-.hh__grp { max-width: none; font-size: 15px; font-weight: 600; }
+.hh__grp { max-width: none; font-size: 0.9375rem; font-weight: 600; }
 .hh__pnotes { padding-top: 10px; }
 .hh__pnotes:where(:not(:has(.hh__pnote:not([hidden])))) { display: none; }
 /* With scripts on, the toggle and the notes under it keep their places, unseen, until the page's script shows them (on
@@ -515,14 +515,15 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 /* The net: its label, the large figure beside its stamp, the band's slot (empty until the band is modeled), the
    common fiscal year's note. */
 .hh__net { margin-top: 30px; }
-.hh__netlab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; color: var(--ink-2); font: 600 13.5px/1.3 var(--font-body); }
+.hh__netlab { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; color: var(--ink-2); font: 600 0.84375rem/1.3 var(--font-body); }
 .hh__netline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-top: 8px; }
 .hh__big { max-width: none; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; white-space: nowrap; }
 /* Where the record and the money take the page's whole width (one column, above a phone's), the net is at its full size:
    the clamp above follows the two-column page's left column. */
 @media (min-width: 641px) and (max-width: 1023px) { .hh__big { font-size: 3.5rem; } }
-/* 24px: large text, so the bonus ink on paper meets its 3:1 (at 22px it would need 4.5:1). The worksheet's stamp too. */
-.hh__stamp .stamp, .wsx .stamp { font-size: 24px; padding: 5px 11px 2px; }
+/* 1.5rem (24px at the browser's default size): large text, so the bonus ink on paper meets its 3:1 (at 22px it would need
+   4.5:1). The worksheet's stamp too. */
+.hh__stamp .stamp, .wsx .stamp { font-size: 1.5rem; padding: 5px 11px 2px; }
 .hh__stamp--bonus .stamp, .stamp--rew { border-color: var(--rew); color: var(--rew); }
 .hh__band:empty { display: none; }
 /* The net's likely range, drawn as the HACRP pages draw one (sites/hacrp/web/styles.css .money__range): a small-caps key
@@ -538,15 +539,15 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
   .hh__rng-bar::before { border-color: CanvasText; }
   .hh__rng-bar::after { forced-color-adjust: none; background: CanvasText; }
 }
-.hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.hh__fy { margin-top: 10px; color: var(--ink-2); font-size: 0.8125rem; line-height: 1.45; }
 /* A hospital whose Medicare agreement has ended (page.js closed): under the year note, in its size and ink, as the HACRP
    and Readmissions pages set theirs. */
-.hh__closed { margin-top: 8px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+.hh__closed { margin-top: 8px; color: var(--ink-2); font-size: 0.8125rem; line-height: 1.45; }
 
 /* Each program's dollars as rows adding to the net: a label, a track (the signed bar from the zero line, the peers'
    median tick), the figure and its word. One grid, so every track lines up; the rows are its subgrids. --z is the zero
    line's place on the track, --a and --w a bar's start and width, --m a tick's place, each a fraction of the track. */
-.hh__sum { display: grid; grid-template-columns: 11.25em minmax(0, 1fr) auto 4.2em; column-gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 13.5px; }
+.hh__sum { display: grid; grid-template-columns: 11.25em minmax(0, 1fr) auto 4.2em; column-gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; font-size: 0.84375rem; }
 .hh__sr, .hh__axis { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: center; max-width: none; min-height: 34px; }
 .hh__sl { color: var(--ink-2); line-height: 1.2; overflow-wrap: break-word; }
 .hh__track { position: relative; align-self: stretch; }
@@ -555,27 +556,27 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__bar--pen { background: var(--pen); }
 .hh__bar--rew { background: var(--rew); }
 .hh__tick { position: absolute; top: 50%; height: 25px; width: 2px; margin: -12.5px 0 0 -1px; left: calc(var(--m) * 100%); background: var(--ink); }
-.hh__sv { font: 600 13.5px/1 var(--font-type); text-align: right; white-space: nowrap; }
-.hh__sw { color: var(--ink-2); font: 400 12px/1.2 var(--font-type); white-space: nowrap; }
+.hh__sv { font: 600 0.84375rem/1 var(--font-type); text-align: right; white-space: nowrap; }
+.hh__sw { color: var(--ink-2); font: 400 var(--fs-xs)/1.2 var(--font-type); white-space: nowrap; }
 /* The net's row, under a rule: its words in ink, its figure larger. */
 .hh__sr--net { margin-top: 10px; padding-top: 6px; border-top: 1.5px solid var(--ink); }
-.hh__sr--net .hh__sl { color: var(--ink); font-weight: 700; font-size: 14.5px; }
-.hh__sr--net .hh__sv { font-size: 15px; font-weight: 700; }
+.hh__sr--net .hh__sl { color: var(--ink); font-weight: 700; font-size: 0.90625rem; }
+.hh__sr--net .hh__sv { font-size: 0.9375rem; font-weight: 700; }
 /* A program the hospital is not in: hatched across the track, the words on paper, never $0. */
-.hh__out { grid-column: 2 / -1; display: flex; align-items: center; justify-content: center; height: 24px; border: 1px dashed var(--line); background: var(--hatch-fill); }
-.hh__out span { padding: 1px 8px; background: var(--paper); color: var(--ink-2); font: 400 12px/1.3 var(--font-body); }
+.hh__out { grid-column: 2 / -1; display: flex; align-items: center; justify-content: center; min-height: 1.8em; border: 1px dashed var(--line); background: var(--hatch-fill); }
+.hh__out span { padding: 1px 8px; background: var(--paper); color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
 /* The axis under the rows: $0 at the zero line, the side that is a cut and the side that is a bonus. */
 .hh__axis { min-height: 0; }
-.hh__ax { grid-column: 2; position: relative; height: 20px; color: var(--ink-3); font: 400 11px/20px var(--font-type); white-space: nowrap; }
+.hh__ax { grid-column: 2; position: relative; min-height: 1.8em; color: var(--ink-3); font: 400 0.6875rem/1.8 var(--font-type); white-space: nowrap; }
 .hh__ax-0 { position: absolute; left: calc(var(--z) * 100%); transform: translateX(-50%); }
 .hh__ax-cut { position: absolute; right: calc((1 - var(--z)) * 100% + 20px); }
 .hh__ax-bonus { position: absolute; left: calc(var(--z) * 100% + 20px); }
-.hh__key { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--ink-3); font-size: 12.5px; }
+.hh__key { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--ink-3); font-size: 0.78125rem; }
 .hh__key-tick { flex: none; width: 2px; height: 13px; background: var(--ink); }
-.hh__round { margin-top: 4px; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; }
+.hh__round { margin-top: 4px; color: var(--ink-3); font-size: 0.78125rem; line-height: 1.45; }
 
 /* The button down to the what-if: bold, outlined, the capsule handle as its glyph. */
-.hh__wbtn { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; padding: 10px 18px 10px 12px; border: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 15.5px/1.2 var(--font-body); text-decoration: none; }
+.hh__wbtn { display: inline-flex; align-items: center; gap: 12px; margin-top: 26px; padding: 10px 18px 10px 12px; border: 2px solid var(--ink); border-radius: 3px; background: var(--paper); color: var(--ink); font: 700 0.96875rem/1.2 var(--font-body); text-decoration: none; }
 .hh__wbtn:hover, .hh__wbtn:focus-visible { background: var(--ink); color: var(--paper); }
 .ico--capsule { --ico: var(--icon-capsule); width: 2.6em; height: 1.05em; }
 
@@ -586,12 +587,15 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__swarm:empty { display: none; }
 .hh__cv { display: block; width: 100%; touch-action: manipulation; }
 .hh__cv:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
-.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 12.5px/1.35 var(--font-body); pointer-events: none; }
+.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 0.78125rem/1.35 var(--font-body); pointer-events: none; }
+/* A mouse or pen can move onto the tooltip and read it there (hub/client/hospital/swarm.js keeps it); a tap goes
+   through it to the dots under it. */
+@media (hover: hover) and (pointer: fine) { .hh__tip { pointer-events: auto; } }
 .hh__tip b { display: block; font-weight: 700; }
-.hh__tip span { display: block; color: var(--ink-2); font: 400 12px/1.4 var(--font-type); }
-.hh__tip .hh__tip-open { color: var(--ink); font: 600 12px/1.4 var(--font-body); }
+.hh__tip span { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); }
+.hh__tip .hh__tip-open { color: var(--ink); font: 600 var(--fs-xs)/1.4 var(--font-body); }
 .hh--live .hh__tick { transition: left var(--glide); }
-.hh__cap { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__cap { margin-top: 10px; color: var(--ink-3); font-size: 0.78125rem; line-height: 1.5; }
 .hh__hint { display: block; margin-top: 4px; }
 .hh__err { margin-top: 12px; color: var(--ink-2); font-size: var(--fs-sm); }
 
@@ -602,7 +606,7 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__sechead { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-items: end; margin-bottom: 18px; }
 .hh__sechead h2 { font: 400 clamp(1.75rem, 3.6vw, var(--fs-2xl))/1.02 var(--font-display); }
 .hh__sechead .kicker { margin-bottom: 8px; }
-.hh__lede { color: var(--ink-2); font-size: 15px; }
+.hh__lede { color: var(--ink-2); font-size: 0.9375rem; }
 /* Scripts off, nothing offers what needs them: the button down to the what-if goes, the what-if's section is headed by
    what it shows (its kicker's words, which then step aside), and a line says what needs JavaScript, here and under the
    headline in place of the swarm. */
@@ -614,13 +618,13 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
   .hh__sechead .hh__noscript { margin-top: 0; }
 }
 .hh__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 0; align-items: center; padding-block: 18px 16px; border-top: 1px dotted var(--line); }
-.hh__rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font: 700 18px/1.2 var(--font-body); }
-.hh__ab { color: var(--ink-3); font: 400 12px var(--font-type); }
+.hh__rh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font: 700 var(--fs-md)/1.2 var(--font-body); }
+.hh__ab { color: var(--ink-3); font: 400 var(--fs-xs) var(--font-type); }
 .hh__rv { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 6px; }
-.hh__num { font: 700 22px/1.1 var(--font-type); }
+.hh__num { font: 700 var(--fs-lg)/1.1 var(--font-type); }
 .hh__rv .pill--na { font-size: var(--fs-sm); padding: 3px 9px 2px; }
-.hh__why { margin-top: 6px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
-.hh__deep { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 12px; padding: 5px 10px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 13.5px/1.2 var(--font-body); text-decoration: none; }
+.hh__why { margin-top: 6px; color: var(--ink-2); font-size: 0.84375rem; line-height: 1.5; }
+.hh__deep { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; margin-top: 12px; padding: 5px 10px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 0.84375rem/1.2 var(--font-body); text-decoration: none; }
 .hh__deep:hover, .hh__deep:focus-visible { background: var(--ink); color: var(--paper); }
 .hh__deep--soon { border-style: dashed; border-color: var(--line); color: var(--ink-2); font-weight: 600; }
 .hh__rows { position: relative; }
@@ -677,29 +681,29 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 /* One column (text above each strip): the thread would cross every row's words, so the rings alone carry the hospital. */
 @media (max-width: 1023px) { .hh__thread { display: none; } }
 /* The empty-program band at the foot of each directory slip (.slip__none). */
-.hh__nextbox { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px dashed var(--line); background: var(--hatch-fill); }
-.hh__nextbox span { padding: 2px 8px; background: var(--paper); color: var(--ink-3); font-size: 12.5px; }
+.hh__nextbox { display: flex; align-items: center; justify-content: center; min-height: 2.4em; border: 1px dashed var(--line); background: var(--hatch-fill); }
+.hh__nextbox span { padding: 2px 8px; background: var(--paper); color: var(--ink-3); font-size: 0.78125rem; }
 .hh__row--net { padding-top: 20px; border-top: 2px solid var(--ink); }
-.hh__row--net .hh__rh { font-size: 19px; }
+.hh__row--net .hh__rh { font-size: 1.1875rem; }
 .hh__result { margin-top: 10px; padding: 12px 14px 13px; border: 1.5px solid var(--ink); background: var(--paper); }
-.hh__rhd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; font: 700 13px/1.3 var(--font-body); }
-.hh__rbig { margin-top: 6px; font: 700 21px/1.2 var(--font-type); }
-.hh__rs { margin-top: 7px; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
-.hh__stand { margin-top: 10px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__rhd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 2px; max-width: none; font: 700 0.8125rem/1.3 var(--font-body); }
+.hh__rbig { margin-top: 6px; font: 700 1.3125rem/1.2 var(--font-type); }
+.hh__rs { margin-top: 7px; color: var(--ink-2); font-size: 0.84375rem; line-height: 1.5; }
+.hh__stand { margin-top: 10px; color: var(--ink-3); font-size: 0.78125rem; line-height: 1.5; }
 .hh__actions { display: flex; flex-wrap: wrap; gap: 16px; max-width: none; margin-top: 10px; }
 .hh__actions:not(:has(button:not([hidden]))) { display: none; }
-.hh__lnk { min-height: var(--target-min); padding: 0 0 1px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: 600 13.5px/1.3 var(--font-body); cursor: pointer; }
-.hh__reset { min-height: 32px; padding: 7px 14px; border: 0; border-radius: 2px; background: var(--ink); color: var(--paper); font: 700 14px/1.2 var(--font-body); cursor: pointer; }
+.hh__lnk { min-height: var(--target-min); padding: 0 0 1px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--ink); font: 600 0.84375rem/1.3 var(--font-body); cursor: pointer; }
+.hh__reset { min-height: 32px; padding: 7px 14px; border: 0; border-radius: 2px; background: var(--ink); color: var(--paper); font: 700 var(--fs-sm)/1.2 var(--font-body); cursor: pointer; }
 .hh__reset:hover, .hh__reset:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* The what-if's controls (hub/client/hospital/whatif.js): how to use them under the lede, then in each row the factor
    field with its steppers and the peers' median, or the cut / no cut pair. */
-.hh__how { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; color: var(--ink); font-size: 14px; line-height: 1.45; }
+.hh__how { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; color: var(--ink); font-size: var(--fs-sm); line-height: 1.45; }
 .hh__how .ico--capsule { flex: none; margin-top: 2px; }
-.hh__ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--ink-2); font-size: 13px; }
+.hh__ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; color: var(--ink-2); font-size: 0.8125rem; }
 .hh__ctl label { font-weight: 600; }
-.hh__fin { width: 6.6em; min-height: 32px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 400 14px var(--font-type); }
-.hh__stp { min-width: 32px; min-height: 32px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 700 16px/1 var(--font-type); cursor: pointer; }
+.hh__fin { width: 6.6em; min-height: 32px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 400 var(--fs-sm) var(--font-type); }
+.hh__stp { min-width: 32px; min-height: 32px; border: 1px solid var(--line); border-radius: 2px; background: var(--paper); color: var(--ink); font: 700 1rem/1 var(--font-type); cursor: pointer; }
 .hh__stp:hover { background: var(--paper-2); }
 .hh__fin:focus-visible, .hh__stp:focus-visible, .hh__lnk:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .hh__ctl .hh__lnk { margin-left: 6px; }
@@ -714,44 +718,44 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__scen[hidden] { display: none; }
 .hh__scenin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-block: 8px; }
 .hh__scenin .hh__reset { margin-left: auto; }
-.hh__htag { display: inline-block; padding: 5px 8px 3px; border: 2px dashed var(--ink); color: var(--ink); font: 400 14px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; transform: rotate(-2deg); }
-.hh__htag--sm { margin-left: 6px; padding: 3px 6px 2px; border-width: 1.5px; font-size: 11.5px; }
+.hh__htag { display: inline-block; padding: 5px 8px 3px; border: 2px dashed var(--ink); color: var(--ink); font: 400 var(--fs-sm)/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; transform: rotate(-2deg); }
+.hh__htag--sm { margin-left: 6px; padding: 3px 6px 2px; border-width: 1.5px; font-size: 0.71875rem; }
 .hh__htag[hidden] { display: none; }
-.hh__scentext { font: 600 13.5px/1.3 var(--font-type); }
+.hh__scentext { font: 600 0.84375rem/1.3 var(--font-type); }
 .hh__nw { white-space: nowrap; }
-.hh__shared { max-width: none; padding-top: 10px; color: var(--ink-2); font-size: 13px; }
+.hh__shared { max-width: none; padding-top: 10px; color: var(--ink-2); font-size: 0.8125rem; }
 .hh__shared a { color: var(--ink); font-weight: 600; }
 .hh__stamp--hyp .stamp { border-style: dashed; border-color: var(--ink); color: var(--ink); }
-.hh__was { color: var(--ink-3); font: 400 13px/1.2 var(--font-type); text-decoration: line-through; white-space: nowrap; }
-.hh__was--big { font-size: 18px; }
-.hh__sv .hh__was { margin-left: 6px; font-size: 12px; }
+.hh__was { color: var(--ink-3); font: 400 0.8125rem/1.2 var(--font-type); text-decoration: line-through; white-space: nowrap; }
+.hh__was--big { font-size: var(--fs-md); }
+.hh__sv .hh__was { margin-left: 6px; font-size: var(--fs-xs); }
 .hh__bar--ghost { z-index: 0; background: transparent; outline: 1.5px dashed var(--ink-3); outline-offset: -1.5px; }
 .hh__result--hyp { border-style: dashed; }
-.hh__rbig .hh__was { font-size: 15px; }
+.hh__rbig .hh__was { font-size: 0.9375rem; }
 
 /* The peer table's fold, then the source and fairness lines. */
 .hh__tbl { margin-top: 26px; padding-block: 28px 18px; border-top: 1px dotted var(--line); }
-.hh__det summary { width: fit-content; min-height: var(--target-min); cursor: pointer; font: 700 16px/1.5 var(--font-body); }
+.hh__det summary { width: fit-content; min-height: var(--target-min); cursor: pointer; font: 700 1rem/1.5 var(--font-body); }
 .hh__det summary span { color: var(--ink-2); font-weight: 400; }
 /* The peer table (hub/client/hospital/table.js), alphabetical, this hospital's row marked; it scrolls sideways in its own box. */
 .hh__tw { max-height: 75vh; margin-top: 12px; overflow: auto; border-top: 1.5px solid var(--ink); }
 .hh__tw:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.hh__pt { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.hh__pt caption { padding: 10px 0 8px; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; text-align: left; }
+.hh__pt { width: 100%; border-collapse: collapse; font-size: 0.84375rem; }
+.hh__pt caption { padding: 10px 0 8px; color: var(--ink-2); font-size: 0.78125rem; line-height: 1.45; text-align: left; }
 .hh__pt th, .hh__pt td { padding: 6px 10px; border-bottom: 1px dotted var(--line); text-align: left; white-space: nowrap; }
-.hh__pt thead th { position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--ink); background: var(--paper); font-size: 12.5px; font-weight: 700; }
+.hh__pt thead th { position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--ink); background: var(--paper); font-size: 0.78125rem; font-weight: 700; }
 .hh__pt tbody th { min-width: 14em; font-weight: 400; white-space: normal; }
 .hh__pt .num { font-family: var(--font-type); text-align: right; }
-.hh__pt .hh__na { color: var(--ink-3); font: 400 12px var(--font-body); }
+.hh__pt .hh__na { color: var(--ink-3); font: 400 var(--fs-xs) var(--font-body); }
 .hh__pt .hh__me > * { background: var(--paper-2); }
-.hh__metag { color: var(--ink-2); font-size: 12px; }
-.hh__notes { margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 12.5px; line-height: 1.5; }
+.hh__metag { color: var(--ink-2); font-size: var(--fs-xs); }
+.hh__notes { margin-top: 18px; padding-top: 14px; border-top: 1px dotted var(--line); color: var(--ink-3); font-size: 0.78125rem; line-height: 1.5; }
 .hh__notes p { max-width: 80em; }
 .hh__notes p + p { margin-top: 6px; }
 
 /* A hospital without an estimate: the record card, its status as an ink stamp, why, and its program pages. */
 .hh__status { display: grid; justify-items: start; gap: 14px; }
-.hh .hh__sh { font-size: 24px; padding: 6px 12px 3px; }
+.hh .hh__sh { font-size: 1.5rem; padding: 6px 12px 3px; }
 .hh__st { font-size: var(--fs-md); line-height: 1.5; }
 .hh__pages { margin-top: 26px; }
 .hh__plist { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
@@ -768,11 +772,11 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   /* On a phone the peer row's label steps aside for the toggle: from the start with scripts on (above), and in a browser
      without the scripting media feature once the toggle shows. */
   .hh__pin:has(.hh__pb:not([hidden])) .hh__plbl { display: none; }
-  .hh__pb { padding: 6px 10px; font-size: 13px; }
+  .hh__pb { padding: 6px 10px; font-size: 0.8125rem; }
   .hh__hero { padding-top: 18px; }
-  .hh__sum { grid-template-columns: minmax(6.6em, 7.4em) minmax(0, 1fr) auto 3.9em; column-gap: 8px; font-size: 13px; }
-  .hh__sv { font-size: 13px; }
-  .hh__sw { font-size: 11.5px; }
+  .hh__sum { grid-template-columns: minmax(6.6em, 7.4em) minmax(0, 1fr) auto 3.9em; column-gap: 8px; font-size: 0.8125rem; }
+  .hh__sv { font-size: 0.8125rem; }
+  .hh__sw { font-size: 0.71875rem; }
   /* While the banner shows, it takes the peer row's place in the sticky stack (the peer row scrolls with the page, its
      toggle still there at the top), so the stack never grows on a phone: the tag and Reset on one line, the net under
      them. */
@@ -780,9 +784,9 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__scen { top: var(--sticky-top, 0px); }
   html:has(.hh__peers--hyp) { scroll-padding-top: calc(var(--sticky-top, 0px) + var(--scen-h, 0px)); }
   .hh__scenin { gap: 6px 10px; padding-block: 7px; }
-  .hh__scen .hh__htag { font-size: 12px; }
-  .hh__scentext { order: 3; flex-basis: 100%; font-size: 12px; }
-  .hh__scen .hh__reset { padding: 5px 12px; font-size: 13px; }
+  .hh__scen .hh__htag { font-size: var(--fs-xs); }
+  .hh__scentext { order: 3; flex-basis: 100%; font-size: var(--fs-xs); }
+  .hh__scen .hh__reset { padding: 5px 12px; font-size: 0.8125rem; }
 }
 /* Below 360px a toggle's words may take two lines, in one face and not in another: the buttons are two lines tall either
    way, so the row keeps its height when the page's face replaces the stand-in. */
@@ -802,6 +806,18 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 @media print {
   .hh__peers, .hh__scen, .hh__sharedrow, .hh__wbtn, .hh__ctl, .hh__how, .st__h { display: none; }
   .hh__progs { break-before: page; }
+}
+/* Touch screens: the home story's rail links and state buttons and the hospital page's controls take the kit's touch
+   height (--control-h, 44px under a coarse pointer: tokens.css), as the shared fields and buttons do. The state
+   buttons keep their width (their row would otherwise hold too few) and grow in height only: their ::after is the
+   colored bar, so it can't also widen the hit area. The rows keep their gaps, so no two targets meet. The link-styled
+   buttons draw their line as an underline there, so it stays under the words in the taller box. */
+@media (pointer: coarse) {
+  .story .rail a { padding-block: 14px; }
+  .story .sb { height: var(--control-h); }
+  .hh__pb, .hh__reset, .hh__deep, .hh__lnk, .hh__fin { min-height: var(--control-h); }
+  .hh__lnk { border-bottom: 0; text-decoration: underline 1px var(--line); text-underline-offset: 3px; }
+  .hh__stp { min-width: var(--control-h); min-height: var(--control-h); }
 }
 
 /* ---------- the family Methods page's back-test (hub/pages.js closeSection), root .mt ----------

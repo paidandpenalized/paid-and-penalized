@@ -4,6 +4,10 @@ import { count, factor, money, pct as percent } from '../render/format.js';
 
 export { count, factor, money };
 
+// Text in a reader's order: case aside, and numbers inside it by value ("Unit 2" before "Unit 10"). One collator for the
+// page, not one per comparison.
+export const compareText = new Intl.Collator('en', { numeric: true, sensitivity: 'base' }).compare;
+
 // The build's pct with two decimals by default, which is the only reason it is wrapped (a hospital's net is a fraction of
 // a percent of its pay): pct(-0.0053) is "−0.53%". sign: + before a positive share, never before one that reads 0.
 export const pct = (fraction, dp = 2, options) => percent(fraction, dp, options);

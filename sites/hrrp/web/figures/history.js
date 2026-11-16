@@ -29,7 +29,7 @@ const sourceOf = ({ label, url }) => (url ? externalLink(url, label) : label);
 export function timeline(entries) {
   if (!entries.length) return '';
   return html`<h3 class="part__sub" id="history-timeline-h">${t('timelineHeading')}</h3>
-<ol class="tl" aria-labelledby="history-timeline-h">
+<ol class="tl" role="list" aria-labelledby="history-timeline-h">
 ${entries.map((e) => html`<li class="tl__item${e.future ? ' tl__item--future' : ''}">
 <p class="tl__date"><time datetime="${e.date}">${isoDate(e.date)}</time>${e.fy != null ? html` <span class="tl__fy">${fyLabel(e.fy)}</span>` : ''}${e.future ? html` <span class="tl__tag">${t('timelineFuture')}</span>` : ''}</p>
 <h4 class="tl__title">${e.title}</h4>

@@ -20,7 +20,7 @@ export const select = (id, any, options) => html`<select id="${id}">${option('',
 export function filterControls({ prefix, w, states, peers, conds, teach, beds, sorts, hidden = false }) {
   const id = (name) => `${prefix}-${name}`;
   return html`<div class="ht__controls ph__controls" role="group" aria-label="${w.filters}"${hidden ? html` hidden` : ''}>
-${field(id('text'), w.text, html`<input id="${id('text')}" type="search" autocomplete="off">`)}
+${field(id('text'), w.text, html`<input id="${id('text')}" type="search" autocomplete="off" spellcheck="false" autocapitalize="none">`)}
 ${states.length > 1 ? field(id('state'), w.state, select(id('state'), w.any, states.map((s) => option(s, s)))) : ''}
 ${field(id('peer'), w.peer, select(id('peer'), w.any, peers.map((p) => option(p, w.group(p)))))}
 ${field(id('cond'), w.cond, select(id('cond'), w.any, conds.map((c, i) => option(String(i), c.short))))}
@@ -41,7 +41,7 @@ const WORDS = () => ({
 
 // controls: explore-data.js exploreControls(); url: the rows asset's path (null: none, the shell has no source).
 export function explorePart(controls, { url = null } = {}) {
-  return html`<p class="part__intro">${t('exploreIntro')}</p>
+  return html`<p class="part__intro">${t('exploreIntro')}${controls.inactive ? html` ${t('exploreInactive')}` : ''}</p>
 <p class="ht-nojs" id="ex-nojs">${t('exploreNoScript')}</p>
 <p class="ht-retry small" id="ex-note" role="status" data-loading="${t('exploreLoading')}" data-text="${t('exploreRetry')}"></p>
 <p class="ht-csv" id="ex-csv"><a href="${controls.csvHref}" download>${t('exploreNoScriptCsv')}</a></p>
@@ -49,7 +49,7 @@ export function explorePart(controls, { url = null } = {}) {
 ${filterControls({ prefix: 'ex', w: WORDS(), states: controls.states, peers: controls.peers, conds: controls.conds, teach: controls.teach, beds: controls.beds, sorts: controls.sorts })}
 <p class="small ph__status" id="ex-status" aria-live="polite" data-template="${statusTemplate()}"></p>
 ${printout(html`<table class="gb gb--hospitals explore__table ph__table">
-<caption class="vh">${t('exploreCaption')}</caption>
+<caption class="vh" id="ex-cap">${t('exploreCaption')}</caption>
 <thead><tr><th scope="col">${t('exploreColHospital')}</th><th scope="col" class="num nb__cuth">${t('exploreColCut')}</th><th scope="col" class="num">${t('exploreColDollars')}</th><th scope="col" class="num">${t('exploreColPeer')}</th><th scope="col">${t('exploreColConds')}</th><th scope="col" class="num">${t('exploreColBeds')}</th></tr></thead>
 <tbody></tbody>
 </table>`)}

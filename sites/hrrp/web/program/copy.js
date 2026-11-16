@@ -180,6 +180,7 @@ export const COPY = {
     text: 'The six boxes follow {names}. Filled: the condition adds to the cut. Hatched: measured, adds nothing. Empty: too few cases to be measured.',
     claim: 'HRRP-04',
   },
+  penCaption: { text: 'The hospitals with the largest cuts', claim: null },
   penColHospital: { text: 'Hospital', claim: null },
   penColPlace: { text: 'Place', claim: null },
   penColCut: { text: 'Cut (% of base payments)', claim: null },
@@ -474,7 +475,7 @@ export const COPY = {
   mapColDollars: { text: 'Estimated dollars', claim: null },
   mapColGe1: { text: 'Cut {pct}% or more (% of hospitals)', claim: null },
   statesHeading: { text: 'Every state', claim: null },
-  statesIntro: { text: 'Highest average cut first, {size} to a page. Open a state for its metro areas and hospitals.', claim: null },
+  statesIntro: { text: 'Highest average cut first, {size} to a page. Penalized is the share of hospitals measured on at least one condition that take a cut. Open a state for its metro areas and hospitals.', claim: null },
   statesColState: { text: 'State', claim: null },
   statesColHospitals: { text: 'Hospitals', claim: null },
   statesColPenalized: { text: 'Penalized', claim: null },
@@ -560,6 +561,7 @@ export const COPY = {
 
   // Part 5, every hospital: the explorer's shell (figures/explore.js); the rows come from the hospitals asset.
   exploreIntro: { text: 'Search every hospital in the program and filter by place, peer group, size and the conditions it was cut for.', claim: null },
+  exploreInactive: { text: 'Inactive marks a hospital whose Medicare agreement CMS lists as ended.', claim: null },
   exploreNoScript: { text: 'The searchable table needs JavaScript. Without it, every hospital is listed on its state’s page: use the state map and the list of states above.', claim: null },
   exploreNoScriptCsv: { text: 'Or download the full list as a CSV file.', claim: null },
   exploreCopied: { text: 'Copied.', claim: null },

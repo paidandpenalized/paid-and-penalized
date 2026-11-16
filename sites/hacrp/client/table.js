@@ -10,7 +10,8 @@ import { fill } from '../web/copy.js';
 import { NUMERIC, cellOf, decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
 import { cutText } from '../web/money.js';
 import { cmsText, count } from '../../../web/render/format.js';
-import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
+import { liveStatus } from '../../../web/client/live-status.js';
+import { NARROW } from '../../../web/whatif/dom.js';
 
 // Every match for a query, handed on by the top bar's search: the table shows them through its own text filter
 // (mountTable reads it if the table mounts later). A state filter could hide them, so the table goes back to all
@@ -94,13 +95,8 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
     return built.get(r);
   };
 
-  // The row count, in a polite live region; while the reader types a name, it follows SETTLE_MS after they stop.
-  let settle = null;
-  function announce(text, wait) {
-    clearTimeout(settle);
-    if (wait) settle = setTimeout(() => { status.textContent = text; }, SETTLE_MS);
-    else status.textContent = text;
-  }
+  // The row count, in a polite live region; while the reader types a name, it follows once they stop (live-status.js).
+  const announce = liveStatus(status);
 
   // The rows in the reader's sort, built once per sort change: the asset's own order is the default (hospitalRows),
   // and a filter keeps the order it is given, so a keystroke only filters. Each row's lowercase name and numeric
@@ -108,7 +104,9 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
   const records = tableRows(rows);
   let ordered = records;
 
-  function render({ typing = false } = {}) {
+  // sorted: the new order in words, after a sort (said before the count: the order changed, not the count, so the count
+  // alone would give a screen reader nothing new to say).
+  function render({ typing = false, sorted = null } = {}) {
     const matches = filterRows(ordered, view);
     const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
     const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
@@ -119,7 +117,7 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
       : matches.length === 1 ? fill('tableCountOne')
         : limited ? fill('tableCountFirst', { shown: count(shown.length), n: count(matches.length) })
           : fill('tableCount', { n: count(matches.length) });
-    announce(text, typing);
+    announce(sorted ? `${fill('tableSorted', { sort: sorted })} ${text}` : text, typing);
   }
 
   // The state on the US map: its outline drawn heavier while the table lists its hospitals (both map variants).
@@ -169,7 +167,8 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
     }
     if (menu) menu.value = `${key}:${dir}`;
     ordered = sortRows(records, key, dir);
-    render();
+    // The column's name as its head shows it, each way as the Sort by menu words it.
+    render({ sorted: fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: label[key] ?? key }) });
   }
   // On a phone the column heads are clipped out of view (styles.css), so their sort buttons leave the tab order
   // while that layout holds; they stay in the accessibility tree, and the Sort by menu stands in for them.
