@@ -18,6 +18,7 @@
 // Without the script, or without the asset, the page stays as the server drew it (the middle case at the default use
 // rate), and the chips, the Find and the controls stay hidden.
 import { setFollowed } from '../../../web/client/follow.js';
+import { liveStatus } from '../../../web/client/live-status.js';
 import { DEFAULT_SCENARIO, SCENARIOS } from '../web/constants.js';
 import { count, pct } from '../../../web/render/format.js';
 import { fill } from '../web/copy.js';
@@ -129,18 +130,12 @@ function mountRanges(section, { store }) {
 }
 
 // The page's one live line (ranges.js draws it empty): what changed, said once a reader has stopped moving (a slider
-// dragged across a dozen stops says only the last), so the ranges, the counts and the chips' readout can change without
-// a sound of their own.
-export const SETTLE_MS = 400;
+// dragged across a dozen stops says only the last; web/client/live-status.js), so the ranges, the counts and the chips'
+// readout can change without a sound of their own.
 function liveLine(el) {
-  let timer = 0;
-  return (text) => {
-    if (!el) return;
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      el.textContent = text;
-    }, SETTLE_MS);
-  };
+  if (!el) return () => {};
+  const say = liveStatus(el);
+  return (text) => say(text, true);
 }
 
 const getJson = async (url) => {
