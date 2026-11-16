@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { standIn } from './dom.js';
-import { HIDE_MS, mountFigure } from '../client/figure.js';
+import { mountFigure } from '../client/figure.js';
+import { HIDE_MS } from '../client/tooltip.js';
 
 // An element that keeps its attributes, classes and listeners (several per event type).
 function node(extra = {}) {

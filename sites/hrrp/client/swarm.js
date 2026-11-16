@@ -43,9 +43,9 @@ export function mountSwarm() {
         status.textContent = '';
         picked.click();
       } catch {
-        // Cleared first, so a repeated failure is announced again.
+        // Cleared, then set a frame later, so a repeated failure (the same words) is announced again.
         status.textContent = '';
-        status.textContent = t('swarmLoadFailed');
+        requestAnimationFrame(() => { status.textContent = t('swarmLoadFailed'); });
       }
     }, true);
     mountSwitch({ box, controls, attr: 'cond', panels, onPick: (p) => setTakeaway(figure, p.dataset.takeaway) });

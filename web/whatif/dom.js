@@ -9,6 +9,7 @@
 // changesOf(state), viewModel(state) }. start.ids: the measures; params[id]: { decimals, cap }, for decoding a link.
 // reduce() takes { type: 'set', id, value }, 'reset', 'median', { type: 'predicted', id, count } and
 // { type: 'load', changes }, and returns the same state when it refuses an action.
+import { SETTLE_MS } from '../client/live-status.js';
 import { pillClass } from '../render/components.js';
 import { decode, encode, isScenarioHash, isWhatIfHash } from './fragment.js';
 import {
@@ -16,8 +17,9 @@ import {
   rampLabels, RAMP_Y, rampHeight, rampSide, rampX, sliderValue, trackMarks, trackStart,
 } from './marks.js';
 
-// A live announcement waits this long after the reader stops typing (the program page's table count uses it too).
-export const SETTLE_MS = 400;
+// A live announcement waits this long after the reader stops typing (web/client/live-status.js, which the tables' counts
+// use too).
+export { SETTLE_MS };
 // The phone layout (the program page's table uses it too).
 export const NARROW = '(max-width: 640px)';
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)';

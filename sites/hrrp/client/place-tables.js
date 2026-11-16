@@ -9,6 +9,7 @@
 // has the first page and the CSV.
 import { copyOrSelect } from '../../../web/client/clipboard.js';
 import { saveCsv } from '../../../web/client/download.js';
+import { liveStatus } from '../../../web/client/live-status.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
@@ -39,9 +40,6 @@ function mountCopy(box, copyText) {
 }
 
 const RETRY = ['pointerdown', 'focusin'];
-// While the reader types a name, the status line (a polite live region) waits this long after the last key before it says
-// the new count, so a screen reader is not handed a number per keystroke over its own echo of the typing.
-export const TYPING_MS = 250;
 
 // A same-site data file's text (only /data/hrrp/ and /assets/ paths).
 async function fetchText(href, prefix) {
@@ -99,8 +97,9 @@ export function mountHospitals(box) {
 
   const want = () => ({ text: f.text.value, st: f.st?.value, peer: f.peer.value, cond: f.cond.value, teach: f.teach.value, beds: f.beds.value, loc: f.loc.value, pen: f.pen.checked });
   const empty = box.querySelector('.ht-empty');
-  let saying = 0;
-  // typing: the name box changed, so the status waits for a pause (TYPING_MS); every other change says it at once.
+  // The status line, a polite live region: while the reader types a name it waits for a pause (live-status.js).
+  const say = liveStatus(status);
+  // typing: the name box changed; every other change says the count at once.
   function render(typing = false) {
     shown = sortRows(filterRows(all, want()), f.sort.value);
     const pages = Math.max(1, Math.ceil(shown.length / size));
@@ -110,17 +109,14 @@ export function mountHospitals(box) {
     empty.hidden = shown.length > 0;
     body.closest('.printout').hidden = shown.length === 0;
     // No row: the status says the empty table's sentence, so a screen reader hears that nothing matches.
-    const said = shown.length ? statusLine(status.dataset.template, { page, size, n: shown.length }) : empty.textContent;
-    clearTimeout(saying);
-    if (typing) saying = setTimeout(() => { status.textContent = said; }, TYPING_MS);
-    else status.textContent = said;
+    say(shown.length ? statusLine(status.dataset.template, { page, size, n: shown.length }) : empty.textContent, typing);
     // A button about to be disabled hands the keyboard's focus to the other (enabled first: on a two-page table it was
     // still disabled), as a disabled button would drop it.
     const [first, last] = [page <= 1, page >= pages];
-    const hand = (from, to) => {
-      if (document.activeElement !== from) return;
-      to.disabled = false;
-      to.focus();
+    const hand = (losing, gaining) => {
+      if (document.activeElement !== losing) return;
+      gaining.disabled = false;
+      gaining.focus();
     };
     if (last && !first) hand(next, prev);
     if (first && !last) hand(prev, next);

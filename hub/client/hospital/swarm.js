@@ -15,6 +15,7 @@ import { median } from '../../../engine/js/peers.js';
 import { clamp } from '../../../engine/js/stats.js';
 import { count } from '../../../web/client/format.js';
 import { placeText } from '../../../web/render/format.js';
+import { bindTip, delayedHide } from '../../../web/client/tooltip.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
@@ -30,9 +31,6 @@ const ALL_A = 0.62;
 const ALL_A_SMALL = 0.8;
 // The actual's rings during a what-if: a ghost.
 const GHOST_A = 0.4;
-// How long the tooltip stays after the pointer leaves its dot: time to cross onto the tooltip (WCAG 1.4.13; the charts'
-// tooltips wait as long: web/client/figure.js HIDE_MS).
-const HIDE_MS = 150;
 // The frame, in CSS pixels, wide and narrow (under pile.js NARROW_BELOW): the margins, the $0 gutter, where each pile and
 // the axis sit, and everyone's pile's largest pitch (the group's: pile.js peerPitch).
 const WIDE = { x: 6, gutter: 20, H: 452, pTop: 34, pBot: 206, aTop: 284, aBot: 396, allMax: 4.2 };
@@ -416,24 +414,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     return s % N === self ? `${line}. ${fill('dotThis')}` : line;
   };
 
-  // A pointer leaving a dot (or the canvas, or the tooltip) puts the tooltip away a moment later, unless it reaches the
-  // tooltip or a dot first.
-  let hiding = 0;
-  const keepTip = () => {
-    clearTimeout(hiding);
-    hiding = 0;
-  };
-  const hideSoon = () => {
-    keepTip();
-    hiding = setTimeout(() => {
-      hiding = 0;
-      canvas.style.cursor = '';
-      onLeave();
-    }, HIDE_MS);
-  };
+  // A pointer leaving a dot (or the canvas, or the tooltip) puts the tooltip away a moment later (tooltip.js), unless it
+  // reaches the tooltip or a dot first.
+  const hiding = delayedHide(() => onLeave());
 
   function showTip(s, touch = false) {
-    keepTip();
+    hiding.keep();
     if (s < 0) {
       tip.hidden = true;
       return;
@@ -461,10 +447,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     const s = hit(...point(e));
     // Off the dot shown: the pointer may be on its way to the tooltip.
     if (s < 0 && hover >= 0) {
-      if (!hiding) hideSoon();
+      if (!hiding.pending()) hiding.soon();
       return;
     }
-    keepTip();
+    hiding.keep();
     if (s === hover) return;
     hover = s;
     canvas.style.cursor = s >= 0 && s % N !== self ? 'pointer' : '';
@@ -472,9 +458,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
   function onLeave() {
-    keepTip();
+    hiding.keep();
     const was = hover;
     hover = -1;
+    canvas.style.cursor = '';
     tip.hidden = true;
     if (was >= 0 && !moving) draw();
   }
@@ -502,12 +489,6 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     else if (e.key === 'End') at = order.length - 1;
     else if (e.key === 'Enter') {
       if (picked >= 0) open(picked);
-      return;
-    } else if (e.key === 'Escape') {
-      if (picked < 0) return;
-      picked = -1;
-      tip.hidden = true;
-      draw();
       return;
     } else return;
     e.preventDefault();
@@ -537,22 +518,28 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
 
+  // Escape lets go of the dot shown or picked, wherever the focus is: on the canvas (its keys) or not (a pointer's
+  // tooltip).
+  function onEscape(e) {
+    if (e.key !== 'Escape' || (tip.hidden && picked < 0)) return;
+    hiding.keep();
+    letGo();
+    if (!moving) draw();
+  }
+
   // A tap's pointerleave comes before its click, which shows the tooltip again.
   canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerleave', (e) => (e.pointerType === 'touch' ? onLeave() : hideSoon()));
-  tip.addEventListener('pointerenter', keepTip);
-  tip.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hideSoon(); });
+  canvas.addEventListener('pointerleave', (e) => (e.pointerType === 'touch' ? onLeave() : hiding.soon()));
+  bindTip(tip, hiding);
   canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);
-  document.addEventListener('pointerdown', onOutside);
-  // Escape puts away a tooltip the pointer shows, wherever the focus is (a dot the keys picked, the canvas's own keys).
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || tip.hidden) return;
-    keepTip();
-    letGo();
-    if (!moving) draw();
-  });
+  // The page-wide listeners go once the swarm leaves the page (the first event after, by either of them), as the
+  // charts' do (web/client/figure.js).
+  const gone = new AbortController();
+  const onPage = (fn) => (e) => { if (!canvas.isConnected) gone.abort(); else fn(e); };
+  document.addEventListener('pointerdown', onPage(onOutside), { signal: gone.signal });
+  document.addEventListener('keydown', onPage(onEscape), { signal: gone.signal });
 
   function resize() {
     if (el.clientWidth === W) return;

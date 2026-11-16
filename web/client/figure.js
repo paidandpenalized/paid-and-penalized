@@ -9,10 +9,10 @@
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 import { saveCsv } from './download.js';
+import { compareText } from './format.js';
+import { bindTip, delayedHide } from './tooltip.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
-// How long a tooltip stays after the pointer leaves its mark: time to cross the gap onto the tooltip (WCAG 1.4.13).
-export const HIDE_MS = 150;
 
 // A cell's raw value (CMS's text, with its hyphen-minus) where the build kept one, else its text.
 const valueOf = (cell) => cell.getAttribute('data-value') ?? cell.textContent.trim();
@@ -24,10 +24,9 @@ export function tableCsv(table) {
 
 // Rows by column index, dir 1 (ascending) or -1. Numbers by value, with blanks and text such as "N/A" last in either
 // direction; text by locale. Ties keep their order (Array sort is stable).
-const collate = new Intl.Collator('en', { numeric: true, sensitivity: 'base' }).compare;
 export function compareRows(index, numeric, dir) {
   const key = (row) => valueOf(row.cells[index]);
-  if (!numeric) return (a, b) => dir * collate(key(a), key(b));
+  if (!numeric) return (a, b) => dir * compareText(key(a), key(b));
   return (a, b) => compareNumbers(numberOrNaN(key(a)), numberOrNaN(key(b)), dir);
 }
 
@@ -152,25 +151,17 @@ function mountMarks(fig, svg, live) {
   if (hint) svg.setAttribute('aria-describedby', hint.id);
 
   let current = -1;
-  // A pointer leaving a mark or the chart hides the tooltip a moment later (HIDE_MS), so it can cross the gap onto the
-  // tooltip, which keeps it.
-  let hiding = 0;
-  const keep = () => {
-    clearTimeout(hiding);
-    hiding = 0;
-  };
-  const hideSoon = () => {
-    keep();
-    hiding = setTimeout(hide, HIDE_MS);
-  };
+  // A pointer leaving a mark or the chart hides the tooltip a moment later (tooltip.js), so it can cross the gap onto
+  // the tooltip, which keeps it.
+  const hiding = delayedHide(() => hide());
   const hide = () => {
-    keep();
+    hiding.keep();
     marks[current]?.classList.remove('is-active');
     current = -1;
     tip.hidden = true;
   };
   const show = (i, announce) => {
-    keep();
+    hiding.keep();
     // The pointer moving between one mark's parts changes nothing; a key press still announces the mark again.
     if (i === current && !announce) return;
     marks[current]?.classList.remove('is-active');
@@ -193,15 +184,13 @@ function mountMarks(fig, svg, live) {
   svg.addEventListener('pointerover', (e) => {
     const m = e.target.closest('[data-mark]');
     if (m) show(marks.indexOf(m), false);
-    else if (current >= 0) hideSoon();
+    else if (current >= 0) hiding.soon();
   });
   // A mouse or pen leaving the chart, or the tooltip, hides it a moment later, unless it moves onto the other. A tap's
   // pointerleave comes right after its pointerup, so a touch keeps the tooltip; a tap outside the chart, Escape or a
   // scroll hides it.
-  const leave = (e) => { if (e.pointerType !== 'touch' && current >= 0) hideSoon(); };
-  svg.addEventListener('pointerleave', leave);
-  tip.addEventListener('pointerenter', keep);
-  tip.addEventListener('pointerleave', leave);
+  svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && current >= 0) hiding.soon(); });
+  bindTip(tip, hiding);
   svg.addEventListener('blur', hide);
   // The page-wide listeners go when a script redraws the figure and this drawing leaves the page (the first event after, by any of them).
   const gone = new AbortController();

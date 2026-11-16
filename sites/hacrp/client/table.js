@@ -10,7 +10,8 @@ import { fill } from '../web/copy.js';
 import { NUMERIC, cellOf, decodeState, filterRows, hospitalHref, sortRows, stateCodes, tableRows, withState } from '../web/hospital-table.js';
 import { cutText } from '../web/money.js';
 import { cmsText, count } from '../../../web/render/format.js';
-import { NARROW, SETTLE_MS } from '../../../web/whatif/dom.js';
+import { liveStatus } from '../../../web/client/live-status.js';
+import { NARROW } from '../../../web/whatif/dom.js';
 
 // Every match for a query, handed on by the top bar's search: the table shows them through its own text filter
 // (mountTable reads it if the table mounts later). A state filter could hide them, so the table goes back to all
@@ -94,13 +95,8 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
     return built.get(r);
   };
 
-  // The row count, in a polite live region; while the reader types a name, it follows SETTLE_MS after they stop.
-  let settle = null;
-  function announce(text, wait) {
-    clearTimeout(settle);
-    if (wait) settle = setTimeout(() => { status.textContent = text; }, SETTLE_MS);
-    else status.textContent = text;
-  }
+  // The row count, in a polite live region; while the reader types a name, it follows once they stop (live-status.js).
+  const announce = liveStatus(status);
 
   // The rows in the reader's sort, built once per sort change: the asset's own order is the default (hospitalRows),
   // and a filter keeps the order it is given, so a keystroke only filters. Each row's lowercase name and numeric
