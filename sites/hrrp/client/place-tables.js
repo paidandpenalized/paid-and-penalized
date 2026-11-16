@@ -9,6 +9,7 @@
 // has the first page and the CSV.
 import { copyOrSelect } from '../../../web/client/clipboard.js';
 import { saveCsv } from '../../../web/client/download.js';
+import { liveStatus } from '../../../web/client/live-status.js';
 import { once } from '../../../web/client/once.js';
 import { hospitalRow } from '../web/figures/place-row.js';
 import { csvSubset, filterRows, placeRows, sortRows } from './place-rows.js';
@@ -95,17 +96,38 @@ export function mountHospitals(box) {
   let page = 1;
 
   const want = () => ({ text: f.text.value, st: f.st?.value, peer: f.peer.value, cond: f.cond.value, teach: f.teach.value, beds: f.beds.value, loc: f.loc.value, pen: f.pen.checked });
-  function render() {
+  const empty = box.querySelector('.ht-empty');
+  // The status line, a polite live region: while the reader types a name it waits for a pause (live-status.js). With no
+  // row it says the empty table's sentence for a screen reader only (.vh): the sentence already shows under the filters.
+  const say = liveStatus(status, {
+    write: (text) => {
+      status.textContent = text;
+      status.classList.toggle('vh', text === empty.textContent);
+    },
+  });
+  // typing: the name box changed; every other change says the count at once.
+  function render(typing = false) {
     shown = sortRows(filterRows(all, want()), f.sort.value);
     const pages = Math.max(1, Math.ceil(shown.length / size));
     page = Math.min(page, pages);
     const [from, to] = [(page - 1) * size, Math.min(page * size, shown.length)];
     body.innerHTML = shown.slice(from, to).map((r) => String(hospitalRow(r, conditions, { prefix }))).join('');
-    box.querySelector('.ht-empty').hidden = shown.length > 0;
+    empty.hidden = shown.length > 0;
     body.closest('.printout').hidden = shown.length === 0;
-    status.textContent = statusLine(status.dataset.template, { page, size, n: shown.length });
-    prev.disabled = page <= 1;
-    next.disabled = page >= pages;
+    // No row: the status says the empty table's sentence, so a screen reader hears that nothing matches.
+    say(shown.length ? statusLine(status.dataset.template, { page, size, n: shown.length }) : empty.textContent, typing);
+    // A button about to be disabled hands the keyboard's focus to the other (enabled first: on a two-page table it was
+    // still disabled), as a disabled button would drop it.
+    const [first, last] = [page <= 1, page >= pages];
+    const hand = (losing, gaining) => {
+      if (document.activeElement !== losing) return;
+      gaining.disabled = false;
+      gaining.focus();
+    };
+    if (last && !first) hand(next, prev);
+    if (first && !last) hand(prev, next);
+    prev.disabled = first;
+    next.disabled = last;
   }
 
   // The rows asset, fetched once; a failure is tried again on the reader's next touch of the table.
@@ -146,7 +168,7 @@ export function mountHospitals(box) {
     box.querySelector('.ph__more')?.setAttribute('hidden', '');
     box.hidden = false;
     for (const e of [controls, status, prev, next]) e.hidden = false;
-    controls.addEventListener('input', () => { page = 1; render(); });
+    controls.addEventListener('input', (e) => { page = 1; render(e.target === f.text); });
     prev.addEventListener('click', () => { page -= 1; render(); });
     next.addEventListener('click', () => { page += 1; render(); });
     render();

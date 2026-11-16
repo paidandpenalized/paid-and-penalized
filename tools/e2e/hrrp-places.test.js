@@ -26,7 +26,11 @@ function table(page, root, prefix) {
     box,
     rows: box.locator('table.ph__table tbody tr'),
     status: () => box.locator('.ph__status').innerText(),
-    total: async () => intOf((await t.status()).match(/of ([\d,]+)/)[1]),
+    // NaN while the status says no row matches (it then says the empty table's sentence).
+    total: async () => {
+      const of = (await t.status()).match(/of ([\d,]+)/);
+      return of ? intOf(of[1]) : NaN;
+    },
     // The CCNs of the rows shown, from their links.
     shownIds: () => box.locator('table.ph__table tbody tr th a').evaluateAll((as) => as.map((a) => a.getAttribute('href').split('/').filter(Boolean).pop().toUpperCase())),
     column: (n) => box.locator(`table.ph__table tbody tr td:nth-child(${n})`).allInnerTexts(),
@@ -61,9 +65,18 @@ async function exerciseTable(page, t, scope, { state }) {
   await t.box.locator('[data-prev]').click();
   assert.equal(await t.box.locator('[data-prev]').isDisabled(), true, 'previous is off on page 1');
   assert.deepEqual(await t.shownIds(), first, 'page 1 again');
-  for (let i = 1; i < pages; i++) await t.box.locator('[data-next]').click();
-  assert.equal(await t.box.locator('[data-next]').isDisabled(), true, 'next is off on the last page');
+  // From the keyboard: Next onto the last page hands the focus to Previous (a disabled button would drop it), and
+  // Previous onto page 1 hands it back to Next.
+  const [prev, next] = [t.box.locator('[data-prev]'), t.box.locator('[data-next]')];
+  const focused = (b) => b.evaluate((el) => el === document.activeElement);
+  await next.focus();
+  for (let i = 1; i < pages; i++) await page.keyboard.press('Enter');
+  assert.equal(await next.isDisabled(), true, 'next is off on the last page');
+  assert.equal(await focused(prev), true, 'the focus moves to Previous on the last page');
   assert.equal(await t.rows.count(), n - (pages - 1) * PAGE_SIZE, 'the last page holds the rest');
+  for (let i = 1; i < pages; i++) await page.keyboard.press('Enter');
+  assert.equal(await prev.isDisabled(), true, 'previous is off on page 1 again');
+  assert.equal(await focused(next), true, 'the focus moves to Next on page 1');
   await t.control('sort').selectOption('cut');
 
   // Text filter.
@@ -84,7 +97,7 @@ async function exerciseTable(page, t, scope, { state }) {
   for (const [what, apply, undo, filter] of checks) {
     const want = applyFilters(scope, filter);
     await apply();
-    await eventually(async () => (await t.status()) === '' || (await t.total()) === want.length, `the ${what} filter does not leave the ${want.length} expected`);
+    await eventually(async () => (want.length ? (await t.total()) === want.length : t.box.locator('.ht-empty').isVisible()), `the ${what} filter does not leave the ${want.length} expected`);
     if (want.length) assert.equal(await t.total(), want.length, `${what}: the count`);
     if (what === 'peer') assert.ok((await t.column(4)).every((x) => x.trim() === String(scope[0].peer)), 'only that peer group shows');
     await undo();
@@ -100,12 +113,16 @@ async function exerciseTable(page, t, scope, { state }) {
   assert.ok(beds.every((v, i) => !i || v <= beds[i - 1]), 'beds high to low');
   await t.control('sort').selectOption('cut');
 
-  // No match: the empty line says so and the status is empty.
+  // No match: the empty line says so, and the status (a live region) says the same, so a screen reader hears it.
   await t.control('text').fill('qqzzxxqq');
   await eventually(async () => await t.box.locator('.ht-empty').isVisible(), 'no empty line for a filter nothing passes');
-  assert.equal(await t.status(), '');
+  const none = await t.box.locator('.ht-empty').innerText();
+  // Its words (textContent), whether or not the box shows them: what a screen reader hears.
+  await eventually(async () => (await t.box.locator('.ph__status').textContent()) === none, 'the status does not say that nothing matches');
+  assert.equal(await t.box.locator('.ph__status').evaluate((el) => el.classList.contains('vh')), true, 'said to a screen reader only, not shown twice');
   await t.control('text').fill('');
   await eventually(async () => (await t.total()) === n, 'clearing the text restores the rows');
+  assert.equal(await t.box.locator('.ph__status').evaluate((el) => el.classList.contains('vh')), false, 'the count shows again');
 }
 
 // Copy as CSV: the filtered rows, in the table's sort order, the header first.

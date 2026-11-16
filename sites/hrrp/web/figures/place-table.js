@@ -66,11 +66,11 @@ export function hospitalsSection(table, { name, conditions, fy, rowsUrl = null }
   const scope = table.cbsa ? html` data-cbsa="${table.cbsa}"` : html` data-states="${table.states.join(',')}"`;
   return html`<section class="ht place__tbl ph" aria-labelledby="ph-h" data-ph data-csv="${csvHref}" data-page-size="${PAGE_SIZE}"${rowsUrl && more ? html` data-src="${rowsUrl}"` : ''}${scope}>
 <h2 id="ph-h">${fill('hosHeading', { name })}</h2>
-<p class="small muted">${t('hosIntro')}</p>
+<p class="small muted">${t('hosIntro')}${table.rows.some((r) => r.h.inactive) ? html` ${t('hosInactive')}` : ''}</p>
 ${controls(table, { conditions })}
 <p class="small ph__status" role="status" aria-live="polite" data-template="${statusTemplate()}" hidden></p>
 ${printout(html`<table class="gb ph__table">
-<caption class="vh">${fill('hosCaption', { name })}</caption>
+<caption class="vh" id="ph-cap">${fill('hosCaption', { name })}</caption>
 <thead><tr><th scope="col">${t('hosColHospital')}</th><th scope="col" class="num nb__cuth">${t('hosColCut')}</th><th scope="col" class="num">${t('hosColDollars')}</th><th scope="col" class="num">${t('hosColPeer')}</th><th scope="col">${t('hosColConds')}</th><th scope="col" class="num">${t('hosColBeds')}</th></tr></thead>
 <tbody>${first.map((r) => hospitalRow(r, conditions))}</tbody>
 </table>`)}
