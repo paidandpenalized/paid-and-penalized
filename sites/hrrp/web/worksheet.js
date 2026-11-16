@@ -96,7 +96,7 @@ ${body}
 </tbody>
 </table>`)}
 <p class="wsr__note">${WORKSHEET_NOTE}</p>
-<ol class="wsr__totals">
+<ol class="wsr__totals" role="list">
 <li><span>${fill('wsLineSum', { n: '7', m: '6' })}</span><b>${points(totals.sum)}%</b></li>
 <li><span>${fill('wsLineCap', { n: '8', m: '7', cap: String(CAP_PCT) })}</span><b>${fmtPct(totals.reduction * 100)}</b></li>
 <li><span>${fill('wsLineFactor', { n: '9', m: '8', one: '1' })}</span><b>${ratio(totals.factor)}</b></li>

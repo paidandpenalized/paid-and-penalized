@@ -55,6 +55,9 @@
 th[aria-sort="ascending"] .fig__sort::after { content: " \2191" / ""; color: var(--ink-2); }
 th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: var(--ink-2); }
 .fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
+/* A mouse or pen can move onto the tooltip and read it there (web/client/figure.js keeps it); a tap goes through it to
+   the marks under it. */
+@media (hover: hover) and (pointer: fine) { .fig__tip { pointer-events: auto; } }
 
 /* ---------- the SVG ---------- */
 /* A viewBox shown wider scales its text, so a chart is never drawn much wider than its viewBox (--vb, from the kit's

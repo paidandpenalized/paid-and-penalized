@@ -326,8 +326,12 @@ const RECORD = {
 };
 // A year of a record in words: what CMS decided, and that it gave the decision without a score where it did.
 const decisionWords = (y) => (y.noScore ? fill('recordTipNoScore', { what: t(RECORD[y.c].tip) }) : t(RECORD[y.c].tip));
-// One year's cell in a record strip: the year's last two digits over its value; tip: its tooltip, if any.
-const recordCell = (fy, cls, value, tip = null) => html`<li class="hrec__y hrec__y--${cls}"${tip ? html` title="${tip}"` : ''}><span class="hrec__fy">${String(fy).slice(-2)}</span><span class="hrec__v">${value}</span></li>`;
+// One year's cell in a record strip: the year's last two digits over its value. phrase: the year and its value in full words,
+// if any: a screen reader then reads those (visually hidden) in place of the short ones, which a sighted reader sees.
+const recordCell = (fy, cls, value, phrase = null) => {
+  const hide = phrase ? html` aria-hidden="true"` : '';
+  return html`<li class="hrec__y hrec__y--${cls}">${phrase ? html`<span class="vh">${phrase}</span>` : ''}<span class="hrec__fy"${hide}>${String(fy).slice(-2)}</span><span class="hrec__v"${hide}>${value}</span></li>`;
+};
 
 // The record strip under the verdict: one box per year, cut in the penalty ink.
 export function recordStrip(rec, fys) {

@@ -631,6 +631,7 @@ export const COPY = {
   // This site's estimate of the HAC cut, in dollars ("modeled": not CMS's number).
   tableColMoney: { text: 'Est. cut ($, modeled)', claim: null },
   tableMoneyNone: { text: 'no estimate', claim: null },
+  tableSorted: { text: 'Sorted by {sort}.', claim: null },
   tableCount: { text: '{n} hospitals shown.', claim: null },
   tableCountOne: { text: 'One hospital shown.', claim: null },
   tableCountNone: { text: 'No hospital matches.', claim: null },

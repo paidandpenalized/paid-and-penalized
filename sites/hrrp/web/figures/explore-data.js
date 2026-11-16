@@ -30,5 +30,5 @@ export function exploreControls(hospitals, conditions, fy) {
   const states = [...new Set(hospitals.map((h) => h.st))].sort();
   const peers = [...new Set(hospitals.map((h) => h.peer).filter((p) => p != null))].sort((a, b) => a - b);
   const teach = Object.keys(TEACH_LABEL).filter((k) => hospitals.some((h) => h.teach === k)).map((value) => ({ value, label: TEACH_LABEL[value] }));
-  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: SORT_KEYS, csvHref: csvPath(fy, hospitalsCsvName(fy)) };
+  return { states, peers, teach, beds: BED_BANDS, conds: CONDS.map((key) => ({ key, short: conditionShort(conditions, key) })), pageSize: PAGE_SIZE, sorts: SORT_KEYS, inactive: hospitals.some((h) => h.inactive), csvHref: csvPath(fy, hospitalsCsvName(fy)) };
 }

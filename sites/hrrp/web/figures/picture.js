@@ -37,6 +37,7 @@ export function ledeText({ lede }) {
 // the table fits the screen; each width shows one copy (the other is display: none, out of the accessibility tree too).
 function penTable(rows, conditions) {
   return html`<div class="pen">${printout(html`<table class="gb pen__table">
+<caption class="vh" id="pen-cap">${t('penCaption')}</caption>
 <thead><tr><th scope="col">${t('penColHospital')}</th><th scope="col" class="num">${t('penColCut')}</th><th scope="col" class="num">${t('penColDollars')}</th><th scope="col">${t('penColConds')}</th></tr></thead>
 <tbody>${rows.map((r, i) => {
     const names = countedNames(r, conditions);

@@ -163,8 +163,8 @@ export const COPY = {
   childrenMetros: { text: 'Metro areas', claim: null },
   childPart: { text: '{name} ({st} part)', claim: null },
   childOutside: { text: 'Outside metro areas', claim: null },
-  kidsIntro: { text: 'Largest first, by hospitals. A metro area across a state line counts the hospitals in this state only.', claim: null },
-  kidsIntroOther: { text: 'Largest first, by hospitals.', claim: null },
+  kidsIntro: { text: 'Largest first, by hospitals. Penalized is the share of hospitals measured on at least one condition that take a cut. A metro area across a state line counts the hospitals in this state only.', claim: null },
+  kidsIntroOther: { text: 'Largest first, by hospitals. Penalized is the share of hospitals measured on at least one condition that take a cut.', claim: null },
   kidsColDivision: { text: 'Division', claim: null },
   kidsColState: { text: 'State', claim: null },
   kidsColMetro: { text: 'Metro area', claim: null },
@@ -182,6 +182,7 @@ export const COPY = {
   // place's rows; a script unhides them.
   hosHeading: { text: 'Hospitals in {name}', claim: null },
   hosIntro: { text: 'Largest cut first. Select a hospital to open its page.', claim: null },
+  hosInactive: { text: 'Inactive marks a hospital whose Medicare agreement CMS lists as ended.', claim: null },
   hosFilters: { text: 'Filters', claim: null },
   hosText: { text: 'Name, city or CCN', claim: null },
   hosState: { text: 'State', claim: null },

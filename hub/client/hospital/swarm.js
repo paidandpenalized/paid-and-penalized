@@ -7,13 +7,15 @@
 // what-if's net past it) moves every dot at once, and the ticks, the gutter, the median and the marks with them.
 //
 // Every dot answers a pointer (its name, city and net in a tooltip, with a hit target larger than the dot) and a click
-// opens its hospital's page; on a touch screen the first tap shows the tooltip and a second opens. The canvas takes focus:
+// opens its hospital's page; on a touch screen the first tap shows the tooltip and a second opens. The pointer can move
+// from a dot onto its tooltip, which stays while the pointer is on it; Escape puts it away. The canvas takes focus:
 // ← and → step through the group from left to right (Home and End to its ends), each step said in a polite live region,
 // Enter opens, Escape lets go. Colors come from the tokens (colors.js) and repaint when the theme changes.
 import { median } from '../../../engine/js/peers.js';
 import { clamp } from '../../../engine/js/stats.js';
 import { count } from '../../../web/client/format.js';
 import { placeText } from '../../../web/render/format.js';
+import { bindTip, delayedHide } from '../../../web/client/tooltip.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { signedShareText } from '../../hospital/text.js';
 import { inkColor, onThemeChange, readColors, readFonts, signCode } from '../colors.js';
@@ -412,7 +414,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     return s % N === self ? `${line}. ${fill('dotThis')}` : line;
   };
 
+  // A pointer leaving a dot (or the canvas, or the tooltip) puts the tooltip away a moment later (tooltip.js), unless it
+  // reaches the tooltip or a dot first.
+  const hiding = delayedHide(() => onLeave());
+
   function showTip(s, touch = false) {
+    hiding.keep();
     if (s < 0) {
       tip.hidden = true;
       return;
@@ -438,6 +445,12 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
   function onMove(e) {
     if (e.pointerType === 'touch') return;
     const s = hit(...point(e));
+    // Off the dot shown: the pointer may be on its way to the tooltip.
+    if (s < 0 && hover >= 0) {
+      if (!hiding.pending()) hiding.soon();
+      return;
+    }
+    hiding.keep();
     if (s === hover) return;
     hover = s;
     canvas.style.cursor = s >= 0 && s % N !== self ? 'pointer' : '';
@@ -445,8 +458,10 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
   function onLeave() {
+    hiding.keep();
     const was = hover;
     hover = -1;
+    canvas.style.cursor = '';
     tip.hidden = true;
     if (was >= 0 && !moving) draw();
   }
@@ -475,12 +490,6 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     else if (e.key === 'Enter') {
       if (picked >= 0) open(picked);
       return;
-    } else if (e.key === 'Escape') {
-      if (picked < 0) return;
-      picked = -1;
-      tip.hidden = true;
-      draw();
-      return;
     } else return;
     e.preventDefault();
     picked = order[at];
@@ -489,8 +498,13 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     draw();
   }
 
+  // Focus leaving the canvas lets go of the dot it shows (hover too, so the pointer coming back to that dot shows it
+  // again), unless the focus left for a press on the tooltip itself.
   function onBlur() {
-    picked = -1;
+    if (pressing()) return;
+    hiding.keep();
+    picked = hover = -1;
+    canvas.style.cursor = '';
     tip.hidden = true;
     draw();
   }
@@ -509,12 +523,28 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     if (!moving) draw();
   }
 
+  // Escape lets go of the dot shown or picked, wherever the focus is: on the canvas (its keys) or not (a pointer's
+  // tooltip).
+  function onEscape(e) {
+    if (e.key !== 'Escape' || (tip.hidden && picked < 0)) return;
+    hiding.keep();
+    letGo();
+    if (!moving) draw();
+  }
+
+  // A tap's pointerleave comes before its click, which shows the tooltip again.
   canvas.addEventListener('pointermove', onMove);
-  canvas.addEventListener('pointerleave', onLeave);
+  canvas.addEventListener('pointerleave', (e) => (e.pointerType === 'touch' ? onLeave() : hiding.soon()));
+  const pressing = bindTip(tip, hiding);
   canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);
-  document.addEventListener('pointerdown', onOutside);
+  // The page-wide listeners go once the swarm leaves the page (the first event after, by either of them), as the
+  // charts' do (web/client/figure.js).
+  const gone = new AbortController();
+  const onPage = (fn) => (e) => { if (!canvas.isConnected) gone.abort(); else fn(e); };
+  document.addEventListener('pointerdown', onPage(onOutside), { signal: gone.signal });
+  document.addEventListener('keydown', onPage(onEscape), { signal: gone.signal });
 
   function resize() {
     if (el.clientWidth === W) return;
