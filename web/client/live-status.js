@@ -4,13 +4,13 @@
 // A live announcement waits this long after the reader stops typing.
 export const SETTLE_MS = 400;
 
-// say(text, typing): writes text into status now, or SETTLE_MS after the last call while typing; any call cancels a
-// waiting one.
-export function liveStatus(status, wait = SETTLE_MS) {
+// say(text, typing): writes text into status now, or wait (SETTLE_MS) after the last call while typing; any call cancels
+// a waiting one. write: how the words go in (by default, as the status's text).
+export function liveStatus(status, { wait = SETTLE_MS, write = (text) => { status.textContent = text; } } = {}) {
   let timer = 0;
   return (text, typing = false) => {
     clearTimeout(timer);
-    if (typing) timer = setTimeout(() => { status.textContent = text; }, wait);
-    else status.textContent = text;
+    if (typing) timer = setTimeout(() => write(text), wait);
+    else write(text);
   };
 }

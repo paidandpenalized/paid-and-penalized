@@ -190,8 +190,8 @@ function mountMarks(fig, svg, live) {
   // pointerleave comes right after its pointerup, so a touch keeps the tooltip; a tap outside the chart, Escape or a
   // scroll hides it.
   svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && current >= 0) hiding.soon(); });
-  bindTip(tip, hiding);
-  svg.addEventListener('blur', hide);
+  const pressing = bindTip(tip, hiding);
+  svg.addEventListener('blur', () => { if (!pressing()) hide(); });
   // The page-wide listeners go when a script redraws the figure and this drawing leaves the page (the first event after, by any of them).
   const gone = new AbortController();
   const onPage = (fn) => (e) => { if (!svg.isConnected) gone.abort(); else fn(e); };

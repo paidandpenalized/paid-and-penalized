@@ -83,3 +83,14 @@ test('Escape hides a tooltip the pointer shows, and a press on the tooltip keeps
   doc.fire('keydown', { key: 'Escape' });
   assert.equal(tip.hidden, true, 'Escape');
 });
+
+test('a press on the tooltip keeps it up though it takes the focus from the chart; any other blur hides it', async (t) => {
+  const { svg, marks, tip } = chart(t);
+  svg.fire('pointerover', { target: marks[0] });
+  tip.fire('pointerdown');
+  svg.fire('blur');
+  assert.equal(tip.hidden, false, 'the press\'s blur');
+  t.mock.timers.tick(0);
+  svg.fire('blur');
+  assert.equal(tip.hidden, true, 'a later blur');
+});

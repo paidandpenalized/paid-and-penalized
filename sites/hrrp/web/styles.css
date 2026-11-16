@@ -72,7 +72,9 @@
 .prog__summary { display: flex; flex-wrap: wrap; }
 .prog__summary > .field { flex: 1 1 210px; }
 .prog__summary > .form__title { flex-basis: 100%; }
-.prog__card .stamp { justify-self: end; margin: 4px 6px 0 0; white-space: nowrap; font-size: clamp(0.9rem, 4.5cqi, 1.55rem); }
+/* One line where the card has room; where larger text leaves it too little, the stamp wraps inside the card rather than
+   run off its edge (its size keeps a rem floor, so it can't shrink to fit). */
+.prog__card .stamp { justify-self: end; max-width: calc(100% - 6px); margin: 4px 6px 0 0; font-size: clamp(0.9rem, 4.5cqi, 1.55rem); text-wrap: balance; }
 .part { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 64px; padding-top: 28px; border-top: 5px double var(--ink); }
 /* A phone: the Parts and steps closer together, and the At-a-glance card two fields to a row. */
 @media (max-width: 559px) {

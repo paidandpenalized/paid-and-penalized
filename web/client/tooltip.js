@@ -22,7 +22,15 @@ export function delayedHide(fn, ms = HIDE_MS) {
 }
 
 // The tooltip's own pointer: on it, the hide waits; a mouse or pen leaving it hides it soon (a tap's leave does not).
+// Returns pressing(): true while a press on the tooltip is being handled, so the chart's blur (the press takes the focus
+// from it) can leave the tooltip up.
 export function bindTip(tip, { keep, soon }) {
+  let pressed = false;
   tip.addEventListener('pointerenter', keep);
   tip.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') soon(); });
+  tip.addEventListener('pointerdown', () => {
+    pressed = true;
+    setTimeout(() => { pressed = false; });
+  });
+  return () => pressed;
 }

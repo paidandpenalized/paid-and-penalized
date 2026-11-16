@@ -97,8 +97,14 @@ export function mountHospitals(box) {
 
   const want = () => ({ text: f.text.value, st: f.st?.value, peer: f.peer.value, cond: f.cond.value, teach: f.teach.value, beds: f.beds.value, loc: f.loc.value, pen: f.pen.checked });
   const empty = box.querySelector('.ht-empty');
-  // The status line, a polite live region: while the reader types a name it waits for a pause (live-status.js).
-  const say = liveStatus(status);
+  // The status line, a polite live region: while the reader types a name it waits for a pause (live-status.js). With no
+  // row it says the empty table's sentence for a screen reader only (.vh): the sentence already shows under the filters.
+  const say = liveStatus(status, {
+    write: (text) => {
+      status.textContent = text;
+      status.classList.toggle('vh', text === empty.textContent);
+    },
+  });
   // typing: the name box changed; every other change says the count at once.
   function render(typing = false) {
     shown = sortRows(filterRows(all, want()), f.sort.value);

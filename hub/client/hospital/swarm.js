@@ -498,8 +498,13 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
     draw();
   }
 
+  // Focus leaving the canvas lets go of the dot it shows (hover too, so the pointer coming back to that dot shows it
+  // again), unless the focus left for a press on the tooltip itself.
   function onBlur() {
-    picked = -1;
+    if (pressing()) return;
+    hiding.keep();
+    picked = hover = -1;
+    canvas.style.cursor = '';
     tip.hidden = true;
     draw();
   }
@@ -530,7 +535,7 @@ export function mountSwarm(el, { hospitals, h, peers, domain, fill, fy, group, s
   // A tap's pointerleave comes before its click, which shows the tooltip again.
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerleave', (e) => (e.pointerType === 'touch' ? onLeave() : hiding.soon()));
-  bindTip(tip, hiding);
+  const pressing = bindTip(tip, hiding);
   canvas.addEventListener('click', onClick);
   canvas.addEventListener('keydown', onKey);
   canvas.addEventListener('blur', onBlur);

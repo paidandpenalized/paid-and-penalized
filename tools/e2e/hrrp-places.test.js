@@ -117,9 +117,12 @@ async function exerciseTable(page, t, scope, { state }) {
   await t.control('text').fill('qqzzxxqq');
   await eventually(async () => await t.box.locator('.ht-empty').isVisible(), 'no empty line for a filter nothing passes');
   const none = await t.box.locator('.ht-empty').innerText();
-  await eventually(async () => (await t.status()) === none, 'the status does not say that nothing matches');
+  // Its words (textContent), whether or not the box shows them: what a screen reader hears.
+  await eventually(async () => (await t.box.locator('.ph__status').textContent()) === none, 'the status does not say that nothing matches');
+  assert.equal(await t.box.locator('.ph__status').evaluate((el) => el.classList.contains('vh')), true, 'said to a screen reader only, not shown twice');
   await t.control('text').fill('');
   await eventually(async () => (await t.total()) === n, 'clearing the text restores the rows');
+  assert.equal(await t.box.locator('.ph__status').evaluate((el) => el.classList.contains('vh')), false, 'the count shows again');
 }
 
 // Copy as CSV: the filtered rows, in the table's sort order, the header first.

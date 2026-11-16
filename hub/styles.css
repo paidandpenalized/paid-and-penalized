@@ -587,7 +587,10 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 .hh__swarm:empty { display: none; }
 .hh__cv { display: block; width: 100%; touch-action: manipulation; }
 .hh__cv:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
-.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 0.78125rem/1.35 var(--font-body); }
+.hh__tip { position: absolute; z-index: 3; max-width: min(280px, 100%); padding: 6px 9px 7px; border: 1px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 0.78125rem/1.35 var(--font-body); pointer-events: none; }
+/* A mouse or pen can move onto the tooltip and read it there (hub/client/hospital/swarm.js keeps it); a tap goes
+   through it to the dots under it. */
+@media (hover: hover) and (pointer: fine) { .hh__tip { pointer-events: auto; } }
 .hh__tip b { display: block; font-weight: 700; }
 .hh__tip span { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); }
 .hh__tip .hh__tip-open { color: var(--ink); font: 600 var(--fs-xs)/1.4 var(--font-body); }
@@ -807,11 +810,13 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 /* Touch screens: the home story's rail links and state buttons and the hospital page's controls take the kit's touch
    height (--control-h, 44px under a coarse pointer: tokens.css), as the shared fields and buttons do. The state
    buttons keep their width (their row would otherwise hold too few) and grow in height only: their ::after is the
-   colored bar, so it can't also widen the hit area. The rows keep their gaps, so no two targets meet. */
+   colored bar, so it can't also widen the hit area. The rows keep their gaps, so no two targets meet. The link-styled
+   buttons draw their line as an underline there, so it stays under the words in the taller box. */
 @media (pointer: coarse) {
   .story .rail a { padding-block: 14px; }
   .story .sb { height: var(--control-h); }
   .hh__pb, .hh__reset, .hh__deep, .hh__lnk, .hh__fin { min-height: var(--control-h); }
+  .hh__lnk { border-bottom: 0; text-decoration: underline 1px var(--line); text-underline-offset: 3px; }
   .hh__stp { min-width: var(--control-h); min-height: var(--control-h); }
 }
 
