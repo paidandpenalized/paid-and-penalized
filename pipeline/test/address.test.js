@@ -61,13 +61,14 @@ test('lookup serves each page at addressOf its file', () => {
   for (const file of TREE) assert.deepEqual(lookup(addressOf(file), at), { status: 200, file }, file);
 });
 
-test('isServed: every file but _headers, in any letter case', () => {
-  for (const file of ['index.html', '404.html', 'assets/site.0a1b2c3d.css', 'a/_headers', '_headers.txt']) assert.equal(isServed(file), true, file);
-  for (const file of ['_headers', '_HEADERS', '_Headers']) assert.equal(isServed(file), false, file);
+test('isServed: every file but _headers and _redirects, in any letter case', () => {
+  for (const file of ['index.html', '404.html', 'assets/site.0a1b2c3d.css', 'a/_headers', '_headers.txt', 'a/_redirects', '_redirects.txt']) assert.equal(isServed(file), true, file);
+  for (const file of ['_headers', '_HEADERS', '_Headers', '_redirects', '_REDIRECTS', '_Redirects']) assert.equal(isServed(file), false, file);
 });
 
-test('filesAt: lookup over a list of built files answers as it does over the folder, and never serves _headers', () => {
-  const at = filesAt(['_headers', ...TREE]);
+test('filesAt: lookup over a list of built files answers as it does over the folder, and never serves _headers or _redirects', () => {
+  const at = filesAt(['_headers', '_redirects', ...TREE]);
   for (const [path, want, why] of ANSWERS) assert.deepEqual(lookup(path, at), want, why ?? path);
   assert.deepEqual(lookup('/_headers', at), { status: 404 });
+  assert.deepEqual(lookup('/_redirects', at), { status: 404 });
 });

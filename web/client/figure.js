@@ -1,13 +1,16 @@
 // Figures in the browser (web/charts/figure.js wrote them): column sort on the table, the CSV download built from
 // the table, and a tooltip for the chart's marks on hover and from the keyboard (the chart takes focus, named by the
 // figure's caption if it was hidden from screen readers; arrow keys, Home and End step through the marks; Escape hides
-// the tooltip). A tap on a mark shows its tooltip until a tap elsewhere, Escape or a scroll. It also makes every table's
+// the tooltip). The pointer can move from a mark onto its tooltip, which stays while the pointer is on it (a screen
+// magnifier's reader can read it there). A tap on a mark shows its tooltip until a tap elsewhere, Escape or a scroll. It also makes every table's
 // scroll box on the page a keyboard-scrollable region while its table overflows (mountScroll). Program-neutral: it runs
 // on any page with figure[data-figure]. Without JavaScript the table, the native SVG tooltips and the page still work.
 // No animation.
 import { toCsv } from '../../engine/js/csv.js';
 import { compareNumbers, numberOrNaN } from '../../engine/js/stats.js';
 import { saveCsv } from './download.js';
+import { compareText } from './format.js';
+import { bindTip, delayedHide } from './tooltip.js';
 
 const STEPS = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
 
@@ -21,10 +24,9 @@ export function tableCsv(table) {
 
 // Rows by column index, dir 1 (ascending) or -1. Numbers by value, with blanks and text such as "N/A" last in either
 // direction; text by locale. Ties keep their order (Array sort is stable).
-const collate = new Intl.Collator('en').compare;
 export function compareRows(index, numeric, dir) {
   const key = (row) => valueOf(row.cells[index]);
-  if (!numeric) return (a, b) => dir * collate(key(a), key(b));
+  if (!numeric) return (a, b) => dir * compareText(key(a), key(b));
   return (a, b) => compareNumbers(numberOrNaN(key(a)), numberOrNaN(key(b)), dir);
 }
 
@@ -149,12 +151,17 @@ function mountMarks(fig, svg, live) {
   if (hint) svg.setAttribute('aria-describedby', hint.id);
 
   let current = -1;
+  // A pointer leaving a mark or the chart hides the tooltip a moment later (tooltip.js), so it can cross the gap onto
+  // the tooltip, which keeps it.
+  const hiding = delayedHide(() => hide());
   const hide = () => {
+    hiding.keep();
     marks[current]?.classList.remove('is-active');
     current = -1;
     tip.hidden = true;
   };
   const show = (i, announce) => {
+    hiding.keep();
     // The pointer moving between one mark's parts changes nothing; a key press still announces the mark again.
     if (i === current && !announce) return;
     marks[current]?.classList.remove('is-active');
@@ -173,20 +180,22 @@ function mountMarks(fig, svg, live) {
     if (announce) live.textContent = m.dataset.tip;
   };
 
-  // Onto a mark shows it; onto the chart's empty space (or a tap there) hides it.
+  // Onto a mark shows it; onto the chart's empty space (or a tap there) hides it, a moment later.
   svg.addEventListener('pointerover', (e) => {
     const m = e.target.closest('[data-mark]');
     if (m) show(marks.indexOf(m), false);
-    else hide();
+    else if (current >= 0) hiding.soon();
   });
-  // A mouse or pen leaving the chart hides the tooltip. A tap's pointerleave comes right after its pointerup, so a
-  // touch keeps the tooltip; a tap outside the chart, Escape or a scroll hides it.
-  svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') hide(); });
-  svg.addEventListener('blur', hide);
+  // A mouse or pen leaving the chart, or the tooltip, hides it a moment later, unless it moves onto the other. A tap's
+  // pointerleave comes right after its pointerup, so a touch keeps the tooltip; a tap outside the chart, Escape or a
+  // scroll hides it.
+  svg.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch' && current >= 0) hiding.soon(); });
+  const pressing = bindTip(tip, hiding);
+  svg.addEventListener('blur', () => { if (!pressing()) hide(); });
   // The page-wide listeners go when a script redraws the figure and this drawing leaves the page (the first event after, by any of them).
   const gone = new AbortController();
   const onPage = (fn) => (e) => { if (!svg.isConnected) gone.abort(); else fn(e); };
-  document.addEventListener('pointerdown', onPage((e) => { if (current >= 0 && !svg.contains(e.target)) hide(); }), { signal: gone.signal });
+  document.addEventListener('pointerdown', onPage((e) => { if (current >= 0 && !svg.contains(e.target) && !tip.contains(e.target)) hide(); }), { signal: gone.signal });
   document.addEventListener('keydown', onPage((e) => { if (e.key === 'Escape' && current >= 0) hide(); }), { signal: gone.signal });
   window.addEventListener('scroll', onPage(() => { if (current >= 0) hide(); }), { passive: true, signal: gone.signal });
   svg.addEventListener('keydown', (e) => {

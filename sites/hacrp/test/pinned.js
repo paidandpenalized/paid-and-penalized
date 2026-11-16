@@ -76,6 +76,7 @@ export const renderMethods = (overrides = {}) => methodsPage({
   pins: DATA.pinsUsed, changes: DATA.changes,
   estimate: { tolerance: ESTIMATE_THRESHOLD, tagged: tagged.length ? listText(tagged.map((id) => SHORT_NAMES[id])) : null, maxError: tagged.length ? Math.max(...tagged.map((id) => DATA.estimate[id].maxError)) : null },
   boundaryText: DATA.boundaryText, eqFy: EQUAL_FROM, zFy: Z_FROM, robots: null, assets: ASSETS, searchUrl: SEARCH_URL, dollars: DATA.dollars, names: () => null,
+  shift: DATA.baselineShift,
   ...overrides,
 });
 

@@ -320,6 +320,10 @@
 .est summary { display: inline-block; min-height: 24px; padding-block: 2px; color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-body); text-decoration: underline dotted 1px; text-underline-offset: 3px; cursor: pointer; list-style: none; }
 .est summary::-webkit-details-marker { display: none; }
 .est[open] summary { color: var(--ink); }
+/* Its open or closed state in the shape too, not the ink alone: a small chevron, down to open, up once open (a border, so
+   there is no character for a screen reader to read; the summary's expanded state is native). */
+.est summary::after { content: ""; display: inline-block; width: 0.38em; height: 0.38em; margin-left: 0.45em; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-0.2em) rotate(45deg); }
+.est[open] summary::after { transform: translateY(0.05em) rotate(-135deg); }
 .est__body { margin-top: 4px; }
 
 /* The hospital table: its controls in one row above it, wrapping on a phone. */
@@ -681,10 +685,16 @@
 .hrec__sum { font: 700 var(--fs-sm)/1.2 var(--font-type); }
 .hrec__row { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; }
 .hrec__row > li { flex: 1 1 0; min-width: 0; }
-@media (max-width: 600px) { .hrec__v { font-size: 8px; letter-spacing: 0; } }
+/* Where the row has too little room for its labels (a phone, or larger text: the width is in rem), two rows of six, so
+   the labels keep a legible size. The record strip and the infections' quarter strip are each the container. */
+.hrec, .infq { container-type: inline-size; }
+@container (width < 26rem) {
+  .hrec__row { flex-wrap: wrap; row-gap: 6px; }
+  .hrec__row > li { flex: 0 0 calc((100% - 5 * 2px) / 6); }
+}
 .hrec__y { display: grid; gap: 2px; text-align: center; }
-.hrec__fy { color: var(--ink-3); font: 400 10px/1 var(--font-type); }
-.hrec__v { display: block; padding: 5px 0 4px; border: 1.5px solid var(--ink); font: 700 9px/1 var(--font-type); text-transform: uppercase; letter-spacing: 0.04em; }
+.hrec__fy { color: var(--ink-3); font: 400 var(--fs-xs)/1 var(--font-type); }
+.hrec__v { display: block; padding: 5px 0 4px; border: 1.5px solid var(--ink); font: 700 0.6875rem/1 var(--font-type); text-transform: uppercase; letter-spacing: 0.04em; }
 .hrec__y--cut .hrec__v { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
 .hrec__y--none .hrec__v { border-style: dashed; border-color: var(--ink-3); color: var(--ink-3); }
 /* A decision CMS gave with no score: the decision's own box, ringed in a dashed outline; the note under the row says so. */

@@ -22,7 +22,7 @@ import { CUT, NONE, NOT_CUT, everCut, rollOrder, tallyYears } from '../../../eng
 import { ceilToUnit, toUnit } from '../../../engine/js/stats.js';
 import { groupLabel } from './groups.js';
 import { nameInText } from './places.js';
-import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES } from './constants.js';
+import { FACT_SHEET_CUT, FEW_DECIDED, MAP_STEPS_PCT, SHORT_NAMES, SIR_BASE_YEAR } from './constants.js';
 import { COUNT_NOTE, METHODS_PATH } from './links.js';
 import { YEAR_CLASSES, yearClass, yearGroups } from './year-classes.js';
 import { fyLabel } from './copy.js';
@@ -326,8 +326,12 @@ const RECORD = {
 };
 // A year of a record in words: what CMS decided, and that it gave the decision without a score where it did.
 const decisionWords = (y) => (y.noScore ? fill('recordTipNoScore', { what: t(RECORD[y.c].tip) }) : t(RECORD[y.c].tip));
-// One year's cell in a record strip: the year's last two digits over its value; tip: its tooltip, if any.
-const recordCell = (fy, cls, value, tip = null) => html`<li class="hrec__y hrec__y--${cls}"${tip ? html` title="${tip}"` : ''}><span class="hrec__fy">${String(fy).slice(-2)}</span><span class="hrec__v">${value}</span></li>`;
+// One year's cell in a record strip: the year's last two digits over its value. phrase: the year and its value in full words,
+// if any: a screen reader then reads those (visually hidden) in place of the short ones, which a sighted reader sees.
+const recordCell = (fy, cls, value, phrase = null) => {
+  const hide = phrase ? html` aria-hidden="true"` : '';
+  return html`<li class="hrec__y hrec__y--${cls}">${phrase ? html`<span class="vh">${phrase}</span>` : ''}<span class="hrec__fy"${hide}>${String(fy).slice(-2)}</span><span class="hrec__v"${hide}>${value}</span></li>`;
+};
 
 // The record strip under the verdict: one box per year, cut in the penalty ink.
 export function recordStrip(rec, fys) {
@@ -389,7 +393,7 @@ export function part4({ hd, figure: fig, rollUrl = null, src = null, shapes = nu
   return html`${psec({ id: 'roll', wide: true, heading: t('rollHeading'), text: html`${para('rollText')}${para('rollText2')}${countLink(hd)}`, figure: rollFigure(hd, { n: fig(), source, rollUrl, src }) })}
 ${psec({ id: 'ever', heading: t('everHeading'), text: para('everText'), figure: everFigure(hd, { n: fig(), source }) })}
 ${shapes && master ? psec({ id: 'spread', wide: true, heading: t('ymapHeading'), text: html`${para('ymapText')}${para('ymapText2')}`, figure: yearMapFigure(hd, { n: fig(), source, shapes, master, rollUrl }) }) : ''}
-${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText')}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}
+${inf ? psec({ id: 'infections', heading: t('infHeading'), text: html`${para('infText', { base: String(SIR_BASE_YEAR) })}${para('infText2', { spike: String(spikeYear(hd.infections)) })}`, figure: infectionsFigure(hd, { n: fig(), source: fill('infSource', { first: String(inf.first), last: String(inf.last) }) }) }) : ''}
 ${psec({ id: 'chance', heading: t('chanceHeading'), text: html`${para('chanceText')}${para('chanceText2')}`, figure: chanceFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'again', heading: t('gapHeading'), text: html`${para('gapText')}${para('gapText2')}`, figure: gapFigure(hd, { n: fig(), source }) })}
 ${psec({ id: 'kinds', heading: t('kindsHeading'), text: html`${para('kindsText')}${flip ? para('kindsText2', { since: String(flip) }) : para('kindsText2NoFlip')}`, figure: kindsFigure(hd, { n: fig(), source, flip }) })}

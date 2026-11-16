@@ -2,7 +2,7 @@
 // net and the net as a share of pay; this hospital's row marked. A program a hospital is not in reads "Not in this
 // program", never $0. Built when the reader first opens the fold, and again when the group changes while it is open
 // (or at the next opening). Nothing here ranks: the order is the names'.
-import { count } from '../../../web/client/format.js';
+import { compareText, count } from '../../../web/client/format.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { ROW_KEY, inProgram } from '../../hospital/peers.js';
 import { outKey, signedMoney, signedShareText } from '../../hospital/text.js';
@@ -25,7 +25,7 @@ export function fillPeerTable(details, { peers, h, fill, fy, group }) {
   const table = node('table', { class: 'hh__pt' }, [cell('caption', fill('tableCaption', { fy, n: count(peers.length), group }))]);
   const head = node('thead', {}, [node('tr', {}, COLS.map((col) => node('th', { class: col.num ? 'num' : null, scope: 'col' }, [fill(col.key)])))]);
   const body = node('tbody');
-  const rows = [...peers].sort((a, b) => a.name.localeCompare(b.name, 'en-US') || a.ccn.localeCompare(b.ccn));
+  const rows = [...peers].sort((a, b) => compareText(a.name, b.name) || (a.ccn < b.ccn ? -1 : a.ccn > b.ccn ? 1 : 0));
   for (const x of rows) {
     const me = x === h;
     const th = node('th', { scope: 'row' }, me

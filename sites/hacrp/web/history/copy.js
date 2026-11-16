@@ -55,7 +55,7 @@ export const COPY = {
 
   // Infections against the cut.
   infHeading: { text: 'Fewer infections, the same quarter cut', claim: null },
-  infText: { text: "The lines are the nation’s infection rates, each calendar year Care Compare published one: the infections of every hospital Care Compare lists, critical access and other hospitals outside this program included, added up over the number CDC’s model predicted. Below the dashed line, fewer infections than predicted.", claim: ['HACRP-14', 'HACRP-46'] },
+  infText: { text: "The lines are the nation’s infection rates, each calendar year Care Compare published one on CDC’s {base} baseline: the infections of every hospital Care Compare lists, critical access and other hospitals outside this program included, added up over the number CDC’s model predicted. Below the dashed line, fewer infections than predicted.", claim: ['HACRP-14', 'HACRP-46', 'HACRP-47'] },
   infText2: { text: "Most fell, one by more than half, though most rose in {spike}, the pandemic’s second year. The cut did not shrink with them: in every year CMS cut anyone, the rule took the quarter of hospitals with the highest scores, however much every hospital improved.", claim: 'HACRP-02' },
   infTakeaway: { text: "From {first} to {last}, the nation’s {a} rate fell {aPct} and its {b} rate {bPct}; in every year CMS cut anyone, it cut about a quarter of hospitals all the same.", claim: null },
   infTakeawayOne: { text: "From {first} to {last}, the nation’s {a} rate fell {aPct}; in every year CMS cut anyone, it cut about a quarter of hospitals all the same.", claim: null },
@@ -189,7 +189,7 @@ export const COPY = {
   yearsRun: { text: 'Its longest run: cut {run} years in a row.', claim: null },
 
   hinfHeading: { text: 'Its infections, year by year', claim: null },
-  hinfIntro: { text: "This hospital's infection rate against prediction for each calendar year Care Compare published one, on each measure with at least two years of results (black), over the nation's middle hospital (gray). Below the dashed line at one, fewer infections than predicted. Each year is measured against the same fixed baseline, not against other hospitals, so unlike the score they can all improve at once.", claim: ['HACRP-36', 'HACRP-47'] },
+  hinfIntro: { text: "This hospital's infection rate against prediction for each calendar year Care Compare published one on CDC’s {base} baseline, on each measure with at least two years of results (black), over the nation's middle hospital (gray). Below the dashed line at one, fewer infections than predicted. Each year is measured against the same fixed baseline, not against other hospitals, so unlike the score they can all improve at once.", claim: ['HACRP-36', 'HACRP-47'] },
   hinfNation: { text: 'Nation’s middle', claim: null },
   hinfTakeaway: { text: "{down} of its {m} infection measures ended lower than they started.", claim: null },
   hinfTip: { text: '{measure}, {cy}: {sir}', claim: null },

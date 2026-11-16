@@ -7,7 +7,8 @@
    The rows of a trail that wraps on a phone sit a target's height (--target-min) apart, line to line, whatever the type
    size: each link keeps WCAG 2.2's 24px of clear space around it. */
 .crumbs ol { display: flex; flex-wrap: wrap; gap: calc(var(--target-min) - 1lh) 0; margin: 0; padding: 0; list-style: none; font: 400 var(--fs-sm)/1.5 var(--font-type); }
-.crumbs li + li::before { content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
+/* The plain content first: a browser without the alt-text syntax keeps the separator instead of dropping the rule. */
+.crumbs li + li::before { content: "\203A"; content: "\203A" / ""; margin: 0 8px; color: var(--ink-3); }
 .crumbs a { color: var(--ink); }
 .crumbs [aria-current] { color: var(--ink-2); }
 
@@ -16,8 +17,11 @@
    under 980px, the record first. */
 .hosp { gap: 0; }
 .hosp > * + * { margin-top: 28px; }
-/* Figures stand further apart than the blocks inside them. */
-.hosp > figure.fig { margin-top: 56px; }
+/* Figures stand further apart than the blocks inside them; each part's heading (the place pages' .place__figh look) sits
+   over its figure. */
+.hosp > figure.fig, .hosp > .hosp__figh { margin-top: 56px; }
+.hosp__figh { font: 700 var(--fs-md)/1.25 var(--font-body); }
+.hosp > .hosp__figh + figure.fig, .hosp > .hosp__figh + * { margin-top: 4px; }
 .hosp__top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 40px; padding: 4px 0 32px; border-bottom: 5px solid var(--ink); }
 @media (min-width: 980px) { .hosp__top { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: stretch; } }
 .hosp__top > * { min-width: 0; }
@@ -51,7 +55,7 @@
 @media (min-width: 960px) { .prog__top { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; } }
 .prog__intro { display: grid; gap: 14px; align-content: start; container-type: inline-size; }
 .prog__kicker { color: var(--pen-ink); }
-.prog__title { font: 400 clamp(2.2rem, 11.5cqi, 6rem)/0.95 var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
+.prog__title { font: 400 clamp(2.2rem, 11.5cqi, 5.5rem)/0.95 var(--font-display); letter-spacing: -0.01em; color: var(--ink); }
 /* Two lines, as the old site set it: "Thirty Day" in ink, the program's name in the penalty's ink. */
 .prog__title > span { display: block; }
 .prog__title-pen { color: var(--pen); }
@@ -68,7 +72,9 @@
 .prog__summary { display: flex; flex-wrap: wrap; }
 .prog__summary > .field { flex: 1 1 210px; }
 .prog__summary > .form__title { flex-basis: 100%; }
-.prog__card .stamp { justify-self: end; margin: 4px 6px 0 0; white-space: nowrap; font-size: min(4.5cqi, 1.55rem); }
+/* One line where the card has room; where larger text leaves it too little, the stamp wraps inside the card rather than
+   run off its edge (its size keeps a rem floor, so it can't shrink to fit). */
+.prog__card .stamp { justify-self: end; max-width: calc(100% - 6px); margin: 4px 6px 0 0; font-size: clamp(0.9rem, 4.5cqi, 1.55rem); text-wrap: balance; }
 .part { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: 64px; padding-top: 28px; border-top: 5px double var(--ink); }
 /* A phone: the Parts and steps closer together, and the At-a-glance card two fields to a row. */
 @media (max-width: 559px) {
@@ -551,8 +557,11 @@
 .hosphist__title { margin: 0 0 6px; font: 600 var(--fs-sm)/1.3 var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
 
 
-/* The full worksheet: a button that opens it. */
+/* The full worksheet: a button that opens it, its + turning to − once open (the share button's sign, pages.css). */
 .hosp__ws > summary { display: inline-block; padding: 8px 16px; border: 2px solid var(--ink); background: var(--paper); font: 600 var(--fs-sm)/1.2 var(--font-body); letter-spacing: 0.04em; cursor: pointer; }
+.hosp__ws > summary::-webkit-details-marker { display: none; }
+.hosp__ws > summary::after { content: " +"; content: " +" / ""; font-family: var(--font-type); font-weight: 700; }
+.hosp__ws[open] > summary::after { content: " \2212"; content: " \2212" / ""; }
 .hosp__ws[open] > summary { margin-bottom: 20px; }
 
 /* The what-if (figures/whatif.js): a slider for each measured condition (name over the range and its value, then the words about

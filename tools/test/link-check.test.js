@@ -167,9 +167,9 @@ test('links inside a comment or a script body are not links; a script src is', a
   assert.deepEqual(found, ['/ /assets/x.js missing file']);
 });
 
-test('a link to _headers is a missing file: the server never serves it', async () => {
-  const found = await problemsIn({ 'index.html': page('<a href="/_headers">h</a><a href="/_HEADERS">H</a>'), _headers: '/*\n  X-A: 1\n' });
-  assert.deepEqual(found, ['/ /_headers missing file', '/ /_HEADERS missing file']);
+test('a link to _headers or _redirects is a missing file: the server never serves them', async () => {
+  const found = await problemsIn({ 'index.html': page('<a href="/_headers">h</a><a href="/_HEADERS">H</a><a href="/_redirects">r</a>'), _headers: '/*\n  X-A: 1\n', _redirects: '/a https://x.example/ 302\n' });
+  assert.deepEqual(found, ['/ /_headers missing file', '/ /_HEADERS missing file', '/ /_redirects missing file']);
 });
 
 test('a link cannot reach outside the built folder', () =>

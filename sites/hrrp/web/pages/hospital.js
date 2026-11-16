@@ -32,7 +32,7 @@ function recordCard(view) {
     { label: t('fieldMetro'), value: view.metro.value, note: link(view.metro.href, view.metro.linkText), fieldCls: 'f-metro' },
     { label: t('fieldType'), value: view.type, size: 'sm', fieldCls: 'f-type' },
     { label: t('fieldPeer'), value: view.peer.value, note: view.peer.note, fieldCls: 'f-peer' },
-    { label: t('fieldStars'), value: starsValue(view.stars), note: link(view.stars.href, t('starsLink'), true), fieldCls: 'f-stars' },
+    { label: t('fieldStars'), value: starsValue(view.stars), note: view.stars.href ? link(view.stars.href, t('starsLink'), true) : null, fieldCls: 'f-stars' },
   ].map((spec, i) => formField({ no: i + 2, ...spec }));
   return html`<div class="form hosp__id">
 ${formTitle(view.record.left, view.record.right)}
@@ -60,6 +60,9 @@ ${formField({ no: 'B', label: t('fieldDollars'), value: dollars.estimated ? html
 </section>`;
 }
 
+// A heading over one of the page's parts (the figures nest their own h3s under it), so a screen reader can move between them.
+const partHeading = (id, key) => html`<h2 class="hosp__figh" id="hf-${id}">${t(key)}</h2>`;
+
 // view: hospitalView()'s result; robots: null for an indexable page, else the meta robots value; assets: the build's paths.
 export function hospitalPage({ view, robots, assets, hospitalsUrl = null }) {
   const path = hospitalPath(view.ccn);
@@ -73,12 +76,16 @@ ${breadcrumb(view.crumbs, view.name)}
 ${recordCard(view)}
 ${verdict(view, path)}
 </div>
+${partHeading('rulers', 'partRulers')}
 ${rulersFigure(rulers, { view, n: n() })}
+${partHeading('whatif', 'partWhatIf')}
 ${interactive ? whatIfFigure(whatIf, { view, n: n() }) : whatIfNone()}
 ${worksheetDisclosure(sheet, view.edition)}
+${partHeading('history', 'partHistory')}
 ${historyFigure(history, { view, n: n() })}
 ${interactive ? whatIfScriptData(whatIf) : ''}
-${area && neighborsFigure(area, { view, n: n() })}
+${area && html`${partHeading('area', 'partArea')}
+${neighborsFigure(area, { view, n: n() })}`}
 <p class="small muted hosp__source">${view.source}</p>
 </article>`;
   return page({

@@ -78,7 +78,7 @@ export function neighborsFigure(area, { view, n }) {
   const chart = html`<div class="nb" data-nb>
 <div>
 ${printout(html`<table class="gb nb__table" data-page-size="${PAGE_SIZE}">
-<caption class="vh">${t('nbCaption')}</caption>
+<caption class="vh" id="nb-cap">${t('nbCaption')}</caption>
 <thead><tr><th scope="col" class="num">${t('nbColRank')}</th><th scope="col">${t('nbColHospital')}</th><th scope="col" class="num nb__cuth">${t('nbColCut')}</th><th scope="col" class="num">${t('nbColDollars')}</th><th scope="col" class="num">${t('nbColPeer')}</th><th scope="col">${t('nbColConds')}</th></tr></thead>
 ${bodies}</table>`)}
 ${pager}

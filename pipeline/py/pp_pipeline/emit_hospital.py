@@ -15,15 +15,17 @@ from pp_engine.parse import (MARYLAND, SchemaError, impact_fy, index_by_ccn, rea
 from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, read_manifest, read_pinned_bytes, read_zip_member,
                                read_zip_text_cp1252, write_emitted)
 
-HGI, IMPACT, POS, HACRP, TDR = "hgi-2026-07", "ipps-impact-fy2027", "pos-q2-2026", "yq43-i98g", "tdr-hrrp-fy2027"
+HGI, IMPACT, POS, HACRP, TDR = "hgi-2026-11", "ipps-impact-fy2027", "pos-q2-2026", "yq43-i98g", "tdr-hrrp-fy2027"
+HGI_PRIOR = "hgi-2026-07"  # the previous Care Compare file: the last row of a hospital the current one dropped
 ZCTA, COUNTIES, CBSA, TDR_POINTS = "zcta-2024", "us-atlas-counties-3.0.1", "county-cbsa-fy2027", "tdr-geocodes"
 CENSUS_POINTS = "census-geocodes-2026-10"
 ZCTA_MEMBER = "2024_Gaz_zcta_national.txt"
 CBSA_MEMBER = "FY 2027 FR County to CBSA Crosswalk.txt"  # CMS text: Windows-1252
-SOURCES = (HGI, IMPACT, POS, HACRP, TDR, ZCTA, COUNTIES, CBSA, TDR_POINTS, CENSUS_POINTS)
+SOURCES = (HGI, HGI_PRIOR, IMPACT, POS, HACRP, TDR, ZCTA, COUNTIES, CBSA, TDR_POINTS, CENSUS_POINTS)
 # Counties the location rules can't check (location.county_label's doubt) across the whole master; more fails the
 # build so a new spelling is looked at before it ships. `make emit` prints them.
-MAX_UNCHECKED_COUNTIES = 37  # the 2026-10-20 build (73 listed; the rest have no Care Compare county or no atlas)
+MAX_UNCHECKED_COUNTIES = 38  # the 2026-10-20 build (73 listed; the rest have no Care Compare county or no atlas), plus
+# one DC hospital new in the 2026-11 Care Compare file whose "THE DISTRICT" takes the impact file's county
 # The final rule's correction-notice values, the file Thirty Day Readmissions builds from. CMS writes it in
 # Windows-1252.
 IMPACT_MEMBER = "FY 2027 IPPS Impact File - Correction Notice.txt"
@@ -114,9 +116,16 @@ def cbsa_names():
 
 
 @functools.lru_cache(maxsize=None)
+def hgi_table(pin):
+    """A Care Compare Hospital General Information pin, parsed (read_hgi)."""
+    return read_hgi(read_pinned_bytes(pin).decode("utf-8"))
+
+
+@functools.lru_cache(maxsize=None)
 def tables():
-    """The parsed CMS tables the master joins: HGI, the impact file, POS, and each program's listing."""
-    return {"hgi": read_hgi(read_pinned_bytes(HGI).decode("utf-8")), "impact": read_impact(impact_text()),
+    """The parsed CMS tables the master joins: HGI and the previous HGI, the impact file, POS, and each program's
+    listing."""
+    return {"hgi": hgi_table(HGI), "hgi_prior": hgi_table(HGI_PRIOR), "impact": read_impact(impact_text()),
             "pos": read_pos(read_pinned_bytes(POS).decode("utf-8")),
             "programs": {"hacrp": hacrp_program(), "hrrp": hrrp_program()}}
 
@@ -134,13 +143,15 @@ def new_ref():
     return location.Ref(zcta(), counties(), points(), [], [])
 
 
-def build_from_pins(built_at, ref=None):
+def build_from_pins(built_at, ref=None, hgi=HGI):
     """The master from the pins. `ref` (a location.Ref) collects the location report; the county gate runs here, so
-    the golden test fails too when there are more unchecked counties than allowed."""
+    the golden test fails too when there are more unchecked counties than allowed. `hgi` picks the Care Compare pin:
+    the Thirty Day Readmissions checks build on the earlier file, the one that site used."""
     ref = ref or new_ref()
-    t = tables()
+    t = {**tables(), "hgi": hgi_table(hgi)}
     master = build_master(
         hgi=t["hgi"],
+        hgi_prior=t["hgi_prior"],
         impact=t["impact"],
         pos=t["pos"],
         programs=t["programs"],

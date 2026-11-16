@@ -13,6 +13,12 @@ bounds. Everything else is ignored, and those hospitals keep the build's ZIP/cou
 
 Who is sent: every master hospital with a street address, except those with a TDR point and TDR's HRRP hospitals
 (TDR's own call already tried both their addresses with the same benchmark; a new point would break the TDR check).
+
+`run.py geocode --changed` sends only the gap's hospitals whose Care Compare address is new: those the newer file added
+with no row yet, and those it gave a different street, city, state or ZIP. Their old rows go (a point for an address
+Care Compare no longer gives would be called a street-address match); their matches are written in, and a hospital
+with none falls back to its ZIP (one the service didn't fully answer keeps its row). Every other row stays as it was:
+a full re-run would move points the pages already show, since the service's answers drift.
 """
 import csv
 import io
@@ -22,8 +28,9 @@ import urllib.request
 import uuid
 
 from pp_engine.master import universe
+from pp_engine import parse
 from pp_pipeline.emit_hospital import tables, tdr_points
-from pp_pipeline.files import PINNED_DIR, REPO_ROOT
+from pp_pipeline.files import PINNED_DIR
 
 URL = "https://geocoding.geo.census.gov/geocoder/locations/addressbatch"
 BENCHMARK = "Public_AR_Current"
@@ -31,6 +38,8 @@ USER_AGENT = "paid-and-penalized hospital master geocoding (https://paidandpenal
 MAX_ROWS = 10_000  # the service's batch limit
 MAX_RESPONSE = 10_000_000  # bytes
 MIN_MATCHED = 0.5  # share of hospitals that must match before the CSV is written
+MIN_GATED = 10  # fewer hospitals sent than this and the share isn't checked: a small batch can miss on its own
+MAX_UNANSWERED = 0.01  # a full run stops when more than this share of hospitals is unanswered (a cut-off response)
 OUT = PINNED_DIR / "census-geocodes-2026-10" / "geocodes.csv"
 FIELDS = ["ccn", "lat", "lon", "match", "source"]
 # (south, north, west, east): conterminous US, Alaska, Hawaii, Puerto Rico and the U.S. Virgin Islands,
@@ -48,6 +57,32 @@ def gap():
     """The master's CCNs with no TDR point that aren't HRRP hospitals, sorted."""
     t = tables()
     return sorted(universe(t["hgi"], t["impact"], t["programs"]) - set(tdr_points()) - t["programs"]["hrrp"]["subject"])
+
+
+def pinned_rows(path):
+    """The pinned CSV's rows ([ccn, lat, lon, match, source] text, as written), its header checked."""
+    header, *body = parse.rows(path.read_text(encoding="utf-8"), ",")
+    if header != FIELDS:
+        raise SystemExit(f"{path.name}: unexpected header {header}")
+    return body
+
+
+ADDRESS = ("street", "city", "state", "zip")
+
+
+def changed(have):
+    """(new, moved): the gap's CCNs whose current Care Compare address is new, each sorted. `new`: listed now but not
+    in the previous file, and not in `have` (CCNs the pinned CSV already places). `moved`: listed in both, with a
+    different address (compared without case, as candidates() compares). It reads the two files, not what a pinned row
+    was geocoded from, so run it once per Care Compare re-pin: a second run sends the moved hospitals again."""
+    t = tables()
+    now, before = t["hgi"], t["hgi_prior"]
+
+    def address(row):
+        return [row[k].upper() for k in ADDRESS]
+    listed = [c for c in gap() if c in now]
+    return ([c for c in listed if c not in before and c not in have],
+            [c for c in listed if c in before and address(now[c]) != address(before[c])])
 
 
 def candidates(ccns, hgi, pos):
@@ -105,41 +140,82 @@ def parse_response(text, batch):
 
 
 def geocode(cands, send=post):
-    """{ccn: (lat, lon, match, source)}: every candidate address in one request; each hospital's first matched
-    address wins."""
+    """({ccn: (lat, lon, match, source)}, unanswered CCNs): every candidate address in one request; each hospital's
+    first matched address wins. An address is answered by exactly one complete row (a Match row of all 8 columns, or a
+    No_Match or Tie row). Walking a hospital's addresses in order, a match wins; an unanswered address before any match
+    makes the hospital unanswered (that address might have won), and the caller decides what it keeps."""
     batch = {f"{c}-{n}": a for c, addrs in cands.items() for n, a in enumerate(addrs, 1)}
+    if not batch:
+        return {}, set()
     if len(batch) > MAX_ROWS:
         raise SystemExit(f"{len(batch)} addresses exceed the geocoder's {MAX_ROWS:,}-row batch limit")
-    got = parse_response(send(batch), batch)
-    found = {}
+    text = send(batch).lstrip("\ufeff")
+    rows = [r for r in csv.reader(io.StringIO(text)) if r and r[0] in batch]
+    times = Counter(r[0] for r in rows)
+    answered = {r[0] for r in rows if times[r[0]] == 1 and len(r) >= 3
+                and (r[2] in ("No_Match", "Tie") or (r[2] == "Match" and len(r) >= 8))}
+    got = {i: v for i, v in parse_response(text, batch).items() if i in answered}
+    found, unanswered = {}, set()
     for c, addrs in cands.items():
         for n, a in enumerate(addrs, 1):
+            if f"{c}-{n}" not in answered:
+                unanswered.add(c)
+                break
             if f"{c}-{n}" in got:
                 found[c] = (*got[f"{c}-{n}"], a[0])
                 break
-    print(f"one request: {len(batch)} addresses for {len(cands)} hospitals; {len(found)} hospitals matched")
-    return found
+    print(f"one request: {len(batch)} addresses for {len(cands)} hospitals; {len(found)} hospitals matched"
+          + (f"; {len(unanswered)} not fully answered" if unanswered else ""))
+    return found, unanswered
 
 
-def write(found, attempted, path=OUT):
+def write(found, attempted, path=OUT, keep=()):
     """Write the CSV sorted by CCN, unless fewer than MIN_MATCHED of `attempted` hospitals matched (an outage or an
-    error page must not wipe the points)."""
-    if len(found) < MIN_MATCHED * attempted:
+    error page must not wipe the points; not checked below MIN_GATED, so `--changed` still drops a re-addressed
+    hospital's stale row when its few new addresses all miss). `keep` is rows already written ([ccn, lat, lon, match,
+    source] text), kept as they are; a CCN in both raises."""
+    if attempted >= MIN_GATED and len(found) < MIN_MATCHED * attempted:
         raise SystemExit(f"only {len(found)} of {attempted} hospitals matched; {path.name} left unchanged")
+    rows = {r[0]: r for r in keep}
+    if rows.keys() & found.keys():
+        raise SystemExit(f"already geocoded: {sorted(rows.keys() & found.keys())[:10]}")
+    rows.update({c: [c, f"{lat:.5f}", f"{lon:.5f}", kind, src] for c, (lat, lon, kind, src) in found.items()})
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(FIELDS)
-        w.writerows([c, f"{lat:.5f}", f"{lon:.5f}", kind, src] for c, (lat, lon, kind, src) in sorted(found.items()))
+        w.writerows(rows[c] for c in sorted(rows))
 
 
-def main(send=post):
-    ccns = gap()
+def main(send=post, only_changed=False, out=OUT):
     t = tables()
-    cands = candidates(ccns, t["hgi"], t["pos"])
-    found = geocode(cands, send)
-    write(found, len(cands))
+    if only_changed:
+        pinned = pinned_rows(out)
+        have = {r[0] for r in pinned}
+        new, moved = changed(have)
+        ccns = sorted(new + moved)
+        # A moved hospital is sent at its new Care Compare address alone: POS may still give the old one.
+        cands = {**candidates(new, t["hgi"], t["pos"]), **candidates(moved, t["hgi"], {})}
+    else:
+        pinned, have, ccns = [], set(), gap()
+        cands = candidates(ccns, t["hgi"], t["pos"])
+    found, unanswered = geocode(cands, send)
+    # --changed: an unanswered hospital keeps any row it has, since nothing is known about its new address. A full run
+    # rewrites every row: a few unanswered hospitals get none, as unmatched ones do; more than MAX_UNANSWERED stops it.
+    if not only_changed and len(unanswered) > MAX_UNANSWERED * len(cands):
+        raise SystemExit(f"{len(unanswered)} of {len(cands)} hospitals not fully answered (a cut-off response?); "
+                         f"{out.name} left unchanged")
+    replaced = set(ccns) - unanswered if only_changed else set(ccns)
+    dropped = sorted(have & replaced - found.keys())
+    if dropped:
+        print(f"no match for a new address; old point dropped ({len(dropped)}): {', '.join(dropped)}")
+    if unanswered:
+        kept = sorted(unanswered & have) if only_changed else []
+        print(f"not fully answered, run again to retry ({len(unanswered)}): {', '.join(sorted(unanswered))}; "
+              f"row kept as it was: {', '.join(kept) or 'none'}")
+    write(found, len(cands), path=out, keep=[r for r in pinned if r[0] not in replaced])
     kinds, srcs = Counter(v[2] for v in found.values()), Counter(v[3] for v in found.values())
-    print(f"wrote {OUT.relative_to(REPO_ROOT)}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; "
-          f"no address {len(ccns) - len(cands)}, unmatched {len(cands) - len(found)}")
+    print(f"wrote {out.name}: {len(found)} of {len(ccns)} hospitals {dict(kinds)} {dict(srcs)}; no address "
+          f"{len(ccns) - len(cands)}, no match {len(cands) - len(found) - len(unanswered)}, "
+          f"unanswered {len(unanswered)}")
     return 0

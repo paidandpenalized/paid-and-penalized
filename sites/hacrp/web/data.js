@@ -13,25 +13,30 @@ import { ATLAS_ID, countyShapes, stateShapes } from '../../../web/charts/geo.js'
 import { REPO_ROOT, dollarsPath, masterPath, newestYear, readJson, readManifest, readPinned } from '../../../pipeline/files.js';
 import { masterByCcn } from '../../../pipeline/master.js';
 import { SOURCES, newestEmittedPath } from '../pipeline/build.js';
-import { HAI_MEASURES, HAI_PINS, historyPath } from '../pipeline/history.js';
+import { BASELINE_PINS, HAI_MEASURES, HAI_PINS, historyPath, infectionYear } from '../pipeline/history.js';
 import { checkNetBands, netRangeOf, rangeOf, rangeShare } from './money.js';
+import { SIR_EXPECTED } from './constants.js';
 import { boundaryText } from './view.js';
 
 export const FOOTNOTES_ID = 'y9us-9xdf';
 // Care Compare's Hospital General Information (each hospital's overall star rating); the us-atlas topology (state
 // outlines for the locator maps and the US map) is ATLAS_ID, from web/charts/geo.js.
-export const HGI_ID = 'hgi-2026-07';
+export const HGI_ID = 'hgi-2026-11';
+// The previous Care Compare file: a hospital the current one dropped keeps its last rating, with that file's date, as
+// the hospital master keeps its last row (docs/METHODS-LOG.md, hospital methods_version 3).
+export const HGI_PRIOR_ID = 'hgi-2026-07';
 
-// CCN -> { rating, footnotes }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words when it
-// rates none) and its footnotes' text. A row without the columns fails the build.
-export function careCompareRatings(csvText, footnotes) {
+// CCN -> { rating, footnotes, modified }: CMS's "Hospital overall rating" text as published ("1" to "5", or CMS's words
+// when it rates none), its footnotes' text, and `modified`, the date of the file it came from. A row without the
+// columns fails the build.
+export function careCompareRatings(csvText, footnotes, modified) {
   const out = new Map();
   for (const row of parseCsv(csvText)) {
     const ccn = row['Facility ID'];
     const rating = row['Hospital overall rating'];
     const note = row['Hospital overall rating footnote'];
-    if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError(`${HGI_ID}: missing column`);
-    out.set(ccn, { rating, footnotes: footnoteList(footnotes, note) });
+    if (ccn === undefined || rating === undefined || note === undefined) throw new RangeError('Hospital General Information: missing column');
+    out.set(ccn, { rating, footnotes: footnoteList(footnotes, note), modified });
   }
   return out;
 }
@@ -66,6 +71,25 @@ export function infectionsByHospital(files) {
     }
   }
   return out;
+}
+
+// What the baseline change did to C. diff results, over the hospitals with a C. diff SIR in both years (before, after:
+// { cy, id, rows } of the extracts): { hospitals, before, after, sources }, each side { cy, above (SIRs over SIR_EXPECTED),
+// and infectionYear's median, observed and predicted }. A hospital with an SIR but not both counts fails.
+export function baselineShift(before, after) {
+  const [, k] = HAI_MEASURES.find(([id]) => id === 'CDI');
+  const sir = (r) => numberOf(r[`hai_${k}_sir`], `hai_${k}_sir`);
+  const scored = ({ rows }) => new Set(rows.filter((r) => sir(r) !== null).map((r) => r.ccn));
+  const later = scored(after);
+  const both = new Set([...scored(before)].filter((ccn) => later.has(ccn)));
+  if (!both.size) throw new RangeError('baseline shift: no hospital has a C. diff SIR in both years');
+  const side = ({ cy, rows }) => {
+    const kept = rows.filter((r) => both.has(r.ccn));
+    const { median, counted, observed, predicted } = infectionYear(cy, kept).measures.CDI;
+    if (counted !== both.size) throw new RangeError(`baseline shift: CY${cy} has ${both.size - counted} hospitals with a C. diff SIR but not both counts`);
+    return { cy, above: kept.filter((r) => sir(r) > SIR_EXPECTED).length, median, observed, predicted };
+  };
+  return { hospitals: both.size, before: side(before), after: side(after), sources: [before.id, after.id] };
 }
 
 // The history, when there is one, must end with the HACRP file's year.
@@ -164,7 +188,18 @@ export function loadHacrp() {
   const footnotes = parseFootnotes(readPinned(FOOTNOTES_ID));
   const manifest = readManifest();
   const hgi = manifest.find((e) => e.id === HGI_ID);
+  const hgiPrior = manifest.find((e) => e.id === HGI_PRIOR_ID);
   const topo = JSON.parse(readPinned(ATLAS_ID));
+  // A Care Compare infection extract's rows, each pin parsed once (the history and the baseline shift share a year).
+  const parsed = new Map();
+  const haiRows = (id) => {
+    if (!parsed.has(id)) parsed.set(id, parseCsv(readPinned(id)));
+    return parsed.get(id);
+  };
+  const shift = {
+    ...baselineShift(...[BASELINE_PINS.before, BASELINE_PINS.after].map((pin) => ({ ...pin, rows: haiRows(pin.id) }))),
+    released: manifest.find((e) => e.id === BASELINE_PINS.after.id).pdcReleased,
+  };
   return {
     fy: data.fy,
     // The day this site's numbers last changed (the corrections page shows it): the newest built_at of builtFiles.
@@ -179,7 +214,11 @@ export function loadHacrp() {
     // The hospital master's own fiscal year (its IPPS attributes: teaching, urban, special statuses).
     masterFy: masterFile.fy,
     footnotes,
-    careCompare: careCompareRatings(readPinned(HGI_ID), footnotes),
+    // `listed`: the current file lists the hospital (Care Compare still has its profile to link to).
+    careCompare: new Map([
+      ...[...careCompareRatings(readPinned(HGI_PRIOR_ID), footnotes, hgiPrior.pdcModified)].map(([ccn, r]) => [ccn, { ...r, listed: false }]),
+      ...[...careCompareRatings(readPinned(HGI_ID), footnotes, hgi.pdcModified)].map(([ccn, r]) => [ccn, { ...r, listed: true }]),
+    ]),
     careCompareSource: { id: hgi.id, modified: hgi.pdcModified, landingPage: hgi.landingPage },
     shapes: stateShapes(topo),
     counties: countyShapes(topo),
@@ -189,10 +228,13 @@ export function loadHacrp() {
     dollars: dollarsData(dollarsFile, data.hospitals),
     // Every program year's file, when the build has them (the history; null without).
     history,
-    infections: history ? infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: parseCsv(readPinned(id)) }))) : new Map(),
+    infections: history ? infectionsByHospital(HAI_PINS.map(({ cy, id }) => ({ cy, rows: haiRows(id) }))) : new Map(),
+    // Care Compare's C. diff results either side of the baseline change (Methods § The infection baseline), with the
+    // newer file's release date.
+    baselineShift: shift,
     // Every pinned input the pages rest on: the HACRP file's, the history's, the hospital master's and the dollar
     // estimates' sources, and the files the pages read directly.
-    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, FOOTNOTES_ID, HGI_ID, ATLAS_ID]).has(e.id)),
+    pinsUsed: manifest.filter((e) => new Set([...data.sources, ...(history?.sources ?? []), ...masterFile.sources, ...dollarsFile.sources, ...shift.sources, FOOTNOTES_ID, HGI_ID, HGI_PRIOR_ID, ATLAS_ID]).has(e.id)),
     manifest,
     // The emitted file keeps every row of CMS's file.
     sourceRows: data.hospitals.length,

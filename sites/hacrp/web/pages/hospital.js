@@ -14,7 +14,7 @@ import { closedNote } from '../../../../web/render/closed.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT } from '../constants.js';
+import { CARE_COMPARE_STARS, CUTOFF_PERCENTILE, REDUCTION_TEXT, SIR_BASE_YEAR } from '../constants.js';
 import { biggestLever } from '../compare.js';
 import { distanceSentence, leadSentence, measureNote, noteSentences, smallNumber, whySentences } from '../sentences.js';
 import { fill, fillKeep, sourceText, t } from '../copy.js';
@@ -81,8 +81,9 @@ const ledgerScored = (view) => (view.n === view.measures.length
   : fill('ledgerScored', { n: String(view.n), all: String(view.measures.length) }));
 
 // Care Compare's stars: the rating as filled and empty stars (hidden from screen readers, which hear "4 of 5 stars"),
-// or CMS's own words where it published no rating, with CMS's footnotes, as formField options. null when Care
-// Compare doesn't list the hospital.
+// or CMS's own words where it published no rating, with CMS's footnotes and the date of the file it came from, as
+// formField options; the link to the hospital's Care Compare profile only while the current file lists it. null when
+// no Care Compare file the site reads lists the hospital.
 function starsSpec(view, careSource) {
   const cc = view.careCompare;
   if (!cc || !careSource) return null;
@@ -90,7 +91,7 @@ function starsSpec(view, careSource) {
   const value = n !== null && n <= CARE_COMPARE_STARS
     ? html`<span class="stars" aria-hidden="true">${'★'.repeat(n)}<span class="stars__off">${'☆'.repeat(CARE_COMPARE_STARS - n)}</span></span><span class="vh">${fill('stars', { n: String(n), max: String(CARE_COMPARE_STARS) })}</span>`
     : cc.rating;
-  const note = html`${fillKeep('starsNote', { date: isoDate(careSource.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}<br>${externalLink(careCompareHref(view.ccn), t('starsLink'))}`;
+  const note = html`${fillKeep('starsNote', { date: isoDate(cc.modified) }, ['date'])}${cc.footnotes.map((f) => html`<br>${fill('footnoteLead', { code: f.code })} ${f.text}`)}${cc.listed === false ? '' : html`<br>${externalLink(careCompareHref(view.ccn), t('starsLink'))}`}`;
   return { label: t('fieldStars'), value, note, size: n === null ? 'sm' : null, fieldCls: 'f-stars' };
 }
 
@@ -326,7 +327,7 @@ ${history.rec.run > 1 ? html`<p class="hsec__stat">${hfill('yearsRun', { run: St
 ${infections && section({
     id: 'infections',
     text: html`<h2 id="infections-h">${ht('hinfHeading')}</h2>
-<p>${ht('hinfIntro')}</p>`,
+<p>${hfill('hinfIntro', { base: String(SIR_BASE_YEAR) })}</p>`,
     figure: infections,
   })}
 ${peers && section({

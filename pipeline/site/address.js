@@ -53,9 +53,10 @@ export function lookup(path, at) {
   return isFile(`${path}/index.html`) ? redirect(`${path}/`) : NOT_FOUND;
 }
 
-// Whether a file in the built folder is ever served: every one but _headers (in any letter case), which Cloudflare reads
-// its response headers from and never serves, and nor does serve.js.
-export const isServed = (file) => file.toLowerCase() !== '_headers';
+// Whether a file in the built folder is ever served: every one but _headers and _redirects (in any letter case), which
+// Cloudflare reads its response headers and short links from and never serves, and nor does serve.js.
+const UNSERVED = new Set(['_headers', '_redirects']);
+export const isServed = (file) => !UNSERVED.has(file.toLowerCase());
 
 // lookup's isFile over a list of the built folder's files ('/'-separated, from it, as filesUnder lists them), for the
 // checks that read dist/ without a server: a site path is a file when the list has it and it is served.

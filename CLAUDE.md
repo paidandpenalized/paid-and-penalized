@@ -36,8 +36,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `hub/pages.js`). Generators write only through the context (`context.js`: `emit` for pages and files, `asset` for
   hashed data, `robotsFor`, the one indexing rule). Last, the build writes Cloudflare's `dist/_headers`
   (`headers.js`: the CSP, security headers, caching, `X-Robots-Tag: noindex` on every build but production, and
-  the parser and matcher that read it back as Cloudflare does). `serve.js` previews `dist/` locally with those
-  headers. `dist/` is build output and gitignored.
+  the parser and matcher that read it back as Cloudflare does) and `dist/_redirects` (`redirects.js`: the short links,
+  302s to the Inpatient-Only lookup's own site until it moves under `/ipo/`, and their parser and matcher). `serve.js`
+  previews `dist/` locally with those headers and short links. `dist/` is build output and gitignored.
 - `data/pinned/`: CMS inputs pinned byte-for-byte; `manifest.json` records SHA-256, source URL and dates.
   A test fails if a pinned file changes. Files of 10 MiB (10,485,760 bytes) or more never go in git: the pre-commit
   hook blocks them and a test fails on any tracked file that size.
@@ -52,7 +53,9 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   the IPPS impact file or any program file, with per-program `inProgram` and a reason code (rules and order in
   `pp_engine/master.py` and `docs/METHODS-LOG.md`) and a location (point, county, CBSA, region; rules in
   `pp_engine/location.py`). Sites join on it by CCN. Until Thirty Day Readmissions folds in, a test requires its
-  hospitals' names and locations to equal the master's. Two commands use the network, both run by hand and never by
+  hospitals' names and locations to equal those of a master built on the Care Compare file that site used
+  (`hgi-2026-07`); a second test holds that the shipped master, on the newer file, differs from that build only in
+  Care Compare's own fields, and only for hospitals whose Care Compare row changed. Two commands use the network, both run by hand and never by
   the build or the tests: `run.py geocode` (the Census Geocoder; its output is a pinned input) and `make refresh`
   (CMS's files from data.cms.gov; below).
 - The HCRIS layer, `data/emitted/hcris/fy<YYYY>/hcris.json` (FY2011 on): Medicare cost reports, one row per acute or
@@ -141,7 +144,7 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   `make test`.
 - `E2E_BASE_URL=<site> npm run e2e:launch`: the launch check, run by hand where all three browser engines are installed.
   Compares the site's live response headers with `dist/_headers` first (home, program and hospital pages, a request for
-  each `_headers` rule, an unknown path, a missing hashed asset, and two redirects with their Location: the program
-  page without its "/" and `/404.html`), then runs `npm run e2e` on Chromium, Firefox and WebKit
+  each `_headers` rule, an unknown path, a missing hashed asset, two redirects with their Location: the program
+  page without its "/" and `/404.html`, and each short link in `_redirects`), then runs `npm run e2e` on Chromium, Firefox and WebKit
   against the site. Needs a `dist/` built from the deployed commit the way it was deployed (`PP_ENV=production make build` for the live
   site). CI's `browser` job runs `npm run e2e` on Chromium only.

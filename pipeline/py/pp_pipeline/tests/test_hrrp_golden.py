@@ -3,7 +3,9 @@ Readmissions' own output (`data/pinned/tdr/hrrp.json`), every hospital and every
 reference until the FY2028 refresh. Since methods_version 2 the MDHs' base and pen differ by design (MDH case mix;
 `docs/METHODS-LOG.md`), and a test proves that is the only difference. Since 2026-11-09 the dual proportion is stored to
 more decimals (`hrrp.DUAL_DECIMALS`; corrections/2026-11-09-dual-eligible-share.md): rounded to 4 decimals it is the site
-file's value."""
+file's value. The site file was built on an earlier Care Compare file than the master now is, so the comparisons with it
+build on that file (the master from `tdr_inputs` and its star ratings); a test holds that the newer file moves only the
+fields Care Compare feeds, and only for the hospitals whose Care Compare row changed."""
 import copy
 import functools
 import io
@@ -13,8 +15,10 @@ from unittest import mock
 
 from pp_engine import hrrp
 from pp_engine.parse import SchemaError
-from pp_pipeline import emit_hrrp
+from pp_engine.hrrp_read import read_hgi_stars
+from pp_pipeline import emit_hospital, emit_hrrp
 from pp_pipeline.files import read_json, read_manifest, read_pinned_bytes, require_current
+from pp_pipeline.tests.tdr_inputs import CARE_COMPARE_FIELDS, july_master, unexplained
 
 # meta keys the emitted file sets differently on purpose: `sources` names the manifest's pins; `whatsNew` is page copy,
 # kept with the site's content.
@@ -22,6 +26,10 @@ META_DIFFERS = ("sources", "whatsNew")
 # What the MDH case mix (methods_version 2) moves: an MDH's base and penalty, and the national totals of both.
 MDH_FIELDS = ("base", "pen")
 TOTALS_DIFFER = ("modelBase", "modelPen")
+# A hospital record's fields that come from its Care Compare row: the master's CARE_COMPARE_FIELDS the record copies,
+# and the star rating (and whether it came from an earlier file).
+RECORD_CARE_COMPARE = tuple(emit_hrrp.RENAMED.get(f, f) for f in CARE_COMPARE_FIELDS
+                            if f in emit_hrrp.MASTER_FIELDS) + ("star", "careCompareUnlisted")
 
 
 @functools.lru_cache(maxsize=None)
@@ -30,14 +38,18 @@ def fresh():
 
 
 @functools.lru_cache(maxsize=None)
-def fresh_with_the_sites_case_mix():
-    """A build whose MDH add-on uses the transfer-adjusted case mix, as Thirty Day Readmissions' does."""
+def on_the_sites_care_compare(the_sites_case_mix=False):
+    """A build on the Care Compare file Thirty Day Readmissions used (its master and star ratings); with
+    `the_sites_case_mix`, the MDH add-on also uses the transfer-adjusted case mix, as that site's does."""
     real = emit_hrrp.read_inputs
+    stars = emit_hrrp.care_compare_stars((emit_hospital.HGI_PRIOR,))
 
     def inputs():
-        got = real()
-        return {**got, "impact": {c: {**r, "cmi_hsp": r["cmi"]} for c, r in got["impact"].items()}}
-    with mock.patch.object(emit_hrrp, "read_inputs", inputs):
+        got = {**real(), "stars": stars}
+        if the_sites_case_mix:
+            got["impact"] = {c: {**r, "cmi_hsp": r["cmi"]} for c, r in got["impact"].items()}
+        return got
+    with mock.patch.object(emit_hrrp, "read_inputs", inputs), mock.patch.object(emit_hrrp, "committed_master", july_master):
         return emit_hrrp.build_from_pins("2000-01-01T00:00:00Z")
 
 
@@ -51,12 +63,20 @@ def as_the_site_file_rounds(h):
     return {**h, "dual": hrrp.rnd(h["dual"], 4, half_up=True)} if "dual" in h else h
 
 
+# Record fields this site adds that Thirty Day Readmissions' file never had.
+ONLY_HERE = ("careCompareUnlisted",)
+
+
 def differences(mine, theirs):
-    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs, the dual proportion compared at
-    the site file's 4 decimals."""
+    """[(ccn, key, 'ccn key: mine vs theirs')] for every hospital field that differs (ONLY_HERE aside), the dual
+    proportion compared at the site file's 4 decimals."""
     a, b = {h["id"]: as_the_site_file_rounds(h) for h in mine}, {h["id"]: h for h in theirs}
     return [(c, k, f"{c} {k}: {a[c].get(k)!r} vs {h.get(k)!r}") for c, h in sorted(b.items())
-            for k in sorted(set(h) | set(a[c])) if a[c].get(k, "absent") != h.get(k, "absent")]
+            for k in sorted((set(h) | set(a[c])) - set(ONLY_HERE)) if a[c].get(k, "absent") != h.get(k, "absent")]
+
+
+def by_id(data):
+    return {h["id"]: h for h in data["hospitals"]}
 
 
 def assert_none(test, diffs):
@@ -81,7 +101,7 @@ class Golden(unittest.TestCase):
                          "the committed file is not what the pins build: run `make emit`")
 
     def test_meta_equals_the_site_file_but_the_totals_the_mdh_case_mix_moves(self):
-        self.assertEqual(without(fresh()["meta"], TOTALS_DIFFER), without(site()["meta"], TOTALS_DIFFER))
+        self.assertEqual(without(on_the_sites_care_compare()["meta"], TOTALS_DIFFER), without(site()["meta"], TOTALS_DIFFER))
 
     def test_conditions_and_history_equal_the_site_file(self):
         self.assertEqual(fresh()["conditions"], site()["conditions"])
@@ -89,8 +109,19 @@ class Golden(unittest.TestCase):
 
     def test_every_hospital_equals_the_site_file_but_the_mdhs_base_and_penalty(self):
         self.assertEqual(sorted(h["id"] for h in fresh()["hospitals"]), sorted(h["id"] for h in site()["hospitals"]))
-        diffs = differences(fresh()["hospitals"], site()["hospitals"])
+        diffs = differences(on_the_sites_care_compare()["hospitals"], site()["hospitals"])
         assert_none(self, [d for d in diffs if not (d[0] in mdh_ids() and d[1] in MDH_FIELDS)])
+
+    def test_the_newer_care_compare_moves_only_its_own_fields_of_the_hospitals_it_changed(self):
+        now, then = fresh(), on_the_sites_care_compare()
+        self.assertEqual(sorted(by_id(now)), sorted(by_id(then)))
+        moved = unexplained(by_id(now), by_id(then), RECORD_CARE_COMPARE)
+        self.assertEqual(moved, [], f"{len(moved)} differences Care Compare does not explain:\n" + "\n".join(moved[:30]))
+        # Of the meta, only the count of map points by where they came from (address, ZIP or county) may move.
+        self.assertEqual({k for k in now["meta"].keys() | then["meta"].keys() if now["meta"].get(k) != then["meta"].get(k)}
+                         - {"geocode"}, set())
+        self.assertEqual({k: v for k, v in now.items() if k not in ("meta", "hospitals")},
+                         {k: v for k, v in then.items() if k not in ("meta", "hospitals")})
 
 
 class MdhCaseMix(unittest.TestCase):
@@ -98,18 +129,37 @@ class MdhCaseMix(unittest.TestCase):
 
     def test_with_the_sites_case_mix_every_hospital_and_the_meta_equal_the_site_file(self):
         theirs = site()
-        mine = fresh_with_the_sites_case_mix()
+        mine = on_the_sites_care_compare(the_sites_case_mix=True)
         assert_none(self, differences(mine["hospitals"], theirs["hospitals"]))
         self.assertEqual(without(mine["meta"]), without(theirs["meta"]))
 
     def test_the_hsp_case_mix_moves_some_mdhs_and_nothing_else(self):
-        moved = {c for c, _, _ in differences(fresh()["hospitals"], site()["hospitals"])}
+        moved = {c for c, _, _ in differences(on_the_sites_care_compare()["hospitals"], site()["hospitals"])}
         self.assertTrue(moved, "no MDH changed: is the add-on still on the transfer-adjusted case mix?")
         self.assertLessEqual(moved, mdh_ids())
 
     def test_meta_sources_name_every_pin(self):
         ids = [s["id"] for s in fresh()["meta"]["sources"] if "id" in s]
         self.assertEqual(ids, list(fresh()["sources"]))
+
+
+class CareCompareStars(unittest.TestCase):
+    """The ratings Readmissions reads: oldest file first, the last file's rating (even none) wins, and a hospital the
+    last file doesn't list is marked unlisted."""
+
+    def test_the_last_file_wins_and_a_dropped_hospital_keeps_its_earlier_rating(self):
+        files = {"old": "Facility ID,Hospital overall rating\n990001,4\n990002,3\n990003,2\n",
+                 "new": "Facility ID,Hospital overall rating\n990002,Not Available\n990003,5\n990004,1\n"}
+        with mock.patch.object(emit_hrrp, "read_pinned_bytes", lambda pin: files[pin].encode("utf-8")):
+            got = emit_hrrp.care_compare_stars(("old", "new"))
+        self.assertEqual(got, {"990001": (4, True), "990002": (None, False), "990003": (5, False),
+                               "990004": (1, False)})
+
+    def test_a_hospital_the_current_file_does_not_list_is_unlisted_in_the_record(self):
+        listed = set(read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")))
+        records = {h["id"]: h for h in fresh()["hospitals"]}
+        self.assertEqual({c for c, h in records.items() if h.get("careCompareUnlisted")}, set(records) - listed)
+        self.assertTrue(all(h.get("careCompareUnlisted", True) is True for h in records.values()))
 
 
 class DualProportion(unittest.TestCase):

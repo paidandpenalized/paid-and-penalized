@@ -35,7 +35,7 @@ PROVENANCE = "hrrp-history-provenance"  # how the history was built and checked:
 OWN_SOURCES = (SUPPLEMENTAL, TABLE15, emit_hospital.IMPACT, RATES, emit_hospital.HGI, HISTORY, SUMMARY, PROVENANCE,
                TOTALS, DOLLAR_CHECK)
 SOURCES = OWN_SOURCES + tuple(s for s in emit_hospital.SOURCES if s not in OWN_SOURCES)
-SCHEMA_VERSION, METHODS_VERSION = 1, 2
+SCHEMA_VERSION, METHODS_VERSION = 1, 3
 SCHEMA = "hrrp.schema.json"
 
 SUPP_XLSX = "FY2027_HRRP_Supplemental_File.xlsx"
@@ -64,7 +64,7 @@ assert tuple(CONDITION_INFO) == CONDITIONS
 MASTER_FIELDS = ("name", "alias", "city", "state", "county", "zip", "lat", "lon", "geo", "cbsa", "cbsaName", "urban",
                  "region", "division", "beds", "teach", "own", "ownDetail", "types", "inactive")
 RENAMED = {"state": "st"}  # the master's key -> the record's, where they differ (the record keeps the listed order)
-OPTIONAL = ("alias", "bedsSrc", "inactive")
+OPTIONAL = ("alias", "bedsSrc", "inactive", "careCompareUnlisted")
 
 
 def committed_master():
@@ -81,6 +81,15 @@ def master_fields(m):
     return out
 
 
+def care_compare_stars(pins=(emit_hospital.HGI_PRIOR, emit_hospital.HGI)):
+    """{ccn: (star rating, the last file doesn't list it)} from Care Compare pins, oldest first: a later file's rating
+    wins, so a hospital the last file dropped keeps its rating from an earlier one, as the master keeps its row. A CCN
+    no pin lists is absent (the caller treats it as unlisted)."""
+    last = pins[-1]
+    return {c: (s, pin != last) for pin in pins
+            for c, s in read_hgi_stars(read_pinned_bytes(pin).decode("utf-8")).items()}
+
+
 def read_inputs():
     """The pinned files, parsed: {supp, pub, t15, impact, rates, stars, fy}."""
     impact_text = emit_hospital.impact_text()
@@ -93,7 +102,7 @@ def read_inputs():
         "t15": read_table15(read_zip_text_cp1252(TABLE15, TABLE15_MEMBER), fy),
         "impact": read_estimate_inputs(impact_text, fy, GROUPER),
         "rates": read_operating_rates(read_zip_text_cp1252(RATES, RATES_MEMBER)),
-        "stars": read_hgi_stars(read_pinned_bytes(emit_hospital.HGI).decode("utf-8")),
+        "stars": care_compare_stars(),
     }
 
 
@@ -148,7 +157,8 @@ def hospital_records(kept, inputs, master, mdh_share):
                                             inputs["rates"], mdh_share)
         if addon is not None:
             addons[ccn] = addon
-        rec = {"id": ccn, **master_fields(master[ccn]), "star": inputs["stars"].get(ccn),
+        star, unlisted = inputs["stars"].get(ccn, (None, True))
+        rec = {"id": ccn, **master_fields(master[ccn]), "star": star, "careCompareUnlisted": unlisted or None,
                **fields}
         records.append({k: v for k, v in rec.items() if v is not None or k not in OPTIONAL})
     return records, addons

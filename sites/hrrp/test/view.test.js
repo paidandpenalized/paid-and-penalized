@@ -102,6 +102,9 @@ test('stars, or "Not rated"', () => {
   assert.equal(v.stars.href, 'https://www.medicare.gov/care-compare/details/hospital/990001/');
   const none = view(hospital({ star: null }));
   assert.deepEqual({ n: none.stars.n, text: none.stars.text }, { n: null, text: 'Not rated' });
+  // A hospital the current Care Compare file doesn't list: any earlier rating shown, with no link to a missing profile.
+  const prior = view(hospital({ star: 3, careCompareUnlisted: true }));
+  assert.deepEqual({ n: prior.stars.n, href: prior.stars.href }, { n: 3, href: null });
 });
 
 test('fields A and B: the factor as CMS publishes it, and the estimated dollars', () => {

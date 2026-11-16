@@ -12,7 +12,7 @@ from pp_engine.contract import envelope
 from pp_engine.parse import MARYLAND, POS_TERMINATION, SchemaError
 
 SCHEMA_VERSION = 2
-METHODS_VERSION = 2
+METHODS_VERSION = 3
 
 # Care Compare's "Hospital Type" -> kind. An unlisted type fails the build rather than guessing.
 KINDS = {
@@ -22,16 +22,18 @@ KINDS = {
     "Childrens": "childrens",
     "Long-term": "long_term",
     "Rural Emergency Hospital": "rural_emergency",
+    "Dedicated Cancer Care": "cancer",
     "Acute Care - Veterans Administration": "va",
     "Acute Care - Department of Defense": "dod",
 }
 # Kinds not paid under the inpatient prospective payment system, so outside the IPPS penalty programs; the reason
 # code a page renders for each.
 NOT_IPPS = {"critical_access": "critical_access", "psychiatric": "psychiatric", "childrens": "childrens",
-            "long_term": "long_term", "rural_emergency": "rural_emergency", "va": "federal", "dod": "federal"}
+            "long_term": "long_term", "rural_emergency": "rural_emergency", "cancer": "cancer", "va": "federal",
+            "dod": "federal"}
 # Why a hospital isn't in a program's file, in the order the rules are tried (see reason_for).
-REASONS = ("critical_access", "psychiatric", "childrens", "long_term", "rural_emergency", "federal", "maryland",
-           "inactive", "not_listed")
+REASONS = ("critical_access", "psychiatric", "childrens", "long_term", "rural_emergency", "cancer", "federal",
+           "maryland", "inactive", "not_listed")
 
 # Impact-file provider types -> special statuses (TDR's PTYPES); MDH also comes from the MDH flag.
 PTYPES = {7: ["RRC"], 8: ["IHS"], 14: ["MDH"], 15: ["MDH", "RRC"], 16: ["SCH"], 17: ["SCH", "RRC"], 21: ["EACH"],
@@ -161,14 +163,16 @@ def universe(hgi, impact, programs):
     return ccns
 
 
-def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at, place):
+def build_master(hgi, impact, pos, programs, fy, manifest, sources, built_at, place, hgi_prior=None):
     """The master: envelope, each program's file year, and one record per CCN in HGI, the impact file or any
     program's file, sorted by CCN. `programs` maps program id -> {"fy": int, "names": {ccn: the file's name},
     "subject": the CCNs subject to its payment adjustment}; a listed CCN outside `subject` is not in the program.
-    `place` is a Place (no_place() for none)."""
+    `place` is a Place (no_place() for none). `hgi_prior` is the previous Care Compare file: a hospital the current
+    one dropped (most often a closure) keeps its last Care Compare row there, but the prior file adds no CCN."""
     ccns = universe(hgi, impact, programs)
     order = sorted(programs)
-    hospitals = [build_record(c, hgi.get(c), impact.get(c), pos.get(c),
+    prior = hgi_prior or {}
+    hospitals = [build_record(c, hgi.get(c) or prior.get(c), impact.get(c), pos.get(c),
                               {pid: c in programs[pid]["subject"] for pid in order},
                               [programs[pid]["names"][c] for pid in order if c in programs[pid]["names"]], place)
                  for c in sorted(ccns)]
