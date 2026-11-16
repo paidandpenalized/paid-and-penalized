@@ -527,11 +527,15 @@ test('recordStrip: a box a year in the ink of its decision, with a sentence of h
   assert.equal(String(recordStrip(null, S.fys)), '');
   const rec = S.recordOf('990101');
   const strip = String(recordStrip(rec, S.fys));
-  const boxes = [...strip.matchAll(/<li class="hrec__y hrec__y--(cut|no|none)" title="([^"]*)">/g)];
+  // Each year's full phrase is text a screen reader reads (no title, which touch and keyboard never show); the short year
+  // and label beside it are hidden from it.
+  assert.doesNotMatch(strip, /title=/);
+  const boxes = [...strip.matchAll(/<li class="hrec__y hrec__y--(cut|no|none)"><span class="vh">([^<]*)<\/span>/g)];
   assert.deepEqual(boxes.map((m) => m[1]), ['cut', 'cut', 'none', 'cut', 'cut']);
   assert.equal(boxes.length, S.fys.length);
   boxes.forEach((m, i) => assert.ok(text(m[2]).includes(String(S.fys[i]))));
-  assert.deepEqual([...strip.matchAll(/<span class="hrec__fy">(\d+)<\/span>/g)].map((m) => m[1]), ['21', '22', '23', '24', '25']);
+  assert.match(text(boxes[2][2]), /no decision/, 'the dash said in words');
+  assert.deepEqual([...strip.matchAll(/<span class="hrec__fy" aria-hidden="true">(\d+)<\/span><span class="hrec__v" aria-hidden="true">/g)].map((m) => m[1]), ['21', '22', '23', '24', '25']);
   const summary = text(/<span class="hrec__sum">([^<]*)<\/span>/.exec(strip)[1]);
   same(numbers(summary), ['4', '4']);
   // A hospital never cut gets the other sentence, naming only how many years it was decided.
@@ -804,7 +808,7 @@ test('a hospital\'s own record counts a decision CMS gave without a score, marks
   assert.match(strip, new RegExp(`Cut in ${rec.cut} of ${rec.decided} years`));
   assert.match(strip, /hrec__y--cut hrec__y--noscore/);
   assert.match(text(strip), new RegExp(`In [^<]*FY${DATA.fy}, CMS reports a payment reduction decision for this hospital but no Total HAC Score\\.`));
-  assert.match(strip, new RegExp(`title="Fiscal year ${DATA.fy}: cut, with no score published"`));
+  assert.match(strip, new RegExp(`<span class="vh">Fiscal year ${DATA.fy}: cut, with no score published</span>`));
   // The national record (records(): scored decisions only) is unchanged.
   assert.equal(HD.recs.get(yes.ccn)?.at(-1) ?? '.', '.');
   // A hospital with no decision in any year has no record; one with only unscored decisions has one.

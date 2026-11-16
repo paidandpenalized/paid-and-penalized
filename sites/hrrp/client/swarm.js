@@ -24,9 +24,9 @@ export function mountSwarm() {
     const figure = box.closest('figure');
     const panels = () => [...box.querySelectorAll('.swarm__m')];
     // Heard before the switch's own handler: a condition whose panel has not arrived is fetched first, then the press is made again.
+    // Present (and empty) from the start, never hidden, so a screen reader hears the words put in it.
     const status = document.createElement('p');
     status.className = 'swarm__status small muted';
-    status.hidden = true;
     status.setAttribute('role', 'status');
     controls.after(status);
     controls.addEventListener('click', async (e) => {
@@ -40,11 +40,12 @@ export function mountSwarm() {
           for (const markup of Object.values(rest)) box.insertAdjacentHTML('beforeend', markup); // the build's own markup, as swarm.js drew it
           for (const p of panels()) if (!before.has(p)) mountCharts(figure, p);
         }
-        status.hidden = true;
+        status.textContent = '';
         picked.click();
       } catch {
+        // Cleared first, so a repeated failure is announced again.
+        status.textContent = '';
         status.textContent = t('swarmLoadFailed');
-        status.hidden = false;
       }
     }, true);
     mountSwitch({ box, controls, attr: 'cond', panels, onPick: (p) => setTakeaway(figure, p.dataset.takeaway) });

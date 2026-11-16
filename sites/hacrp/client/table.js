@@ -108,7 +108,9 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
   const records = tableRows(rows);
   let ordered = records;
 
-  function render({ typing = false } = {}) {
+  // sorted: the new order in words, after a sort (said before the count: the order changed, not the count, so the count
+  // alone would give a screen reader nothing new to say).
+  function render({ typing = false, sorted = null } = {}) {
     const matches = filterRows(ordered, view);
     const limited = !view.state && !view.expanded && matches.length > TABLE_FIRST_ROWS;
     const shown = limited ? matches.slice(0, TABLE_FIRST_ROWS) : matches;
@@ -119,7 +121,7 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
       : matches.length === 1 ? fill('tableCountOne')
         : limited ? fill('tableCountFirst', { shown: count(shown.length), n: count(matches.length) })
           : fill('tableCount', { n: count(matches.length) });
-    announce(text, typing);
+    announce(sorted ? `${fill('tableSorted', { sort: sorted })} ${text}` : text, typing);
   }
 
   // The state on the US map: its outline drawn heavier while the table lists its hospitals (both map variants).
@@ -169,7 +171,8 @@ function mountTable(table, { hospitalPath, rows: listed }, { linked }) {
     }
     if (menu) menu.value = `${key}:${dir}`;
     ordered = sortRows(records, key, dir);
-    render();
+    // The column's name as its head shows it, each way as the Sort by menu words it.
+    render({ sorted: fill(dir > 0 ? 'tableSortUp' : 'tableSortDown', { column: label[key] ?? key }) });
   }
   // On a phone the column heads are clipped out of view (styles.css), so their sort buttons leave the tab order
   // while that layout holds; they stay in the accessibility tree, and the Sort by menu stands in for them.

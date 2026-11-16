@@ -140,6 +140,24 @@ test('on a phone the sort buttons leave the tab order (the Sort by menu stands i
   assert.deepEqual(tabs(), ['-1', '-1', '-1', '-1', '-1']);
 });
 
+test('a sort says the new order in the live count line, with the count; a filter says the count alone', async (t) => {
+  const heads = ['name', 'score'].map((key) => {
+    const button = { handlers: {}, addEventListener: (type, fn) => { button.handlers[type] = fn; }, setAttribute() {}, removeAttribute() {} };
+    return { dataset: { key }, textContent: ` ${key === 'name' ? 'Hospital' : 'Score'} `, setAttribute() {}, removeAttribute() {}, querySelector: () => button };
+  });
+  const s = await run(t, { results: [true], heads });
+  const said = () => s.parts['#ht-count'].textContent;
+  const all = fill('tableCount', { n: count(ASSET.rows.length) });
+  assert.equal(said(), all, 'the count on load');
+  heads[1].querySelector().handlers.click();
+  assert.equal(said(), `${fill('tableSorted', { sort: fill('tableSortUp', { column: 'Score' }) })} ${all}`);
+  heads[1].querySelector().handlers.click();
+  assert.equal(said(), `${fill('tableSorted', { sort: fill('tableSortDown', { column: 'Score' }) })} ${all}`, 'the second press, the other way');
+  s.parts['#ht-state'].value = 'AL';
+  s.parts['#ht-state'].handlers.change();
+  assert.equal(said(), fill('tableCountOne'), 'a filter: the count alone');
+});
+
 test('a state picked on the US map, by a click or by Enter on the active mark, opens that state\'s page', async (t) => {
   const mark = (code) => ({ dataset: { state: code } });
   const active = mark('MD');

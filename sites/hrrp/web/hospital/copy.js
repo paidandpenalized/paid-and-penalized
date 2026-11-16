@@ -148,7 +148,12 @@ export const COPY = {
   wiNoScript: { text: 'The sliders need JavaScript. Without it this shows the actual ratios.', claim: null },
   wiSlidersLabel: { text: 'Ratios to try', claim: null },
   wiSliderMedian: { text: 'median {median}', claim: null },
-  wiSliderHint: { text: 'Ratio for {short}', claim: null },
+  // The headings over the page's parts.
+  partRulers: { text: 'Each condition against its peer median', claim: null },
+  partWhatIf: { text: 'What if the ratios changed', claim: null },
+  partHistory: { text: 'The cut over the years', claim: null },
+  partArea: { text: 'Other hospitals in the area', claim: null },
+  wiSliderHint: { text: 'Ratio for', claim: null },
   wiReset: { text: 'Reset', claim: null },
   wiToMedian: { text: 'Bring all to median', claim: null },
   wiToMedianHelp: { text: 'Sets every ratio over its peer median down to the median. A ratio already under it stays where it is.', claim: null },

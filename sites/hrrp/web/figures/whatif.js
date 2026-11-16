@@ -37,10 +37,10 @@ export function overNote({ why, step }) {
 const slider = (row) => {
   const id = `wi-${row.cond.toLowerCase().replace(/_/g, '-')}`;
   return html`<li class="wi__row" data-cond="${row.cond}">
-<label class="wi__name" for="${id}"><b>${row.short}</b><small>${fill('wiSliderMedian', { median: ratio(row.med, 3) })}</small></label>
-<input class="wi__range" type="range" id="${id}" data-wi="range" min="${row.min}" max="${row.max}" step="${WI_STEP}" value="${row.err}" aria-label="${fill('wiSliderHint', { short: row.short })}">
+<label class="wi__name" for="${id}"><span class="vh">${t('wiSliderHint')} </span><b>${row.short}</b><small>${fill('wiSliderMedian', { median: ratio(row.med, 3) })}</small></label>
+<input class="wi__range" type="range" id="${id}" data-wi="range" min="${row.min}" max="${row.max}" step="${WI_STEP}" value="${row.err}" aria-describedby="${id}-esc">
 <output class="wi__val" for="${id}" data-wi="val">${ratio(row.err, 3)}</output>
-<p class="small wi__escape">${escapeWords(row)}</p>
+<p class="small wi__escape" id="${id}-esc">${escapeWords(row)}</p>
 </li>`;
 };
 
