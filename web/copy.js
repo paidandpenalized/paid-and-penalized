@@ -86,6 +86,11 @@ export const COPY = typesetCopy({
   // web/client/figure.js, which fills in {column}.
   sortedUp: 'Sorted by {column}, ascending',
   sortedDown: 'Sorted by {column}, descending',
+  // A distance (render/miles.js): in words, under a mile and a mile when rounded (whole miles otherwise are a count and
+  // its noun); in a table's column of miles, under a mile.
+  milesUnder: 'less than a mile',
+  milesAbout: 'about a mile',
+  milesUnderCell: 'under {one}',
   // A figure's claim level, said under the chart when its values are not CMS's own (DES-25 words).
   claimRecomputed: 'This site recomputes',
   claimEstimate: 'Estimate',

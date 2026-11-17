@@ -392,12 +392,11 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
   }
   for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
   // The chart kit (charts.css) rides in HACRP's sheet and the hub's (the area map on a page outside the programs), never the
-  // shared one; the what-if kit in HACRP's alone. The hub's also keeps the scale bar's two dot rules.
-  for (const rule of ['.chart-tile', '.fig__key']) {
+  // shared one; the what-if kit in HACRP's alone. The kit's dot rules draw the hub's scale bar too.
+  for (const rule of ['.chart-tile', '.fig__key', '.chart-dots--ink']) {
     assert.ok(css(hacrp).includes(rule) && css(hub).includes(rule) && !css(site).includes(rule), `HACRP's and the hub's stylesheets hold ${rule}, the shared one doesn't`);
   }
   assert.ok(css(hacrp).includes('.wi-cliff__pit') && !css(site).includes('.wi-cliff__pit') && !css(hub).includes('.wi-cliff__pit'), 'only HACRP\'s stylesheet holds the what-if kit');
-  assert.ok(css(hub).includes('.sbar .chart-dots--ink'), 'the hub\'s stylesheet holds the scale bar\'s dots');
   // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's
   // sheet reads the tokens and sets none of that, so the shared bundle's dark and print values reach its rules.
   assert.ok(/:root\[data-theme="?dark"?\]\{[^}]*--pen:/.test(css(site)), 'the shared stylesheet\'s copy of the dark tokens for the toggle');

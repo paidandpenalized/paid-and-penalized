@@ -230,15 +230,8 @@ ${marks}${overlay}${legend.body}`,
   });
 }
 
-// The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
-// numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
-// steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
-//   center   { point, tip }; points [{ point, n, cls, tip }] (n: the number printed on the dot; cls: its class)
-//   context  [{ point, cls }]: other places for reference, each a plain small circle of its class (not a mark: no
-//            tooltip, no number), under the pins, drawn only where it falls inside the frame
-//   label    the image's accessible name
 // The nearest-hospitals map's drawn width, shared by the HACRP hospital page and the hub's pages for hospitals outside the
-// programs (sites/hacrp/web/constants.js re-exports it).
+// programs.
 export const NEAR_MAP_WIDTH = 460;
 const AREA_PAD = 22;
 const CONTEXT_R = 2.5;
@@ -266,8 +259,10 @@ const MILES_PER_DEGREE = (EARTH_MILES * Math.PI) / 180;
 
 // The k rows nearest a [lon, lat] point, nearest first, each the row with its distance added ({ ...row, miles }); rows
 // without a point, and the one whose ccn is skip, are left out. Ties break by the lower CCN, so every build agrees. One
-// pass keeps the k nearest in a short sorted list, so a page never sorts every row. rows: [{ ccn, point }].
+// pass keeps the k nearest in a short sorted list, so a page never sorts every row. rows: [{ ccn, point }]. k of zero or
+// less: none.
 export function nearestTo(rows, point, { k, skip = null }) {
+  if (!(k > 0)) return [];
   const best = [];
   for (const row of rows) {
     if (row.ccn === skip || !row.point) continue;
@@ -283,6 +278,14 @@ export function nearestTo(rows, point, { k, skip = null }) {
   return best.map(({ row, miles: d }) => ({ ...row, miles: d }));
 }
 
+// The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
+// numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
+// steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
+//   center   { point, tip }; points [{ point, n, cls, tip }] (n: the number printed on the dot; cls: its class)
+//   context  [{ point, cls }]: other places for reference, each a plain small circle of its class (not a mark: no
+//            tooltip, no number), under the pins, drawn only where it falls inside the frame
+//   label    the image's accessible name
+// The returned markup carries contextDrawn: how many context dots fell inside the frame.
 export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);

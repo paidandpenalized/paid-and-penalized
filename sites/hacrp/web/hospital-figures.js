@@ -12,9 +12,10 @@ import { WIDTH } from '../../../web/charts/svg.js';
 import { ridges } from '../../../web/charts/ridges.js';
 import { ruler } from '../../../web/charts/ruler.js';
 import { waterfall } from '../../../web/charts/waterfall.js';
-import { cmsText, count, decimal, noun, pct, pctFloor, placeText } from '../../../web/render/format.js';
+import { cmsText, count, decimal, pct, pctFloor, placeText } from '../../../web/render/format.js';
 import { html } from '../../../web/render/html.js';
 import { pill, printout, wsOp, wsTerm } from '../../../web/render/components.js';
+import { milesCell, milesText } from '../../../web/render/miles.js';
 import { isSir } from '../../../engine/js/hacrp/measures.js';
 import { countBins } from './compare.js';
 import { REDUCTION_TEXT, RINGS_MAX, RING_MILES, RULER_BINS, RULER_ROOM_HIGH, RULER_ROOM_LOW, SIR_EXPECTED_TEXT } from './constants.js';
@@ -275,11 +276,7 @@ function glyph(flags) {
 // A hospital's estimated cut in a table: the dollars, in the penalty ink for a cut; words where there is no estimate.
 const cutCell = (dollars) => html`<td class="num near__cut${dollars > 0 ? ' near__cut--pen' : ''}">${cutText(dollars)}</td>`;
 
-// A distance in the nearest hospitals' table: whole miles, "under 1" for a hospital under a mile away (never "0").
-const miles = (x) => (x < 1 ? fill('nearbyUnderMile', { one: count(1) }) : count(Math.round(x)));
-// A distance in words, for a tooltip and the takeaway: "less than a mile" under one, "about a mile" for one when
-// rounded, whole miles ("3 miles") otherwise.
-export const milesText = (x) => (x < 1 ? t('milesUnder') : Math.round(x) === 1 ? t('milesAbout') : noun(Math.round(x), 'mile'));
+// A distance in the table (milesCell) and in words, for a tooltip and the takeaway (milesText): web/render/miles.js.
 
 // The table's estimated-cut column reads each nearby hospital's cut from the national context (compare.js).
 export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
@@ -299,14 +296,14 @@ export function nearbyBlock({ view, nat, shapes, counties = [], n, source }) {
   const href = (ccn) => hospitalHref(HOSPITALS_PATH, ccn);
   const table = printout(html`<table class="gb gb--near" aria-labelledby="nearby-h">
 <thead><tr><th scope="col" class="num">#</th><th scope="col">${t('nearbyColName')}</th><th scope="col" class="num">${t('nearbyColMiles')}</th><th scope="col" class="num">${t('nearbyColScore')}</th><th scope="col">${t('nearbyColDecision')}</th><th scope="col" class="num">${t('tableColMoney')}</th><th scope="col">${t('nearbyColMeasures')}</th></tr></thead>
-<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${placeText(h)}</span></th><td class="num">${miles(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
+<tbody>${near.map((h, i) => html`<tr class="near--${kind(h)}"><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${href(h.ccn)}">${h.name}</a><span class="near__city">${placeText(h)}</span></th><td class="num">${milesCell(h.miles)}</td><td class="num">${cmsText(h.totalText)}</td><td>${decisionMark(h.decision)}</td>${cutCell(h.cut)}<td>${glyph(h.flags)}</td></tr>`)}</tbody>
 </table>`);
   const fig = map && figure({
     n, source, chart: map, csvName: `hacrp-fy${view.fy}-${view.ccn.toLowerCase()}-nearest`,
     takeaway: nearbyTakeaway(yes, near.length, milesText(near[0].miles)),
     table: {
       columns: [{ name: t('nearbyColName') }, { name: t('nearbyColMiles'), numeric: true }, { name: t('nearbyColScore'), numeric: true }, { name: t('nearbyColDecision') }],
-      rows: near.map((h) => [`${h.name}, ${placeText(h)}`, num(miles(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),
+      rows: near.map((h) => [`${h.name}, ${placeText(h)}`, num(milesCell(h.miles), toUnit(h.miles, 1)), h.totalText, decisionWord(h.decision)]),
     },
   });
   return { table, fig, keys: fig ? keysHint(n, t('figRangeKeys')) : '', count: near.length };

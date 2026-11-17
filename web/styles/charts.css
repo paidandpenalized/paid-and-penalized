@@ -455,3 +455,22 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-bubble { fill: CanvasText; fill-opacity: 0.5; stroke: CanvasText; }
   .chart-col--rew { fill: Highlight; }
 }
+
+/* ---------- the nearest hospitals' table ----------
+   HACRP's hospital page (sites/hacrp/web/hospital-figures.js nearbyBlock) and the hub's page of a hospital outside the
+   programs (hub/hospital/outside-figures.js nearBlock): the number in a dot like the map's pin (filled in the pen ink
+   for a cut, .near--yes; dashed where the program doesn't apply, .near--na), the hospital and its city, the miles and
+   the dollars (in the pen ink for a cut). */
+.near__cut { white-space: nowrap; }
+.gb--near thead th.num { white-space: normal; }
+.near__cut--pen { color: var(--pen-ink); font-weight: 700; }
+.gb--near tbody th { font-weight: 600; }
+.gb--near tbody th a { display: block; }
+.near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
+.near--yes .near__n { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
+.near--na .near__n { border-style: dashed; }
+@media (forced-colors: active) {
+  .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .near--yes .near__n { background: CanvasText; color: Canvas; }
+}
