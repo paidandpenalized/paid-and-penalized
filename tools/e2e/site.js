@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
 import { hubModel } from '../../hub/data.js';
+import { NEAR_MAX_MILES } from '../../hub/hospital/outside-figures.js';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
@@ -17,6 +18,7 @@ import { DICTIONARY_PAGE as HRRP_DICTIONARY_PAGE, KINDS as HRRP_KINDS, METHODS_P
 import { buildPlaces } from '../../sites/hrrp/web/places.js';
 import { DEFAULT_SKIP_STATE } from '../../sites/work-requirement/web/constants.js';
 import { METHODS_PATH as WR_METHODS_PATH, PROGRAM_PATH as WR_PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
+import { nearestTo, pointOf } from '../../web/charts/geo.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
@@ -100,6 +102,24 @@ const HUB_HOSPITALS = [
 // record }, from the emitted data alone. model: hubModel()'s answer (its hub and hospitals, worked out once per process).
 export const hubHospitalSample = (type, { hub, hospitals } = hubModel()) => sampleOf('hubHospitalSample', HUB_HOSPITALS, type, hospitals, (h) => hospitalPathOf('hub', h.ccn), (h) => hospitalScenario(hub.medicaid, h.ccn));
 
+// The sample hospitals outside Medicare's penalty programs (hub/outside.js), by type, each the first in the master's order
+// that no program file lists (so its page carries the stamp), is not in Puerto Rico (whose maps differ), and has a point:
+// a critical access hospital with a hospital the dollar file estimates within the nearest section's reach (so its page has
+// the nearest table), and a VA hospital (a federal group: no nearest section, the US map). [type, what it is, the test
+// (h, the estimated hospitals with a point)].
+const outsideSample = (h) => !h.listed && h.state !== 'PR' && pointOf(h) !== null;
+const OUTSIDE_HOSPITALS = [
+  ['hub-hospital-outside-cah', 'critical access, outside the programs, with estimated hospitals near it',
+    (h, estimated) => outsideSample(h) && h.group === 'critical_access' && (nearestTo(estimated, pointOf(h), { k: 1 })[0]?.miles ?? Infinity) <= NEAR_MAX_MILES],
+  ['hub-hospital-outside-federal', 'a VA hospital outside the programs', (h) => outsideSample(h) && h.group === 'va'],
+];
+
+// The sample outside hospital's page of a type (OUTSIDE_HOSPITALS), { type, name, path, hospital: its outside record }.
+export function outsideHospitalSample(type, { hospitals, outside } = hubModel()) {
+  const estimated = hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
+  return sampleOf('outsideHospitalSample', OUTSIDE_HOSPITALS, type, outside, (h) => hospitalPathOf('hub', h.ccn), () => estimated);
+}
+
 // The sample Readmissions hospital pages (sites/hrrp/), by type, each the first hospital in the newest Readmissions file
 // with a payment cut and an estimate of its dollars, with no cut, or with no estimate: [type, what it is, the test].
 const HRRP_HOSPITALS = [
@@ -167,6 +187,7 @@ export function samplePages() {
     page('methods', METHODS_PATH),
     page('dictionary', DICTIONARY_PAGE),
     ...HUB_HOSPITALS.map(([type]) => hubHospitalSample(type)),
+    ...OUTSIDE_HOSPITALS.map(([type]) => outsideHospitalSample(type)),
     page('hrrp-program', HRRP_PROGRAM_PATH),
     ...HRRP_HOSPITALS.map(([type]) => hrrpHospitalSample(type, hrrpData.hospitals)),
     ...hrrpPlaceSamples(hrrpData),
