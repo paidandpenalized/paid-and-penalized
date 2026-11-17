@@ -54,3 +54,14 @@ test('fillOutside fills the rule constants itself and the rest from values', () 
 test('the copy gate reads this file', () => {
   assert.ok(copyFiles().includes('hub/hospital/outside-copy.js'));
 });
+
+test('the not_listed group\'s like-text says only what the files list, naming each file\'s year', () => {
+  const keys = Object.keys(COPY).filter((k) => k.startsWith('likeTextNotListed'));
+  assert.equal(keys.length, 4, 'with and without a state, none listed and some');
+  for (const key of keys) {
+    const text = typeof COPY[key] === 'string' ? COPY[key] : COPY[key].text;
+    assert.ok(text.includes('FY{hacrpFy}') && text.includes('FY{hrrpFy}'), `${key}: both files by year`);
+    assert.ok(!/adjust|penalty program/i.test(text), `${key}: no claim beyond the files`);
+  }
+  assert.ok(!('likeTextSome' in COPY) && !('likeTextSomeNoState' in COPY), 'no "adjust {k} of them" left');
+});

@@ -6,6 +6,7 @@
 // the nearest hospitals in the programs and the hospitals like this one (each a figure block its own module draws, '' for
 // none), and the source line (the dollar model in it only beside the nearest hospitals' dollars).
 import { fillCopy } from '../../web/render/components.js';
+import { endedBy } from '../../web/render/closed.js';
 import { html } from '../../web/render/html.js';
 import { COPY } from './copy.js';
 import { medicaidBand, wbLink } from './medicaid.js';
@@ -62,9 +63,10 @@ const sourceNote = (years, dollars) => html`<div class="wrap"><div class="hh__no
 <p>${fillOutside('sourceOutside', years)}${dollars ? html` ${fillOutside('sourceOutsideDollars')}` : ''}</p></div></div>`;
 
 // The page's description: why the programs don't adjust its pay (and how Medicare pays it instead, for a group with a
-// line for that), or, for a federal, an unlisted or a closed hospital, what the page holds. place: { name, place }.
-export function outsideDescription(h, place) {
-  if (h.inactive) return fillOutside('descriptionOutsideClosed', place);
+// line for that), or, for a federal, an unlisted or a closed hospital, what the page holds. place: { name, place }; fy: the
+// shell's fiscal year (text). "Closed" exactly when the body shows the closed note (endedBy, as record.js closed tests).
+export function outsideDescription(h, place, fy) {
+  if (endedBy(h.inactive, Number(fy))) return fillOutside('descriptionOutsideClosed', place);
   if (FEDERAL.has(h.group)) return fillOutside('descriptionOutsideFederal', place);
   if (h.group === 'not_listed') return fillOutside('descriptionOutsideNotListed', place);
   if (!hasOutside(`reasonInstead.${h.group}`)) throw new RangeError(`outside: no description for group ${h.group}`);
@@ -78,7 +80,8 @@ export function outsideBody(h, { master, fy, programYears, medicaid, near = '', 
   if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: programYears needs the master\'s HACRP and HRRP years');
   const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
   // Its program pages: Readmissions where that site has one (never a hospital-acquired conditions page: the HACRP site has
-  // pages only for the dollar file's hospitals), and the work-requirement page where the scenario file has a row.
+  // pages only for the dollar file's hospitals), and the work-requirement page where the scenario file has a row. The band's
+// dek says Medicare's penalty programs don't touch the hospital, so a hospital a program file lists keeps the default.
   const links = [h.inHrrp && deepLink(h, 'hrrp'), medicaid.hospitals.has(h.ccn) && wbLink(h.ccn)].filter(Boolean);
   const stamped = !h.listed;
   // An inactive-group hospital has no reason line: the closed note is its explanation. Its wording holds only for an end
@@ -100,6 +103,6 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 ${note}
 </div>
 </div>
-${medicaidBand(h, medicaid, { net: false, note: fillOutside('wbNoteOutside') })}${near}${like}${sourceNote(years, near !== '')}
+${medicaidBand(h, medicaid, { net: false, note: h.listed ? null : fillOutside('wbNoteOutside') })}${near}${like}${sourceNote(years, near !== '')}
 </article>`;
 }

@@ -5,11 +5,15 @@
 // master (pp_engine/master.py), except that the master's `federal` splits by the hospital's kind into `va` and `dod`.
 export const LIKE_GROUPS = Object.freeze(['critical_access', 'psychiatric', 'va', 'dod', 'childrens', 'not_listed', 'rural_emergency', 'cancer', 'inactive', 'long_term']);
 
-// A record's group: its HACRP reason code, else its Readmissions one (the first that is not null). Throws a RangeError
-// naming a code that is not in LIKE_GROUPS.
+// The federal hospitals' groups, by the master's kind.
+const FEDERAL_GROUPS = new Set(['va', 'dod']);
+
+// A record's group: its HACRP reason code, else its Readmissions one (the first that is not null); `federal` by its kind,
+// va or dod. Throws a RangeError naming a code that is not in LIKE_GROUPS, or a federal hospital of another kind.
 export function likeGroupOf(record) {
   const code = record.programs.hacrp.reason ?? record.programs.hrrp.reason;
-  const group = code === 'federal' ? (record.kind === 'dod' ? 'dod' : 'va') : code;
+  if (code === 'federal' && !FEDERAL_GROUPS.has(record.kind)) throw new RangeError(`outside: a federal hospital of kind ${JSON.stringify(record.kind)}, neither va nor dod`);
+  const group = code === 'federal' ? record.kind : code;
   if (!LIKE_GROUPS.includes(group)) throw new RangeError(`outside: unknown reason code ${JSON.stringify(code)} for a hospital of kind ${JSON.stringify(record.kind)}`);
   return group;
 }

@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { REPO_ROOT } from '../files.js';
 import { PROGRAM_SITES } from '../../tools/ci/page-types.js';
-import { copyFiles } from './helpers.js';
+import { copyFiles, isCopyFile } from './helpers.js';
 
 const importRepo = (path) => import(pathToFileURL(REPO_ROOT + path));
 
@@ -48,6 +48,12 @@ test('the gate finds the shared copy and each site\'s copy', () => {
   assert.ok(files.includes('web/copy.js'));
   assert.ok(files.includes('hub/copy.js'));
   for (const { id } of PROGRAM_SITES) assert.ok(files.includes(`sites/${id}/web/copy.js`), id);
+});
+
+test('a <name>-copy.js is a copy file when it exports a COPY (a hyphen in its name allowed) and is still on disk', () => {
+  assert.ok(isCopyFile('hub/hospital/outside-copy.js'));
+  assert.ok(!isCopyFile('hub/hospital/group-copy.js'), 'parts a copy.js spreads in');
+  assert.ok(!isCopyFile('hub/hospital/no-such-page-copy.js'), 'a listed path no longer on disk');
 });
 
 test('a copy file cites only its own site\'s claims; shared copy cites any', () => {

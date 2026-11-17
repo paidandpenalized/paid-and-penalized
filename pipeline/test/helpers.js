@@ -1,5 +1,5 @@
 // Shared test helpers for the page build.
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -81,8 +81,9 @@ export function get(port, path) {
 // copy.js spreads in, which the guards read there.
 let copyList = null;
 const COPY_EXPORT = /^export (const|let|function) COPY\b/m;
-const isCopyFile = (p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)
-  || (/^(web|hub|sites)\/(.+\/)?[\w]+-copy\.js$/.test(p) && COPY_EXPORT.test(readFileSync(REPO_ROOT + p, 'utf8')));
+// A listed path deleted from the working tree but not yet from git is no copy file.
+export const isCopyFile = (p) => existsSync(REPO_ROOT + p) && (/^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)
+  || (/^(web|hub|sites)\/(.+\/)?[\w-]+-copy\.js$/.test(p) && COPY_EXPORT.test(readFileSync(REPO_ROOT + p, 'utf8'))));
 export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter(isCopyFile));
 
 // Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches", and the

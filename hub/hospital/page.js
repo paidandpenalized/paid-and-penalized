@@ -281,7 +281,9 @@ function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, med
 
 // An outside hospital's (outside.js): no script until its figures have one.
 function outsideParts({ h, master = null, medicaid, programYears, near = '', like = '' }, fy, place) {
-  return { description: outsideDescription(h, place), body: outsideBody(h, { master, fy, programYears, medicaid, near, like }), scripts: [] };
+  // The body first: it stops the build on a page with nothing to explain it, which outsideDescription would only misname.
+  const body = outsideBody(h, { master, fy, programYears, medicaid, near, like });
+  return { description: outsideDescription(h, place, fy), body, scripts: [] };
 }
 
 // The page shell around a body: the title, path, fonts and the header's hospital chip, shared by a hub hospital's page and

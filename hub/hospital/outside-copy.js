@@ -80,8 +80,10 @@ export const COPY = typesetCopy({
   'own.va': { text: 'The VA publishes its own quality data on how its medical centers meet quality standards.', claim: 'HUB-39' },
 
   // Hospitals like this one: the count of its group on the master and in its state. {kinds}: likeCount.<group>; {state}:
-  // the state's name (likeTextNoState for a code STATE_NAMES lacks). likeTextSome*: a group some of whose hospitals a
-  // program file lists ({k} of them: the Readmissions-only not_listed hospitals).
+  // the state's name (likeTextNoState for a code STATE_NAMES lacks). likeTextNotListed*: the not_listed group, which is
+  // out of the programs only as far as the files show, so its sentence says what the files list and claims nothing more
+  // ({hacrpFy}, {hrrpFy}: the master's programYears; likeTextNotListedSome*: {k} of them a file lists, the
+  // Readmissions-only hospitals).
   likeHeading: 'Hospitals like this one',
   'likeCount.critical_access': 'critical access hospitals',
   'likeCount.psychiatric': 'psychiatric hospitals',
@@ -95,8 +97,10 @@ export const COPY = typesetCopy({
   'likeCount.long_term': 'long-term care hospitals',
   likeText: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. Medicare's penalty programs adjust none of them.",
   likeTextNoState: "{n} {kinds} are on Medicare's hospital list. Medicare's penalty programs adjust none of them.",
-  likeTextSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. Medicare's penalty programs adjust {k} of them.",
-  likeTextSomeNoState: "{n} {kinds} are on Medicare's hospital list. Medicare's penalty programs adjust {k} of them.",
+  likeTextNotListed: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
+  likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
+  likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
+  likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance, formatted;
   // {k} of the {n} nearest with a net cut, in words for none and all) and the table's columns.

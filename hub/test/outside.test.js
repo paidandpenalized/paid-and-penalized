@@ -12,7 +12,9 @@ const OUTSIDE = outsideHospitals({ master: HUB.master, dollarCcns, hrrp: HUB.hrr
 // The rule, written out again from the master's own fields.
 const groupByRule = (r) => {
   const code = r.programs.hacrp.reason ?? r.programs.hrrp.reason;
-  return code === 'federal' ? (r.kind === 'va' ? 'va' : 'dod') : code;
+  if (code !== 'federal') return code;
+  assert.ok(r.kind === 'va' || r.kind === 'dod', 'a federal hospital is va or dod');
+  return r.kind;
 };
 
 test('outsideHospitals: one per master record not in the dollar file', () => {
@@ -56,6 +58,7 @@ test('likeGroupOf: federal splits by kind; an unknown reason throws', () => {
   assert.equal(likeGroupOf(rec('critical_access', 'psychiatric')), 'critical_access', 'the first non-null wins');
   assert.throws(() => likeGroupOf(rec('invented_reason', null)), (e) => e instanceof RangeError && e.message.includes('invented_reason'));
   assert.throws(() => likeGroupOf(rec(null, null)), RangeError, 'no reason at all');
+  assert.throws(() => likeGroupOf(rec('federal', 'federal', 'acute')), (e) => e instanceof RangeError && e.message.includes('"acute"'), 'a federal hospital of another kind');
 });
 
 test('hubModel: outside and counties are there', () => {

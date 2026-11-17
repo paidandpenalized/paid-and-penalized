@@ -11,6 +11,7 @@ import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { fillOutside } from '../hospital/outside-copy.js';
+import { outsideDescription } from '../hospital/outside.js';
 import { outsidePage } from '../hospital/page.js';
 import { LIKE_GROUPS } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -190,4 +191,36 @@ test('outside page: an inactive-group hospital whose agreement ends after the ye
   }
   assert.ok(message !== null, 'a RangeError');
   assert.ok(/no closed note/.test(message) && !message.includes(h.name), 'saying why, naming no hospital beyond its CCN');
+});
+
+test('outside page: a listed hospital with a Medicaid row keeps the band\'s default dek, which doesn\'t say the programs leave it alone', () => {
+  const h = pick((x) => x.listed && wrRow(x), 'an outside hospital a program file lists, with a Medicaid scenario row');
+  const main = mainOf(render(h));
+  assert.ok(main.includes('data-medicaid'), 'the band');
+  assert.ok(!main.includes(esc(fillOutside('wbNoteOutside'))), 'not the outside dek');
+  assert.ok(main.includes(esc(wrRow(h).reason ? COPY.wbNoteReasonAlone : COPY.wbNoteAlone)), 'the default dek');
+  // Today's listed hospitals' rows give reasons, which keep the reason's dek anyway; the same hospital with a loss to draw,
+  // marked listed, shows the guard itself.
+  const drawn = pick((x) => !x.listed && wrRow(x)?.shares, 'an unlisted outside hospital with a loss to draw');
+  const asListed = mainOf(render({ ...drawn, listed: true }));
+  assert.ok(asListed.includes(esc(COPY.wbNoteAlone)) && !asListed.includes(esc(fillOutside('wbNoteOutside'))), 'a listed hospital with a loss to draw: the default dek');
+  for (const x of OUTSIDE.filter((y) => wrRow(y))) {
+    const shows = mainOf(render(x)).includes(esc(fillOutside('wbNoteOutside')));
+    assert.ok(shows === (!x.listed && !wrRow(x).reason), 'the outside dek exactly on an unlisted hospital with a loss to draw');
+  }
+});
+
+test('outside page: the description says closed exactly when the page shows the closed note', () => {
+  for (const h of OUTSIDE) {
+    const page = render(h);
+    const said = /<meta name="description" content="[^"]*as ended\.">/.test(page);
+    assert.ok(said === mainOf(page).includes('<p class="hh__closed">'), 'the description and the note agree');
+  }
+  // A psychiatric hospital whose agreement ends after the year has no note, so no closed description.
+  const h = pick((x) => x.group === 'psychiatric' && !x.inactive, 'an active psychiatric hospital');
+  const later = { ...h, inactive: { date: `${Number(FY)}-10-01`, reason: 'merger or closure' } };
+  assert.ok(!endedBy(later.inactive, Number(FY)), 'the end falls after the year');
+  const place = { name: 'Invented Hospital', place: 'Nowhere, ZZ' };
+  assert.ok(outsideDescription(later, place, FY) === fillOutside('descriptionOutside', place), 'its group\'s description');
+  assert.ok(outsideDescription({ ...later, inactive: { date: `${Number(FY)}-09-30`, reason: 'merger or closure' } }, place, FY) === fillOutside('descriptionOutsideClosed', place), 'an end within the year: closed');
 });
