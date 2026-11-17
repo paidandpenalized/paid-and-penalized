@@ -481,3 +481,19 @@ details.wr-hits > .wr-hits__h { cursor: pointer; }
   .wr-sens__tick { stroke: CanvasText; }
   .wr-sens__dot { fill: CanvasText; stroke: Canvas; }
 }
+
+/* Touch screens: every control the page draws takes the kit's touch height (--control-h, 44px under a coarse pointer:
+   tokens.css), as the shared fields and the hub's controls do (the 11-15 audit's deferral). The switch's options, the
+   chips and pickers, the link-styled buttons, the worksheet's close, the figures' "Show table" and its sort buttons, and
+   the use-rate slider's box. The link-styled buttons keep their line under the words in the taller box (inline-flex,
+   centred). Text links inside a sentence are exempt, as WCAG's target rule exempts them. */
+@media (pointer: coarse) {
+  :is(.wr, .wr-meth) :is(.wr-chip, select.wr-chip, .wr-chips__clear, .wr-use__reset, .wr-stcard__pick, .wr-hits__h, .fig__sort, .fig__table > summary) { min-height: var(--control-h); }
+  :is(.wr, .wr-meth) :is(.wr-mit, .wr-hrand, .wr-lines) { display: inline-flex; align-items: center; min-height: var(--control-h); }
+  :is(.wr, .wr-meth) .fig__table > summary { display: flex; align-items: center; }
+  :is(.wr, .wr-meth) .wr-switch__opt span, .wr-scrolly--on .wr-switch__opt span { display: flex; align-items: center; justify-content: center; min-height: var(--control-h); }
+  :is(.wr, .wr-meth) .wi-range, .wr-scrolly--on .wr-use__track .wi-range { height: var(--control-h); }
+  .wr-ws__x { width: var(--control-h); height: var(--control-h); }
+  /* The chips stay round-ended at the taller height. */
+  .wr-chip { border-radius: calc(var(--control-h) / 2); }
+}

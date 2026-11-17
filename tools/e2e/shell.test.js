@@ -669,3 +669,21 @@ describe('the theme button', () => {
     await assertQuiet(seen, 'hub stylesheet and theme');
   }));
 });
+
+// The footer's program codes ("HRRP", "HACRP", "Medicaid") never break across lines at a phone's width, on a page of
+// each family: the hub, both Medicare programs and the work requirement (the 11-10 build report's launch fix-up).
+describe('the footer at 390 px', { concurrency: CONCURRENCY }, () => {
+  const tabs = useContext(shared, { width: 390 });
+  for (const path of ['/', ...LISTED_PROGRAMS.map((p) => p.path)]) it(`${path}: every program's name and code are on one line`, () => withPage(tabs, { path }, async (page) => {
+    // A program's link (its name and code) is one line box: its code never drops under its name.
+    // The link is an inline block (one rect however it wraps), so count the lines its words sit on.
+    const links = await page.evaluate(() => [...document.querySelectorAll('footer .ft__list a')].map((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return [el.textContent, new Set([...range.getClientRects()].map((r) => Math.round(r.bottom))).size];
+    }));
+    assert.ok(links.length >= 3, 'the footer lists its programs');
+    assert.deepEqual(links.filter(([, lines]) => lines !== 1), [], 'names and codes broken across lines');
+    await assertNoSideways(page, `${path} at 390 px`);
+  }));
+});

@@ -465,7 +465,7 @@ export const COPY = {
   asofSpendLabel: { text: 'Expansion share', claim: null },
   asofSpend: { text: '{form} spending on the new adult group, federal FY{fy}; data.medicaid.gov, updated {date}', claim: 'WR-16' },
   asofDeclinesLabel: { text: 'Enrollment declines', claim: null },
-  asofDeclines: { text: 'Urban Institute and RWJF, Appendix Table {table}; copied {date}', claim: 'WR-18' },
+  asofDeclines: { text: 'Urban Institute and RWJF, Appendix Table\u00a0{table}; copied {date}', claim: 'WR-18' },
   asofPenaltiesLabel: { text: 'Medicare penalties', claim: null },
   asofPenalties: { text: 'This site’s FY{fy} estimates, last changed {date}', claim: null },
   asofChangedLabel: { text: 'Numbers last changed', claim: null },

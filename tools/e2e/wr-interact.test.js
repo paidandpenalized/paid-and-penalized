@@ -24,7 +24,7 @@ import { loadMedicaid } from '../../sites/work-requirement/web/data.js';
 import { PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
 import { hospitalRows } from '../../sites/work-requirement/web/program/strips.js';
 import { AXE_WIDTHS, audit, grainWorst, openFolds } from './axe.js';
-import { CONCURRENCY, SCHEMES, assertNoSideways, assertQuiet, eventually, fetchesOf, settle, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, ENGINE, SCHEMES, assertNoSideways, assertQuiet, eventually, fetchesOf, settle, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 
@@ -471,6 +471,35 @@ describe('each step fits the window', { concurrency: CONCURRENCY }, () => {
     await assertNoSideways(page, 'the stacked program page');
     await assertQuiet(seen, 'the stacked program page');
   }));
+});
+
+// ---------- touch ----------
+
+// Under a coarse pointer every control the page draws takes the kit's touch height (--control-h, 44px: tokens.css), as
+// the shared fields and the hub's controls do (the 11-15 audit's deferral); text links inside a sentence are exempt, as
+// WCAG's target rule exempts them. And the stacked page never scrolls sideways at a phone's widths.
+// Touch is emulated in Chromium and WebKit (Playwright's Firefox has no touch).
+describe('the work-requirement page under touch', { skip: ENGINE === 'firefox' && 'no touch in Firefox', concurrency: CONCURRENCY }, () => {
+  for (const width of [390, 320]) {
+    const tabs = useContext(shared, { width, height: 800, options: { hasTouch: true, isMobile: true } });
+    it(`${width} px: every control is 44 px tall, and nothing scrolls sideways`, () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+      await ready(page);
+      await bringAll(page);
+      const short = await page.evaluate(() => {
+        const CONTROLS = '.wr button, .wr select, .wr input, .wr summary, .wr .wr-lines, .wr .wr-switch__opt';
+        const label = (el) => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`;
+        return [...document.querySelectorAll(CONTROLS)]
+          // A switch option's radio is hidden over its label (the label is the target); a hidden control has no target.
+          .filter((el) => !el.closest('.wr-switch__opt') || el.matches('.wr-switch__opt'))
+          .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
+          .map((el) => [label(el), Math.round(el.getBoundingClientRect().height * 10) / 10])
+          .filter(([, h]) => h < 44);
+      });
+      assert.deepEqual([...new Set(short.map(([l, h]) => `${l} ${h}px`))], [], 'controls under 44 px');
+      await assertNoSideways(page, `the program page at ${width} px under touch`);
+      await assertQuiet(seen, `the program page at ${width} px under touch`);
+    }));
+  }
 });
 
 // ---------- accessibility ----------

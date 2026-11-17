@@ -200,3 +200,12 @@ test('the cost reports\' measured tag carries its phone words, shows one at a ti
   const wraps = [...css.matchAll(/([^{}]*wr-tag[^{}]*)\{([^}]*)\}/g)].filter(([, , body]) => /white-space:\s*normal/.test(body)).map(([, sel]) => sel.trim());
   assert.deepEqual(wraps, ['.wr-stcard__lines .wr-tag--wrap']);
 });
+
+// The 11-10 build report's launch fix-up: "Table A.2" in the as-of block never breaks between its words.
+test('the as-of block keeps "Table A.2" on one line', () => {
+  const asof = program.slice(program.indexOf('Enrollment declines'));
+  const cell = asof.slice(0, asof.indexOf('</dd>'));
+  assert.match(cell, /A\.2/, 'the declines cell names its table');
+  assert.doesNotMatch(cell, /Table A\.2/, 'no breakable space between "Table" and "A.2"');
+  assert.match(cell, /Table(?: |&nbsp;|&#160;)A\.2|<span class="nw">Table A\.2<\/span>/, 'kept together');
+});
