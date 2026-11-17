@@ -299,10 +299,10 @@ const LEAD_MIN = PIN_R;
 // Pins spread apart so none covers another or the ▲: each pair closer than two radii (and a gap) is pushed apart along
 // the line between them, half each, and a pin over the ▲ is pushed off it; then each is kept inside the frame. Rounds
 // repeat until nothing moves. Deterministic: the same pins give the same places on every build. xy: [[x, y]], in pin
-// order; center: [x, y]. Returns new [[x, y]].
-export function spreadPins(xy, center, { width, height, r = PIN_R }) {
+// order; center: [x, y]; gap: the room kept between two pins (default PIN_GAP). Returns new [[x, y]].
+export function spreadPins(xy, center, { width, height, r = PIN_R, gap = PIN_GAP }) {
   const at = xy.map(([x, y]) => [x, y]);
-  const min = 2 * r + PIN_GAP;
+  const min = 2 * r + gap;
   const clamp = (v, hi) => Math.min(hi - r - 1, Math.max(r + 1, v));
   for (let round = 0; round < SPREAD_ROUNDS; round++) {
     let moved = false;
@@ -468,7 +468,7 @@ function townLabels(pins, { width, height, avoidCircles, avoidBoxes }) {
 // The reading aids, off unless asked for (HACRP's hospital page asks for none):
 //   pad      the room between the fitted points and the frame's edge (default AREA_PAD)
 //   spread   true: pins that would cover one another or the ▲ are spread apart (spreadPins), each moved one tied to
-//            its place by a hairline from a small dot there
+//            its place by a hairline from a small dot there; pinGap: the room kept between two pins (default PIN_GAP)
 //   labels   up to this many states labeled by postal code, the largest in the frame first (stateLabels)
 //   towns    true: a pin given a town (points[i].town, text) has it set beside it where it fits (townLabels)
 //   aspect   the frame's height as a share of its width (default AREA_ASPECT)
@@ -478,9 +478,11 @@ function townLabels(pins, { width, height, avoidCircles, avoidBoxes }) {
 //            map twice
 //   dense    true: the context drawn as one path of dots per class (web/charts/dots.js), not a circle each: a few hundred
 //            dots in a few hundred bytes
-// The returned markup carries contextDrawn: how many context dots fell inside the frame; and contextDrawnBy, that count by
-// class ({ [cls]: n }).
-export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH, pad = AREA_PAD, contextR = CONTEXT_R, spread = false, labels = 0, towns = false, aspect = AREA_ASPECT, self = 'triangle', variant = null, dense = false, countyThin = THIN }) {
+//   clear    true: a context dot that a pin (where it is drawn) or this place's mark would cover, wholly or in part, is
+//            left out, so no dot peeks from under a pin's edge
+// The returned markup carries contextDrawn: how many context dots it draws (inside the frame, and not left out under a
+// pin); and contextDrawnBy, that count by class ({ [cls]: n }).
+export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH, pad = AREA_PAD, contextR = CONTEXT_R, spread = false, pinGap = PIN_GAP, labels = 0, towns = false, aspect = AREA_ASPECT, self = 'triangle', variant = null, dense = false, clear = false, countyThin = THIN }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
   const placed = points.filter((p) => ok(p.point));
@@ -512,14 +514,17 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const at = (p) => projection(p).map(r2);
   const [cx, cy] = at(center.point);
   const inFrame = ([x, y]) => x >= 0 && x <= width && y >= 0 && y <= height;
-  const inside = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) })).filter((c) => c.xy && inFrame(c.xy));
+  // Each pin's place, and where it is drawn: the same, unless spread apart.
+  const own = placed.map((p) => projection(p.point));
+  const shown = spread ? spreadPins(own, projection(center.point), { width, height, gap: pinGap }) : own;
+  // The marks a context dot may sit under (clear): each pin where it is drawn, and this place's mark.
+  const covers = clear ? [...shown.map(([x, y]) => ({ x, y, r: PIN_R })), { x: cx, y: cy, r: self === 'ring' ? SELF_RING_R : THIS_R }] : [];
+  const covered = ([x, y]) => covers.some((m) => Math.hypot(x - m.x, y - m.y) < m.r + contextR);
+  const inside = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) })).filter((c) => c.xy && inFrame(c.xy) && !covered(c.xy));
   const classes = [...new Set(inside.map((c) => c.cls))];
   const reference = dense
     ? classes.map((cls) => dotsPath(inside.filter((c) => c.cls === cls).map((c) => c.xy), cls, 2 * contextR))
     : inside.map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${contextR}"/>`);
-  // Each pin's place, and where it is drawn: the same, unless spread apart.
-  const own = placed.map((p) => projection(p.point));
-  const shown = spread ? spreadPins(own, projection(center.point), { width, height }) : own;
   const dots = placed.map((p, i) => {
     const [x, y] = shown[i].map(r2);
     const [ox, oy] = own[i].map(r2);
@@ -547,8 +552,8 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
     + html`${ringsDrawn}${reference}${names}${townText}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: thisMark })}`.text
     + '</svg>');
-  // How many context dots fell inside the frame, in all and by class: a caller keys its legend on this, not on the markup.
-  svg.contextDrawn = reference.length;
+  // How many context dots it draws, in all and by class: a caller keys its legend on this, not on the markup.
+  svg.contextDrawn = inside.length;
   svg.contextDrawnBy = Object.fromEntries(classes.map((cls) => [cls, inside.filter((c) => c.cls === cls).length]));
   return svg;
 }
