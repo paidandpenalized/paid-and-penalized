@@ -806,6 +806,42 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__plist { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
 .hh__plist .hh__deep { margin-top: 0; }
 
+/* The nearest hospitals in the programs (hub/hospital/outside-figures.js nearBlock), under a rule: the heading, caption
+   and compact area map left; the table right, which sticks beside the map as the reader scrolls down it and lets go at
+   the section's end (the grid's row ends there). A phone stacks them, map then table, with nothing sticky. */
+.hh__near { margin-top: 26px; }
+.hh__neari { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 26px; border-top: 1px solid var(--line); }
+.hh__neart { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
+.hh__neart h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
+.hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.hh__nearmap { margin-top: 4px; }
+.hh__neartab { min-width: 0; align-self: start; }
+/* The context dots: the same group's other hospitals, faint, under the pins. */
+.hh__ctx { fill: var(--ink-3); fill-opacity: 0.55; }
+/* The key's swatches, drawn like the map's marks: a pin (cut: the pen ink; not cut: on paper) and a context dot. */
+.hh__nsw { display: inline-block; flex: none; width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.hh__nsw--cut { border-color: var(--paper); background: var(--pen); box-shadow: 0 0 0 1px var(--pen); }
+.hh__nsw--ctx { width: 6px; height: 6px; border: 0; background: var(--ink-3); opacity: 0.55; }
+/* The table, as HACRP's nearest-hospitals table draws it (sites/hacrp/web/styles.css .gb--near). */
+.hh__near .gb thead th.num { white-space: normal; }
+.hh__near .gb tbody th a { display: block; }
+.hh__near .near__cut { white-space: nowrap; }
+.hh__near .near__cut--pen { color: var(--pen-ink); font-weight: 700; }
+.hh__near .near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.hh__near .near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
+.hh__near .near--cut .near__n { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
+@media (min-width: 720px) {
+  .hh__neari { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 36px; }
+  .hh__neartab { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+}
+@media (min-width: 1024px) { .hh__neari { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); } }
+@media (forced-colors: active) {
+  .hh__ctx { fill: GrayText; }
+  .hh__nsw, .hh__near .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .hh__nsw--cut, .hh__near .near--cut .near__n { background: CanvasText; color: Canvas; }
+  .hh__nsw--ctx { background: GrayText; }
+}
+
 @media (min-width: 1024px) {
   .hh__hero { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); padding-top: 30px; }
   .hh__none { padding-top: 34px; }

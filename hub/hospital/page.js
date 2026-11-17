@@ -280,10 +280,11 @@ function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, med
 }
 
 // An outside hospital's (outside.js): no script until its figures have one.
-function outsideParts({ h, master = null, medicaid, programYears, near = '', like = '' }, fy, place) {
+function outsideParts({ h, assets, master = null, medicaid, programYears, near = '', like = '' }, fy, place) {
   // The body first: it stops the build on a page with nothing to explain it, which outsideDescription would only misname.
   const body = outsideBody(h, { master, fy, programYears, medicaid, near, like });
-  return { description: outsideDescription(h, place, fy), body, scripts: [] };
+  // The nearest hospitals' map has tooltips on its pins and its table a scroll box: the figure script serves both.
+  return { description: outsideDescription(h, place, fy), body, scripts: near ? [assets.js.figure] : [] };
 }
 
 // The page shell around a body: the title, path, fonts and the header's hospital chip, shared by a hub hospital's page and
@@ -316,7 +317,8 @@ export function hospitalPage(args) {
 
 // The page of a hospital outside the penalty programs (hub/outside.js outsideHospitals) at the same path. args as
 // hospitalPage's, but with no hospitals, facts or hrrp (it has no peers), and: programYears, loadHub().programYears
-// (required: the years its reasons name); near and like, its figure blocks ('' for none).
+// (required: the years its reasons name); near and like, its figure blocks ('' for none; near: outside-figures.js
+// nearBlock, which brings the figure script).
 export function outsidePage(args) {
   const fy = String(args.assets.shell.fy);
   const place = { name: args.h.name, place: placeText(args.h) };

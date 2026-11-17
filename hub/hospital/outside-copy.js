@@ -103,7 +103,9 @@ export const COPY = typesetCopy({
   likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance, formatted;
-  // {k} of the {n} nearest with a net cut, in words for none and all) and the table's columns.
+  // {k} of the {n} nearest with a net cut, in words for none and all), the table's columns, the map's name, key and
+  // tooltips, and a distance in words (nearMiles*: the caption's and a tooltip's) and in the table (nearUnderMile: "under
+  // 1", never "0").
   nearHeading: "The nearest hospitals in Medicare's penalty programs",
   nearCaption: 'The closest is {miles} away; the programs cut {k} of the {n} nearest on net.',
   nearCaptionNone: 'The closest is {miles} away; the programs cut none of the {n} nearest on net.',
@@ -113,6 +115,17 @@ export const COPY = typesetCopy({
   nearColMiles: 'Miles',
   nearColNet: 'Estimated FY{fy} net change',
   nearColShare: 'Share of Medicare inpatient pay',
+  nearAlt: "Map of the area around this hospital, with the {n} nearest hospitals in Medicare's penalty programs numbered as in the table.",
+  nearThis: 'This hospital: {name}',
+  nearTip: '{n}. {who}: an estimated {net} on net ({share}), {distance} away',
+  nearKeyThis: 'This hospital',
+  nearKeyCut: 'Cut on net',
+  nearKeyNotCut: 'Not cut on net',
+  nearKeyOther: 'Other {kinds}',
+  nearMiles: '{n} miles',
+  nearMilesAbout: 'about a mile',
+  nearMilesUnder: 'less than a mile',
+  nearUnderMile: 'under {one}',
 
   // The Medicaid band's dek on this page (medicaidBand's note).
   wbNoteOutside: "Medicare's penalty programs don't touch this hospital, but Medicaid's work requirement could. A scenario, not a payment.",

@@ -234,8 +234,14 @@ ${marks}${overlay}${legend.body}`,
 // numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
 // steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
 //   center   { point, tip }; points [{ point, n, cls, tip }] (n: the number printed on the dot; cls: its class)
+//   context  [{ point, cls }]: other places for reference, each a plain small circle of its class (not a mark: no
+//            tooltip, no number), under the pins, drawn only where it falls inside the frame
 //   label    the image's accessible name
+// The nearest-hospitals map's drawn width, shared by the HACRP hospital page and the hub's pages for hospitals outside the
+// programs (sites/hacrp/web/constants.js re-exports it).
+export const NEAR_MAP_WIDTH = 460;
 const AREA_PAD = 22;
+const CONTEXT_R = 2.5;
 const BOUNDS = new WeakMap();
 const boundsOf = (f) => { if (!BOUNDS.has(f)) BOUNDS.set(f, geoBounds(f)); return BOUNDS.get(f); };
 const AREA_ASPECT = 0.8;
@@ -257,7 +263,27 @@ function framed(projection, width, height) {
 export const EARTH_MILES = 3958.8;
 export const miles = (a, b) => geoDistance(a, b) * EARTH_MILES;
 const MILES_PER_DEGREE = (EARTH_MILES * Math.PI) / 180;
-export function areaMap({ shapes, counties = [], center, points, rings = [], label, width = WIDTH }) {
+
+// The k rows nearest a [lon, lat] point, nearest first, each the row with its distance added ({ ...row, miles }); rows
+// without a point, and the one whose ccn is skip, are left out. Ties break by the lower CCN, so every build agrees. One
+// pass keeps the k nearest in a short sorted list, so a page never sorts every row. rows: [{ ccn, point }].
+export function nearestTo(rows, point, { k, skip = null }) {
+  const best = [];
+  for (const row of rows) {
+    if (row.ccn === skip || !row.point) continue;
+    const d = miles(point, row.point);
+    // Nearer, or as near with the lower CCN.
+    const closer = (e) => d < e.miles || (d === e.miles && row.ccn < e.row.ccn);
+    if (best.length === k && !closer(best[k - 1])) continue;
+    let i = best.length;
+    while (i > 0 && closer(best[i - 1])) i--;
+    best.splice(i, 0, { row, miles: d });
+    if (best.length > k) best.pop();
+  }
+  return best.map(({ row, miles: d }) => ({ ...row, miles: d }));
+}
+
+export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
   const placed = points.filter((p) => ok(p.point));
@@ -287,6 +313,9 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
   });
   const at = (p) => projection(p).map(r2);
   const [cx, cy] = at(center.point);
+  const inFrame = ([x, y]) => x >= 0 && x <= width && y >= 0 && y <= height;
+  const reference = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) }))
+    .filter((c) => c.xy && inFrame(c.xy)).map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${CONTEXT_R}"/>`);
   const dots = placed.map((p) => {
     const [x, y] = at(p.point);
     return mark({
@@ -298,7 +327,7 @@ export function areaMap({ shapes, counties = [], center, points, rings = [], lab
     + `<rect class="chart-sea" width="${width}" height="${height}"/>${land.map((d) => `<path class="chart-geo-land" d="${d}"/>`).join('')}`
     + `<g class="chart-geo-counties">${inner.map((d) => `<path d="${d}"/>`).join('')}</g>`
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
-    + html`${ringsDrawn}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
+    + html`${ringsDrawn}${reference}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
     + '</svg>');
 }
 
