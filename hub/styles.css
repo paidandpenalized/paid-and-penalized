@@ -797,6 +797,10 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 /* A hospital without an estimate: the record card, its status as an ink stamp, why, and its program pages. */
 .hh__status { display: grid; justify-items: start; gap: 14px; }
 .hh .hh__sh { font-size: 1.5rem; padding: 6px 12px 3px; }
+/* A hospital outside the penalty programs: its stamp's box fits its words, which break before "penalty" on a wide screen
+   only (hub/hospital/outside.js). */
+.hh__sh--fit { width: fit-content; }
+@media (max-width: 719px) { .hh__br-wide { display: none; } }
 .hh__st { font-size: var(--fs-md); line-height: 1.5; }
 .hh__pages { margin-top: 26px; }
 .hh__plist { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }

@@ -53,10 +53,12 @@ export const COPY = typesetCopy({
   yearSplitHrrp: { text: "These pages show CMS's FY{next} file. The family's estimates across the three programs, on the front page and in the footer, use FY{fy}, the latest year all three share.", claim: 'HACRP-12' },
   // A hub or HACRP hospital page's note on a hospital whose Medicare agreement CMS lists as ended by the end of the
   // dollars' fiscal year (render/closed.js): before the year began, or during it; its tail says what that means for the
-  // page's estimated dollars (none for $0); a date CMS doesn't list leaves the timing out.
-  closedBefore: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), before FY{fy} began. It was not paid under this ID in FY{fy}{tail}. This site keeps it in its totals.",
-  closedDuring: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), during FY{fy}. It was not paid under this ID after that{tail}. This site keeps it in its totals.",
-  closedUndated: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended ({reason}). This site keeps it in its totals.",
+  // page's estimated dollars (none for $0); a date CMS doesn't list leaves the timing out. closedKept follows each, on a
+  // page whose hospital is in the site's totals (every page but one of a hospital outside the penalty programs).
+  closedBefore: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), before FY{fy} began. It was not paid under this ID in FY{fy}{tail}.",
+  closedDuring: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), during FY{fy}. It was not paid under this ID after that{tail}.",
+  closedUndated: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended ({reason}).",
+  closedKept: 'This site keeps it in its totals.',
   closedTailBeforeCut: ', so its estimated cut is unlikely to have been collected',
   closedTailBeforeBonus: ', so its estimated bonus is unlikely to have been paid',
   closedTailDuringCut: ', so only part of its estimated cut is likely to have been collected',

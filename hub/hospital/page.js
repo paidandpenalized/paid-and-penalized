@@ -1,4 +1,5 @@
-// A hospital's page across the programs, /hospital/<ccn>/, server-rendered, for every hospital in the dollar file. With an
+// A hospital's page across the programs, /hospital/<ccn>/, server-rendered, for every hospital in the dollar file, and, its
+// body drawn by outside.js, for every other hospital in the hospital master (one outside the penalty programs). With an
 // estimate: the record card, the net of the three programs (its stamp and the common fiscal year's note) with each
 // program's dollars as rows adding to it, each beside its peers' median; the headline that compares the net with the
 // same-state peers' median, over the frame the page's script draws the peer swarm in; the what-if section's rows; the
@@ -16,14 +17,15 @@
 //   [data-peer-table]   the peer table's <details>, which the script fills; [data-load-error], one quiet line (hidden)
 import { rangeBar } from '../../engine/js/dollars/ranges.js';
 import { PEER_MODES, peerKey } from '../../engine/js/peers.js';
-import { fillCopy, formField, formTitle, pill, stamp } from '../../web/render/components.js';
-import { count, dollars, dotList, factor, money, moneyRange, placeText, unbroken } from '../../web/render/format.js';
-import { closedNoteMarkup } from '../../web/render/closed.js';
+import { fillCopy, pill, stamp } from '../../web/render/components.js';
+import { count, dollars, factor, money, moneyRange, placeText } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
-import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
+import { SITE, hospitalPathOf, programById } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { medicaidBand } from './medicaid.js';
+import { outsideBody, outsideDescription } from './outside.js';
+import { closed, deepLink, notes, pageOf, recordCard } from './record.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
 import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
@@ -33,24 +35,6 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 // record's fields and the net's large figure).
 const FONTS = Object.freeze(['alfa-slab-one-400', 'libre-franklin-400', 'ibm-plex-mono-400', 'ibm-plex-mono-700']);
 
-// The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
-// hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
-// the Readmissions file lists (inHrrp) has a Readmissions page (sites/hrrp/).
-const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inHrrp: h.inHrrp });
-
-// A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
-// program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this
-// one).
-function deepLink(h, id) {
-  const program = programById(id);
-  const { name, path } = program;
-  const own = pageOf(h, id);
-  if (own) return html`<a class="hh__deep" href="${own}">${fill('deepHospital', { name })}${arrow}</a>`;
-  return underConstruction(program)
-    ? html`<a class="hh__deep hh__deep--soon" href="${path}">${fill('deepNotBuilt', { name })}</a>`
-    : html`<a class="hh__deep" href="${path}">${fill('deepProgram', { name })}${arrow}</a>`;
-}
-
 // Each group (a mode and its key) and what its peers show (peers.js peerGroup), worked out once per list of hospitals.
 const GROUPS = new WeakMap();
 function groupOf(hospitals, h, mode) {
@@ -59,39 +43,6 @@ function groupOf(hospitals, h, mode) {
   const id = `${mode}:${peerKey(h, mode)}`;
   if (!groups.has(id)) groups.set(id, peerGroup(fill, hospitals, h, mode));
   return groups.get(id);
-}
-
-// ---------- the record card ----------
-const TEACH = { major: 'typeTeachMajor', minor: 'typeTeachMinor', none: 'typeTeachNone' };
-// The Type field: what the master knows (teaching, beds, ownership, urban or rural), or null when it knows none of it.
-// An ownership the master calls Unknown says nothing, so it is left out.
-function typeText(h, master) {
-  const own = master?.own && master.own !== 'Unknown' ? master.own : null;
-  const parts = [
-    TEACH[h.teach] && fill(TEACH[h.teach]),
-    Number.isInteger(h.beds) && unbroken(fill('typeBeds', { beds: count(h.beds) })),
-    own,
-    typeof master?.urban === 'boolean' ? fill(master.urban ? 'typeUrban' : 'typeRural') : null,
-  ].filter(Boolean);
-  return parts.length ? dotList(parts) : null;
-}
-
-// The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,
-// beds } (the hub hospital, or the same fields from the master); master: its master record, or null.
-function recordSpecs(h, master) {
-  const type = typeText(h, master);
-  return [
-    { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },
-    { label: fill('fieldLocation'), value: placeText(h), wide: !type },
-    type && { label: fill('fieldType'), value: type, size: 'sm' },
-  ].filter(Boolean);
-}
-
-function recordCard(h, master, fy) {
-  return html`<div class="form hh__card">
-${formTitle(fill('recordTitle', { fy }), fill('recordCcn', { ccn: h.ccn }))}
-${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
-</div>`;
 }
 
 // ---------- the net and its rows ----------
@@ -145,14 +96,6 @@ function band(h) {
   const bar = places ? html`<span class="hh__rng-bar" style="--lo:${places.lo};--hi:${places.hi};--at:${places.at}" aria-hidden="true"></span>` : '';
   const text = money(lo) === money(hi) ? fill('bandRange', { lo: dollars(lo), hi: dollars(hi) }) : moneyRange(lo, hi);
   return html`<p class="hh__rng"><a class="hh__rng-k" href="${BACKTEST_HREF}">${fill('bandLikely')}</a> <span class="hh__rng-v">${text}</span>${bar}</p>`;
-}
-
-// The note on a hospital whose Medicare agreement CMS lists as ended by the year's end (web/render/closed.js; its master
-// record's `inactive`), on its net (none for a hospital with no estimate): '' for any other. Its tail, on what the net
-// likely was, is a span of its own: the what-if hides it under a scenario that moves the net, as it hides the likely range.
-function closed(h, master, fy) {
-  const note = closedNoteMarkup({ ccn: h.ccn, inactive: master?.inactive ?? null, fy: Number(fy), dollars: h.est?.net ?? 0 }, 'hh__closed-tail');
-  return note ? html`<p class="hh__closed">${note}</p>` : '';
 }
 
 // The net block: its label and tag, the large figure and its stamp, the net's likely range (hidden by the what-if while a
@@ -267,9 +210,6 @@ ${ROWS.map((r) => programRow(h, r.id, figures, ctx))}
 }
 
 // ---------- the page ----------
-const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
-<p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
-${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
 function estimatedBody(h, master, group, { fy, all, sets, hrrp, medicaid }) {
   const { peers } = group;
@@ -314,31 +254,51 @@ ${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
 </article>`;
 }
 
-// The page at hospitalPathOf('hub', h.ccn). h: the hospital (hub/model.js hubHospitals); hospitals: every one of them (its
-// peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital master
-// record (the Type field's ownership and urban or rural); assets: the build's (the fiscal year is the shell's); robots:
-// the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note);
-// medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario file; a hospital with no
-// row in it gets no band).
-export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null, medicaid }) {
+// A hub hospital's description, body and scripts: with an estimate, the net, its peers and the what-if (and the script
+// that draws them); without one (Maryland's, or no inputs), its status and why.
+function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, medicaid }, fy, place) {
+  if (!h.est) {
+    const maryland = h.status === 'maryland';
+    return { description: fill(maryland ? 'descriptionMaryland' : 'descriptionNoInputs', maryland ? place : { ...place, fy }), body: variantBody(h, master, fy, medicaid), scripts: [] };
+  }
+  // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
+  const groups = PEER_MODES.map((mode) => groupOf(hospitals, h, mode));
+  const group = groups[0] ?? null;
+  if (!group) throw new RangeError(`hub: ${h.ccn} has an estimate but no same-state peers`);
+  const sets = groups.filter(Boolean).map((g) => g.figures);
+  return {
+    description: fill('description', { ...place, fy, n: count(group.peers.length), group: group.group }),
+    body: estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp, medicaid }),
+    scripts: [assets.js['hub-hospital']],
+  };
+}
+
+// An outside hospital's (outside.js): no script until its figures have one.
+function outsideParts({ h, master = null, medicaid, programYears, near = '', like = '' }, fy, place) {
+  return { description: outsideDescription(h, place), body: outsideBody(h, { master, fy, programYears, medicaid, near, like }), scripts: [] };
+}
+
+// The page at hospitalPathOf('hub', h.ccn). h: the hospital, either a hub hospital (hub/model.js hubHospitals) or one
+// outside the penalty programs (hub/outside.js outsideHospitals; told apart by its `group`); hospitals: every hub hospital
+// (its peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital
+// master record (the Type field's kind, ownership and urban or rural); assets: the build's (the fiscal year is the
+// shell's); robots: the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer
+// factor (none: no note); medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario
+// file; a hospital with no row in it gets no band). For an outside hospital only: programYears, loadHub().programYears
+// (required: the years its reasons name); near and like, its figure blocks ('' for none).
+export function hospitalPage(args) {
+  const { h, assets, robots } = args;
   const fy = String(assets.shell.fy);
   const place = { name: h.name, place: placeText(h) };
-  // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
-  const groups = h.est ? PEER_MODES.map((mode) => groupOf(hospitals, h, mode)) : [];
-  const group = groups[0] ?? null;
-  if (h.est && !group) throw new RangeError(`hub: ${h.ccn} has an estimate but no same-state peers`);
-  const sets = groups.filter(Boolean).map((g) => g.figures);
-  const description = h.est
-    ? fill('description', { ...place, fy, n: count(group.peers.length), group: group.group })
-    : fill(h.status === 'maryland' ? 'descriptionMaryland' : 'descriptionNoInputs', h.status === 'maryland' ? place : { ...place, fy });
+  const { description, body, scripts } = 'group' in h ? outsideParts(args, fy, place) : hubParts(args, fy, place);
   return hubPage({
     title: `${fill('title', { ...place, fy })} · ${SITE.name}`,
     description,
     path: hospitalPathOf('hub', h.ccn),
     robots,
-    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp, medicaid }) : variantBody(h, master, fy, medicaid),
+    body,
     assets,
-    scripts: h.est ? [assets.js['hub-hospital']] : [],
+    scripts,
     preloadFonts: FONTS,
     hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp },
   });

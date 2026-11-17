@@ -52,6 +52,7 @@ let loaded = null;
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
 //   master        the hospital master's records by CCN, as every site reads them (pipeline/master.js masterByCcn)
+//   programYears  the master's { hacrp, hrrp }: the fiscal year of each program file its reason codes come from
 //   decided       the CCNs of the hospitals CMS scored and gave a Yes or No in the dollar estimates' year (a Set), from
 //                 the HACRP site's emitted file: the HACRP pages count only these, so the hub's words can too
 //   hrrp          { fy, hospitals: Map<ccn, record>, national } from the Readmissions site's newest emitted file: a hospital
@@ -81,6 +82,7 @@ export function loadHub() {
     builtAt: dollars.built_at,
     dollars,
     master: masterByCcn(masterFile),
+    programYears: masterFile.programYears,
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },

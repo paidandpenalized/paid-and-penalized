@@ -19,6 +19,7 @@ import { reasonStamp, reasonWhy } from '../../web/medicaid/reasons.js';
 import { SITE } from '../../web/site.js';
 import { arrow } from '../parts.js';
 import { COPY } from './copy.js';
+import { fillOutside } from './outside-copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -93,14 +94,18 @@ function bar(shares, top) {
 </div>`;
 }
 
-const link = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
+// The link to the hospital on the work-requirement page (its ?h= opens on it): the band's last line, and one of the program
+// pages a page outside the penalty programs lists (outside.js).
+export const wbLink = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
 
 // The band for a hospital (h: the hub's), ending its line, or '' with no row for it in the scenario file (the page is then
 // exactly as it was before the band). medicaid: loadHub().medicaid ({ fy, columns, hospitals, states }), required: loadHub
 // always reads the scenario file (the shell's facts need it too); net: whether the page shows a Medicare net above (its
-// note says the band is never part of it). The shares print as the work-requirement page prints them (web/medicaid/format.js); the
-// headline is their range, or, too small to print as two numbers, its bound.
-export function medicaidBand(h, medicaid, { net }) {
+// note says the band is never part of it); note: a key of outside-copy.js whose dek replaces the default over a loss to draw
+// (a row with a reason keeps the reason's dek, since the requirement may not reach that hospital at all). The shares print
+// as the work-requirement page prints them (web/medicaid/format.js); the headline is their range, or, too small to print
+// as two numbers, its bound.
+export function medicaidBand(h, medicaid, { net, note = null }) {
   const { byCcn, top } = fileOf(medicaid);
   const one = byCcn.get(h.ccn);
   if (!one) return '';
@@ -121,11 +126,11 @@ ${bar(one.shares, top)}
 <div class="hh__wbh">
 <p class="cap kicker">${fill('wbKicker')}</p>
 <h2 id="hh-wb-h">${fill('wbHeading')}</h2>
-<p class="hh__wbnote">${fill(`${one.reason ? 'wbNoteReason' : 'wbNote'}${net ? '' : 'Alone'}`)}</p>
+<p class="hh__wbnote">${note && !one.reason ? fillOutside(note) : fill(`${one.reason ? 'wbNoteReason' : 'wbNote'}${net ? '' : 'Alone'}`)}</p>
 </div>
 <div class="hh__wbb">
 ${body}
-${link(h.ccn)}
+${wbLink(h.ccn)}
 </div>
 </div></div>
 </section>
