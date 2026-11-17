@@ -30,7 +30,9 @@ for (const [where, width] of WIDTHS) {
     for (const sample of [CAH, FEDERAL]) {
       for (const scheme of ['light', 'dark']) {
         it(`${sample.type}, ${scheme}: quiet and axe-clean, with its stamp and map; the nearest table ${sample === CAH ? (width >= 720 ? 'sticks' : 'does not stick') : 'is not there'}`, () => withPage(tabs, { path: sample.path, watched: true }, async (page, { seen }) => {
-          if (scheme === 'dark') {
+          if (scheme === 'light') {
+            assert.notEqual(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'the light run is not dark');
+          } else {
             await page.locator('.theme-toggle:visible').click();
             assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'the theme button sets dark');
             // The colours glide to the dark ones; axe judges the finished page.
@@ -131,6 +133,9 @@ describe('the family search finds a hospital outside the penalty programs', { co
       await withPage(desktop, { path: href, watched: true }, async (opened, { seen: now }) => {
         const chip = await chipOn(opened);
         assert.equal(await chip.count(), 1, `${what}: the chip element is in the page`);
+        // Polled until hidden (the shell's script decides), then checked again two frames on: a chip shown late fails.
+        await chip.waitFor({ state: 'hidden' });
+        await settle(opened);
         assert.equal(await chip.isHidden(), true, `${what}: no chip appears`);
         await assertQuiet(now, what);
       });
