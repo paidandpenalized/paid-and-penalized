@@ -242,6 +242,7 @@
       "file": "HOSP10FY2024.ZIP",
       "bytes": 135705434,
       "sha256": "291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "archive": "r2://pp-sources/sha256/291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
       "members": [
         "HOSP10_2024_rpt.csv",
         "HOSP10_2024_nmrc.csv"
@@ -1638,6 +1639,7 @@
       "file": "HOSP10FY2023.ZIP",
       "bytes": 136799140,
       "sha256": "fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "archive": "r2://pp-sources/sha256/fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
       "members": [
         "HOSP10_2023_rpt.csv",
         "HOSP10_2023_nmrc.csv"
@@ -1648,7 +1650,8 @@
         "file": "hosp10-reports.zip",
         "member": "HOSP10_PRVDR_ID_INFO.CSV",
         "bytes": 10865019,
-        "sha256": "307feaf283c7796fe6bde2f6f86ef4e47a20d95e751c13bb109e1fcd062a7d06"
+        "sha256": "307feaf283c7796fe6bde2f6f86ef4e47a20d95e751c13bb109e1fcd062a7d06",
+        "archive": "r2://pp-sources/sha256/307feaf283c7796fe6bde2f6f86ef4e47a20d95e751c13bb109e1fcd062a7d06"
       },
       "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL will differ. The raw zips are archived by SHA-256 in a private R2 bucket (pp-sources); they are not in git."
     },

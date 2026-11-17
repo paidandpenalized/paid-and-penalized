@@ -18,6 +18,18 @@ class Pins(unittest.TestCase):
             with self.subTest(entry["id"]):
                 read_pinned_bytes(entry["id"])  # raises on a size or SHA-256 mismatch
 
+    def test_every_hcris_derived_pin_names_its_archived_zips(self):
+        # DATA-TERMS: CMS's raw HCRIS zips are archived by SHA-256 in R2, so a pin derived from one names the archive
+        # key of that zip and of any other zip it reads.
+        for entry in read_manifest():
+            src = entry.get("derivedFrom") or {}
+            if "/FILES/HCRIS/" not in src.get("downloadUrl", ""):
+                continue
+            with self.subTest(entry["id"]):
+                for zip_ in [src, *([src["alsoRead"]] if "alsoRead" in src else [])]:
+                    self.assertEqual(zip_.get("archive"), f"r2://{hcris_pins.BUCKET}/{hcris_pins.archive_key(zip_['sha256'])}",
+                                     zip_["file"])
+
     def test_no_unlisted_pinned_files(self):
         listed = {e["path"] for e in read_manifest()}
         on_disk = {p.relative_to(PINNED_DIR).as_posix() for p in PINNED_DIR.rglob("*") if p.is_file()}
