@@ -4,12 +4,12 @@
 // Points are invented coordinates, never a hospital's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { geoCentroid, geoContains } from 'd3-geo';
+import { geoCentroid, geoConicEqualArea, geoContains, geoPath } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
 import { absoluteD } from '../charts/pathd.js';
 import { STATES, STATE_NAMES } from '../../engine/js/states.js';
-import { US_MAP_CODES, countiesOf, countyShapes, placeMap, pointOf, stateMap, stateShapes, usMap, usMapHeight, usPoints, usProjected } from '../charts/geo.js';
+import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, spreadPins, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
 
 const TOPO = JSON.parse(readPinned('us-atlas-counties-3.0.1'));
 const shapes = stateShapes(TOPO);
@@ -265,4 +265,83 @@ test('placeMap, dense: the dots are one path per class with no marks or tooltips
   assert.deepEqual(dots('dot--pen'), [[4, 20]]);
   assert.deepEqual(dots('dot--ring'), [[3.4, 20]]);
   assert.deepEqual(dots('dot--faint'), []);
+});
+
+// ---------- the area map's reading aids, and Puerto Rico's inset ----------
+
+const AREA = { shapes, center: { point: [-93.6, 42.0], tip: 'c' }, label: 'Map', width: 460 };
+const pins = (svg) => [...String(svg).matchAll(/<circle class="chart-pin [^"]*" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => m.slice(1).map(Number));
+
+test('spreadPins: pins at one place, or over the ▲, are pushed apart, kept in the frame, the same every time', () => {
+  const same = [[100, 100], [100, 100], [100, 100], [104, 101]];
+  const got = spreadPins(same, [300, 300], { width: 460, height: 368 });
+  for (let i = 0; i < got.length; i++) for (let j = i + 1; j < got.length; j++) assert.ok(Math.hypot(got[i][0] - got[j][0], got[i][1] - got[j][1]) >= 18, 'two radii apart');
+  assert.deepEqual(spreadPins(same, [300, 300], { width: 460, height: 368 }), got, 'deterministic');
+  assert.deepEqual(same[0], [100, 100], 'the input is left as it was');
+  const [off] = spreadPins([[50, 50]], [50, 50], { width: 460, height: 368 });
+  assert.ok(Math.hypot(off[0] - 50, off[1] - 50) >= 9 + 12 - 1e-9, 'off the ▲');
+  const [edge] = spreadPins([[0, 400]], [200, 200], { width: 460, height: 368 });
+  assert.ok(edge[0] >= 10 && edge[1] <= 368 - 10, 'inside the frame, a radius in');
+  const apart = [[10 + 9, 30], [100, 30]];
+  assert.deepEqual(spreadPins(apart, [300, 300], { width: 460, height: 368 }), apart, 'pins already apart stay put');
+});
+
+test('areaMap: without its options it draws what it always drew; spread and labels add only the aids', () => {
+  const points = [{ point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a' }, { point: [-93.62, 42.03], n: 2, cls: 'chart-pin--yes', tip: 'b' }, { point: [-92.9, 41.7], n: 3, cls: 'chart-pin--no', tip: 'c' }];
+  const plain = String(areaMap({ ...AREA, points }));
+  assert.equal(plain, String(areaMap({ ...AREA, points, spread: false, labels: 0 })), 'the defaults are off');
+  assert.doesNotMatch(plain, /chart-geo-label|chart-pin__lead|chart-pin__at/, 'no aids by default');
+  const closest = (list) => Math.min(...list.flatMap((p, i) => list.slice(i + 1).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1]))));
+  assert.equal(closest(pins(plain)), 0, 'unspread, two pins at one place overlap');
+  const aided = String(areaMap({ ...AREA, points, spread: true, labels: 4, pad: 30 }));
+  assert.ok(closest(pins(aided)) >= 18, 'spread apart');
+  assert.match(aided, /<path class="chart-pin__lead" d="M[\d.-]+ [\d.-]+L[\d.-]+ [\d.-]+"\/><circle class="chart-pin__at"/, 'a moved pin is tied to its place');
+  const labels = [...aided.matchAll(/<text class="chart-geo-label" x="([\d.-]+)" y="([\d.-]+)"[^>]*>([A-Z]{2})<\/text>/g)];
+  assert.ok(labels.length >= 1 && labels.length <= 4, 'one to four state labels');
+  assert.ok(labels.some((m) => m[3] === 'IA'), 'the state the map centers on is labeled');
+  assert.ok(new Set(labels.map((m) => m[3])).size === labels.length, 'each state once');
+  assert.match(String(areaMap({ ...AREA, points: points.slice(1), labels: 4 })), /chart-geo-label/, 'labels without spreading too');
+  assert.ok(aided.indexOf('chart-geo-label') < aided.indexOf('class="chart-pin '), 'under the pins');
+  assert.equal(String(areaMap({ ...AREA, points, context: [{ point: [-93.5, 42.1], cls: 'ctx' }], contextR: 3 })).match(/<circle class="ctx" [^>]*r="3"\/>/g)?.length, 1, 'the context dots\' radius');
+});
+
+test('areaMap labels: each inside the state it names, clear of the pins and the frame', () => {
+  const points = [{ point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a' }, { point: [-91.5, 41.6], n: 2, cls: 'chart-pin--yes', tip: 'b' }];
+  const svg = String(areaMap({ ...AREA, points, spread: true, labels: 4, pad: 30 }));
+  const [w, h] = viewBox(svg);
+  // The same projection the map fits (geo.js areaMap): around the center, a quarter degree about it, and the points.
+  const [lon, lat] = AREA.center.point;
+  const projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
+    .fitExtent([[30, 30], [w - 30, h - 30]], { type: 'MultiPoint', coordinates: [AREA.center.point, [lon - 0.25, lat - 0.25], [lon + 0.25, lat + 0.25], ...points.map((p) => p.point)] });
+  const labels = [...svg.matchAll(/<text class="chart-geo-label" x="([\d.-]+)" y="([\d.-]+)"[^>]*>([A-Z]{2})<\/text>/g)];
+  assert.ok(labels.length > 0);
+  for (const [, x, y, code] of labels) {
+    const at = [Number(x), Number(y)];
+    assert.ok(geoContains(shapes.get(code), projection.invert(at)), 'inside its state');
+    assert.ok(at[0] > 10 && at[0] < w - 10 && at[1] > 7 && at[1] < h - 7, 'clear of the frame');
+    for (const [px, py, r] of pins(svg)) assert.ok(Math.hypot(at[0] - px, at[1] - py) >= r, 'clear of a pin');
+  }
+});
+
+test('prInset: Puerto Rico in a box at the US map\'s lower right, clear of every state; points outside the island have no place', () => {
+  const width = 975;
+  const inset = prInset(shapes, width);
+  assert.ok(inset, 'the atlas has Puerto Rico');
+  assert.equal(prInset(shapes, width), inset, 'remembered');
+  const { box } = inset;
+  const height = usMapHeight(width);
+  assert.ok(box.x + box.width <= width && box.y + box.height <= height && box.x > width * 0.8 && box.y > height * 0.85, 'in the lower right, inside the frame');
+  // Clear of the states: no state's outline reaches into the box.
+  const { projection } = usPaths(shapes, width);
+  for (const code of US_MAP_CODES) {
+    const [[sx0, sy0], [sx1, sy1]] = geoPath(projection).bounds(shapes.get(code));
+    assert.ok(sx1 < box.x || sy1 < box.y || sx0 > box.x + box.width || sy0 > box.y + box.height, `${code} is clear of the box`);
+  }
+  // San Juan inside; a point on the mainland, and one far at sea, outside.
+  const sj = inset.project([-66.1, 18.45]);
+  assert.ok(sj && sj[0] >= box.x && sj[0] <= box.x + box.width && sj[1] >= box.y && sj[1] <= box.y + box.height, 'a point on the island inside the box');
+  assert.equal(inset.project([-93.6, 42.0]), null, 'a mainland point has no place');
+  assert.equal(inset.project(null), null, 'no coordinates, no place');
+  assert.match(inset.outline, /^m|^M/, 'the outline');
+  assert.equal(prInset(new Map(), width), null, 'no Puerto Rico in the shapes: no inset');
 });

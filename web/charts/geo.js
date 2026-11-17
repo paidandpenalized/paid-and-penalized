@@ -2,7 +2,7 @@
 // locator map) and the US choropleth, each state filled by a step of the pen ramp (a figure's chart, like the tile
 // map it replaces). d3-geo projects and draws them here, at build time, as inline SVG: no map code ships to browsers.
 // Colors come from classes in web/styles/charts.css, never from here.
-import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath } from 'd3-geo';
+import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath, geoStream } from 'd3-geo';
 import { feature } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r1, r2, WIDTH } from './svg.js';
@@ -278,15 +278,163 @@ export function nearestTo(rows, point, { k, skip = null }) {
   return best.map(({ row, miles: d }) => ({ ...row, miles: d }));
 }
 
+// ---------- the area map's reading aids (each behind an option of areaMap's; HACRP's map takes none) ----------
+
+// A pin's radius, in viewBox units, and the room kept between two pins once spread apart.
+const PIN_R = 9;
+const PIN_GAP = 2;
+// The ▲'s reach from the center, which a pin spread apart keeps clear of.
+const THIS_R = 12;
+// The golden angle, in radians: the direction two pins at the very same place are pushed apart, a different one for each
+// pair, the same on every build.
+const GOLDEN = Math.PI * (3 - Math.sqrt(5));
+// At most this many rounds of pushing apart (a page has a handful of pins; they settle in a few).
+const SPREAD_ROUNDS = 60;
+// A pin moved farther than this from its place is tied back to it by a hairline.
+const LEAD_MIN = 2;
+
+// Pins spread apart so none covers another or the ▲: each pair closer than two radii (and a gap) is pushed apart along
+// the line between them, half each, and a pin over the ▲ is pushed off it; then each is kept inside the frame. Rounds
+// repeat until nothing moves. Deterministic: the same pins give the same places on every build. xy: [[x, y]], in pin
+// order; center: [x, y]. Returns new [[x, y]].
+export function spreadPins(xy, center, { width, height, r = PIN_R }) {
+  const at = xy.map(([x, y]) => [x, y]);
+  const min = 2 * r + PIN_GAP;
+  const clamp = (v, hi) => Math.min(hi - r - 1, Math.max(r + 1, v));
+  for (let round = 0; round < SPREAD_ROUNDS; round++) {
+    let moved = false;
+    for (let i = 0; i < at.length; i++) {
+      for (let j = i + 1; j < at.length; j++) {
+        let dx = at[j][0] - at[i][0];
+        let dy = at[j][1] - at[i][1];
+        let d = Math.hypot(dx, dy);
+        if (d >= min - 1e-6) continue;
+        if (d < 1e-6) [dx, dy, d] = [Math.cos(GOLDEN * (i + j)), Math.sin(GOLDEN * (i + j)), 1];
+        const push = (min - Math.hypot(at[j][0] - at[i][0], at[j][1] - at[i][1])) / 2;
+        at[i][0] -= (dx / d) * push; at[i][1] -= (dy / d) * push;
+        at[j][0] += (dx / d) * push; at[j][1] += (dy / d) * push;
+        moved = true;
+      }
+      // Off the ▲.
+      let dx = at[i][0] - center[0];
+      let dy = at[i][1] - center[1];
+      let d = Math.hypot(dx, dy);
+      if (d < r + THIS_R - 1e-6) {
+        if (d < 1e-6) [dx, dy, d] = [Math.cos(GOLDEN * (i + 1)), Math.sin(GOLDEN * (i + 1)), 1];
+        const push = r + THIS_R - Math.hypot(at[i][0] - center[0], at[i][1] - center[1]);
+        at[i][0] += (dx / d) * push; at[i][1] += (dy / d) * push;
+        moved = true;
+      }
+    }
+    for (const p of at) {
+      const [x, y] = [clamp(p[0], width), clamp(p[1], height)];
+      if (x !== p[0] || y !== p[1]) [p[0], p[1]] = [x, y];
+    }
+    if (!moved) break;
+  }
+  return at;
+}
+
+// State labels: a state's postal code, in a box this many units each way from its point (two letters of the 10-unit mono
+// label, with a little air), placed where the box is clear of the state's edges, the frame, the pins and the ▲.
+const LABEL_HALF_W = 10;
+const LABEL_HALF_H = 7;
+const LABEL_CLEAR = Math.hypot(LABEL_HALF_W, LABEL_HALF_H);
+// A state needs this much of the frame (in square units: ten labels' boxes) to be labeled at all, so a corner of a state at
+// the frame's edge goes unlabeled.
+const LABEL_MIN_AREA = 40 * LABEL_HALF_W * LABEL_HALF_H;
+// The grid a label's point is looked for on, where the outline's center is not clear, and the outline's coarser thinning
+// for the looking.
+const LABEL_STEP = 10;
+const LABEL_THIN = 3;
+
+// A shape's rings projected and clipped to the frame (the projection's clipExtent), thinned: [[[x, y]]].
+function ringsOf(projection, f) {
+  const rings = [];
+  let ring = null;
+  geoStream(f, thinned(projection, LABEL_THIN).stream({
+    point(x, y) { ring?.push([x, y]); },
+    lineStart() { ring = []; },
+    lineEnd() { if (ring.length > 2) rings.push(ring); ring = null; },
+    polygonStart() {}, polygonEnd() {}, sphere() {},
+  }));
+  return rings;
+}
+// Whether [x, y] is inside the rings (even-odd, so a hole is outside), and its distance to their nearest edge.
+function inside([x, y], rings) {
+  let odd = false;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i];
+      const [xj, yj] = ring[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) odd = !odd;
+    }
+  }
+  return odd;
+}
+function edgeDistance([x, y], rings) {
+  let best = Infinity;
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [ax, ay] = ring[j];
+      const [bx, by] = ring[i];
+      const [vx, vy] = [bx - ax, by - ay];
+      const len2 = vx * vx + vy * vy;
+      const t = len2 ? Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / len2)) : 0;
+      best = Math.min(best, Math.hypot(x - ax - t * vx, y - ay - t * vy));
+    }
+  }
+  return best;
+}
+
+// Up to max states labeled by postal code, the largest in the frame first, each at a point inside it: its outline's center
+// where that is clear, else the clearest point on a grid over it; a state with no clear point goes unlabeled. obstacles:
+// [{ x, y, r }] (the pins and the ▲), which a label keeps clear of, as of the labels placed before it.
+function stateLabels({ projection, shapes, meets, width, height, max, obstacles }) {
+  const path = geoPath(projection);
+  const frame = (x, y) => Math.min(x, width - x, y, height - y);
+  const candidates = [...shapes].filter(([code, f]) => LOCATOR_CODES.has(code) && meets(f))
+    .map(([code, f]) => ({ code, f, area: path.area(f) })).filter((c) => c.area >= LABEL_MIN_AREA)
+    .sort((a, b) => b.area - a.area || (a.code < b.code ? -1 : 1));
+  const placed = [];
+  for (const { code, f } of candidates) {
+    if (placed.length >= max) break;
+    const rings = ringsOf(projection, f);
+    const avoid = [...obstacles, ...placed.map((l) => ({ x: l.x, y: l.y, r: LABEL_CLEAR }))];
+    const clearance = (pt) => {
+      if (!inside(pt, rings)) return -Infinity;
+      return Math.min(edgeDistance(pt, rings), frame(...pt), ...avoid.map((o) => Math.hypot(pt[0] - o.x, pt[1] - o.y) - o.r));
+    };
+    let best = path.centroid(f);
+    let score = best.every(Number.isFinite) ? clearance(best) : -Infinity;
+    if (score < LABEL_CLEAR) {
+      const [[x0, y0], [x1, y1]] = path.bounds(f);
+      for (let y = Math.max(y0, 0) + LABEL_STEP / 2; y < Math.min(y1, height); y += LABEL_STEP) {
+        for (let x = Math.max(x0, 0) + LABEL_STEP / 2; x < Math.min(x1, width); x += LABEL_STEP) {
+          const s = clearance([x, y]);
+          if (s > score) [best, score] = [[x, y], s];
+        }
+      }
+    }
+    if (score >= LABEL_CLEAR) placed.push({ code, x: best[0], y: best[1] });
+  }
+  return placed;
+}
+
 // The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
 // numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
 // steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
 //   center   { point, tip }; points [{ point, n, cls, tip }] (n: the number printed on the dot; cls: its class)
 //   context  [{ point, cls }]: other places for reference, each a plain small circle of its class (not a mark: no
-//            tooltip, no number), under the pins, drawn only where it falls inside the frame
+//            tooltip, no number), under the pins, drawn only where it falls inside the frame; contextR: their radius
 //   label    the image's accessible name
+// The reading aids, off unless asked for (HACRP's hospital page asks for none):
+//   pad      the room between the fitted points and the frame's edge (default AREA_PAD)
+//   spread   true: pins that would cover one another or the ▲ are spread apart (spreadPins), each moved one tied to
+//            its place by a hairline from a small dot there
+//   labels   up to this many states labeled by postal code, the largest in the frame first (stateLabels)
 // The returned markup carries contextDrawn: how many context dots fell inside the frame.
-export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH }) {
+export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH, pad = AREA_PAD, contextR = CONTEXT_R, spread = false, labels = 0 }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
   const placed = points.filter((p) => ok(p.point));
@@ -298,7 +446,7 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const span = [[lon - 0.25, lat - 0.25], [lon + 0.25, lat + 0.25]];
   const all = { type: 'MultiPoint', coordinates: [center.point, ...span, ...placed.map((p) => p.point)] };
   const projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
-    .fitExtent([[AREA_PAD, AREA_PAD], [width - AREA_PAD, height - AREA_PAD]], all);
+    .fitExtent([[pad, pad], [width - pad, height - pad]], all);
   // Clipped to the frame, and no adaptive resampling: at a few hundred miles across, straight segments are exact enough.
   projection.clipExtent([[0, 0], [width, height]]).precision(0);
   // Only the shapes whose bounds meet the frame's (a degree of slack) are drawn.
@@ -318,19 +466,28 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const [cx, cy] = at(center.point);
   const inFrame = ([x, y]) => x >= 0 && x <= width && y >= 0 && y <= height;
   const reference = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) }))
-    .filter((c) => c.xy && inFrame(c.xy)).map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${CONTEXT_R}"/>`);
-  const dots = placed.map((p) => {
-    const [x, y] = at(p.point);
+    .filter((c) => c.xy && inFrame(c.xy)).map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${contextR}"/>`);
+  // Each pin's place, and where it is drawn: the same, unless spread apart.
+  const own = placed.map((p) => projection(p.point));
+  const shown = spread ? spreadPins(own, projection(center.point), { width, height }) : own;
+  const dots = placed.map((p, i) => {
+    const [x, y] = shown[i].map(r2);
+    const [ox, oy] = own[i].map(r2);
+    const lead = spread && Math.hypot(x - ox, y - oy) > LEAD_MIN
+      ? html`<path class="chart-pin__lead" d="M${ox} ${oy}L${x} ${y}"/><circle class="chart-pin__at" cx="${ox}" cy="${oy}" r="1.5"/>` : '';
     return mark({
       tip: p.tip, value: null, hit: null,
-      body: html`<circle class="chart-pin ${p.cls}" cx="${x}" cy="${y}" r="9"/><text class="chart-pin__n" x="${x}" y="${y}" dy="0.35em" text-anchor="middle">${String(p.n)}</text>`,
+      body: html`${lead}<circle class="chart-pin ${p.cls}" cx="${x}" cy="${y}" r="${PIN_R}"/><text class="chart-pin__n" x="${x}" y="${y}" dy="0.35em" text-anchor="middle">${String(p.n)}</text>`,
     });
   });
+  const obstacles = [...shown.map(([x, y]) => ({ x, y, r: PIN_R })), { x: cx, y: cy, r: THIS_R }];
+  const named = labels > 0 ? stateLabels({ projection, shapes, meets, width, height, max: labels, obstacles }) : [];
+  const names = named.map((l) => html`<text class="chart-geo-label" x="${r2(l.x)}" y="${r2(l.y)}" dy="0.35em" text-anchor="middle">${l.code}</text>`);
   const svg = new Safe(html`<svg class="chart chart--area-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
     + `<rect class="chart-sea" width="${width}" height="${height}"/>${land.map((d) => `<path class="chart-geo-land" d="${d}"/>`).join('')}`
     + `<g class="chart-geo-counties">${inner.map((d) => `<path d="${d}"/>`).join('')}</g>`
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
-    + html`${ringsDrawn}${reference}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
+    + html`${ringsDrawn}${reference}${names}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
     + '</svg>');
   // How many context dots fell inside the frame: a caller keys its legend on this, not on the markup.
   svg.contextDrawn = reference.length;
@@ -424,6 +581,45 @@ export function usProjected(shapes, points, width) {
     const at = Array.isArray(p) ? projection(p) : null;
     return at ? at.map(r1) : null;
   });
+}
+
+// Puerto Rico's inset on the US map. Albers USA has no place for Puerto Rico, so a map that shows it draws it in a box of its
+// own at the lower right, in the Atlantic off Florida, as Albers USA itself sets Alaska and Hawaii at the lower left: a
+// projection of its own (a conic equal-area, as a locator map's), fitted to the island's outline from the same shapes, in
+// a box PR_INSET_SHARE of the map's width across, as tall as the outline needs, against the frame's lower-right corner.
+// { box: { x, y, width, height }, outline (its d), project([lon, lat]) -> [x, y] to a tenth, or null outside the box },
+// or null where the shapes lack Puerto Rico. Remembered per width.
+const PR_INSET_SHARE = 0.11;
+const PR_INSET_PAD = 5;
+// The inset's gap from the frame's edges, as usPaths fits the states (2 units in).
+const US_EDGE = 2;
+const INSETS = new Map();
+export function prInset(shapes, width) {
+  const key = String(width);
+  if (INSETS.get(key)?.shapes === shapes) return INSETS.get(key).inset;
+  const f = shapes.get('PR');
+  let entry = null;
+  if (f) {
+    const w = Math.round(width * PR_INSET_SHARE);
+    const [[, south], [, north]] = geoBounds(f);
+    const inset = (north - south) * PARALLEL_INSET;
+    const projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitWidth(w - 2 * PR_INSET_PAD, f);
+    const [[, y0], [, y1]] = geoPath(projection).bounds(f);
+    const h = Math.ceil(y1 - y0 + 2 * PR_INSET_PAD);
+    const box = { x: width - US_EDGE - w, y: usMapHeight(width) - US_EDGE - h, width: w, height: h };
+    projection.fitExtent([[box.x + PR_INSET_PAD, box.y + PR_INSET_PAD], [box.x + w - PR_INSET_PAD, box.y + h - PR_INSET_PAD]], f);
+    const inBox = ([x, y]) => x >= box.x && x <= box.x + w && y >= box.y && y <= box.y + h;
+    entry = {
+      box,
+      outline: relativePath(geoPath(projection).digits(DIGITS))(f),
+      project: (p) => {
+        const at = Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) ? projection(p) : null;
+        return at && inBox(at) ? at.map(r1) : null;
+      },
+    };
+  }
+  INSETS.set(key, { shapes, inset: entry });
+  return entry;
 }
 
 // The year map: every state's outline as a faint land, and the hospitals as dots, one path per class (drawn in the

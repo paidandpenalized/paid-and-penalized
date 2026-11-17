@@ -165,6 +165,11 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-pin__n { fill: var(--ink); font-family: var(--font-type); font-size: 10px; font-weight: 700; pointer-events: none; }
 .chart-pin--yes + .chart-pin__n { fill: var(--on-mark); }
 .chart-this--map { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+/* The area map's reading aids (geo.js areaMap's options; a map that asks for none draws none): a state's postal code in
+   the type face, haloed in the land's tone; a pin spread off its place, tied back to it by a hairline from a small dot. */
+.chart-geo-label { fill: var(--ink-2); font-family: var(--font-type); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.chart-pin__lead { fill: none; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-pin__at { fill: var(--ink); }
 /* ---------- maps (web/charts/geo.js) ---------- */
 /* A locator map: the state in the panel tone with an ink outline, the place an ink dot on a paper ring inside a soft
    ink halo, so it reads on any part of the state. */
@@ -216,6 +221,9 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-dist, .chart-step, .chart-this--pen, .chart-step--pen, .chart-pin--yes, .chart-this--map { fill: CanvasText; }
   .chart-pin__n, .chart-pin--yes + .chart-pin__n { fill: CanvasText; }
   .chart-pin--yes + .chart-pin__n { fill: Canvas; }
+  .chart-geo-label { fill: CanvasText; stroke: Canvas; }
+  .chart-pin__lead { stroke: CanvasText; }
+  .chart-pin__at { fill: CanvasText; }
 }
 
 /* ---------- the program and place pages' charts (web/charts: scoreRule, punchCard, dots, measureDots, slideRule,
