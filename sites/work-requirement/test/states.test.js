@@ -329,12 +329,18 @@ test('Figure 3\'s labels, in every case at every use rate with any state selecte
 
 test('the hub pages the cards link to are the ones the hub writes; a hospital without one is named in plain text', async () => {
   const { hubModel } = await import('../../../hub/data.js');
-  assert.deepEqual([...hubCcns].sort(), hubModel().hospitals.map((h) => h.ccn).sort());
-  const without = model.states.flatMap((s) => (s.top ?? []).filter((h) => !h.hub).map((h) => [s.code, h]));
-  assert.ok(without.length > 0, 'some most exposed hospital has no hub page (a critical access hospital outside the dollar file)');
+  // The hub's modeled hospitals (the dollar file's) are among the list; the master's other hospitals have the outside pages.
+  assert.ok(hubModel().hospitals.every((h) => hubCcns.has(h.ccn)), 'a modeled hospital is missing from the list');
+  // Every file hospital has a page now, so a hospital without one is made by leaving one out of the list.
+  const top = model.states.flatMap((s) => s.top ?? []);
+  assert.ok(top.length > 0 && top.every((h) => h.hub), 'every most exposed hospital links its page');
+  const gap = top[0].ccn;
+  const partial = statesModel(data, rows, new Set([...hubCcns].filter((ccn) => ccn !== gap)));
+  const without = partial.states.flatMap((s) => (s.top ?? []).filter((h) => !h.hub).map((h) => [s.code, h]));
+  assert.ok(without.length > 0, 'a most exposed hospital without a page');
   for (const [code, h] of without) {
-    const card = cardBody(model, code, { k: MIDDLE, use: 1 }).text;
-    assert.ok(!card.includes(`href="${hospitalPathOf('hub', h.ccn)}"`), `${h.ccn}: not linked`);
+    const card = cardBody(partial, code, { k: MIDDLE, use: 1 }).text;
+    assert.ok(!card.includes(`href="${hospitalPathOf('hub', h.ccn)}"`), 'a hospital without a page is linked');
   }
   const linked = model.states.flatMap((s) => (s.top ?? []).filter((h) => h.hub));
   assert.ok(linked.length > 0);
