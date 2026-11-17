@@ -103,10 +103,14 @@ export const COPY = typesetCopy({
   likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
   likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
   likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}, Puerto Rico in a box at the lower right. The other territories are not drawn.',
-  // The US map's figure caption ({n}: the group's count, as the sentence's big figure); the unlisted acute group's noun
-  // ends on the file that doesn't list them, so its caption names the list first.
-  likeCaption: "The {n} {kinds} on Medicare's hospital list; this one in red.",
-  likeCaptionNotListed: "Medicare's hospital list holds {n} {kinds}; this one in red.",
+  // The map's figure caption: the US map's says only what it shows (the sentence beside it gives the count); the map of
+  // Puerto Rico alone, on a Puerto Rico hospital's page, gives the national count it doesn't show ({ns} in Puerto Rico,
+  // of {n}). "Ringed" says how this one is marked in any colors. likeAltPr: that map's name; keyLike: the dots in both
+  // maps' keys.
+  likeCaption: 'Where they are; this one ringed in red.',
+  likeCaptionPr: 'The {ns} in Puerto Rico, of {n} nationally; this one ringed in red.',
+  likeAltPr: 'A map of Puerto Rico with this hospital ringed and a dot for each of the other {kinds} there.',
+  keyLike: 'Other hospitals like this one',
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance in words,
   // web/render/miles.js; {k} of the {n} nearest with a net cut, in words for none and all, and its own words for a table
@@ -129,7 +133,7 @@ export const COPY = typesetCopy({
   nearKeyThis: 'This hospital',
   nearKeyCut: 'Cut on net',
   nearKeyNotCut: 'Not cut on net',
-  nearKeyOther: 'Other {kinds}',
+  nearKeyProgram: "Other hospitals in Medicare's penalty programs",
 
   // The Medicaid band's dek on this page (medicaidBand's note).
   wbNoteOutside: "Medicare's penalty programs don't touch this hospital, but Medicaid's work requirement could. A scenario, not a payment.",

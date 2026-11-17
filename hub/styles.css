@@ -813,12 +813,20 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .hh__nearmap { margin-top: 4px; }
 .hh__neartab { min-width: 0; align-self: start; }
-/* The context dots: the same group's other hospitals, in the map-dot ink (stronger in dark mode), under the pins. */
-.hh__ctx { fill: var(--dot); }
+/* The context dots: the same group's other hospitals in the map-dot ink (stronger in dark mode), and the other hospitals in
+   the programs in the text ink, both under the pins. */
+.hh__ctx { stroke: var(--dot); }
+.hh__ctxe { stroke: var(--ink-2); }
 /* The key's swatches, drawn like the map's marks: a pin (cut: the pen ink; not cut: on paper) and a context dot. */
 .hh__nsw { display: inline-block; flex: none; width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
 .hh__nsw--cut { border-color: var(--paper); background: var(--pen); box-shadow: 0 0 0 1px var(--pen); }
-.hh__nsw--ctx { width: 6px; height: 6px; border: 0; background: var(--dot); }
+.hh__nsw--ctx, .hh__nsw--est { width: 6px; height: 6px; border: 0; background: var(--dot); }
+.hh__nsw--est { background: var(--ink-2); }
+/* Both keys: a swatch sits on its label's first line, centered on it, when the label wraps. */
+.hh__nkey li, .hh__lkey li { align-items: flex-start; line-height: 1.4; }
+.hh__nkey li > span, .hh__lkey li > span { margin-top: calc((1.4em - 12px) / 2); }
+.hh__nkey .hh__nsw--ctx, .hh__nkey .hh__nsw--est, .hh__lkey .hh__nsw--ctx { margin-top: calc((1.4em - 6px) / 2); }
+.hh__lkey .hh__lsw, .hh__nkey .hh__lsw { margin-top: calc((1.4em - 8px) / 2); }
 /* The share of Medicare inpatient pay: a column of its own, or, on a phone, a line under the dollars (and under the
    dollars' heading), so the table fits the screen. One of the two shows at a time, so a screen reader reads one. */
 .hh__nshare { display: none; }
@@ -849,6 +857,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__likek { display: block; margin-bottom: 8px; font: 400 clamp(2.5rem, 4.2vw, 2.75rem)/1 var(--font-display); }
 .hh__likeown { color: var(--ink-2); }
 .hh__likemap { align-self: start; }
+/* The map's caption and key, closing the words' column. */
+.hh__likelegend { display: grid; gap: 10px; margin-top: 8px; }
 .hh__likedot { stroke: var(--dot); }
 /* Puerto Rico's inset: a hairline box, its code above it. */
 .hh__inset { fill: none; stroke: var(--line); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
@@ -859,10 +869,12 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__lsw { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pen); box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--pen); margin: 0 3px; }
 /* Forced colors, for both sections (after the like section's rules, which these override). */
 @media (forced-colors: active) {
-  .hh__ctx { fill: GrayText; }
+  .hh__ctx { stroke: GrayText; }
   .hh__nsw { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
   .hh__nsw--cut { background: CanvasText; color: Canvas; }
   .hh__nsw--ctx { background: GrayText; }
+  .hh__nsw--est { background: CanvasText; }
+  .hh__ctxe { stroke: CanvasText; }
   .hh__likedot { stroke: GrayText; }
   .hh__inset { stroke: GrayText; }
   .hh__insetlab { fill: CanvasText; }

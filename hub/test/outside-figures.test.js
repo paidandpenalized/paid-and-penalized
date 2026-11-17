@@ -99,7 +99,7 @@ test('nearBlock: on a critical access page, 5 rows, all estimated, sorted by mil
   assert.ok(block.includes(esc(fillOutside('nearHeading'))), 'the heading');
   assert.ok(block.includes(esc(fillOutside('nearColNet', { fy: FY }))), 'the net column names the year');
   // The map: a numbered pin per row, and the same group's hospitals as context dots, this one not among them.
-  assert.equal((block.match(/class="chart-pin /g) ?? []).length, NEAREST_K, 'a pin per row');
+  for (const svg of svgsOf(block)) assert.equal((svg.match(/class="chart-pin /g) ?? []).length, NEAREST_K, 'a pin per row, in each drawing');
   assert.ok(block.includes('class="chart chart--area-map"'), 'the area map');
   assert.ok(block.includes('data-figure'), 'a figure the tooltip script wires');
   // The keyboard hint the figure script names as the map's description, as HACRP's hospital page has one.
@@ -184,6 +184,8 @@ const YEARS = { hacrpFy: String(HUB.programYears.hacrp), hrrpFy: String(HUB.prog
 // A group's noun: the unlisted acute group's names the hospital-acquired conditions file's year.
 const kindsOf = (group) => fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: YEARS.hacrpFy } : {});
 const textOf = (block) => block.replace(/<[^>]*>/g, '');
+// Each <svg> in a block, whole.
+const svgsOf = (block) => block.match(/<svg [\s\S]*?<\/svg>/g) ?? [];
 // Where the map puts a hospital: Albers USA's place, or Puerto Rico's inset for a Puerto Rico hospital.
 const INSET = prInset(HUB.shapes, MAP_WIDTH);
 const projected = (h) => (h.state === 'PR' ? INSET.project(pointOf(h)) : usProjected(HUB.shapes, [pointOf(h)], MAP_WIDTH)[0]);
@@ -234,7 +236,7 @@ test('likeBlock: the count and state count equal a recount from the master', () 
   assert.ok(c.inHacrp === 0, 'not_listed: the hospital-acquired conditions file lists none of the group');
   assert.ok(c.inHrrp === c.listed, 'not_listed: the listed ones are all in the Readmissions file');
   const nlMapped = pick((x) => x.group === 'not_listed' && mapped(x), 'an unlisted acute hospital on the US map');
-  assert.ok(like(nlMapped).includes(esc(fillOutside('nearKeyOther', { kinds: kindsOf('not_listed') }))), 'not_listed: the map key names the group by its noun');
+  assert.ok(like(nlMapped).includes(esc(fillOutside('keyLike'))), 'not_listed: the map key names the group\'s dots');
   // A territory STATE_NAMES lacks: the national count alone.
   const terr = pick((x) => !STATE_NAMES[x.state], 'a hospital in a territory without a state name');
   assert.ok(textOf(like(terr)).includes(esc(expectedLike(terr))), 'a territory: the sentence without a state');
@@ -260,22 +262,34 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
   }
 });
 
-test('likeBlock: a Puerto Rico hospital is ringed in the inset at the lower right; Guam, or no coordinates: no map, the words across the section', (t) => {
-  const pr = pick((x) => x.state === 'PR' && placed(x), 'a Puerto Rico hospital with a place');
-  const block = like(pr);
+// A Puerto Rico hospital's page draws Puerto Rico alone (the US map's inset is too small to read one hospital in); another
+// page whose group has Puerto Rico hospitals keeps the inset.
+const PR_MAP = CTX.pr;
+test('likeBlock: a Puerto Rico hospital gets a map of Puerto Rico, ringed whole inside it; the US map keeps the inset; Guam, or no coordinates: no map, the words across the section', (t) => {
+  for (const pr of OUTSIDE.filter((x) => x.state === 'PR' && placed(x))) {
+    const block = like(pr);
+    const svg = svgsOf(block)[0];
+    assert.ok(svg && svg.includes('chart--like-pr'), 'a map of Puerto Rico');
+    assert.ok(!svg.includes('class="hh__inset"'), 'not the US map\'s inset');
+    const [w, ht] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
+    const ring = /<circle class="hh__likering" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/.exec(svg).slice(1).map(Number);
+    assert.deepEqual(ring.slice(0, 2), PR_MAP.project(pointOf(pr)), 'ringed at its place');
+    assert.ok(ring[0] - ring[2] >= 0 && ring[0] + ring[2] <= w && ring[1] - ring[2] >= 0 && ring[1] + ring[2] <= ht, 'the ring whole inside the frame');
+    const c = RECOUNT.get(pr.group);
+    assert.ok(block.includes(esc(fillOutside('likeCaptionPr', { ns: count(c.byState.get('PR')), n: count(c.n) }))), 'its caption gives the national count');
+    const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(svg)?.[1] ?? '';
+    assert.equal((d.match(/h0/g) ?? []).length, sameGroup(pr).filter((o) => o.state === 'PR' && placed(o)).length, 'a dot for each Puerto Rico hospital of the group');
+  }
+  // A mainland page in a group with Puerto Rico hospitals: the US map, its inset holding them.
+  const main = pick((x) => x.group === 'not_listed' && x.state !== 'PR' && mapped(x), 'a mainland unlisted acute hospital');
+  const block = like(main);
   const { box } = INSET;
-  const [x, y] = projected(pr);
-  assert.ok(x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height, 'its place is inside the inset');
-  assert.ok(block.includes(`<circle class="hh__likering" cx="${x}" cy="${y}"`), 'ringed there');
-  assert.ok(block.includes(`<rect class="hh__inset" x="${box.x}" y="${box.y}"`), 'the inset\'s box');
-  // The box sits in the frame's lower right, clear of every state's outline (Florida's tip included).
+  assert.ok(block.includes(`<rect class="hh__inset" x="${box.x}" y="${box.y}"`) && !block.includes('chart--like-pr'), 'the US map with its inset');
   const height = Number(/viewBox="0 0 \d+ (\d+)"/.exec(block)[1]);
   assert.ok(box.x > MAP_WIDTH / 2 && box.y > height / 2 && box.x + box.width <= MAP_WIDTH && box.y + box.height <= height, 'in the frame\'s lower right');
   const states = usProjected(HUB.shapes, OUTSIDE.filter((o) => o.state !== 'PR' && placed(o)).map(pointOf), MAP_WIDTH).filter(Boolean);
   assert.ok(states.every(([sx, sy]) => sx < box.x || sy < box.y), 'no mainland hospital falls in the box');
-  // Every Puerto Rico hospital of the group is a dot in the box.
-  const inBox = sameGroup(pr).filter((o) => o.state === 'PR' && placed(o));
-  assert.ok(inBox.every((o) => projected(o) !== null), 'each Puerto Rico hospital has a place in the inset');
+  assert.ok(sameGroup(main).filter((o) => o.state === 'PR' && placed(o)).every((o) => projected(o) !== null), 'each Puerto Rico hospital has a place in the inset');
   for (const h of [pick((x) => x.state === 'GU', 'a Guam hospital'), pick((x) => !placed(x), 'a hospital without coordinates')]) {
     const solo = like(h);
     assert.ok(!solo.includes('<svg'), 'no map');
@@ -303,7 +317,7 @@ test('likeBlock: a sparse group\'s dots are drawn larger than a dense group\'s, 
 
 // Each map is a numbered figure, numbered in page order: the nearest hospitals' map first where the page has it.
 test('figures: "Figure N." captions, numbered in page order, the nearest map\'s caption its sentence', () => {
-  const cap = (block) => [...block.matchAll(/<figcaption class="fig__cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/g)].map((m) => [Number(m[1]), m[2]]);
+  const cap = (block) => [...block.matchAll(/<(figcaption|p) class="fig__cap"(?: id="[^"]+")?><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/\1>/g)].map((m) => [Number(m[2]), m[3]]);
   const both = pick((x) => x.group === 'critical_access' && mapped(x) && within(x).length === NEAREST_K, 'a critical access hospital with both maps');
   const next = counter();
   const n = cap(String(nearBlock(both, CTX, next)));
@@ -311,9 +325,13 @@ test('figures: "Figure N." captions, numbered in page order, the nearest map\'s 
   assert.deepEqual([n.length, l.length], [1, 1], 'a caption on each map');
   assert.deepEqual([n[0][0], l[0][0]], [1, 2], 'numbered in order');
   assert.ok(!String(nearBlock(both, CTX)).includes('class="hh__nearcap"'), 'the sentence is the figure\'s caption, not a paragraph too');
-  assert.equal(l[0][1], esc(fillOutside('likeCaption', { n: count(LIKE_COUNTS.get('critical_access').n), kinds: kindsOf('critical_access') })), 'the US map\'s caption counts the group');
-  const nl = pick((x) => x.group === 'not_listed' && mapped(x), 'an unlisted acute hospital on the map');
-  assert.ok(cap(like(nl))[0][1].startsWith(esc(fillOutside('likeCaptionNotListed', { n: count(LIKE_COUNTS.get('not_listed').n), kinds: kindsOf('not_listed') }))), 'the unlisted group\'s caption names the list first');
+  assert.equal(l[0][1], esc(fillOutside('likeCaption')), 'the US map\'s caption says what it shows, not the count beside it');
+  assert.match(fillOutside('likeCaption'), /ringed/, 'how this one is marked, in words that hold in any colors');
+  // The US map's caption and key close the words' column; the figure names the caption by id, its map top-aligned.
+  const lb = String(likeBlock(both, CTX));
+  const words = lb.slice(lb.indexOf('class="hh__liket"'), lb.indexOf('<figure'));
+  assert.ok(words.includes('id="hh-like-cap"') && words.includes('class="fig__key hh__lkey"'), 'caption and key in the words\' column');
+  assert.match(lb, /<figure class="fig hh__likemap" aria-labelledby="hh-like-cap">\s*<svg /, 'the figure, named by its caption, opens on the map');
   // A page with only the US map numbers it 1; one with no map takes no number.
   const alone = pick((x) => x.group === 'psychiatric' && mapped(x), 'a psychiatric hospital on the map');
   const k = counter();
@@ -345,17 +363,36 @@ test('nearBlock: the map labels states and keeps every pin whole inside its fram
   const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
   const pages = OUTSIDE.filter((x) => NEAR_GROUPS.has(x.group) && placed(x) && nearestTo(rows, pointOf(x), { k: 2 }).at(-1).miles <= NEAR_MAX_MILES);
   let labeled = 0;
+  let towns = 0;
   for (const h of pages.filter((_, i) => i % 25 === 0)) {
     const block = near(h);
-    const [w, ht] = /viewBox="0 0 (\d+) (\d+)"/.exec(block).slice(1).map(Number);
-    const pins = [...block.matchAll(/<circle class="chart-pin [^"]*" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => m.slice(1).map(Number));
-    for (const [x, y, r] of pins) assert.ok(x - r >= 0 && x + r <= w && y - r >= 0 && y + r <= ht, 'a pin whole inside the frame');
-    for (let i = 0; i < pins.length; i++) for (let j = i + 1; j < pins.length; j++) assert.ok(Math.hypot(pins[i][0] - pins[j][0], pins[i][1] - pins[j][1]) >= pins[i][2] + pins[j][2], 'no pin over another');
-    const labels = block.match(/<text class="chart-geo-label"/g)?.length ?? 0;
-    assert.ok(labels <= 4, 'at most four labels');
-    if (labels) labeled += 1;
+    const svgs = svgsOf(block);
+    assert.deepEqual(svgs.map((svg) => /data-fit="(\w+)"/.exec(svg)?.[1]), ['narrow', 'wide'], 'a phone drawing and a wide one');
+    const cities = new Set(rowsOf(block).map((row) => /<span class="near__city">([^<,]*)/.exec(row)?.[1]));
+    for (const svg of svgs) {
+      const [w, ht] = /viewBox="0 0 (\d+) (\d+)"/.exec(svg).slice(1).map(Number);
+      const pins = [...svg.matchAll(/<circle class="chart-pin [^"]*" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => m.slice(1).map(Number));
+      for (const [x, y, r] of pins) assert.ok(x - r >= 0 && x + r <= w && y - r >= 0 && y + r <= ht, 'a pin whole inside the frame');
+      for (let i = 0; i < pins.length; i++) for (let j = i + 1; j < pins.length; j++) assert.ok(Math.hypot(pins[i][0] - pins[j][0], pins[i][1] - pins[j][1]) >= pins[i][2] + pins[j][2], 'no pin over another');
+      const labels = svg.match(/<text class="chart-geo-label"/g)?.length ?? 0;
+      assert.ok(labels <= 4, 'at most four labels');
+      if (labels) labeled += 1;
+      // Towns: each a row's city, once, inside the frame (by its anchor and a generous width per character).
+      const named = [...svg.matchAll(/<text class="chart-pin__town" x="([\d.-]+)" y="([\d.-]+)" dy="0.35em" text-anchor="(\w+)">([^<]*)<\/text>/g)];
+      assert.equal(new Set(named.map((m) => m[4])).size, named.length, 'a town once');
+      for (const [, x, y, anchor, town] of named) {
+        assert.ok(cities.has(town), 'a town of the table\'s rows');
+        const tw = town.replace(/&#?\w+;/g, '_').length * 6.1;
+        const x0 = anchor === 'start' ? Number(x) : anchor === 'end' ? Number(x) - tw : Number(x) - tw / 2;
+        assert.ok(x0 >= 0 && x0 + tw <= w && Number(y) >= 0 && Number(y) <= ht, 'inside the frame');
+      }
+      towns += named.length;
+      // This hospital ringed, as on the US map, never the ▲.
+      assert.ok(svg.includes('class="chart-self__ring"') && !svg.includes('chart-this--map'), 'this hospital ringed');
+    }
   }
   assert.ok(labeled > 0, 'maps carry state labels');
+  assert.ok(towns > 0, 'maps name towns');
 });
 
 // The page-weight ceiling for an outside page, gzip: the HACRP hospital page for the example CCN measured about 39 KB
@@ -382,4 +419,20 @@ test('outsideFigureContext: refuses an unlisted acute hospital that the HACRP fi
   const args = { hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS, master: HUB.master, shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy };
   assert.doesNotThrow(() => outsideFigureContext(args));
   assert.throws(() => outsideFigureContext({ ...args, master: listed }), /HACRP file/);
+});
+
+// The nearest map's context: the program hospitals not in the table (in ink) and the group's other hospitals (gray), each
+// named in the key exactly when a drawing shows any; this hospital keyed as both maps mark it.
+test('nearBlock: the other program hospitals and the group\'s others as context dots, each keyed when drawn', () => {
+  const h = pick((x) => x.group === 'critical_access' && placed(x) && within(x).length === NEAREST_K, 'a critical access hospital with NEAREST_K close');
+  const block = near(h);
+  const keyOf = (b) => b.slice(b.indexOf('class="fig__key hh__nkey"'), b.indexOf('</ul>', b.indexOf('class="fig__key hh__nkey"')));
+  // The dots of a class: one path each, a dot per h0.
+  const dotsIn = (b, cls) => [...b.matchAll(new RegExp(`<path class="chart-dots ${cls}"[^>]* d="([^"]*)"`, 'g'))].reduce((n, m) => n + (m[1].match(/h0/g) ?? []).length, 0);
+  const program = dotsIn(block, 'hh__ctxe');
+  const own = dotsIn(block, 'hh__ctx');
+  assert.ok(program > 0, 'program hospitals drawn as context');
+  assert.equal(keyOf(block).includes(esc(fillOutside('nearKeyProgram'))), program > 0, 'keyed when drawn');
+  assert.equal(keyOf(block).includes(esc(fillOutside('keyLike'))), own > 0, 'the group\'s others keyed when drawn');
+  assert.ok(keyOf(block).includes('hh__lsw hh__lsw--me'), 'this hospital keyed as a ring');
 });
