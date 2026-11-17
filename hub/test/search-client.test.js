@@ -126,7 +126,7 @@ test('the real list: every state carries the count its line on the map says (sta
 
 // ---------- the combobox on the hub's forms ----------
 
-// The family search mounted on a stand-in search form (web/test/dom.js) over the hub's asset, which holds SAMPLE unless
+// The family search mounted on a stand-in search form (web/test/dom.js) over the search index, which holds SAMPLE unless
 // load says otherwise.
 function stage(t, { load } = {}) {
   const s = comboForm(t);
@@ -211,7 +211,7 @@ test('mountHubSearch: a page with no hub search form mounts nothing', () => {
 
 // ---------- the form's markup ----------
 
-test('hubSearchForm: the shell\'s search form over the hub asset, marked data-hub, in the family\'s words; hidden until its script shows it', () => {
+test('hubSearchForm: the shell\'s search form over the search index, marked data-hub, in the family\'s words; hidden until its script shows it', () => {
   const bar = String(hubSearchForm('/assets/hub-search.abcd1234.json'));
   assert.match(bar, /^<form class="omni" id="omni" role="search" aria-label="[^"]+" data-src="\/assets\/hub-search\.abcd1234\.json" data-hub hidden>/);
   assert.ok(bar.includes('<input id="omni-q" type="search" role="combobox"'));

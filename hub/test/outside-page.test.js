@@ -4,9 +4,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
+import { cmsNamed } from '../../pipeline/master.js';
 import { ASSETS, chipOf, headerOf } from '../../pipeline/test/helpers.js';
 import { endedBy } from '../../web/render/closed.js';
-import { escapeHtml } from '../../web/render/html.js';
+import { escapeHtml, html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel } from '../data.js';
 import { COPY } from '../hospital/copy.js';
@@ -15,7 +16,6 @@ import { outsideDescription } from '../hospital/outside.js';
 import { outsidePage } from '../hospital/page.js';
 import { LIKE_GROUPS } from '../outside.js';
 import { mainOf } from './helpers.js';
-import { cmsNamed } from '../../pipeline/master.js';
 
 const { hub: HUB, hospitals: HOSPITALS, facts: FACTS, outside: OUTSIDE } = hubModel();
 const FY = String(ASSETS.shell.fy);
@@ -175,7 +175,7 @@ test('outside page: the source line names the hospital list and each program fil
   }
   // With the nearest hospitals' figure (near), the dollar model joins it.
   const h = OUTSIDE[0];
-  const page = outsidePage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: '<section></section>' });
+  const page = outsidePage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: html`<section></section>` });
   assert.ok(notesOf(page).includes(esc(fillOutside('sourceOutsideDollars'))), 'the dollar model beside the nearest hospitals');
 });
 

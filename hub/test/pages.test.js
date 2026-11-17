@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cmsNamed } from '../../pipeline/master.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
@@ -12,7 +13,6 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { hubModel, loadHub } from '../data.js';
-import { cmsNamed } from '../../pipeline/master.js';
 import { hacCounts, hrrpCounts, hubHospitals } from '../model.js';
 import { rangeShare } from '../../engine/js/dollars/ranges.js';
 import { endedBy } from '../../web/render/closed.js';
@@ -120,6 +120,7 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(notFound, /href="\/hacrp\/"/);
     assert.ok(notFound.includes(escapeHtml(fillCopy(COPY, 'notFoundHospitals'))), 'the line on which hospitals have pages here');
     assert.ok(!/have none|no page here/.test(textOf(notFound)), '404 no longer says these hospitals have no page');
+    assert.ok(!/Hospital pages here are for the hospitals in CMS.s program files/.test(textOf(notFound)), '404 no longer limits the pages to the program files\' hospitals');
     assert.match(textOf(notFound), /Every hospital on Medicare.s hospital list has a page here/);
     assert.ok(!notFound.includes(escapeHtml(fillCopy(SHARED, 'notInHrrp'))), 'not the Readmissions-only line');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.

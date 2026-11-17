@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
+import { cmsNamed } from '../../pipeline/master.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
@@ -17,7 +18,6 @@ import { decimal, dollars, money, moneyRange, pct } from '../../web/render/forma
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel, loadHub } from '../data.js';
-import { cmsNamed } from '../../pipeline/master.js';
 import { COPY } from '../hospital/copy.js';
 import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';

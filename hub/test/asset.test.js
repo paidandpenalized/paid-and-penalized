@@ -189,6 +189,16 @@ test('searchAsset: gzip size printed; under the old hub asset\'s', () => {
   assert.ok(gz < oldGz, 'the search index is smaller than the hub asset, gzip');
 });
 
+test('searchAsset: the state counts are the map\'s: a Maryland hospital counts in Maryland, one with no inputs and one outside the programs count nowhere', () => {
+  const row = (ccn, state, status, est) => ({ ccn, name: 'Invented Hospital', city: 'Exampleton', state, status, est });
+  const hospitals = [row('990001', 'OH', 'estimated', { net: -1 }), row('990002', 'MD', 'maryland', null), row('990003', 'OH', 'no-inputs', null)];
+  const outside = [{ ccn: '990004', name: 'Invented Hospital', city: 'Exampleton', state: 'OH', kind: 'critical_access' }];
+  const master = new Map(['990001', '990002', '990003'].map((ccn) => [ccn, { kind: 'acute' }]));
+  const got = searchAsset({ hospitals, outside, master });
+  assert.deepEqual(got.states, { MD: 1, OH: 1 }, 'Ohio\'s estimated hospital and Maryland\'s, and no other');
+  assert.equal(got.rows.length, 4, 'every hospital is still a row the search finds');
+});
+
 test('searchAsset refuses a hospital twice, a kind the search has no word for, and a dollar-file hospital the master lacks', () => {
   const row = { ccn: '990001', name: 'Invented Hospital', city: 'Exampleton', state: 'OH', status: 'estimated', est: { net: -1 } };
   const master = new Map([['990001', { kind: 'acute' }]]);
