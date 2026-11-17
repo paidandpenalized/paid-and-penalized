@@ -1,6 +1,6 @@
 // The family search's box in the shell's bar (render/shell.js searchForm, id "omni", which the phone's find button
-// controls), in the hub's words: a combobox over the hub's asset (src) that hub/client/search.js mounts and shows; hidden
-// without JavaScript.
+// controls), in the hub's words: a combobox over the search's own asset (src: assets.shell.searchUrl, hub/search/asset.js)
+// that hub/client/search.js mounts and shows; hidden without JavaScript.
 import { searchForm } from '../../web/render/shell.js';
 import { t } from './copy.js';
 

@@ -203,6 +203,11 @@ test('build writes the hub\'s asset once and hands every site the shell\'s facts
     assert.equal(seen[0], seen[1]);
     const shell = seen[0];
     assert.equal(shell.hubUrl, `/assets/${files[0]}`);
+    // The family search's own index, beside it, named by its content too.
+    const search = readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-search.'));
+    assert.equal(search.length, 1);
+    assert.equal(shell.searchUrl, `/assets/${search[0]}`);
+    assert.equal(search[0], `hub-search.${hash8(readFileSync(join(out, 'assets', search[0]), 'utf8'))}.json`);
     const asset = JSON.parse(text);
     assert.equal(shell.fy, asset.fy);
     assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
@@ -246,9 +251,11 @@ test('buildContext, the build\'s own path to a context, writes the hub\'s asset 
     assert.equal(ctx.assets.css, assets.css);
     assert.equal(ctx.assets.js, assets.js);
     assert.equal(ctx.env, 'preview');
-    const { hubUrl, ...facts } = ctx.assets.shell;
+    const { hubUrl, searchUrl, ...facts } = ctx.assets.shell;
     assert.match(hubUrl, /^\/assets\/hub-hospitals\.[0-9a-f]{8}\.json$/);
     assert.ok(existsSync(join(dir, hubUrl)), 'the asset the facts name is written');
+    assert.match(searchUrl, /^\/assets\/hub-search\.[0-9a-f]{8}\.json$/);
+    assert.ok(existsSync(join(dir, searchUrl)), 'the search\'s index is written');
     assert.deepEqual(Object.keys(facts), ['fy', 'hospitals', 'changed', 'programs']);
   }));
 

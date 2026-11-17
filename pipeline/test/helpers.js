@@ -28,6 +28,7 @@ export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/
       'work-requirement': { scenario: { year: 2023, lost: { low: 4000000, middle: 6000000, high: 9000000 } } },
     },
     hubUrl: '/assets/hub-hospitals.test.json',
+    searchUrl: '/assets/hub-search.test.json',
     ...shell,
   },
 });

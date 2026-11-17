@@ -1,38 +1,54 @@
 // The family search (hub/client/search.js, entry hub-search): the hospitals and the states as search entries, found by
 // word starts in the shared index (web/client/search.js), the combobox mounted on every hub search form, and the form's
-// markup (hub/search/form.js) that Task 6 puts in the bar. Synthetic hospitals, plus the real list for the counts and
-// for the example hospital, which is picked by EXAMPLE_CCN and not by name.
+// markup (hub/search/form.js) that Task 6 puts in the bar. Synthetic hospitals, plus the real list (the search's own
+// index over every hospital on Medicare's list) for the counts, for the example hospital, which is picked by EXAMPLE_CCN
+// and not by name, and for a critical access hospital, picked by its kind.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { buildIndex, search } from '../../web/client/search.js';
 import { US_STATES } from '../../engine/js/states.js';
-import { hubEntries, hubWords, mountHubSearch } from '../client/search.js';
-import { loadHub } from '../data.js';
-import { EXAMPLE_CCN, hubHospitals, stateTotals } from '../model.js';
+import { cmsNamed } from '../../pipeline/master.js';
+import { SEARCH_KINDS, decodeSearchAsset, hubEntries, hubWords, mountHubSearch } from '../client/search.js';
+import { hubModel } from '../data.js';
+import { EXAMPLE_CCN, stateTotals } from '../model.js';
+import { searchAsset } from '../search/asset.js';
 import { hubSearchForm } from '../search/form.js';
 import { comboForm } from '../../web/test/dom.js';
 
-// An estimated hospital (its est a stand-in: the search reads only whether there is one).
-const h = (ccn, name, city, state) => ({ ccn, name, city, state, status: 'estimated', inHrrp: false, est: { share: 0 } });
+// A row of the search asset as loadSearchAsset decodes it (hub/search/asset.js writes it): the hospital's CCN, the name
+// its page shows, its place and the master's kind. The state counts are the asset's (the map's, worked out at build).
+const h = (ccn, name, city, state, kind = 'acute') => ({ ccn, name, city, state, kind });
 const SAMPLE = [
   h('990001', 'Example General Hospital', 'Exampleton', 'OH'),
   h('99000A', 'Sample Medical Center', 'Sampleville', 'NY'),
   h('990003', 'Ohio Valley Example', 'Troy', 'NY'),
   h('990004', 'Island Clinic', 'San Juan', 'PR'),
 ];
+const STATES = { OH: 1, NY: 2 };
+const SEARCH = { rows: SAMPLE, states: STATES };
 
-test('each hospital is an entry: its name, "City, ST" under it, found by its city, state and CCN, opening its page', () => {
-  const entries = hubEntries(SAMPLE).filter((e) => e.type === 'hospital');
+test('each hospital is an entry: its name, "City, ST · kind" under it, found by its city, state and CCN, opening its page', () => {
+  const entries = hubEntries(SEARCH).filter((e) => e.type === 'hospital');
   assert.equal(entries.length, SAMPLE.length);
-  assert.deepEqual(entries[0], { type: 'hospital', key: '990001', label: 'Example General Hospital', sub: 'Exampleton, OH', extra: 'Exampleton OH', href: '/hospital/990001/' });
+  assert.deepEqual(entries[0], { type: 'hospital', key: '990001', label: 'Example General Hospital', sub: 'Exampleton, OH · Acute care hospital', extra: 'Exampleton OH', href: '/hospital/990001/' });
   assert.equal(entries[1].href, '/hospital/99000a/', 'folders are lowercase');
-  assert.equal(entries[3].sub, 'San Juan, PR');
+  assert.equal(entries[3].sub, 'San Juan, PR · Acute care hospital');
 });
 
-test('the states are the fifty and DC, each by name and by code, with the hospitals in it; Puerto Rico is a place hospitals are in, not a state', () => {
-  const states = hubEntries(SAMPLE).filter((e) => e.type === 'state');
+test('every kind of hospital has its word in the sub line, but one of unknown kind, which has its place alone', () => {
+  for (const kind of SEARCH_KINDS) {
+    const [entry] = hubEntries({ rows: [h('990001', 'Invented Hospital', 'Exampleton', 'OH', kind)], states: {} }).filter((e) => e.type === 'hospital');
+    if (kind === 'unknown') assert.equal(entry.sub, 'Exampleton, OH', kind);
+    else assert.match(entry.sub, /^Exampleton, OH · \S/, kind);
+  }
+  const subs = SEARCH_KINDS.map((kind) => hubEntries({ rows: [h('990001', 'Invented Hospital', 'Exampleton', 'OH', kind)], states: {} }).at(-1).sub);
+  assert.equal(new Set(subs).size, subs.length, 'no two kinds share a word');
+});
+
+test('the states are the fifty and DC, each by name and by code, with the hospitals the asset counts in it; Puerto Rico is a place hospitals are in, not a state', () => {
+  const states = hubEntries(SEARCH).filter((e) => e.type === 'state');
   assert.deepEqual(states.map((e) => e.key), US_STATES.map(([code]) => code));
   assert.equal(states.length, 51);
   assert.ok(!states.some((e) => e.key === 'PR'));
@@ -43,18 +59,8 @@ test('the states are the fifty and DC, each by name and by code, with the hospit
   assert.ok(states.every((e) => e.href === `/#state=${e.key}`));
 });
 
-test('a state counts its hospitals as its line on the map does: those with an estimate, and every one in Maryland', () => {
-  const none = (ccn, state, status) => ({ ...h(ccn, 'Example Clinic', 'Exampleton', state), status, est: null });
-  const list = [...SAMPLE, none('990005', 'OH', 'no-inputs'), none('990006', 'MD', 'maryland'), none('990007', 'MD', 'no-inputs')];
-  const entries = hubEntries(list);
-  assert.equal(entries.filter((e) => e.type === 'hospital').length, list.length, 'every hospital is still found');
-  const sub = (code) => entries.find((e) => e.type === 'state' && e.key === code).sub;
-  assert.equal(sub('OH'), 'State · one hospital', 'a hospital with no estimate is not counted');
-  assert.equal(sub('MD'), 'State · 2 hospitals', "Maryland's are all counted");
-});
-
 test('typing a state\'s name or code lists the state first; a city and a state find a hospital', () => {
-  const index = buildIndex(hubEntries(SAMPLE));
+  const index = buildIndex(hubEntries(SEARCH));
   const keys = (q) => search(q, index).results.map((r) => r.key);
   assert.equal(keys('ohio')[0], 'OH');
   assert.equal(keys('oh')[0], 'OH', 'a code is a key: it outranks a hospital whose name starts with it');
@@ -65,14 +71,16 @@ test('typing a state\'s name or code lists the state first; a city and a state f
   assert.equal(keys('san juan')[0], '990004');
 });
 
-const hub = loadHub();
-const hospitals = hubHospitals(hub);
+const model = hubModel();
+const { hub, hospitals, outside } = model;
+const asset = searchAsset({ hospitals, outside, master: hub.master });
+const realRows = decodeSearchAsset(asset);
 const EXAMPLE_STATE = hospitals.find((x) => x.ccn === EXAMPLE_CCN).state;
 
-test('the real list: every hospital of the dollar file plus the fifty states and DC, and "troy oh" finds the example hospital', () => {
-  const entries = hubEntries(hospitals);
-  assert.equal(entries.length, hub.dollars.hospitals.length + 51);
-  assert.equal(entries.filter((e) => e.type === 'hospital').length, hub.dollars.hospitals.length);
+test('the real list: every hospital on Medicare\'s list plus the fifty states and DC, and "troy oh" finds the example hospital', () => {
+  const entries = hubEntries(realRows);
+  assert.equal(entries.length, hub.master.size + 51);
+  assert.equal(entries.filter((e) => e.type === 'hospital').length, hub.master.size);
   assert.equal(new Set(entries.map((e) => `${e.type}:${e.key}`)).size, entries.length, 'no two entries share a key');
   const index = buildIndex(entries);
   // The example hospital's city and state find it. They need not rank it first: the search puts a name that holds a
@@ -85,22 +93,34 @@ test('the real list: every hospital of the dollar file plus the fifty states and
   assert.equal(search(EXAMPLE_CCN, index).results[0].key, EXAMPLE_CCN, 'its CCN finds it first');
 });
 
-test('the real list: a CCN finds its hospital first, and a state carries the count of the data\'s hospitals in it', () => {
-  const entries = hubEntries(hospitals);
+test('hubEntries: a critical access hospital is found by name, city and CCN, and its sub line names its kind', () => {
+  const cah = outside.find((x) => x.kind === 'critical_access' && x.city && cmsNamed(x.name, x.ccn));
+  assert.ok(cah, 'an outside critical access hospital with a name and a city');
+  const index = buildIndex(hubEntries(realRows));
+  const hits = (q) => search(q, index, { limit: Infinity }).results.some((r) => r.key === cah.ccn);
+  assert.ok(hits(cah.name), 'found by its name');
+  assert.ok(hits(`${cah.city} ${cah.state}`), 'found by its city and state');
+  assert.ok(search(cah.ccn, index).results[0].key === cah.ccn, 'its CCN finds it first');
+  const entry = index.find((e) => e.key === cah.ccn);
+  assert.ok(entry.sub === `${cah.city}, ${cah.state} · Critical access hospital`, 'the sub line names its place and its kind');
+  assert.ok(entry.href === `/hospital/${cah.ccn.toLowerCase()}/`, 'it opens its page');
+});
+
+test('the real list: a CCN finds its hospital first, inside the programs and out, and a state carries the count of the data\'s hospitals in it', () => {
+  const entries = hubEntries(realRows);
   const index = buildIndex(entries);
-  for (const row of [hospitals[0], hospitals[hospitals.length - 1], hospitals.find((x) => x.status === 'maryland')]) {
-    assert.equal(search(row.ccn, index).results[0].key, row.ccn);
-  }
+  const rows = { 'the dollar file\'s first': hospitals[0], 'its last': hospitals[hospitals.length - 1], 'a Maryland hospital': hospitals.find((x) => x.status === 'maryland'), 'the first outside': outside[0], 'the last outside': outside[outside.length - 1] };
+  for (const [what, row] of Object.entries(rows)) assert.ok(search(row.ccn, index).results[0].key === row.ccn, `${what}: its CCN finds it first`);
   const state = entries.find((e) => e.type === 'state' && e.key === EXAMPLE_STATE);
   assert.equal(state.sub, `State · ${stateTotals(hospitals).get(EXAMPLE_STATE).n.toLocaleString('en-US')} hospitals`);
 });
 
 test('the real list: every state carries the count its line on the map says (stateTotals), though some have hospitals with no estimate', () => {
   const totals = stateTotals(hospitals);
-  const states = hubEntries(hospitals).filter((e) => e.type === 'state');
+  const states = hubEntries(realRows).filter((e) => e.type === 'state');
   const n = (code) => totals.get(code)?.n ?? 0;
   const words = (k) => (k === 1 ? 'State · one hospital' : `State · ${k.toLocaleString('en-US')} hospitals`);
-  for (const e of states) assert.equal(e.sub, words(n(e.key)), `${e.key}: the map's count`);
+  for (const e of states) assert.equal(e.sub, words(n(e.key)), 'the map\'s count');
   assert.ok(states.some((e) => hospitals.filter((x) => x.state === e.key).length !== n(e.key)), 'some state has a hospital the map does not count (if not, this test no longer covers one)');
 });
 
@@ -110,11 +130,11 @@ test('the real list: every state carries the count its line on the map says (sta
 // load says otherwise.
 function stage(t, { load } = {}) {
   const s = comboForm(t);
-  s.form.dataset.src = '/assets/hub-hospitals.test.json';
+  s.form.dataset.src = '/assets/hub-search.test.json';
   const opened = [];
   const loads = [];
   mountHubSearch([s.form], {
-    loadAsset: async (src) => { loads.push(src); if (load) return load(); return { hospitals: SAMPLE }; },
+    loadAsset: async (src) => { loads.push(src); if (load) return load(); return SEARCH; },
     open: (href) => opened.push(href),
   });
   return { ...s, opened, loads };
@@ -125,8 +145,8 @@ test('mountHubSearch: the form shows; the asset loads once, from the form\'s own
   assert.equal(s.form.hidden, false);
   assert.deepEqual(s.loads, []);
   await s.type('ohio');
-  assert.deepEqual(s.loads, ['/assets/hub-hospitals.test.json']);
-  assert.deepEqual(s.texts(), ['Ohio|State · one hospital|State', 'Ohio Valley Example|Troy, NY|Hospital']);
+  assert.deepEqual(s.loads, ['/assets/hub-search.test.json']);
+  assert.deepEqual(s.texts(), ['Ohio|State · one hospital|State', 'Ohio Valley Example|Troy, NY · Acute care hospital|Hospital']);
   assert.equal(s.status.textContent, '2 matches');
   await s.type('exampleton');
   assert.equal(s.status.textContent, 'One match');
@@ -146,12 +166,12 @@ test('mountHubSearch: Enter opens the first match — a hospital\'s page, or a s
 
 test('mountHubSearch: a form with data-only lists that kind alone; a pick a page\'s script cancels (hub:pick) opens nothing', async (t) => {
   const s = comboForm(t);
-  s.form.dataset.src = '/assets/hub-hospitals.test.json';
+  s.form.dataset.src = '/assets/hub-search.test.json';
   s.form.dataset.only = 'hospital';
   const opened = [];
-  mountHubSearch([s.form], { loadAsset: async () => ({ hospitals: SAMPLE }), open: (href) => opened.push(href) });
+  mountHubSearch([s.form], { loadAsset: async () => SEARCH, open: (href) => opened.push(href) });
   await s.type('ohio');
-  assert.deepEqual(s.texts(), ['Ohio Valley Example|Troy, NY|Hospital'], 'no state');
+  assert.deepEqual(s.texts(), ['Ohio Valley Example|Troy, NY · Acute care hospital|Hospital'], 'no state');
   const picked = [];
   s.form.addEventListener('hub:pick', (e) => {
     picked.push(e.detail.href);
@@ -162,6 +182,20 @@ test('mountHubSearch: a form with data-only lists that kind alone; a pick a page
   await s.input.listeners.keydown({ key: 'Enter', preventDefault() {} });
   assert.deepEqual(picked, ['/hospital/990003/', '/hospital/990001/']);
   assert.deepEqual(opened, ['/hospital/990001/'], 'the canceled pick stays on the page');
+});
+
+test('mountHubSearch: no fetch before focus', async (t) => {
+  const s = comboForm(t);
+  s.form.dataset.src = '/assets/hub-search.test.json';
+  const loads = [];
+  mountHubSearch([s.form], { loadAsset: async (src) => { loads.push(src); return SEARCH; }, open: () => {} });
+  assert.deepEqual(loads, [], 'mounting fetches nothing');
+  await s.input.listeners.focus();
+  await Promise.resolve();
+  assert.deepEqual(loads, ['/assets/hub-search.test.json'], 'the first focus fetches the form\'s own asset');
+  await s.input.listeners.focus();
+  await s.type('ohio');
+  assert.equal(loads.length, 1, 'once');
 });
 
 test('mountHubSearch: a failed load says so in the box\'s status', async (t) => {
@@ -178,8 +212,8 @@ test('mountHubSearch: a page with no hub search form mounts nothing', () => {
 // ---------- the form's markup ----------
 
 test('hubSearchForm: the shell\'s search form over the hub asset, marked data-hub, in the family\'s words; hidden until its script shows it', () => {
-  const bar = String(hubSearchForm('/assets/hub-hospitals.abcd1234.json'));
-  assert.match(bar, /^<form class="omni" id="omni" role="search" aria-label="[^"]+" data-src="\/assets\/hub-hospitals\.abcd1234\.json" data-hub hidden>/);
+  const bar = String(hubSearchForm('/assets/hub-search.abcd1234.json'));
+  assert.match(bar, /^<form class="omni" id="omni" role="search" aria-label="[^"]+" data-src="\/assets\/hub-search\.abcd1234\.json" data-hub hidden>/);
   assert.ok(bar.includes('<input id="omni-q" type="search" role="combobox"'));
   assert.ok(bar.includes('aria-controls="omni-list"'));
   assert.doesNotMatch(bar, /\sstyle=/);
@@ -191,7 +225,12 @@ test('the script builds markup from no data: textContent and attributes only (th
 });
 
 test('hubEntries: a hospital with no city is found by its state alone, never by the word "null"', () => {
-  const entry = hubEntries([{ ccn: '990001', name: 'Invented Hospital', city: null, state: 'SC', est: { net: -1 } }]).find((e) => e.type === 'hospital');
+  const entry = hubEntries({ rows: [h('990001', 'Invented Hospital', null, 'SC', 'unknown')], states: {} }).find((e) => e.type === 'hospital');
   assert.equal(entry.extra, 'SC');
   assert.equal(entry.sub, 'SC');
+});
+
+test('hubEntries: a state count is the asset\'s own key only, never one the object inherits', () => {
+  const states = hubEntries({ rows: [], states: Object.create({ OH: 7 }) }).filter((e) => e.type === 'state');
+  assert.equal(states.find((e) => e.key === 'OH').sub, 'State · 0 hospitals');
 });

@@ -178,14 +178,14 @@ test('released: false: no hub page is indexable in production, and the sitemap l
     assert.doesNotMatch(readFileSync(join(dir, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
-test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
+test('every hub page holds the family search in its bar, over the search\'s own asset, and loads its script', () =>
   withTemp('pp-hub-search-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
     const paths = ['/', ...Object.values(SITE.pages), ...PLACEHOLDER_PROGRAMS.map((p) => p.path)];
     const files = [...paths.map((path) => [path, join(dir, path, 'index.html')]), ['not found', join(dir, '404.html')]];
-    const box = String(hubSearchForm(ASSETS.shell.hubUrl));
-    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-hospitals\.test\.json" data-hub hidden>/);
+    const box = String(hubSearchForm(ASSETS.shell.searchUrl));
+    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-search\.test\.json" data-hub hidden>/);
     for (const [path, file] of files) {
       const text = readFileSync(file, 'utf8');
       const header = headerOf(text);

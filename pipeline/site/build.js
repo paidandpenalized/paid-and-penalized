@@ -7,6 +7,7 @@ import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { hubAsset } from '../../hub/asset.js';
+import { searchAsset } from '../../hub/search/asset.js';
 import { hubModel } from '../../hub/data.js';
 import { shellFacts } from '../../hub/model.js';
 import { HUB } from '../../hub/pages.js';
@@ -64,17 +65,21 @@ export function mergeEntries(...sets) {
   return merged;
 }
 
-// The build's context for the sites. The hub's one browser asset (every hospital's dollars and place,
-// hub-hospitals.<hash>.json) is written once, and the facts every page's shell shows (hub/model.js's shellFacts, and
-// hubUrl: the asset's path) are computed once and handed to every page as ctx.assets.shell. A change to the dollar
+// The build's context for the sites. The hub's browser asset (every dollar-file hospital's dollars and place,
+// hub-hospitals.<hash>.json) and the family search's index (every hospital on Medicare's list with its kind,
+// hub-search.<hash>.json; hub/search/asset.js) are written once, and the facts every page's shell shows (hub/model.js's
+// shellFacts, hubUrl: the hub asset's path, and searchUrl: the search index's) are computed once and handed to every page
+// as ctx.assets.shell. A change to the dollar
 // estimates changes the facts on every page, the hub's and a program site's alike. The hospitals and their story facts
 // are hub/data.js hubModel's, which the hub's pages read too. `assets` (what buildAssets returned) is not edited:
 // createContext copies it with the shell added.
 export function buildContext({ outDir, env, assets }) {
-  const { hub, hospitals, facts: story } = hubModel();
+  const { hub, hospitals, outside, facts: story } = hubModel();
   const facts = shellFacts({ facts: story, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid });
-  const hubUrl = writeHashed(join(outDir, 'assets'), 'hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub)));
-  return createContext({ outDir, env, assets, shell: { ...facts, hubUrl } });
+  const dir = join(outDir, 'assets');
+  const hubUrl = writeHashed(dir, 'hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub)));
+  const searchUrl = writeHashed(dir, 'hub-search', 'json', JSON.stringify(searchAsset({ hospitals, outside, master: hub.master })));
+  return createContext({ outDir, env, assets, shell: { ...facts, hubUrl, searchUrl } });
 }
 
 export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), sites = SITES } = {}) {

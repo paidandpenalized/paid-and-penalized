@@ -195,7 +195,7 @@ test('what only a script uses is hidden: the small states\' buttons, the peer to
   assert.match(out, /<canvas class="stage__cv" aria-hidden="true" hidden><\/canvas>/);
   const form = [...tags(out, { names: ['form'] })].find(({ attrs }) => attrs.class === 'omni omni--hero');
   assert.ok(form, 'the hero search');
-  assert.equal(form.attrs['data-src'], assets.shell.hubUrl);
+  assert.equal(form.attrs['data-src'], assets.shell.searchUrl, 'the search\'s own asset, as the bar\'s box');
   assert.ok('hidden' in form.attrs);
   // A family search box (hub/client/search.js mounts it) that lists hospitals only.
   assert.ok('data-hub' in form.attrs);
