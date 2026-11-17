@@ -110,7 +110,7 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .ft__f .field__label { margin-bottom: 8px; }
 .ft__f a { color: var(--ink); }
 .ft__list, .ft__links { margin: 0; padding: 0; list-style: none; }
-.ft__list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0 10px; max-width: none; }
+.ft__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; max-width: none; }
 /* A program's name and code stay one line; a figure that no longer fits beside them (the work requirement's range on a
    phone) takes the next line, still at the right edge. */
 .ft__list a { font-weight: 600; text-decoration: none; white-space: nowrap; }

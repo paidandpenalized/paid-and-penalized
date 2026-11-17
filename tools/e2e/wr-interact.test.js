@@ -21,7 +21,7 @@ import assert from 'node:assert/strict';
 import { hubHospitals } from '../../hub/model.js';
 import { loadHub } from '../../hub/data.js';
 import { loadMedicaid } from '../../sites/work-requirement/web/data.js';
-import { PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
+import { METHODS_PATH, PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
 import { hospitalRows } from '../../sites/work-requirement/web/program/strips.js';
 import { AXE_WIDTHS, audit, grainWorst, openFolds } from './axe.js';
 import { CONCURRENCY, ENGINE, SCHEMES, assertNoSideways, assertQuiet, eventually, fetchesOf, settle, useBrowser, useContext, withPage } from './lib.js';
@@ -496,10 +496,41 @@ describe('the work-requirement page under touch', { skip: ENGINE === 'firefox' &
           .filter(([, h]) => h < 44);
       });
       assert.deepEqual([...new Set(short.map(([l, h]) => `${l} ${h}px`))], [], 'controls under 44 px');
+      const facts = await page.evaluate(() => {
+        // A sentence with a button in it keeps its line height: the button's taller target doesn't widen its line.
+        const p = document.querySelector('.wr-hpick');
+        const range = document.createRange();
+        range.selectNodeContents(p);
+        const lines = new Set([...range.getClientRects()].map((r) => Math.round(r.bottom))).size;
+        return {
+          // The buttons the page hides and shows ("Show all", the chips' Clear) still hide under the touch rules.
+          shown: [...document.querySelectorAll('.wr :is(.wr-hrand, .wr-chips__clear, .wr-use__reset)')].filter((el) => {
+            const was = el.hidden;
+            el.hidden = true;
+            const shows = getComputedStyle(el).display !== 'none';
+            el.hidden = was;
+            return shows;
+          }).map((el) => el.className),
+          markers: [...document.querySelectorAll('.wr .fig__table > summary')].map((el) => getComputedStyle(el).display),
+          sentence: [p.getBoundingClientRect().height, lines * parseFloat(getComputedStyle(p).lineHeight)],
+        };
+      });
+      assert.deepEqual(facts.shown, [], 'hidden elements stay hidden');
+      assert.deepEqual([...new Set(facts.markers)], ['list-item'], '"Show table" keeps its arrow');
+      assert.ok(facts.sentence[0] <= facts.sentence[1] + 2, `the random pick's sentence keeps its lines (${facts.sentence})`);
       await assertNoSideways(page, `the program page at ${width} px under touch`);
       await assertQuiet(seen, `the program page at ${width} px under touch`);
     }));
   }
+  const tabs = useContext(shared, { width: 390, height: 800, options: { hasTouch: true, isMobile: true } });
+  it('390 px: the Methods page\'s controls are 44 px tall', () => withPage(tabs, { path: METHODS_PATH, watched: true }, async (page, { seen }) => {
+    const short = await page.evaluate(() => [...document.querySelectorAll('.wr-meth :is(button, select, input, summary)')]
+      .filter((el) => el.getClientRects().length)
+      .map((el) => [el.className || el.tagName.toLowerCase(), el.getBoundingClientRect().height])
+      .filter(([, h]) => h < 44));
+    assert.deepEqual(short, [], 'controls under 44 px');
+    await assertQuiet(seen, 'the Methods page under touch');
+  }));
 });
 
 // ---------- accessibility ----------

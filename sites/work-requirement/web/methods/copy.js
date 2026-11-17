@@ -88,7 +88,7 @@ export const COPY = {
   // The three cases.
   casesHeading: { text: 'The three cases', claim: null },
   casesText: {
-    text: 'Low, middle and high are Urban Institute and RWJF’s high, medium and low state mitigation: their projections of how much the work requirement alone reduces average monthly expansion enrollment, state by state (Appendix Table {table}). Nationally that is {low}, {middle} and {high} million fewer enrollees.',
+    text: 'Low, middle and high are Urban Institute and RWJF’s high, medium and low state mitigation: their projections of how much the work requirement alone reduces average monthly expansion enrollment, state by state (Appendix Table\u00a0{table}). Nationally that is {low}, {middle} and {high} million fewer enrollees.',
     claim: ['WR-03', 'WR-18'],
   },
   casesMap: {

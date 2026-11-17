@@ -201,9 +201,15 @@ test('the cost reports\' measured tag carries its phone words, shows one at a ti
   assert.deepEqual(wraps, ['.wr-stcard__lines .wr-tag--wrap']);
 });
 
-// The 11-10 build report's launch fix-up: "Table A.2" in the as-of block never breaks between its words.
-test('the as-of block keeps "Table A.2" on one line', () => {
-  const asof = program.slice(program.indexOf('Enrollment declines'));
-  const cell = asof.slice(0, asof.indexOf('</dd>'));
-  assert.match(cell, /<span class="nw">Table A\.2<\/span>/);
+// The 11-10 build report's launch fix-up: "Table A.2" never breaks between its words, in the as-of block or Methods.
+test('"Table A.2" is joined by a no-break space on both pages', () => {
+  const at = program.indexOf('Enrollment declines');
+  assert.ok(at >= 0, 'the as-of block has its declines cell');
+  const cell = program.slice(at, program.indexOf('</dd>', at));
+  // Methods' cases paragraph (its source list also names the table, in the pin's own title, which is data).
+  const cases = methods.slice(methods.indexOf('state by state ('), methods.indexOf('Nationally that is'));
+  for (const [page, text] of [['the as-of cell', cell], ['Methods\' cases', cases]]) {
+    assert.match(text, /Table\u00a0A\.2/, page);
+    assert.doesNotMatch(text, /Table A\.2/, page);
+  }
 });
