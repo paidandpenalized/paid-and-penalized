@@ -262,6 +262,7 @@ test('build: the summary line names the file count, the size and the pages', () 
     const line = summaryLine({ pages: 7, env: 'preview', files: 13123, bytes: 1288490188 });
     assert.ok(line.includes('7 pages') && line.includes('13,123 files') && line.includes('1.2 GB') && line.includes('env preview'), 'pages, files, size and env');
     assert.ok(summaryLine({ pages: 1, env: undefined, files: 2, bytes: 3 }).includes('env unset'));
+    assert.ok(summaryLine({ pages: 12415, env: 'preview', files: 13106, bytes: 3 }).startsWith('dist/: 12,415 pages, 13,106 files'), 'the pages counted as the files are');
   }));
 
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {

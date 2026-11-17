@@ -32,8 +32,9 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     await generateHub(ctx, { released: true });
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
     // still to come, and a page per hospital in the dollar file (the
-    // Readmissions site writes /hrrp/ and its pages). The hub released: its home page, Methods, policy pages and hospital
-    // pages with an estimate (one without has no figures) are indexable; the 404 page and the placeholders never are.
+    // Readmissions site writes /hrrp/ and its pages). The hub released: its home page, Methods, policy pages and every
+    // hospital page but one with no inputs (an estimate's, Maryland's and an outside hospital's) are indexable; the 404
+    // page and the placeholders never are.
     const hub = loadHub();
     const { outside } = hubModel();
     assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + outside.length);
@@ -133,12 +134,6 @@ const withRealHub = (env, fn) => withTemp('pp-hub-all-', async (dir) => {
   return fn(ctx, (path) => readFileSync(join(dir, path, 'index.html'), 'utf8'));
 });
 
-test('generateHub: every master CCN has /hospital/<ccn>/index.html', () =>
-  withRealHub('preview', (ctx, read) => {
-    const { hub } = hubModel();
-    const missing = [...hub.master.keys()].filter((ccn) => !existsSync(join(ctx.outDir, hospitalPathOf('hub', ccn), 'index.html')));
-    assert.equal(missing.length, 0, `${missing.length} master hospitals have no page`);
-  }));
 
 test('generateHub: in production, Maryland and outside pages are indexable and in the sitemap; no-inputs pages are not', () =>
   withRealHub('production', (ctx) => {
@@ -156,10 +151,14 @@ test('generateHub: in production, Maryland and outside pages are indexable and i
     assert.ok(text(kinds.noInputs[0]).includes(NOINDEX), 'a no-inputs page is noindex');
   }));
 
-test('generateHub: in a non-production build every hospital page is noindex', () =>
+// One preview build for both checks: every master CCN has a page, and none is indexable outside production.
+test('generateHub, in a non-production build: every master CCN has /hospital/<ccn>/index.html, and every one is noindex', () =>
   withRealHub('preview', (ctx) => {
     const { hub } = hubModel();
-    const open = [...hub.master.keys()].filter((ccn) => !readFileSync(join(ctx.outDir, hospitalPathOf('hub', ccn), 'index.html'), 'utf8').includes(NOINDEX));
+    const pathOf = (ccn) => join(ctx.outDir, hospitalPathOf('hub', ccn), 'index.html');
+    const missing = [...hub.master.keys()].filter((ccn) => !existsSync(pathOf(ccn)));
+    assert.equal(missing.length, 0, `${missing.length} master hospitals have no page`);
+    const open = [...hub.master.keys()].filter((ccn) => !readFileSync(pathOf(ccn), 'utf8').includes(NOINDEX));
     assert.equal(open.length, 0, `${open.length} hospital pages are indexable`);
     assert.equal(ctx.indexable.filter((p) => p.startsWith('/hospital/')).length, 0);
   }));

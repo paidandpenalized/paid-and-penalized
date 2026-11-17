@@ -111,7 +111,7 @@ export function distStats(dir) {
 // The build's one-line summary: the pages, the files and size of dist/, and the env.
 export function summaryLine({ pages, env, files, bytes }) {
   const size = bytes >= 2 ** 30 ? `${(bytes / 2 ** 30).toFixed(1)} GB` : `${(bytes / 2 ** 20).toFixed(1)} MB`;
-  return `dist/: ${pages} pages, ${files.toLocaleString('en-US')} files, ${size} (env ${env ?? 'unset'})`;
+  return `dist/: ${pages.toLocaleString('en-US')} pages, ${files.toLocaleString('en-US')} files, ${size} (env ${env ?? 'unset'})`;
 }
 
 if (isMain(import.meta.url)) {

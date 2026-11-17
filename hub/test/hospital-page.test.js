@@ -363,7 +363,7 @@ test('the copy holds no word that judges', () => {
   for (const text of Object.values(COPY)) assert.ok(!/\b(should|failed|could have avoided|worst|best)\b/i.test(text), 'a judging word in the copy');
 });
 
-test('the hub writes a page for every hospital in the dollar file, each at its address, none with NaN, undefined or Infinity', () =>
+test('the hub writes a page for every hospital in the master, each at its address, none with NaN, undefined or Infinity', () =>
   withTemp('pp-hub-hosp-', async (dir) => {
     const base = createContext({ outDir: join(dir, 'a'), env: 'production', assets: ASSETS });
     await generateHub(base, { hospitals: [], master: new Map() });
@@ -372,7 +372,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + OUTSIDE.length, 'one page per hospital in the master');
     let bad = 0;
     let wrongCanonical = 0;
-    for (const h of HOSPITALS) {
+    for (const h of [...HOSPITALS, ...OUTSIDE]) {
       const path = hospitalPathOf('hub', h.ccn);
       const text = readFileSync(join(dir, 'b', path, 'index.html'), 'utf8');
       if (/NaN|undefined|Infinity/.test(text)) bad += 1;
