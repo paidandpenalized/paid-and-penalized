@@ -17,6 +17,7 @@ import { decimal, dollars, money, moneyRange, pct } from '../../web/render/forma
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel, loadHub } from '../data.js';
+import { cmsNamed } from '../../pipeline/master.js';
 import { COPY } from '../hospital/copy.js';
 import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';
@@ -380,9 +381,10 @@ test('the hub writes a page for every hospital in the master, each at its addres
     }
     assert.equal(bad, 0, 'pages with NaN, undefined or Infinity');
     assert.equal(wrongCanonical, 0, 'pages without their canonical address');
-    // The hub released: every page is indexed but one with no inputs (it has no figures).
+    // The hub released: every page is indexed but one with no inputs (it has no figures) and one for a hospital no CMS
+    // file names.
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
-    assert.equal(indexed, HOSPITALS.filter((h) => h.status !== 'no-inputs').length + OUTSIDE.length, 'hospital pages indexable');
+    assert.equal(indexed, HOSPITALS.filter((h) => h.status !== 'no-inputs').length + OUTSIDE.filter((h) => cmsNamed(h.name, h.ccn)).length, 'hospital pages indexable');
   }));
 
 test('a hospital whose Medicare agreement ended before or during the year carries the note on its net (no estimate: under its status); one still in Medicare carries none', () => {

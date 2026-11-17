@@ -12,6 +12,7 @@ import { externalLink, feedbackHref } from '../../web/render/layout.js';
 import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
 import { hubModel, loadHub } from '../data.js';
+import { cmsNamed } from '../../pipeline/master.js';
 import { hacCounts, hrrpCounts, hubHospitals } from '../model.js';
 import { rangeShare } from '../../engine/js/dollars/ranges.js';
 import { endedBy } from '../../web/render/closed.js';
@@ -31,17 +32,17 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx, { released: true });
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
-    // still to come, and a page per hospital in the dollar file (the
-    // Readmissions site writes /hrrp/ and its pages). The hub released: its home page, Methods, policy pages and every
-    // hospital page but one with no inputs (an estimate's, Maryland's and an outside hospital's) are indexable; the 404
-    // page and the placeholders never are.
+    // still to come, and a page per hospital in the master (the Readmissions site writes /hrrp/ and its pages). The hub
+    // released: its home page, Methods, policy pages and every hospital page (an estimate's, Maryland's and an outside
+    // hospital's) are indexable, but one with no inputs and one for a hospital no CMS file names; the 404 page and the
+    // placeholders never are.
     const hub = loadHub();
     const { outside } = hubModel();
     assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + outside.length);
     // The program site's pages first (the sitemap's order), then the hub's.
     assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
     const hubIndexable = ctx.indexable.slice(2);
-    assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.status !== 'no-inputs').length + outside.length);
+    assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.status !== 'no-inputs').length + outside.filter((h) => cmsNamed(h.name, h.ccn)).length);
     assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -134,21 +135,26 @@ const withRealHub = (env, fn) => withTemp('pp-hub-all-', async (dir) => {
   return fn(ctx, (path) => readFileSync(join(dir, path, 'index.html'), 'utf8'));
 });
 
-
-test('generateHub: in production, Maryland and outside pages are indexable and in the sitemap; no-inputs pages are not', () =>
+// An outside hospital no CMS file names (the master's stand-in name) stays out, as on the Readmissions site.
+test('generateHub: in production, Maryland and outside pages are indexable and in the sitemap; no-inputs pages and unnamed outside hospitals are not', () =>
   withRealHub('production', (ctx) => {
     const { hospitals, outside } = hubModel();
     const listed = new Set(ctx.indexable);
-    const kinds = { maryland: hospitals.filter((h) => h.status === 'maryland'), noInputs: hospitals.filter((h) => h.status === 'no-inputs'), outside };
+    const kinds = {
+      maryland: hospitals.filter((h) => h.status === 'maryland'), noInputs: hospitals.filter((h) => h.status === 'no-inputs'),
+      named: outside.filter((h) => cmsNamed(h.name, h.ccn)), unnamed: outside.filter((h) => !cmsNamed(h.name, h.ccn)),
+    };
     for (const [kind, rows] of Object.entries(kinds)) assert.ok(rows.length > 0, `the data has ${kind} hospitals`);
     const wrong = (rows, want) => rows.filter((h) => listed.has(hospitalPathOf('hub', h.ccn)) !== want).length;
     assert.equal(wrong(kinds.maryland, true), 0, 'Maryland pages in the sitemap');
-    assert.equal(wrong(outside, true), 0, 'outside pages in the sitemap');
+    assert.equal(wrong(kinds.named, true), 0, 'outside pages in the sitemap');
     assert.equal(wrong(kinds.noInputs, false), 0, 'no-inputs pages out of it');
+    assert.equal(wrong(kinds.unnamed, false), 0, 'unnamed outside hospitals out of it');
     const text = (h) => readFileSync(join(ctx.outDir, hospitalPathOf('hub', h.ccn), 'index.html'), 'utf8');
     assert.ok(!text(kinds.maryland[0]).includes(NOINDEX), 'a Maryland page carries no noindex');
-    assert.ok(!text(outside[0]).includes(NOINDEX), 'an outside page carries no noindex');
+    assert.ok(!text(kinds.named[0]).includes(NOINDEX), 'an outside page carries no noindex');
     assert.ok(text(kinds.noInputs[0]).includes(NOINDEX), 'a no-inputs page is noindex');
+    assert.ok(kinds.unnamed.every((h) => text(h).includes(NOINDEX)), 'an unnamed outside hospital\'s page is noindex');
   }));
 
 // One preview build for both checks: every master CCN has a page, and none is indexable outside production.

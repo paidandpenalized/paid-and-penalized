@@ -312,7 +312,7 @@ function shell({ h, assets, robots }, place, fy, { description, body, scripts },
 // file; a hospital with no row in it gets no band).
 export function hospitalPage(args) {
   const fy = String(args.assets.shell.fy);
-  const place = { name: args.h.name, place: placeText(args.h) };
+  const place = { name: shownName(args.h), place: placeText(args.h) };
   return shell(args, place, fy, hubParts(args, fy, place));
 }
 
@@ -320,7 +320,7 @@ export function hospitalPage(args) {
 // hospitalPage's, but with no hospitals, facts or hrrp (it has no peers), and: programYears, loadHub().programYears
 // (required: the years its reasons name); near and like, its figure blocks ('' for none; outside-figures.js nearBlock,
 // which brings the figure script, and likeBlock). A hospital no CMS file names goes by "Hospital <CCN>" in its title,
-// description and the header's chip, as on its card (record.js shownName).
+// description and the header's chip, as on its card (record.js shownName), as on hospitalPage's.
 export function outsidePage(args) {
   const fy = String(args.assets.shell.fy);
   const place = { name: shownName(args.h), place: placeText(args.h) };

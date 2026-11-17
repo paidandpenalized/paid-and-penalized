@@ -4,6 +4,7 @@
 // the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
 // sites before it emitted. The hub's own pages stay noindex until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
+import { cmsNamed } from '../pipeline/master.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
@@ -223,18 +224,21 @@ function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, 
   }
 }
 
-// The page of every other hospital in the master (hospital/outside.js), the hub's robots value on each. The figures'
+// The page of every other hospital in the master (hospital/outside.js): the hub's robots value on each, but never for a
+// hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed), which, as on the Readmissions
+// site, stays out of search engines until a file names it. The figures'
 // context (outside-figures.js) is worked out once here and shared by every page; each page numbers its figures in order
 // (a counter of its own, the nearest hospitals' map first). model: hubModel(), whose hub holds the master, the shapes and
 // the program years.
-function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots }) {
+function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots, never }) {
   const figures = outsideFigureContext({ hospitals, outside, likeCounts, master: hub.master, shapes: hub.shapes, counties: hub.counties, programYears: hub.programYears, fy: hub.fy });
   for (const h of outside) {
     const next = counter();
     const near = nearBlock(h, figures, next);
     const like = likeBlock(h, figures, next);
-    const text = outsidePage({ h, assets: ctx.assets, robots, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
-    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots, text });
+    const r = cmsNamed(h.name, h.ccn) ? robots : never;
+    const text = outsidePage({ h, assets: ctx.assets, robots: r, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text });
   }
 }
 
@@ -260,7 +264,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, medicaid: hub.medicaid, robots, never });
   // The outside pages only with the real model: a test that passes its own hospitals has no master to match them.
-  if (!hospitals) outsidePages(ctx, { model, robots });
+  if (!hospitals) outsidePages(ctx, { model, robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });

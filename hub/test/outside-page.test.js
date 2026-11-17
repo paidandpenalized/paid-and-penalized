@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
-import { ASSETS } from '../../pipeline/test/helpers.js';
+import { ASSETS, chipOf, headerOf } from '../../pipeline/test/helpers.js';
 import { endedBy } from '../../web/render/closed.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { SITE, hospitalPathOf } from '../../web/site.js';
@@ -15,7 +15,6 @@ import { outsideDescription } from '../hospital/outside.js';
 import { outsidePage } from '../hospital/page.js';
 import { LIKE_GROUPS } from '../outside.js';
 import { mainOf } from './helpers.js';
-import { chipOf, headerOf } from '../../pipeline/test/helpers.js';
 import { cmsNamed } from '../../pipeline/master.js';
 
 const { hub: HUB, hospitals: HOSPITALS, facts: FACTS, outside: OUTSIDE } = hubModel();
