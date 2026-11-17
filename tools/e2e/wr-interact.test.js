@@ -486,11 +486,11 @@ describe('the work-requirement page under touch', { skip: ENGINE === 'firefox' &
       await ready(page);
       await bringAll(page);
       const short = await page.evaluate(() => {
-        const CONTROLS = '.wr button, .wr select, .wr input, .wr summary, .wr .wr-lines, .wr .wr-switch__opt';
+        // A switch option's radio is hidden over its label, so the label is the target.
+        const CONTROLS = '.wr button, .wr select, .wr input:not(.wr-switch__opt input), .wr summary, .wr .wr-lines, .wr .wr-switch__opt';
         const label = (el) => `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`;
         return [...document.querySelectorAll(CONTROLS)]
-          // A switch option's radio is hidden over its label (the label is the target); a hidden control has no target.
-          .filter((el) => !el.closest('.wr-switch__opt') || el.matches('.wr-switch__opt'))
+          // A hidden control has no target.
           .filter((el) => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden')
           .map((el) => [label(el), Math.round(el.getBoundingClientRect().height * 10) / 10])
           .filter(([, h]) => h < 44);

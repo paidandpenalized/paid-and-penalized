@@ -57,7 +57,7 @@ export function asOf(data) {
     items: [
       { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: isoDate(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
       { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: isoDate(spend.datasetModified) }, ['date']) },
-      { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table, date: isoDate(declines.retrieved) }, ['date']) },
+      { label: t('asofDeclinesLabel'), value: fillKeep('asofDeclines', { table: `Table ${table}`, date: isoDate(declines.retrieved) }, ['table', 'date']) },
       { label: t('asofPenaltiesLabel'), value: fillKeep('asofPenalties', { fy: String(data.meta.penaltyFy), date: isoDate(data.meta.penaltiesChanged) }, ['date']) },
       { label: t('asofChangedLabel'), value: fillKeep('asofChanged', { date: isoDate(data.meta.changed) }, ['date']) },
     ],

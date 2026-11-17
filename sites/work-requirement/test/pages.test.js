@@ -205,7 +205,5 @@ test('the cost reports\' measured tag carries its phone words, shows one at a ti
 test('the as-of block keeps "Table A.2" on one line', () => {
   const asof = program.slice(program.indexOf('Enrollment declines'));
   const cell = asof.slice(0, asof.indexOf('</dd>'));
-  assert.match(cell, /A\.2/, 'the declines cell names its table');
-  assert.doesNotMatch(cell, /Table A\.2/, 'no breakable space between "Table" and "A.2"');
-  assert.match(cell, /Table(?: |&nbsp;|&#160;)A\.2|<span class="nw">Table A\.2<\/span>/, 'kept together');
+  assert.match(cell, /<span class="nw">Table A\.2<\/span>/);
 });
