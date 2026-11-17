@@ -711,5 +711,870 @@
     "note": "Staged: an input for the FY2027 HACRP refresh, pinned ahead of use; nothing built from the pins reads it yet. Its period is the FY2027 program's PSI-90 window, so it is not a revision of the FY2026 values.",
     "staged": true,
     "retrieved": "2026-11-13"
+  },
+  {
+    "id": "hcris-fy2011-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2011 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2011/hcris_fy2011_cells.csv",
+    "bytes": 1604498,
+    "sha256": "888c333afde6bd3c1570ad541edee3cef4f8f753667d8927e6e28cb671e4c0e3",
+    "derivedFrom": {
+      "file": "HOSP10FY2011.ZIP",
+      "bytes": 136911382,
+      "sha256": "80a5364cfb976b0f8500c23b891fdc07719e8efb399b262de21886a995a76256",
+      "members": [
+        "HOSP10_2011_rpt.csv",
+        "HOSP10_2011_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2011.ZIP",
+      "archive": "r2://pp-sources/sha256/80a5364cfb976b0f8500c23b891fdc07719e8efb399b262de21886a995a76256",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2011-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2011 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2011/hcris_fy2011_g3_line24.csv",
+    "bytes": 700977,
+    "sha256": "2d2fe1832c98dbf87fa6f3841677ab2040a5021a6854e5545ec4796a1cdc370d",
+    "derivedFrom": {
+      "file": "HOSP10FY2011.ZIP",
+      "bytes": 136911382,
+      "sha256": "80a5364cfb976b0f8500c23b891fdc07719e8efb399b262de21886a995a76256",
+      "members": [
+        "HOSP10_2011_rpt.csv",
+        "HOSP10_2011_nmrc.csv",
+        "HOSP10_2011_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2011.ZIP",
+      "archive": "r2://pp-sources/sha256/80a5364cfb976b0f8500c23b891fdc07719e8efb399b262de21886a995a76256",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2012-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2012 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2012/hcris_fy2012_cells.csv",
+    "bytes": 1628689,
+    "sha256": "cef18effee907512a0ed046f8630a531692978dfdbe967f3954b97a1e702136c",
+    "derivedFrom": {
+      "file": "HOSP10FY2012.ZIP",
+      "bytes": 139153577,
+      "sha256": "6bd2f78e4c4229ebccf788cb1f3da6c25ce9d4aa3f70d99b5077f280c50c2f6c",
+      "members": [
+        "HOSP10_2012_rpt.csv",
+        "HOSP10_2012_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2012.ZIP",
+      "archive": "r2://pp-sources/sha256/6bd2f78e4c4229ebccf788cb1f3da6c25ce9d4aa3f70d99b5077f280c50c2f6c",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2012-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2012 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2012/hcris_fy2012_g3_line24.csv",
+    "bytes": 735501,
+    "sha256": "22c5fd0f19c99d6a012a9a6eeea120e735c026071b484b772d435eacc249c7c5",
+    "derivedFrom": {
+      "file": "HOSP10FY2012.ZIP",
+      "bytes": 139153577,
+      "sha256": "6bd2f78e4c4229ebccf788cb1f3da6c25ce9d4aa3f70d99b5077f280c50c2f6c",
+      "members": [
+        "HOSP10_2012_rpt.csv",
+        "HOSP10_2012_nmrc.csv",
+        "HOSP10_2012_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2012.ZIP",
+      "archive": "r2://pp-sources/sha256/6bd2f78e4c4229ebccf788cb1f3da6c25ce9d4aa3f70d99b5077f280c50c2f6c",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2013-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2013 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2013/hcris_fy2013_cells.csv",
+    "bytes": 1629180,
+    "sha256": "8bbd35b194a56f826494aade015a994d8121775e30e951681be6f5eb5cea1220",
+    "derivedFrom": {
+      "file": "HOSP10FY2013.ZIP",
+      "bytes": 140955634,
+      "sha256": "6693b8174b9d6d10c3dab75f7bdaad829c33b9feabea6367d02827a233163951",
+      "members": [
+        "HOSP10_2013_rpt.csv",
+        "HOSP10_2013_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2013.ZIP",
+      "archive": "r2://pp-sources/sha256/6693b8174b9d6d10c3dab75f7bdaad829c33b9feabea6367d02827a233163951",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2013-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2013 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2013/hcris_fy2013_g3_line24.csv",
+    "bytes": 754394,
+    "sha256": "d1037ce13457fa868d1ea43b9995aa1b3b8cb93409f109b8d6efc49e72c45996",
+    "derivedFrom": {
+      "file": "HOSP10FY2013.ZIP",
+      "bytes": 140955634,
+      "sha256": "6693b8174b9d6d10c3dab75f7bdaad829c33b9feabea6367d02827a233163951",
+      "members": [
+        "HOSP10_2013_rpt.csv",
+        "HOSP10_2013_nmrc.csv",
+        "HOSP10_2013_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2013.ZIP",
+      "archive": "r2://pp-sources/sha256/6693b8174b9d6d10c3dab75f7bdaad829c33b9feabea6367d02827a233163951",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2014-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2014 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2014/hcris_fy2014_cells.csv",
+    "bytes": 1630756,
+    "sha256": "bb1d874f471040f999c9cea437d391274d8d6139449bb3128403ac79f531677f",
+    "derivedFrom": {
+      "file": "HOSP10FY2014.ZIP",
+      "bytes": 139663440,
+      "sha256": "9608b4a65830a25b423a7a68f44b53dc3fc35c1cc163309a1530b7fb1bb20662",
+      "members": [
+        "HOSP10_2014_rpt.csv",
+        "HOSP10_2014_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2014.ZIP",
+      "archive": "r2://pp-sources/sha256/9608b4a65830a25b423a7a68f44b53dc3fc35c1cc163309a1530b7fb1bb20662",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2014-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2014 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2014/hcris_fy2014_g3_line24.csv",
+    "bytes": 736399,
+    "sha256": "34dee027652677c975b25eff091682176705c9a2aa47051ec9bb8af01420a5de",
+    "derivedFrom": {
+      "file": "HOSP10FY2014.ZIP",
+      "bytes": 139663440,
+      "sha256": "9608b4a65830a25b423a7a68f44b53dc3fc35c1cc163309a1530b7fb1bb20662",
+      "members": [
+        "HOSP10_2014_rpt.csv",
+        "HOSP10_2014_nmrc.csv",
+        "HOSP10_2014_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2014.ZIP",
+      "archive": "r2://pp-sources/sha256/9608b4a65830a25b423a7a68f44b53dc3fc35c1cc163309a1530b7fb1bb20662",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2015-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2015 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2015/hcris_fy2015_cells.csv",
+    "bytes": 1615528,
+    "sha256": "b64d29e7c5d9277feeff161d4efff2af051b289aebcdb97568dfaf2d4ea3b75f",
+    "derivedFrom": {
+      "file": "HOSP10FY2015.ZIP",
+      "bytes": 139591078,
+      "sha256": "45e2fe181aa3dc648fc7ea169ea7c72c25127ddbda699b8b148cf99b968ba367",
+      "members": [
+        "HOSP10_2015_rpt.csv",
+        "HOSP10_2015_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2015.ZIP",
+      "archive": "r2://pp-sources/sha256/45e2fe181aa3dc648fc7ea169ea7c72c25127ddbda699b8b148cf99b968ba367",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2015-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2015 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2015/hcris_fy2015_g3_line24.csv",
+    "bytes": 704775,
+    "sha256": "61dea67494f06ac9da3f521a79968f49c904fe5f789eb0dc8e1669538d3f76a3",
+    "derivedFrom": {
+      "file": "HOSP10FY2015.ZIP",
+      "bytes": 139591078,
+      "sha256": "45e2fe181aa3dc648fc7ea169ea7c72c25127ddbda699b8b148cf99b968ba367",
+      "members": [
+        "HOSP10_2015_rpt.csv",
+        "HOSP10_2015_nmrc.csv",
+        "HOSP10_2015_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2015.ZIP",
+      "archive": "r2://pp-sources/sha256/45e2fe181aa3dc648fc7ea169ea7c72c25127ddbda699b8b148cf99b968ba367",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2016-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2016 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2016/hcris_fy2016_cells.csv",
+    "bytes": 1606264,
+    "sha256": "e1ad24fcd9a81c40b1f3f4780bf593df44e768d581ddc193a1f814a855cedb65",
+    "derivedFrom": {
+      "file": "HOSP10FY2016.ZIP",
+      "bytes": 139117658,
+      "sha256": "f1215113d3458437ac973c14d2250fe6a19406efd9bb5d63d76258cff4693daf",
+      "members": [
+        "HOSP10_2016_rpt.csv",
+        "HOSP10_2016_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2016.ZIP",
+      "archive": "r2://pp-sources/sha256/f1215113d3458437ac973c14d2250fe6a19406efd9bb5d63d76258cff4693daf",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2016-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2016 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2016/hcris_fy2016_g3_line24.csv",
+    "bytes": 701249,
+    "sha256": "819d63990fae4a01794aa29cab5a67f8a3d8134507a912eab10d41d31256edfa",
+    "derivedFrom": {
+      "file": "HOSP10FY2016.ZIP",
+      "bytes": 139117658,
+      "sha256": "f1215113d3458437ac973c14d2250fe6a19406efd9bb5d63d76258cff4693daf",
+      "members": [
+        "HOSP10_2016_rpt.csv",
+        "HOSP10_2016_nmrc.csv",
+        "HOSP10_2016_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2016.ZIP",
+      "archive": "r2://pp-sources/sha256/f1215113d3458437ac973c14d2250fe6a19406efd9bb5d63d76258cff4693daf",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2017-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2017 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2017/hcris_fy2017_cells.csv",
+    "bytes": 1597274,
+    "sha256": "8fc8cef23f9f6c2f070b614a7262edbc4ab080e828a8d01a210bf9cc8bcdc130",
+    "derivedFrom": {
+      "file": "HOSP10FY2017.ZIP",
+      "bytes": 139098891,
+      "sha256": "b3f66b7188b2dfb08e4d8ead4a3004cf5db8e144b54eebabb6f2b551ccdb45cb",
+      "members": [
+        "HOSP10_2017_rpt.csv",
+        "HOSP10_2017_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2017.ZIP",
+      "archive": "r2://pp-sources/sha256/b3f66b7188b2dfb08e4d8ead4a3004cf5db8e144b54eebabb6f2b551ccdb45cb",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2017-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2017 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2017/hcris_fy2017_g3_line24.csv",
+    "bytes": 667059,
+    "sha256": "ddfafceaa4a6f20d62306e3aa8641738fd23b470fb78492290555955d1be4cba",
+    "derivedFrom": {
+      "file": "HOSP10FY2017.ZIP",
+      "bytes": 139098891,
+      "sha256": "b3f66b7188b2dfb08e4d8ead4a3004cf5db8e144b54eebabb6f2b551ccdb45cb",
+      "members": [
+        "HOSP10_2017_rpt.csv",
+        "HOSP10_2017_nmrc.csv",
+        "HOSP10_2017_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2017.ZIP",
+      "archive": "r2://pp-sources/sha256/b3f66b7188b2dfb08e4d8ead4a3004cf5db8e144b54eebabb6f2b551ccdb45cb",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2018-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2018 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2018/hcris_fy2018_cells.csv",
+    "bytes": 1599629,
+    "sha256": "3bc7cceb0a6f6dd00d5545c193e1f85ce7368194641d98295992b78c1de986d5",
+    "derivedFrom": {
+      "file": "HOSP10FY2018.ZIP",
+      "bytes": 139460292,
+      "sha256": "2a3e60f4e4e88410d90df790e6d2c1d0f23d7883eba57be1ce32b22dacbc373a",
+      "members": [
+        "HOSP10_2018_rpt.csv",
+        "HOSP10_2018_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2018.ZIP",
+      "archive": "r2://pp-sources/sha256/2a3e60f4e4e88410d90df790e6d2c1d0f23d7883eba57be1ce32b22dacbc373a",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2018-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2018 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2018/hcris_fy2018_g3_line24.csv",
+    "bytes": 640459,
+    "sha256": "58e9346c336b99914049fc1fcee6f20ebef6efd914b275423a3e9a3720cd5bce",
+    "derivedFrom": {
+      "file": "HOSP10FY2018.ZIP",
+      "bytes": 139460292,
+      "sha256": "2a3e60f4e4e88410d90df790e6d2c1d0f23d7883eba57be1ce32b22dacbc373a",
+      "members": [
+        "HOSP10_2018_rpt.csv",
+        "HOSP10_2018_nmrc.csv",
+        "HOSP10_2018_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2018.ZIP",
+      "archive": "r2://pp-sources/sha256/2a3e60f4e4e88410d90df790e6d2c1d0f23d7883eba57be1ce32b22dacbc373a",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2019-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2019 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2019/hcris_fy2019_cells.csv",
+    "bytes": 1587075,
+    "sha256": "ab4a46b6706665725faf2632bdde3e59c67e134c6df7760d4e6c73d3e8b46f56",
+    "derivedFrom": {
+      "file": "HOSP10FY2019.ZIP",
+      "bytes": 138909879,
+      "sha256": "a1b7f2048034d1c00a6b366d87f1ea57a73867f8778091d4bbafaa43c0cf2012",
+      "members": [
+        "HOSP10_2019_rpt.csv",
+        "HOSP10_2019_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2019.ZIP",
+      "archive": "r2://pp-sources/sha256/a1b7f2048034d1c00a6b366d87f1ea57a73867f8778091d4bbafaa43c0cf2012",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2019-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2019 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2019/hcris_fy2019_g3_line24.csv",
+    "bytes": 636146,
+    "sha256": "eecd0164b1820e1a3a6ad6f70157386d31640fff7decda46bdda9df5075b521f",
+    "derivedFrom": {
+      "file": "HOSP10FY2019.ZIP",
+      "bytes": 138909879,
+      "sha256": "a1b7f2048034d1c00a6b366d87f1ea57a73867f8778091d4bbafaa43c0cf2012",
+      "members": [
+        "HOSP10_2019_rpt.csv",
+        "HOSP10_2019_nmrc.csv",
+        "HOSP10_2019_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2019.ZIP",
+      "archive": "r2://pp-sources/sha256/a1b7f2048034d1c00a6b366d87f1ea57a73867f8778091d4bbafaa43c0cf2012",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2020-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2020 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2020/hcris_fy2020_cells.csv",
+    "bytes": 1584237,
+    "sha256": "4551914659be82ce2a089bd673579b178356ba86e201605496096feaf53551da",
+    "derivedFrom": {
+      "file": "HOSP10FY2020.ZIP",
+      "bytes": 137366306,
+      "sha256": "90a42362736f9ab479a8907474ce93ced20929fa72ce69a59125eebef1eb522d",
+      "members": [
+        "HOSP10_2020_rpt.csv",
+        "HOSP10_2020_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2020.ZIP",
+      "archive": "r2://pp-sources/sha256/90a42362736f9ab479a8907474ce93ced20929fa72ce69a59125eebef1eb522d",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2020-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2020 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2020/hcris_fy2020_g3_line24.csv",
+    "bytes": 628871,
+    "sha256": "c2ba7c09495fddc61aac75a86891bfbf56e8bf7dc92d48662bbb185e399d7fdd",
+    "derivedFrom": {
+      "file": "HOSP10FY2020.ZIP",
+      "bytes": 137366306,
+      "sha256": "90a42362736f9ab479a8907474ce93ced20929fa72ce69a59125eebef1eb522d",
+      "members": [
+        "HOSP10_2020_rpt.csv",
+        "HOSP10_2020_nmrc.csv",
+        "HOSP10_2020_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2020.ZIP",
+      "archive": "r2://pp-sources/sha256/90a42362736f9ab479a8907474ce93ced20929fa72ce69a59125eebef1eb522d",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2021-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2021 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2021/hcris_fy2021_cells.csv",
+    "bytes": 1580486,
+    "sha256": "d0f54cc0a92cdf5e4439dd51ff78f147b4c2f6f648e31b0a4fd047a8273b7a9b",
+    "derivedFrom": {
+      "file": "HOSP10FY2021.ZIP",
+      "bytes": 136901310,
+      "sha256": "7f00467c060c24f79833352530255ad751b5138bcdf0eb8304e5875e5bcd4275",
+      "members": [
+        "HOSP10_2021_rpt.csv",
+        "HOSP10_2021_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2021.ZIP",
+      "archive": "r2://pp-sources/sha256/7f00467c060c24f79833352530255ad751b5138bcdf0eb8304e5875e5bcd4275",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2021-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2021 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2021/hcris_fy2021_g3_line24.csv",
+    "bytes": 611985,
+    "sha256": "67cc83455d070d32eef3fb59bbec7c706336060b04d825c08def7902ac1036aa",
+    "derivedFrom": {
+      "file": "HOSP10FY2021.ZIP",
+      "bytes": 136901310,
+      "sha256": "7f00467c060c24f79833352530255ad751b5138bcdf0eb8304e5875e5bcd4275",
+      "members": [
+        "HOSP10_2021_rpt.csv",
+        "HOSP10_2021_nmrc.csv",
+        "HOSP10_2021_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2021.ZIP",
+      "archive": "r2://pp-sources/sha256/7f00467c060c24f79833352530255ad751b5138bcdf0eb8304e5875e5bcd4275",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2022-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2022 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2022/hcris_fy2022_cells.csv",
+    "bytes": 1560181,
+    "sha256": "e0b500f777ca52366064a0a2992ef489c420e45a05aeae51fa48c02501f7698d",
+    "derivedFrom": {
+      "file": "HOSP10FY2022.ZIP",
+      "bytes": 136452978,
+      "sha256": "02b0ba92cb36cf8fc996779e0b8406164d3a74fd15305c515697592f82974415",
+      "members": [
+        "HOSP10_2022_rpt.csv",
+        "HOSP10_2022_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2022.ZIP",
+      "archive": "r2://pp-sources/sha256/02b0ba92cb36cf8fc996779e0b8406164d3a74fd15305c515697592f82974415",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2022-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2022 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2022/hcris_fy2022_g3_line24.csv",
+    "bytes": 596131,
+    "sha256": "77a01d19303674f2d5ceba65cffc519104068f2b66449de1cd02a915adcd80de",
+    "derivedFrom": {
+      "file": "HOSP10FY2022.ZIP",
+      "bytes": 136452978,
+      "sha256": "02b0ba92cb36cf8fc996779e0b8406164d3a74fd15305c515697592f82974415",
+      "members": [
+        "HOSP10_2022_rpt.csv",
+        "HOSP10_2022_nmrc.csv",
+        "HOSP10_2022_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2022.ZIP",
+      "archive": "r2://pp-sources/sha256/02b0ba92cb36cf8fc996779e0b8406164d3a74fd15305c515697592f82974415",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2023-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2023 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2023/hcris_fy2023_cells.csv",
+    "bytes": 1601824,
+    "sha256": "917e3458b2a3ab017e7404ee7275fa2cb00af0346f877045640bc7f4f9c08ac9",
+    "derivedFrom": {
+      "file": "HOSP10FY2023.ZIP",
+      "bytes": 136799140,
+      "sha256": "fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "members": [
+        "HOSP10_2023_rpt.csv",
+        "HOSP10_2023_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
+      "archive": "r2://pp-sources/sha256/fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2023-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2023 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2023/hcris_fy2023_g3_line24.csv",
+    "bytes": 567949,
+    "sha256": "0c34bcb7de90a749d008205595d4e2470a2a7bcc3e2dd1f3ffd01bae5fd172d5",
+    "derivedFrom": {
+      "file": "HOSP10FY2023.ZIP",
+      "bytes": 136799140,
+      "sha256": "fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "members": [
+        "HOSP10_2023_rpt.csv",
+        "HOSP10_2023_nmrc.csv",
+        "HOSP10_2023_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2023.ZIP",
+      "archive": "r2://pp-sources/sha256/fff18bb36d8b448fc7ea5961415307255fe602e0344b8d44b1f7df75b9a6c321",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2024-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2024 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2024/hcris_fy2024_cells.csv",
+    "bytes": 1570814,
+    "sha256": "7544caa4136238e752380746d0c79c0b4d9df2b218368ee701e9b62f6e91b575",
+    "derivedFrom": {
+      "file": "HOSP10FY2024.ZIP",
+      "bytes": 135705434,
+      "sha256": "291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "members": [
+        "HOSP10_2024_rpt.csv",
+        "HOSP10_2024_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2024.ZIP",
+      "archive": "r2://pp-sources/sha256/291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2024-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2024 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2024/hcris_fy2024_g3_line24.csv",
+    "bytes": 544830,
+    "sha256": "d433b162fb493d4fdbd47daba5d7d0e3b5af02dc41137e1f9074ed88e7275674",
+    "derivedFrom": {
+      "file": "HOSP10FY2024.ZIP",
+      "bytes": 135705434,
+      "sha256": "291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "members": [
+        "HOSP10_2024_rpt.csv",
+        "HOSP10_2024_nmrc.csv",
+        "HOSP10_2024_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2024.ZIP",
+      "archive": "r2://pp-sources/sha256/291749abb7dca4d20aa93e7a5f6c560c4052206a626b8755963a7891b0dc8af2",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2025-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2025 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2025/hcris_fy2025_cells.csv",
+    "bytes": 986545,
+    "sha256": "e84aed253bb7dcbc9eec7d1685d6a3c2567c2e07852114aa84379145ca48dcaf",
+    "derivedFrom": {
+      "file": "HOSP10FY2025.ZIP",
+      "bytes": 83547522,
+      "sha256": "6c6bfd9dfcd0ea76e7fa9628df2f22a2239e7930a109f887e297cf333b832bba",
+      "members": [
+        "HOSP10_2025_rpt.csv",
+        "HOSP10_2025_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2025.ZIP",
+      "archive": "r2://pp-sources/sha256/6c6bfd9dfcd0ea76e7fa9628df2f22a2239e7930a109f887e297cf333b832bba",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2025-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2025 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2025/hcris_fy2025_g3_line24.csv",
+    "bytes": 351066,
+    "sha256": "8e3f4c818c6c58afb33dc79fb8fdce6dd869195aa8c489c508473563c6df8871",
+    "derivedFrom": {
+      "file": "HOSP10FY2025.ZIP",
+      "bytes": 83547522,
+      "sha256": "6c6bfd9dfcd0ea76e7fa9628df2f22a2239e7930a109f887e297cf333b832bba",
+      "members": [
+        "HOSP10_2025_rpt.csv",
+        "HOSP10_2025_nmrc.csv",
+        "HOSP10_2025_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2025.ZIP",
+      "archive": "r2://pp-sources/sha256/6c6bfd9dfcd0ea76e7fa9628df2f22a2239e7930a109f887e297cf333b832bba",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2026-cells",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2026 file: every report from an acute or critical access hospital, with the cells the HCRIS layer reads",
+    "path": "hcris-fy2026/hcris_fy2026_cells.csv",
+    "bytes": 5706,
+    "sha256": "90eb1e12e4d39500775a267de3a110f3678b8dc8d30edf5db976e56c2b99dde7",
+    "derivedFrom": {
+      "file": "HOSP10FY2026.ZIP",
+      "bytes": 302360,
+      "sha256": "51f55f9ebd934dacd09390b3f06e6a0deb417c81b773828441cb3a7ccda400d5",
+      "members": [
+        "HOSP10_2026_rpt.csv",
+        "HOSP10_2026_nmrc.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2026.ZIP",
+      "archive": "r2://pp-sources/sha256/51f55f9ebd934dacd09390b3f06e6a0deb417c81b773828441cb3a7ccda400d5",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-fy2026-g3-line24",
+    "title": "Medicare hospital cost reports (HCRIS, Form CMS-2552-10), FY2026 file: G-3 line 24 \"other (specify)\" entries (line 24 and 24.01 to 24.49: label and amount) from every report of an acute or critical access hospital",
+    "path": "hcris-fy2026/hcris_fy2026_g3_line24.csv",
+    "bytes": 1904,
+    "sha256": "47371f78bc7c32df0086a7c7302d7f286089627385c46c31f636bf24f32c44cf",
+    "derivedFrom": {
+      "file": "HOSP10FY2026.ZIP",
+      "bytes": 302360,
+      "sha256": "51f55f9ebd934dacd09390b3f06e6a0deb417c81b773828441cb3a7ccda400d5",
+      "members": [
+        "HOSP10_2026_rpt.csv",
+        "HOSP10_2026_nmrc.csv",
+        "HOSP10_2026_alpha.csv"
+      ],
+      "downloadUrl": "https://downloads.cms.gov/FILES/HCRIS/HOSP10FY2026.ZIP",
+      "archive": "r2://pp-sources/sha256/51f55f9ebd934dacd09390b3f06e6a0deb417c81b773828441cb3a7ccda400d5",
+      "lastModified": "2026-10-05",
+      "note": "CMS regenerates the HCRIS zips as reports are filed and settled; this SHA-256 is of the copy retrieved on 2026-11-04, and a later download of the same URL may differ. The archive copy is the R2 object named in `archive`."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/pins.py",
+    "landingPage": "https://www.cms.gov/data-research/statistics-trends-and-reports/cost-reports/hospital-2552-2010-form",
+    "retrieved": "2026-11-04"
+  },
+  {
+    "id": "hcris-puf-sample",
+    "title": "CMS Hospital Provider Cost Report (public use file), FY2011 to FY2024: the reports from acute and critical access hospitals whose record number is a multiple of 50, with the key and the 24 columns the HCRIS layer is checked against (no names or addresses)",
+    "path": "hcris-puf/hcris_puf_sample.csv",
+    "bytes": 273168,
+    "sha256": "ae19d60ea8abc9a687415e9754d4d170fe6efd701856109f32047aa72c42f54c",
+    "derivedFrom": {
+      "files": [
+        {
+          "file": "CostReport_2011_Final.csv",
+          "bytes": 4151511,
+          "sha256": "cf893221cd007bc488dd7b99061290df7585eaebe92630c8929715f29d779086",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/b9d68c82-8adb-46f0-9d9a-d49f2b3e9319/CostReport_2011_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2012_Final.csv",
+          "bytes": 4203668,
+          "sha256": "d15d3af87c702d11c6e627005294f6e517719a4ef38809336873178c9c6da456",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/1ed975f4-abc2-4e71-90c2-0d81cea4c3b8/CostReport_2012_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2013_Final.csv",
+          "bytes": 4241430,
+          "sha256": "33d5a9c50c41e378750066b7b7992fb8f017a525a753921c9b8a03ffc5208685",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/33bcf4f2-fbaf-4d82-b945-f9ac40896525/CostReport_2013_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2014_Final.csv",
+          "bytes": 4245527,
+          "sha256": "7ef533424449ea46329b5f4ba18da112254b6fa83ee0d8b60c8563c6ccf078be",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/64bbb8b4-55c1-410f-a676-afff804e571c/CostReport_2014_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2015_Final.csv",
+          "bytes": 4241420,
+          "sha256": "769cbc20bfd7804c8b27918ad7bbeb6e6507b20612a03e437de757c3e8b0e5b9",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/ccf521c3-429e-4ac5-889d-e2e07d9b0b82/CostReport_2015_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2016_Final.csv",
+          "bytes": 4207542,
+          "sha256": "525baaaf2d01115bc19fa0971f73110cb70f1d71bce8f32cdb063ab4de14af8a",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/e35f9c2f-8b57-44d6-9b4d-20dc1ea3d89f/CostReport_2016_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2017_Final.csv",
+          "bytes": 4175965,
+          "sha256": "405888ab4b9e19c0e2597b59f024f0cbaddaa0d0432682ddafbfb8493760df97",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/e708feb7-2645-4e94-8e97-7780f93d41a0/CostReport_2017_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2018_Final.csv",
+          "bytes": 4175984,
+          "sha256": "784e2f27f5ff126235c36576d2a838f8752437c5edcff7c90dda62dc59f69195",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/e26efb20-0229-4b2a-861f-0552d9260bab/CostReport_2018_Final.csv",
+          "lastModified": "2026-09-24"
+        },
+        {
+          "file": "CostReport_2019_Final.csv",
+          "bytes": 4159341,
+          "sha256": "26be9187e5acbfbd867ebfd863f842a22bacd6fe423a1088f252dcdbfe797ffb",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/93e2ef4e-7e38-41b8-b858-6434061194fb/CostReport_2019_Final.csv",
+          "lastModified": "2026-09-29"
+        },
+        {
+          "file": "CostReport_2020_Final.csv",
+          "bytes": 4127703,
+          "sha256": "1c9eb532587ed02e4703a1bf954900dc2e886132419ec722fb101919a3680883",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-09/3751e76b-c99e-48d0-b1e5-0706d9eeaf4d/CostReport_2020_Final.csv",
+          "lastModified": "2026-09-29"
+        },
+        {
+          "file": "CostReport_2021_Final.csv",
+          "bytes": 4133308,
+          "sha256": "9ad1c3655dab084e7c9666c2103aba6422f555b5acb1e860d5c80a572acfb6af",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-10/8b21076c-309e-4eff-a3fe-bd11dff527ca/CostReport_2021_Final.csv",
+          "lastModified": "2026-10-02"
+        },
+        {
+          "file": "CostReport_2022_Final.csv",
+          "bytes": 4132213,
+          "sha256": "4633eaa53eed156bb6480ba76c4fad426236a3b4f7a345a77f12bd511c427a4f",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-10/1be4ec08-6d9d-4e05-b871-c4d74fe81089/CostReport_2022_Final.csv",
+          "lastModified": "2026-10-02"
+        },
+        {
+          "file": "CostReport_2023_Final.csv",
+          "bytes": 4155060,
+          "sha256": "0412fb0050b58260b1c94d4d7cbe43e249d30f37deed9e6727df705fd648b878",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-10/e48e1326-aeeb-4ad4-acf6-a506871b6d20/CostReport_2023_Final.csv",
+          "lastModified": "2026-10-02"
+        },
+        {
+          "file": "CostReport_2024_Final.csv",
+          "bytes": 4153389,
+          "sha256": "bde32414133a7b4ae0bb092654f805ad9d20335764cb4f91feeb4ca129c4e782",
+          "downloadUrl": "https://data.cms.gov/sites/default/files/2026-10/46b1f5a0-a9dd-4431-beee-2ee7194b4135/CostReport_2024_Final.csv",
+          "lastModified": "2026-10-02"
+        }
+      ],
+      "note": "CMS rebuilds the PUF from HCRIS on its own schedule; a later download may differ."
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/hcris/puf.py",
+    "landingPage": "https://data.cms.gov/provider-compliance/cost-reports/hospital-provider-cost-report",
+    "retrieved": "2026-11-04"
   }
 ]

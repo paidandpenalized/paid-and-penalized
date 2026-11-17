@@ -266,8 +266,10 @@ test('the changes and the sources: every changelog entry with its date and items
   const used = new Set(DATA.pinsUsed.map((e) => e.id));
   const listed = new Set([...used, ...otherSites]);
   // A staged pin (`"staged": true`) is pinned ahead of the refresh that will read it, so no page lists it yet; once one
-  // does, it is no longer staged.
-  assert.deepEqual(manifest.filter((e) => !listed.has(e.id) && !e.staged).map((e) => e.id), []);
+  // does, it is no longer staged. The HCRIS layer's pins (data/emitted/hcris/) feed no HACRP page; the site that reads
+  // the layer lists them.
+  const layer = /^hcris-fy\d{4}-(cells|g3-line24)$|^hcris-puf-sample$/;
+  assert.deepEqual(manifest.filter((e) => !listed.has(e.id) && !e.staged && !layer.test(e.id)).map((e) => e.id), []);
   assert.deepEqual(manifest.filter((e) => e.staged && listed.has(e.id)).map((e) => e.id), [], 'a pin a page reads is not staged');
   // Only the newest year's dollars file is read (the pages load that one); an older year's file keeps the sources it
   // was built from and is not held to the pages' list.

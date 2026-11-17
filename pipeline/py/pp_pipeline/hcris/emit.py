@@ -1,0 +1,169 @@
+"""Build the HCRIS layer from its pins and write data/emitted/hcris/fy<YYYY>/hcris.json, one file per HCRIS year.
+
+    python3 -I pipeline/py/pp_pipeline/hcris/cli.py emit
+    python3 -I pipeline/py/pp_pipeline/hcris/cli.py downloads <dir>
+
+`emit` rebuilds every year whose cells table is pinned (manifest ids `hcris-fy<YYYY>-cells`, pins.py), with the
+year's line-24 table (`hcris-fy<YYYY>-g3-line24`) sorted by the rules in `other_income_rules.csv` (other_income.py),
+whose path and SHA-256 each file records (`otherIncomeRules`). Each file is the data contract's envelope, the
+year's facts (CMS's label, the posting, whether CMS is still receiving the year's reports, the settled share and the
+"early" flag) and the hospital-year table as `columns` plus one array per hospital (`hospitals`, one line each, so a
+refresh's diff shows each hospital that moved). A rebuild that changes nothing keeps
+the committed built_at. A file of 10 MiB or more is refused (the repo's limit).
+
+`downloads` writes the build-time download files to <dir> (never committed): `hcris_wide.csv` (every year, a column
+per metric) and `hcris_long.csv` (one row per hospital, year and metric, with its period and status). Sites that read
+the layer use pp_engine.hcris.reader on `load_years()`.
+"""
+import csv
+import datetime
+import functools
+import hashlib
+from datetime import timezone
+from decimal import Decimal
+from pathlib import Path
+
+from pp_engine.contract import envelope, format_emitted
+from pp_engine.hcris import other_income, reader, tidy
+from pp_pipeline.files import EMITTED_DIR, REPO_ROOT, read_json, read_manifest, read_pinned_bytes, write_emitted
+from pp_pipeline.hcris.extract import write_tables
+from pp_pipeline.hcris.pins import line24_pin_id, pinned_years
+
+SCHEMA_VERSION, METHODS_VERSION = 3, 3
+SCHEMA = "hcris.schema.json"
+MAX_BYTES = 10 * 1024 * 1024  # CLAUDE.md: a file of 10 MiB or more never goes in git
+LONG_RULE = "fullest"  # what tidy.hospital_years does with a year of more than 366 days, recorded in each file
+# The JSON's columns: the table's, less `year` (the file's `fy`).
+COLUMNS = tuple(c for c in tidy.WIDE_COLUMNS if c != "year")
+RULES_PATH = Path(__file__).with_name("other_income_rules.csv")
+
+
+@functools.cache
+def rules_bytes():
+    return RULES_PATH.read_bytes()
+
+
+@functools.cache
+def rules():
+    """The parsed rules, once per process."""
+    return other_income.parse_rules(csv.reader(rules_bytes().decode("ascii").splitlines()))
+
+
+def _pinned_rows(pid):
+    return csv.reader(read_pinned_bytes(pid).decode("ascii").splitlines())
+
+
+def line24_entries(year):
+    """The year's pinned line-24 entries (other_income.from_pin_rows)."""
+    return other_income.from_pin_rows(_pinned_rows(line24_pin_id(year)))
+
+
+def year_rows(entry, year):
+    """The year's hospital-year rows from its pinned cells table and line-24 table, the line-24 entries summed by the
+    class their label sorts into."""
+    reports, values = tidy.from_pin_rows(_pinned_rows(entry["id"]), year)
+    line24 = other_income.report_sums(line24_entries(year), rules())
+    stray = next((rpt for rpt in line24 if rpt not in reports), None)
+    if stray is not None:
+        raise tidy.HcrisError(f"FY{year} line-24 table: report {stray} is not in the cells table")
+    return tidy.hospital_years(reports, values, year, line24=line24)
+
+
+def _json(value):
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    return value
+
+
+def build(year, manifest, built_at, rows=None, entry=None):
+    """The year's file. `entry`: its cells table's manifest entry, when the caller has looked it up already."""
+    entry = entry or pinned_years(manifest)[year]
+    rows = year_rows(entry, year) if rows is None else rows
+    summary = tidy.year_summary(rows)
+    posted = entry["derivedFrom"]["lastModified"]
+    due = tidy.filing_due_by(year)
+    return {
+        **envelope(SCHEMA_VERSION, METHODS_VERSION, [entry["id"], line24_pin_id(year)], manifest, built_at, year),
+        "label": reader.label(year),
+        "periodsBegin": [f"{year - 1}-10-01", f"{year}-09-30"],
+        "posted": posted,
+        "filingDueBy": due.isoformat(),
+        "stillFiling": datetime.date.fromisoformat(posted) <= due,
+        "kinds": [name for name, _, _ in tidy.KINDS],
+        "longRule": LONG_RULE,
+        "settledShare": float(summary["settled_share"]),
+        "earlyBelow": float(tidy.EARLY_BELOW),
+        "early": summary["early"],
+        "otherIncomeRules": {"path": RULES_PATH.relative_to(REPO_ROOT).as_posix(),
+                             "sha256": hashlib.sha256(rules_bytes()).hexdigest()},
+        "columns": list(COLUMNS),
+        "hospitals": [[_json(r[c]) for c in COLUMNS] for r in rows],
+    }
+
+
+def emitted_path(year):
+    return EMITTED_DIR / "hcris" / f"fy{year}" / "hcris.json"
+
+
+def check(doc):
+    """Problems the schema can't state: a row of the wrong length, a repeated CCN, a CCN outside the scope, or a file
+    at the size limit."""
+    width, problems, seen = len(doc["columns"]), [], set()
+    kind = doc["columns"].index("kind")
+    for row in doc["hospitals"]:
+        if len(row) != width:
+            problems.append(f"{row[0]}: {len(row)} values, not {width}")
+        if row[0] in seen:
+            problems.append(f"{row[0]}: twice")
+        seen.add(row[0])
+        if row[kind] not in doc["kinds"]:
+            problems.append(f"{row[0]}: kind {row[kind]!r} is outside the layer's scope")
+    size = len(format_emitted(doc).encode("utf-8"))
+    if size >= MAX_BYTES:
+        problems.append(f"{size} bytes: at or over the 10 MiB limit")
+    return problems
+
+
+def main():
+    built_at = datetime.datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    manifest = read_manifest()
+    years = pinned_years(manifest)
+    if not years:
+        print("hcris emit: no pinned cells tables (hcris-fy<YYYY>-cells) in the manifest")
+        return 1
+    failed = []
+    for year, entry in sorted(years.items()):
+        path = emitted_path(year)
+        shown = path.relative_to(REPO_ROOT)
+        # ValueError covers HcrisError, RulesError, TableError, a pin that fails its manifest entry and a build that
+        # fails its schema (write_emitted): one bad year is reported and the rest are still attempted.
+        try:
+            fresh = build(year, manifest, built_at, entry=entry)
+            problems = check(fresh)
+            if problems:
+                raise ValueError("; ".join(problems[:5]))
+            out = write_emitted(path, fresh, SCHEMA)
+        except (ValueError, KeyError, OSError) as err:
+            print(f"not written ({shown} left as it was): {err}")
+            failed.append(year)
+            continue
+        print(f"wrote {shown}: {len(out['hospitals'])} hospitals, "
+              f"{path.stat().st_size} bytes, settled {out['settledShare']:.1%}{', early' if out['early'] else ''}"
+              f"{', still filing' if out['stillFiling'] else ''}")
+    if failed:
+        print(f"hcris emit: {len(failed)} of {len(years)} years not written: "
+              + ", ".join(f"FY{y}" for y in failed))
+        return 1
+    return 0
+
+
+def load_years():
+    """Every emitted year's parsed file, oldest first (for pp_engine.hcris.reader.Panel)."""
+    return [read_json(p) for p in sorted((EMITTED_DIR / "hcris").glob("fy*/hcris.json"))]
+
+
+def write_downloads(out_dir):
+    """The download files, from the pins (the same rows as the emitted files). {year: hospital-years}."""
+    years = sorted(pinned_years(read_manifest()).items())
+    counts, _ = write_tables(out_dir, ((year, year_rows(entry, year)) for year, entry in years))
+    return counts

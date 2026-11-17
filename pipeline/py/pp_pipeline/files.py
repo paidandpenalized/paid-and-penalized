@@ -1,4 +1,5 @@
 """Repo file access for the Python pipeline and its tests. pp_engine itself never reads files."""
+import csv
 import functools
 import hashlib
 import io
@@ -76,6 +77,22 @@ def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     path.write_bytes(data)
     print(f"wrote {entry['path']}: {len(data)} bytes, sha256 {sha}{note}")
     return 0
+
+
+def file_sha256(path):
+    """(SHA-256 hex, size in bytes) of a file, read in 1 MiB blocks (CMS's HCRIS zips are ~136 MB)."""
+    digest, size = hashlib.sha256(), 0
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            digest.update(block)
+            size += len(block)
+    return digest.hexdigest(), size
+
+
+def zip_member_rows(zf, member, encoding="ascii"):
+    """A zip member's CSV rows, read as a stream, never unzipped to disk (HCRIS's numeric file is ~670 MB)."""
+    with zf.open(member) as raw:
+        yield from csv.reader(io.TextIOWrapper(raw, encoding=encoding, newline=""))
 
 
 def read_zip_member(pin_id, member):

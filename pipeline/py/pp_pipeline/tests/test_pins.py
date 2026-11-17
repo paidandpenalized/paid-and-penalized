@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from pp_pipeline import hai_extract, hcris_extract, pos_extract
+from pp_pipeline.hcris import pins as hcris_pins
 from pp_pipeline.files import PINNED_DIR, read_manifest, read_pinned_bytes, write_derived_pin
 
 
@@ -57,7 +58,7 @@ class DerivedPinWrite(unittest.TestCase):
             self.assertFalse(path.exists())
 
     def test_every_extractor_writes_through_it(self):
-        for module in (hai_extract, hcris_extract, pos_extract):
+        for module in (hai_extract, hcris_extract, pos_extract, hcris_pins):
             with self.subTest(module.__name__):
                 self.assertIs(module.write_derived_pin, write_derived_pin)
                 self.assertNotIn("write_bytes", Path(module.__file__).read_text(encoding="utf-8"))
