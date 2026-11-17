@@ -111,9 +111,9 @@ export const COPY = typesetCopy({
   // adjustment), which is more than the yearly update a hospital ends up with.
   dekIqr: { text: "Hospitals that don't report required quality data have {share} of the market-basket increase taken off their yearly payment update.", claim: 'HUB-06' },
   dekPi: { text: 'Hospitals that miss electronic health record requirements have {share} of the market-basket increase taken off their yearly update.', claim: 'HUB-07' },
-  // Who is not in the Readmissions program: its Methods page and the hub's not-found page both say it (claim HRRP-11).
+  // Who is not in the Readmissions program, and that each such hospital still has a page across the programs: the Readmissions Methods page (claim HRRP-11).
   notInHrrp: {
-    text: "The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico's hospitals are not in it and have no page here.",
+    text: "The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico's hospitals are not in it, so they have no Readmissions page here; each has a page across the programs.",
     claim: ['HRRP-11', 'HRRP-12', 'HRRP-13', 'HRRP-16'],
   },
   dekTeam: { text: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.', claim: ['HUB-11', 'HUB-12'] },

@@ -45,6 +45,8 @@ export const COPY = typesetCopy({
   countsHrrp: "Readmissions: CMS's FY{fy} file lists {listed} hospitals and cuts {cut} of them. The front page counts the {est} of them with an estimate here, {estCut} of them cut; the other {other} have no usable row in CMS's payment file or aren't in the hospital-acquired conditions program's file, which the estimates start from.",
   countsHrrpNewer: "The Readmissions pages show CMS's newer FY{fy} file, which lists {listed} hospitals and cuts {cut} of them.",
   countsClosed: "CMS's Provider of Services file lists the Medicare agreement of {n} hospitals with an estimate as ended by the end of FY{fy}. They stay in every total here, and each one's page carries a note saying so.",
+  // Every hospital in the hospital master has a page: the dollar file's hospitals and those outside Medicare's penalty programs.
+  countsPages: 'Every hospital on Medicare’s hospital list has a page here: {all} in all, {outside} of them outside Medicare’s penalty programs.',
   countsClosedOne: "CMS's Provider of Services file lists the Medicare agreement of one hospital with an estimate as ended by the end of FY{fy}. It stays in every total here, and its page carries a note saying so.",
   // Which hospital a figure belongs to.
   ccnHeading: 'Hospitals as CMS listed them',
@@ -179,9 +181,7 @@ export const COPY = typesetCopy({
 
   notFoundTitle: 'Page not found',
   notFoundBody: 'There is no page at this address.',
-  // Who has no hospital page anywhere on the family's sites, by kind (the program sites' rows: HACRP-18 the subsection (d)
-  // hospitals CMS's files list, Maryland's included; HRRP-12 the kinds paid outside the inpatient system; HRRP-13 critical
-  // access hospitals; HRRP-16 Puerto Rico's, outside the fifty states and DC).
-  notFoundHospitals: { text: 'Hospital pages here are for the hospitals in CMS’s program files; critical access hospitals, children’s, cancer, psychiatric, rehabilitation and long-term care hospitals, and Puerto Rico’s hospitals have none.', claim: ['HACRP-18', 'HRRP-12', 'HRRP-13', 'HRRP-16'] },
+  // Every hospital in Medicare's hospital master has a hub page (hub/pages.js), so a missing address is a mistyped one.
+  notFoundHospitals: 'Every hospital on Medicare’s hospital list has a page here. If you typed a CCN, check it, or search for the hospital by name.',
   notFoundHome: 'Go to the home page',
 });

@@ -145,8 +145,8 @@ test('every place page names the CMS file and the day CMS posted it, in the size
   assert.match(text, /Supplemental Data File, posted [A-Z][a-z]+ \d{1,2}, \d{4}\./);
 });
 
-test('the 404 line is a Readmissions sentence with no digit (the family 404 page prints it: hub/test/pages.test.js)', () => {
-  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children’s, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico’s hospitals are not in it and have no page here.');
+test('the Readmissions Methods not-in-program line points to the page across the programs, with no digit', () => {
+  assert.equal(fillCopy(SHARED, 'notInHrrp'), 'The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children’s, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico’s hospitals are not in it, so they have no Readmissions page here; each has a page across the programs.');
 });
 
 // On the data.

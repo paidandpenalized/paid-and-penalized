@@ -106,10 +106,18 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(methods, /<section class="block" id="counts" aria-labelledby="counts-h">\n<h2 id="counts-h">How the counts differ<\/h2>/);
     assert.match(methods, /<section class="block" id="ccn" aria-labelledby="ccn-h">\n<h2 id="ccn-h">Hospitals as CMS listed them<\/h2>/);
 
+    // Methods counts the hospital pages from data: every master hospital, the dollar file's plus the outside ones.
+    const { outside: outsideHospitals } = hubModel();
+    const allPages = hubHospitals(hub).length + outsideHospitals.length;
+    assert.equal(allPages, hub.master.size, 'a page for every master hospital');
+    assert.ok(text.includes(`Every hospital on Medicare’s hospital list has a page here: ${k(allPages)} in all, ${k(outsideHospitals.length)} of them outside Medicare’s penalty programs.`), 'the hospital pages count');
+
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
     assert.ok(notFound.includes(escapeHtml(fillCopy(COPY, 'notFoundHospitals'))), 'the line on which hospitals have pages here');
+    assert.ok(!/have none|no page here/.test(textOf(notFound)), '404 no longer says these hospitals have no page');
+    assert.match(textOf(notFound), /Every hospital on Medicare.s hospital list has a page here/);
     assert.ok(!notFound.includes(escapeHtml(fillCopy(SHARED, 'notInHrrp'))), 'not the Readmissions-only line');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
