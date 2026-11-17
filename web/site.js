@@ -25,7 +25,7 @@ export const SITE = {
     hacrp: { path: '/hacrp/', released: true, title: 'Hospital-Acquired Conditions', subtitle: 'HACRP' },
     hrrp: { path: '/hrrp/', released: true, title: 'Readmissions', subtitle: 'HRRP' },
     // A scenario, not a CMS payment program (the program's `scenario` below).
-    'work-requirement': { path: '/work-requirement/', released: false, title: 'Medicaid work requirement', subtitle: 'Scenario' },
+    'work-requirement': { path: '/work-requirement/', released: true, title: 'Medicaid work requirement', subtitle: 'Scenario' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.

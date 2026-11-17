@@ -48,7 +48,7 @@ test('the registry\'s groups: listed (full tabs and the footer\'s figures), unli
 test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
   assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp', 'work-requirement']);
   assert.equal(SITE.sites['work-requirement'].path, programById('work-requirement').path);
-  assert.equal(SITE.sites['work-requirement'].released, false, 'the work-requirement site stays unreleased: noindex, out of the sitemap');
+  assert.equal(SITE.sites['work-requirement'].released, true, 'the work-requirement site is released (2026-11-19): indexed, in the sitemap');
   assert.equal(SITE.sites['work-requirement'].title, 'Medicaid work requirement', 'the family\'s short name for the site (the page\'s own title is its copy)');
   assert.equal(siteOf('/work-requirement/methods/'), SITE.sites['work-requirement']);
   assert.equal(SITE.sites.hrrp.path, programById('hrrp').path);

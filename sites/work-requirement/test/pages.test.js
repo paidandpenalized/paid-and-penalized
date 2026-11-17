@@ -63,16 +63,16 @@ test('the manifest: id, the page script and the kit\'s styles then the site\'s o
   assert.deepEqual(WR.styles, [...KIT_STYLES, 'sites/work-requirement/web/styles.css']);
 });
 
-test('the generator writes the program page and Methods, noindex while the site is unreleased (even in production), and returns the newest date CMS gives an input and the day the numbers changed', () =>
+test('the generator writes the program page and Methods, indexable now the site is released (in production), and returns the newest date CMS gives an input and the day the numbers changed', () =>
   withTemp('pp-wr-', async (dir) => {
-    assert.equal(SITE.sites['work-requirement'].released, false);
+    assert.equal(SITE.sites['work-requirement'].released, true);
     const ctx = createContext({ outDir: dir, env: 'production', assets: testAssets() });
     const result = generateWr(ctx, { data, log: () => {} });
     assert.equal(ctx.pages, 2);
-    assert.deepEqual(ctx.indexable, [], 'no page indexable: none in the sitemap');
+    assert.deepEqual([...ctx.indexable].sort(), [PROGRAM_PATH, METHODS_PATH].sort(), 'both pages indexable: both in the sitemap');
     for (const path of [PROGRAM_PATH, METHODS_PATH]) {
       const text = readFileSync(join(dir, path, 'index.html'), 'utf8');
-      assert.ok(text.includes('<meta name="robots" content="noindex">'), path);
+      assert.ok(!text.includes('<meta name="robots" content="noindex">'), path);
     }
     assert.deepEqual(result, { updated: { cmsReleased: data.meta.cmsReleased, changed: builtOn(file.built_at) } });
   }));

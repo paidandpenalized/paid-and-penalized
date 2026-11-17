@@ -329,15 +329,17 @@ test('the Readmissions site has a page for every hospital the hub marks for Read
   assert.equal(missing.length, 0, `${missing.length} hub-marked hospitals have no Readmissions page`);
 });
 
-test('the work-requirement site builds its program page and Methods, unreleased: noindex in a production build and out of the sitemap; its dates on /corrections/', async () => {
+test('the work-requirement site builds its program page and Methods, released: indexed in a production build and in the sitemap; its dates on /corrections/', async () => {
   const out = await builtSlice();
   for (const path of [WR_PROGRAM, WR_METHODS]) {
     const text = readFileSync(join(out, path, 'index.html'), 'utf8');
-    assert.ok(text.includes('<meta name="robots" content="noindex">'), path);
+    assert.ok(!text.includes('<meta name="robots" content="noindex">'), path);
   }
   const sitemap = readFileSync(join(out, 'sitemap.xml'), 'utf8');
-  assert.ok(!sitemap.includes(WR_PROGRAM), 'no work-requirement page in the sitemap');
-  assert.ok(sitemap.includes('/hacrp/'), 'the released sites\' pages are');
+  for (const path of [WR_PROGRAM, WR_METHODS]) assert.ok(sitemap.includes(`https://paidandpenalized.org${path}<`), `${path} in the sitemap`);
+  assert.ok(sitemap.includes('/hacrp/'), 'the other released sites\' pages still are');
+  const headers = readFileSync(join(out, '_headers'), 'utf8');
+  assert.ok(!/\/(?:assets\/wr-|work-requirement\/)/.test(headers), 'no noindex rule for its pages or data files');
   const corrections = readFileSync(join(out, 'corrections', 'index.html'), 'utf8');
   assert.ok(corrections.includes(`<time datetime="${loadMedicaid().meta.cmsReleased}">`), 'the newest date CMS gives one of its inputs');
 });
