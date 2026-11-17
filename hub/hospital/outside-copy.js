@@ -126,7 +126,7 @@ export const COPY = typesetCopy({
   nearColMiles: 'Miles',
   nearColNet: 'Estimated FY{fy} net change',
   nearColShare: 'Share of Medicare inpatient pay',
-  nearAlt: "Map of the area around this hospital, with the nearest hospitals in Medicare's penalty programs numbered as in the table.",
+  nearAlt: "Map of the area around this hospital, which is ringed: the nearest hospitals in Medicare's penalty programs are numbered as in the table and their towns named, and small dots mark any other hospitals in the programs or like this one in the area.",
   nearKeys: 'Arrow keys step through the hospitals on the map.',
   nearThis: 'This hospital: {name}',
   nearTip: '{n}. {who}: an estimated {net} on net ({share}), {distance} away',

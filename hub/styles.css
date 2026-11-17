@@ -812,6 +812,19 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__neart h2, .hh__liket h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
 .hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .hh__nearmap { margin-top: 4px; }
+/* The map's two drawings (outside-figures.js nearBlock), each held to the kit's cap for its width (the area map lifts the
+   cap, charts.css .chart--area-map, which would blow its pins and words up in a wide column), and each shown where its
+   column is about its own width: the phone drawing up to 480px and in the narrow two-column layout (720 to 859px), the
+   wider one otherwise. */
+.hh__nearmap .chart--area-map { max-width: calc(var(--vb) * 1.12px + 0.8rem); }
+@media (min-width: 480px) {
+  .hh__nearmap .chart[data-fit="narrow"] { display: none; }
+  .hh__nearmap .chart[data-fit="wide"] { display: block; }
+}
+@media (min-width: 720px) and (max-width: 859px) {
+  .hh__nearmap .chart[data-fit="narrow"] { display: block; }
+  .hh__nearmap .chart[data-fit="wide"] { display: none; }
+}
 .hh__neartab { min-width: 0; align-self: start; }
 /* The context dots: the same group's other hospitals in the map-dot ink (stronger in dark mode), and the other hospitals in
    the programs in the text ink, both under the pins. */
@@ -844,7 +857,11 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__likei { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
   .hh__neartab { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
 }
-@media (min-width: 1024px) { .hh__neari, .hh__likei { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); } }
+@media (min-width: 1024px) {
+  .hh__neari, .hh__likei { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
+  /* The hospital's name gets the room the number columns don't need, so a name wraps to two lines at most. */
+  .hh__ntab tbody th { min-width: 15em; }
+}
 /* No map (a territory without an inset, or no coordinates): the words take the section's width, at a reading measure. */
 .hh__likei.hh__likei--solo { grid-template-columns: minmax(0, 1fr); }
 .hh__likei--solo .hh__liket { max-width: 44rem; }
@@ -857,6 +874,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__likek { display: block; margin-bottom: 8px; font: 400 clamp(2.5rem, 4.2vw, 2.75rem)/1 var(--font-display); }
 .hh__likeown { color: var(--ink-2); }
 .hh__likemap { align-self: start; }
+/* Puerto Rico alone is a short map: beside the words it sits level with their middle, not at their top. */
+@media (min-width: 720px) { .hh__likemap--pr { align-self: center; } }
 /* The map's caption and key, closing the words' column. */
 .hh__likelegend { display: grid; gap: 10px; margin-top: 8px; }
 .hh__likedot { stroke: var(--dot); }

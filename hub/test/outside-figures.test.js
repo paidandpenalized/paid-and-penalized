@@ -7,7 +7,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { STATE_NAMES } from '../../engine/js/states.js';
-import { ASSETS } from '../../pipeline/test/helpers.js';
+import { ASSETS, dotsIn } from '../../pipeline/test/helpers.js';
 import { areaMap, miles, nearestTo, pointOf, prInset, usProjected } from '../../web/charts/geo.js';
 import { count } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
@@ -17,7 +17,7 @@ import { counter } from '../../web/charts/figure.js';
 import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
+import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, insetDotSize, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
 import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -251,10 +251,9 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
     assert.ok(/aria-label="[^"]+"/.test(svg), `${group}: named`);
     assert.ok(block.includes('class="chart-land"'), `${group}: the state lines`);
     // The group's hospitals the map places, Puerto Rico's in its inset (this one's own dot sits under its ring), counted
-    // here, against the dots in the path.
+    // here, against the dots drawn.
     const want = sameGroup(h).filter(mapped).length;
-    const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(block)?.[1] ?? '';
-    assert.ok((d.match(/h0/g) ?? []).length === want, `${group}: a dot for each mappable hospital of the group`);
+    assert.ok(dotsIn(block, 'hh__likedot') === want, `${group}: a dot for each mappable hospital of the group`);
     // This hospital: a ring and a dot at its place.
     const [x, y] = projected(h);
     assert.ok(block.includes(`<circle class="hh__likering" cx="${x}" cy="${y}"`) && block.includes(`<circle class="hh__likeme" cx="${x}" cy="${y}"`), `${group}: this hospital ringed at its place`);
@@ -277,8 +276,8 @@ test('likeBlock: a Puerto Rico hospital gets a map of Puerto Rico, ringed whole 
     assert.ok(ring[0] - ring[2] >= 0 && ring[0] + ring[2] <= w && ring[1] - ring[2] >= 0 && ring[1] + ring[2] <= ht, 'the ring whole inside the frame');
     const c = RECOUNT.get(pr.group);
     assert.ok(block.includes(esc(fillOutside('likeCaptionPr', { ns: count(c.byState.get('PR')), n: count(c.n) }))), 'its caption gives the national count');
-    const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(svg)?.[1] ?? '';
-    assert.equal((d.match(/h0/g) ?? []).length, sameGroup(pr).filter((o) => o.state === 'PR' && placed(o)).length, 'a dot for each Puerto Rico hospital of the group');
+    assert.equal(dotsIn(svg, 'hh__likedot'), sameGroup(pr).filter((o) => o.state === 'PR' && placed(o)).length, 'a dot for each Puerto Rico hospital of the group');
+    assert.match(block, /<figure class="fig hh__likemap hh__likemap--pr" /, 'the figure marked as the short map, which CSS sets level with the words');
   }
   // A mainland page in a group with Puerto Rico hospitals: the US map, its inset holding them.
   const main = pick((x) => x.group === 'not_listed' && x.state !== 'PR' && mapped(x), 'a mainland unlisted acute hospital');
@@ -313,6 +312,33 @@ test('likeBlock: a sparse group\'s dots are drawn larger than a dense group\'s, 
     const width = Number(/<path class="chart-dots hh__likedot" stroke-width="([\d.]+)"/.exec(like(h))?.[1]);
     assert.equal(width, Math.round(likeDotSize(LIKE_COUNTS.get(group).n) * 10) / 10, `${group}: the dots' diameter`);
   }
+});
+
+// Puerto Rico's inset can't be drawn larger (the sea beside Florida is no wider), so a group crowded there draws its
+// inset's dots smaller, in a path of their own; a group with a few there keeps one path at its own size.
+test('likeBlock: a group crowded in Puerto Rico\'s inset draws the inset\'s dots smaller; one with a few keeps one size', () => {
+  const prCount = (group) => OUTSIDE.filter((o) => o.group === group && o.state === 'PR' && mapped(o)).length;
+  const crowded = [...LIKE_COUNTS.keys()].filter((g) => insetDotSize(prCount(g), likeDotSize(LIKE_COUNTS.get(g).n)) < likeDotSize(LIKE_COUNTS.get(g).n));
+  assert.ok(crowded.length > 0, 'some group is crowded in the inset (if not, this test no longer covers one)');
+  const widths = (block) => [...block.matchAll(/<path class="chart-dots hh__likedot" stroke-width="([\d.]+)" d="([^"]*)"/g)].map((m) => [Number(m[1]), m[2]]);
+  for (const group of crowded) {
+    const h = pick((x) => x.group === group && x.state !== 'PR' && mapped(x), `a mainland ${group} hospital`);
+    const block = like(h);
+    const size = likeDotSize(LIKE_COUNTS.get(group).n);
+    const paths = widths(block);
+    assert.equal(paths.length, 2, `${group}: the states' dots and the inset's, a path each`);
+    assert.equal(paths[0][0], Math.round(size * 10) / 10, `${group}: the states' dots at the group's size`);
+    assert.equal(paths[1][0], Math.round(insetDotSize(prCount(group), size) * 10) / 10, `${group}: the inset's smaller`);
+    assert.ok(paths[1][0] < paths[0][0]);
+    assert.equal(dotsIn(`<path class="chart-dots hh__likedot" d="${paths[1][1]}"/>`, 'hh__likedot'), prCount(group), `${group}: the inset's path holds Puerto Rico's dots`);
+  }
+  const few = pick((x) => !crowded.includes(x.group) && prCount(x.group) > 0 && x.state !== 'PR' && mapped(x), 'a mainland hospital of a group with a few in Puerto Rico');
+  assert.equal(widths(like(few)).length, 1, 'a few in the inset: one path, one size');
+  // The size: the group's up to the threshold, then smaller with more, never under a floor.
+  const size = likeDotSize(1);
+  const sizes = [1, 2, 5, 10, 11, 20, 50, 200, 1e6].map((n) => insetDotSize(n, size));
+  for (let i = 1; i < sizes.length; i++) assert.ok(sizes[i] <= sizes[i - 1], 'never larger for more');
+  assert.ok(sizes[0] === size && sizes.at(-1) > 0 && sizes.at(-1) === insetDotSize(1e7, size), 'the group\'s size for a few, a floor for many');
 });
 
 // Each map is a numbered figure, numbered in page order: the nearest hospitals' map first where the page has it.
@@ -395,20 +421,29 @@ test('nearBlock: the map labels states and keeps every pin whole inside its fram
   assert.ok(towns > 0, 'maps name towns');
 });
 
-// The page-weight ceiling for an outside page, gzip: the HACRP hospital page for the example CCN measured about 39 KB
-// gzip on the 11-17 build; this allows that plus room for the shell's growth. A rendered page is measured here, not dist/.
-const PAGE_GZIP_MAX = 45 * 1024;
+// The page-weight ceiling for an outside page, gzip: the HACRP hospital page's size. That page can't be rendered here as its
+// site builds it (its history, infections and dollars come from the HACRP build), so the bound is a documented tolerance:
+// the HACRP hospital page for the example CCN measured about 38 KiB gzip in dist/ on the 11-17 builds, and 40 KiB leaves
+// the shell a little room to grow. A rendered page is measured here, not dist/.
+const HACRP_PAGE_GZIP = 40 * 1024;
+const outsideFull = (h) => String(outsidePage({
+  h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears,
+  near: nearBlock(h, CTX), like: likeBlock(h, CTX),
+}));
 
-test('outside page weight: a critical access page (nearest plus like map) is within the HACRP hospital page\'s gzip size', () => {
-  const h = pick((x) => x.group === 'critical_access' && mapped(x) && !x.listed && near(x) !== '', 'a critical access hospital with both figures');
-  const page = outsidePage({
-    h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears,
-    near: nearBlock(h, CTX),
-    like: likeBlock(h, CTX),
-  });
-  const main = mainOf(page);
+// The heaviest outside page, found by scanning every one: the nearest map is the part whose size varies most from page to
+// page (its counties, context dots and pins in frame), and the US map is its group's, so the candidates are the pages with
+// the longest nearest block and, for each group, a page with none; each is rendered whole and gzipped.
+test('outside page weight: the heaviest outside page is within the HACRP hospital page\'s gzip size', () => {
+  const nearLong = OUTSIDE.map((h) => [h, String(nearBlock(h, CTX)).length]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([h]) => h);
+  assert.ok(nearLong.length > 0, 'some pages have the nearest hospitals');
+  const plain = [...LIKE_COUNTS.keys()].map((group) => OUTSIDE.find((x) => x.group === group && mapped(x) && near(x) === '')).filter(Boolean);
+  let heaviest = 0;
+  for (const h of [...nearLong, ...plain]) heaviest = Math.max(heaviest, gzipSync(outsideFull(h)).length);
+  // The order of the sections, on a page with both figures.
+  const main = mainOf(outsideFull(nearLong[0]));
   assert.ok(main.indexOf('class="hh__like"') > main.indexOf('class="hh__near"') && main.indexOf('class="hh__like"') < main.indexOf('class="hh__notes"'), 'after the nearest hospitals, before the notes');
-  assert.ok(gzipSync(page).length <= PAGE_GZIP_MAX, 'gzip size within PAGE_GZIP_MAX');
+  assert.ok(heaviest <= HACRP_PAGE_GZIP, 'the heaviest outside page, gzip, within the HACRP hospital page\'s');
 });
 
 test('outsideFigureContext: refuses an unlisted acute hospital that the HACRP file lists', () => {
@@ -427,8 +462,6 @@ test('nearBlock: the other program hospitals and the group\'s others as context 
   const h = pick((x) => x.group === 'critical_access' && placed(x) && within(x).length === NEAREST_K, 'a critical access hospital with NEAREST_K close');
   const block = near(h);
   const keyOf = (b) => b.slice(b.indexOf('class="fig__key hh__nkey"'), b.indexOf('</ul>', b.indexOf('class="fig__key hh__nkey"')));
-  // The dots of a class: one path each, a dot per h0.
-  const dotsIn = (b, cls) => [...b.matchAll(new RegExp(`<path class="chart-dots ${cls}"[^>]* d="([^"]*)"`, 'g'))].reduce((n, m) => n + (m[1].match(/h0/g) ?? []).length, 0);
   const program = dotsIn(block, 'hh__ctxe');
   const own = dotsIn(block, 'hh__ctx');
   assert.ok(program > 0, 'program hospitals drawn as context');

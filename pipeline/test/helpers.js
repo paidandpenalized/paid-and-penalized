@@ -40,6 +40,13 @@ export const headerOf = (page) => /<header class="topbar fam"[\s\S]*?<\/header>/
 export const footerOf = (page) => /<footer class="foot">[\s\S]*?<\/footer>/.exec(page)[0];
 export const chipOf = (page) => /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(page)?.[0] ?? null;
 
+// Dots drawn as one path (web/charts/dots.js dotsD): how many a path's d draws (each dot begins with a move, absolute for
+// the first and relative after, whatever its run), and how many the paths of a class draw in some markup, summed over
+// its paths. A test counts dots through these, not by reading the path's encoding itself.
+export const dotsCount = (d) => (String(d).match(/[Mm]/g) ?? []).length;
+export const dotsIn = (markup, cls) => [...String(markup).matchAll(/<path class="chart-dots ([^"]*)"[^>]* d="([^"]*)"/g)]
+  .filter((m) => m[1].split(' ').includes(cls)).reduce((n, m) => n + dotsCount(m[2]), 0);
+
 // Runs fn(dir) in a fresh folder under the system temp directory and removes it afterwards, pass or fail.
 export function withTemp(prefix, fn) {
   const dir = mkdtempSync(join(tmpdir(), prefix));

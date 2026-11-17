@@ -48,6 +48,9 @@ const NEAR_LABELS = 4;
 const NEAR_ASPECT = 0.72;
 // Its county lines thinned to a point every 2 units (the kit's default is 1): faint hairlines, and the map is drawn twice.
 const NEAR_COUNTY_THIN = 2;
+// The room kept between two spread pins (the kit's default is 8), so a cluster of pins in one town reads as separate pins
+// on the phone's narrower drawing; the context dots a pin or the ring would cover are left out (areaMap's clear).
+const NEAR_PIN_GAP = 14;
 // The nearest map's figure id (its keyboard hint is <id>-keys).
 const NEAR_FIG_ID = 'hh-near-map';
 
@@ -62,6 +65,12 @@ const LIKE_DOT_MAX = 9;
 const LIKE_DOT_FULL = 250;
 export const likeDotSize = (n) => Math.max(LIKE_DOT_MIN, Math.min(LIKE_DOT_MAX, LIKE_DOT_MAX * Math.sqrt(LIKE_DOT_FULL / Math.max(n, 1))));
 const ME_R = 5;
+// Puerto Rico's inset is small (web/charts/geo.js prInset), and the free sea beside Florida leaves no room to draw it
+// larger: a group with more than INSET_FULL hospitals there has its inset's dots shrunk with the square root of their
+// count beyond it, never under INSET_DOT_MIN, so they read as dots on the island rather than one gray patch.
+const INSET_FULL = 10;
+const INSET_DOT_MIN = 3;
+export const insetDotSize = (n, size) => (n > INSET_FULL ? Math.max(INSET_DOT_MIN, size * Math.sqrt(INSET_FULL / n)) : size);
 // Puerto Rico's code over its inset, in viewBox units at MAP_WIDTH (about the map's other small type on a desktop page).
 const INSET_LABEL_SIZE = 18;
 const RING_R = 11;
@@ -113,7 +122,13 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
     const counts = likeCounts.get(group);
     if (counts?.n !== list.length) throw new RangeError(`outside: the counts of group ${group} are not its hospitals'`);
     const size = likeDotSize(list.length);
-    const dots = html`<g class="chart-us__points">${dotsPath(list.map((o) => likeAt(shapes, inset, o)).filter(Boolean), LIKE_DOT, size)}</g>`;
+    // The inset's dots in a path of their own where they are drawn smaller (insetDotSize), else with the states'.
+    const at = list.map((o) => [o, likeAt(shapes, inset, o)]).filter(([, xy]) => xy);
+    const prAt = at.filter(([o]) => o.state === 'PR').map(([, xy]) => xy);
+    const prSize = insetDotSize(prAt.length, size);
+    const dots = prSize === size
+      ? html`<g class="chart-us__points">${dotsPath(at.map(([, xy]) => xy), LIKE_DOT, size)}</g>`
+      : html`<g class="chart-us__points">${dotsPath(at.filter(([o]) => o.state !== 'PR').map(([, xy]) => xy), LIKE_DOT, size)}${dotsPath(prAt, LIKE_DOT, prSize)}</g>`;
     const prDots = pr ? list.filter((o) => o.state === 'PR').map((o) => pr.project(pointOf(o))).filter(Boolean) : [];
     groups.set(group, {
       counts,
@@ -203,7 +218,7 @@ export function nearBlock(h, ctx, next = counter()) {
   }));
   const draw = (width, variant) => areaMap({
     shapes: ctx.shapes, counties: ctx.counties, context, width, variant,
-    label: fillOutside('nearAlt'), pad: NEAR_PAD, contextR: CONTEXT_R, spread: true, labels: NEAR_LABELS, towns: true, aspect: NEAR_ASPECT, self: 'ring', dense: true, countyThin: NEAR_COUNTY_THIN,
+    label: fillOutside('nearAlt'), pad: NEAR_PAD, contextR: CONTEXT_R, spread: true, pinGap: NEAR_PIN_GAP, clear: true, labels: NEAR_LABELS, towns: true, aspect: NEAR_ASPECT, self: 'ring', dense: true, countyThin: NEAR_COUNTY_THIN,
     center: { point, tip: fillOutside('nearThis', { name: shownName(h) }) },
     points: pins,
   });
@@ -251,7 +266,7 @@ function likeSentence(h, c, kinds, years) {
   return fillAround((marks) => fillOutside(key, { ...values, ...marks }), { n: html`<span class="hh__likek">${count(c.n)}</span>` });
 }
 
-// The map: { svg, caption }, or null where it has no place for h (another territory, or no coordinates; the page then
+// The map: { svg, caption, own (true for the map of Puerto Rico alone) }, or null where it has no place for h (another territory, or no coordinates; the page then
 // shows the text alone, across the section). For a hospital in Puerto Rico, a map of Puerto Rico alone (prMap: the US
 // map's inset is too small to read one hospital in), its caption giving the national count the map doesn't show; for any
 // other, the US map: every state's outline over the land (the home map's projection and shapes, at its width), Puerto Rico
@@ -268,6 +283,7 @@ function likeMap(h, g, ctx) {
     : fillOutside('likeCaption');
   return {
     caption,
+    own: Boolean(own),
     svg: html`<svg class="chart chart--like-map${own ? ' chart--like-pr' : ''}" viewBox="0 0 ${MAP_WIDTH} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${MAP_WIDTH}">${body}<circle class="hh__likering" cx="${x}" cy="${y}" r="${RING_R}"/><circle class="hh__likeme" cx="${x}" cy="${y}" r="${ME_R}"/></svg>`,
   };
 }
@@ -292,7 +308,7 @@ ${map ? html`<div class="hh__likelegend">
 ${keyList('hh__lkey', [THIS_KEY, ['hh__nsw hh__nsw--ctx', fillOutside('keyLike')]])}
 </div>` : ''}
 </div>
-${map ? html`<figure class="fig hh__likemap" aria-labelledby="${LIKE_CAP_ID}">
+${map ? html`<figure class="fig hh__likemap${map.own ? ' hh__likemap--pr' : ''}" aria-labelledby="${LIKE_CAP_ID}">
 ${map.svg}
 </figure>` : ''}
 </div></div>

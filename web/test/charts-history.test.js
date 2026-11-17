@@ -5,8 +5,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readPinned } from '../../pipeline/files.js';
+import { dotsCount, dotsIn } from '../../pipeline/test/helpers.js';
 import { barRows } from '../charts/barRows.js';
-import { dotsD } from '../charts/dots.js';
+import { dotsD, dotsPath } from '../charts/dots.js';
 import { absoluteD } from '../charts/pathd.js';
 import { US_MAP_CODES, stateShapes, usPoints, usProjected, usYearMap } from '../charts/geo.js';
 import { periodsChart, periodsPlotBase } from '../charts/periods.js';
@@ -869,6 +870,17 @@ test('usProjected puts a dot where usPoints would put it at the same width', () 
   const placed = usProjected(shapes, PLACES, 560).filter(Boolean);
   const svg = String(usPoints({ shapes, points: PLACES.map((point) => ({ point, cls: 'a' })), sizes: { a: 3 }, width: 560 }));
   assert.equal(attr(/<path class="chart-dots a"[^>]*>/.exec(svg)[0], 'd'), dotsD(placed));
+});
+
+test('the tests\' dot counters (pipeline/test/helpers.js) count what dotsD and dotsPath draw, whatever the run', () => {
+  const pts = [[100.04, 80.25], [210.5, 90], [210.5, 90], [3, -4], [0, 0]];
+  for (const run of [0, 1]) assert.equal(dotsCount(dotsD(pts, { run })), pts.length, `run ${run}`);
+  assert.equal(dotsCount(dotsD([])), 0);
+  assert.equal(dotsCount(dotsD([[1e-7, 5e6]])), 1, 'a tiny or a huge coordinate is one dot');
+  const markup = `${dotsPath(pts, 'a', 3)}${dotsPath(pts.slice(0, 2), 'a b', 2)}${dotsPath(pts, 'c', 3)}`;
+  assert.equal(dotsIn(markup, 'a'), pts.length + 2, 'summed over a class\'s paths');
+  assert.equal(dotsIn(markup, 'b'), 2);
+  assert.equal(dotsIn(markup, 'd'), 0);
 });
 
 test('usYearMap: the land as a faint path for each state and DC, then one path of dots for each class that has any, in the order given, at its own size if it has one', () => {
