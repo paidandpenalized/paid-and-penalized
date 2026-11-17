@@ -280,18 +280,21 @@ export function nearestTo(rows, point, { k, skip = null }) {
 
 // ---------- the area map's reading aids (each behind an option of areaMap's; HACRP's map takes none) ----------
 
-// A pin's radius, in viewBox units, and the room kept between two pins once spread apart.
+// A pin's radius, in viewBox units, and the room kept between two pins once spread apart: enough that two pins at one
+// place each move past their radius, so the hairline back to the place shows between them.
 const PIN_R = 9;
-const PIN_GAP = 2;
-// The ▲'s reach from the center, which a pin spread apart keeps clear of.
+const PIN_GAP = 8;
+// The ▲'s reach from the center, which a pin spread apart keeps clear of; the ring (self: 'ring') fits inside it.
 const THIS_R = 12;
+const SELF_RING_R = 11;
+const SELF_DOT_R = 5;
 // The golden angle, in radians: the direction two pins at the very same place are pushed apart, a different one for each
 // pair, the same on every build.
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 // At most this many rounds of pushing apart (a page has a handful of pins; they settle in a few).
 const SPREAD_ROUNDS = 60;
-// A pin moved farther than this from its place is tied back to it by a hairline.
-const LEAD_MIN = 2;
+// A pin moved farther than its radius from its place (so the place is off the pin) is tied back to it by a hairline.
+const LEAD_MIN = PIN_R;
 
 // Pins spread apart so none covers another or the ▲: each pair closer than two radii (and a gap) is pushed apart along
 // the line between them, half each, and a pin over the ▲ is pushed off it; then each is kept inside the frame. Rounds
@@ -421,6 +424,40 @@ function stateLabels({ projection, shapes, meets, width, height, max, obstacles 
   return placed;
 }
 
+// A pin's town: its words in the type face, 10 units, about 6 units a character, set beside the pin (right, then left,
+// above, below), at the first place where the words stay inside the frame and clear of the pins, this hospital's mark,
+// the state labels and the towns set before; none clear, no words.
+const TOWN_SIZE = 10;
+const TOWN_CHAR = 6.1;
+const TOWN_GAP = 4;
+function townLabels(pins, { width, height, avoidCircles, avoidBoxes }) {
+  const boxes = [...avoidBoxes];
+  const out = [];
+  const hitsBox = (b) => boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
+  const hitsCircle = (b) => avoidCircles.some((c) => {
+    const nx = Math.max(b.x0, Math.min(c.x, b.x1));
+    const ny = Math.max(b.y0, Math.min(c.y, b.y1));
+    return Math.hypot(c.x - nx, c.y - ny) < c.r;
+  });
+  for (const { x, y, town } of pins) {
+    if (!town) continue;
+    const w = town.length * TOWN_CHAR;
+    const h = TOWN_SIZE;
+    const off = PIN_R + TOWN_GAP;
+    const spots = [
+      { x: x + off, y, anchor: 'start', box: { x0: x + off, x1: x + off + w, y0: y - h / 2, y1: y + h / 2 } },
+      { x: x - off, y, anchor: 'end', box: { x0: x - off - w, x1: x - off, y0: y - h / 2, y1: y + h / 2 } },
+      { x, y: y - off - h / 2, anchor: 'middle', box: { x0: x - w / 2, x1: x + w / 2, y0: y - off - h, y1: y - off } },
+      { x, y: y + off + h / 2, anchor: 'middle', box: { x0: x - w / 2, x1: x + w / 2, y0: y + off, y1: y + off + h } },
+    ];
+    const spot = spots.find(({ box: b }) => b.x0 >= 2 && b.x1 <= width - 2 && b.y0 >= 2 && b.y1 <= height - 2 && !hitsBox(b) && !hitsCircle(b));
+    if (!spot) continue;
+    boxes.push(spot.box);
+    out.push({ text: town, x: spot.x, y: spot.y, anchor: spot.anchor });
+  }
+  return out;
+}
+
 // The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
 // numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
 // steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
@@ -433,13 +470,22 @@ function stateLabels({ projection, shapes, meets, width, height, max, obstacles 
 //   spread   true: pins that would cover one another or the ▲ are spread apart (spreadPins), each moved one tied to
 //            its place by a hairline from a small dot there
 //   labels   up to this many states labeled by postal code, the largest in the frame first (stateLabels)
-// The returned markup carries contextDrawn: how many context dots fell inside the frame.
-export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH, pad = AREA_PAD, contextR = CONTEXT_R, spread = false, labels = 0 }) {
+//   towns    true: a pin given a town (points[i].town, text) has it set beside it where it fits (townLabels)
+//   aspect   the frame's height as a share of its width (default AREA_ASPECT)
+//   self     'ring': the place drawn as a dot in the pen ink inside a ring (a page whose other maps mark it so), not a ▲
+//   variant  'narrow' or 'wide' when a figure carries two drawings (charts.css shows one by the screen's width)
+//   countyThin  the county lines' thinning, in viewBox units (default THIN): coarser keeps a page light that draws the
+//            map twice
+//   dense    true: the context drawn as one path of dots per class (web/charts/dots.js), not a circle each: a few hundred
+//            dots in a few hundred bytes
+// The returned markup carries contextDrawn: how many context dots fell inside the frame; and contextDrawnBy, that count by
+// class ({ [cls]: n }).
+export function areaMap({ shapes, counties = [], center, points, context = [], rings = [], label, width = WIDTH, pad = AREA_PAD, contextR = CONTEXT_R, spread = false, labels = 0, towns = false, aspect = AREA_ASPECT, self = 'triangle', variant = null, dense = false, countyThin = THIN }) {
   if (typeof label !== 'string' || !label) throw new TypeError('areaMap: label is required');
   const ok = (p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite);
   const placed = points.filter((p) => ok(p.point));
   if (!ok(center.point) || placed.length < 2) return null;
-  const height = Math.round(width * AREA_ASPECT);
+  const height = Math.round(width * aspect);
   // Fitted around the points and a small square about the center (a quarter degree each way), so a lone near pair
   // keeps some country around it.
   const [lon, lat] = center.point;
@@ -453,7 +499,8 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const meets = framed(projection, width, height);
   const path = outlinePath(projection);
   const land = [...shapes.values()].filter(meets).map((f) => path(f)).filter(Boolean);
-  const inner = counties.filter(meets).map((f) => path(f)).filter(Boolean);
+  const countyPath = countyThin === THIN ? path : outlinePath(projection, countyThin);
+  const inner = counties.filter(meets).map((f) => countyPath(f)).filter(Boolean);
   // Distance rings about the center: each { miles, label }, a circle of that great-circle radius.
   const ringPath = relativePath(geoPath(projection).digits(DIGITS));
   const ringsDrawn = rings.map((r) => {
@@ -465,8 +512,11 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const at = (p) => projection(p).map(r2);
   const [cx, cy] = at(center.point);
   const inFrame = ([x, y]) => x >= 0 && x <= width && y >= 0 && y <= height;
-  const reference = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) }))
-    .filter((c) => c.xy && inFrame(c.xy)).map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${contextR}"/>`);
+  const inside = context.filter((c) => ok(c.point)).map((c) => ({ cls: c.cls, xy: projection(c.point) })).filter((c) => c.xy && inFrame(c.xy));
+  const classes = [...new Set(inside.map((c) => c.cls))];
+  const reference = dense
+    ? classes.map((cls) => dotsPath(inside.filter((c) => c.cls === cls).map((c) => c.xy), cls, 2 * contextR))
+    : inside.map(({ cls, xy: [x, y] }) => html`<circle class="${cls}" cx="${r2(x)}" cy="${r2(y)}" r="${contextR}"/>`);
   // Each pin's place, and where it is drawn: the same, unless spread apart.
   const own = placed.map((p) => projection(p.point));
   const shown = spread ? spreadPins(own, projection(center.point), { width, height }) : own;
@@ -483,14 +533,23 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
   const obstacles = [...shown.map(([x, y]) => ({ x, y, r: PIN_R })), { x: cx, y: cy, r: THIS_R }];
   const named = labels > 0 ? stateLabels({ projection, shapes, meets, width, height, max: labels, obstacles }) : [];
   const names = named.map((l) => html`<text class="chart-geo-label" x="${r2(l.x)}" y="${r2(l.y)}" dy="0.35em" text-anchor="middle">${l.code}</text>`);
-  const svg = new Safe(html`<svg class="chart chart--area-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
+  const townsSet = towns ? townLabels(placed.map((p, i) => ({ x: shown[i][0], y: shown[i][1], town: p.town })), {
+    width, height, avoidCircles: obstacles,
+    avoidBoxes: named.map((l) => ({ x0: l.x - LABEL_HALF_W, x1: l.x + LABEL_HALF_W, y0: l.y - LABEL_HALF_H, y1: l.y + LABEL_HALF_H })),
+  }) : [];
+  const townText = townsSet.map((t) => html`<text class="chart-pin__town" x="${r2(t.x)}" y="${r2(t.y)}" dy="0.35em" text-anchor="${t.anchor}">${t.text}</text>`);
+  const thisMark = self === 'ring'
+    ? html`<circle class="chart-self__ring" cx="${cx}" cy="${cy}" r="${SELF_RING_R}"/><circle class="chart-self__dot" cx="${cx}" cy="${cy}" r="${SELF_DOT_R}"/>`
+    : html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>`;
+  const svg = new Safe(html`<svg class="chart chart--area-map"${variant ? html` data-fit="${variant}"` : ''} viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
     + `<rect class="chart-sea" width="${width}" height="${height}"/>${land.map((d) => `<path class="chart-geo-land" d="${d}"/>`).join('')}`
     + `<g class="chart-geo-counties">${inner.map((d) => `<path d="${d}"/>`).join('')}</g>`
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
-    + html`${ringsDrawn}${reference}${names}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
+    + html`${ringsDrawn}${reference}${names}${townText}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: thisMark })}`.text
     + '</svg>');
-  // How many context dots fell inside the frame: a caller keys its legend on this, not on the markup.
+  // How many context dots fell inside the frame, in all and by class: a caller keys its legend on this, not on the markup.
   svg.contextDrawn = reference.length;
+  svg.contextDrawnBy = Object.fromEntries(classes.map((cls) => [cls, inside.filter((c) => c.cls === cls).length]));
   return svg;
 }
 
@@ -620,6 +679,36 @@ export function prInset(shapes, width) {
   }
   INSETS.set(key, { shapes, inset: entry });
   return entry;
+}
+
+// Puerto Rico on a map of its own: the island's outline fitted across a frame of the given width (the same projection as
+// the inset's), pad units in from every edge so a mark at the coast stays inside, as tall as the outline needs. For a
+// Puerto Rico hospital's page, where the US map's inset would be too small to read. { height, outline (its d),
+// project([lon, lat]) -> [x, y] to a tenth, or null outside the frame }, or null where the shapes lack Puerto Rico.
+const PR_MAPS = new Map();
+export function prMap(shapes, width, pad) {
+  const key = `${width}:${pad}`;
+  if (PR_MAPS.get(key)?.shapes === shapes) return PR_MAPS.get(key).map;
+  const f = shapes.get('PR');
+  let map = null;
+  if (f) {
+    const [[, south], [, north]] = geoBounds(f);
+    const inset = (north - south) * PARALLEL_INSET;
+    const projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitWidth(width - 2 * pad, f);
+    const [[, y0], [, y1]] = geoPath(projection).bounds(f);
+    const height = Math.ceil(y1 - y0 + 2 * pad);
+    projection.fitExtent([[pad, pad], [width - pad, height - pad]], f);
+    map = {
+      height,
+      outline: outlinePath(projection)(f),
+      project: (p) => {
+        const at = Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) ? projection(p) : null;
+        return at && at[0] >= 0 && at[0] <= width && at[1] >= 0 && at[1] <= height ? at.map(r1) : null;
+      },
+    };
+  }
+  PR_MAPS.set(key, { shapes, map });
+  return map;
 }
 
 // The year map: every state's outline as a faint land, and the hospitals as dots, one path per class (drawn in the

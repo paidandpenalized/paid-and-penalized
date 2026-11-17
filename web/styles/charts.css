@@ -170,6 +170,10 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-geo-label { fill: var(--ink-2); font-family: var(--font-type); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
 .chart-pin__lead { fill: none; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-pin__at { fill: var(--ink); }
+/* A pin's town, beside it, haloed in the land's tone; this hospital as a dot in the pen ink inside a ring (self: 'ring'). */
+.chart-pin__town { fill: var(--ink); font-family: var(--font-type); font-size: 10px; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.chart-self__ring { fill: none; stroke: var(--pen); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-self__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 /* ---------- maps (web/charts/geo.js) ---------- */
 /* A locator map: the state in the panel tone with an ink outline, the place an ink dot on a paper ring inside a soft
    ink halo, so it reads on any part of the state. */
@@ -224,6 +228,9 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-geo-label { fill: CanvasText; stroke: Canvas; }
   .chart-pin__lead { stroke: CanvasText; }
   .chart-pin__at { fill: CanvasText; }
+  .chart-pin__town { fill: CanvasText; stroke: Canvas; }
+  .chart-self__ring { stroke: CanvasText; }
+  .chart-self__dot { fill: CanvasText; stroke: Canvas; }
 }
 
 /* ---------- the program and place pages' charts (web/charts: scoreRule, punchCard, dots, measureDots, slideRule,

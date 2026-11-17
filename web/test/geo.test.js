@@ -9,7 +9,7 @@ import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../p
 import { Safe } from '../render/html.js';
 import { absoluteD } from '../charts/pathd.js';
 import { STATES, STATE_NAMES } from '../../engine/js/states.js';
-import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, spreadPins, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
+import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, prMap, spreadPins, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
 
 const TOPO = JSON.parse(readPinned('us-atlas-counties-3.0.1'));
 const shapes = stateShapes(TOPO);
@@ -344,4 +344,40 @@ test('prInset: Puerto Rico in a box at the US map\'s lower right, clear of every
   assert.equal(inset.project(null), null, 'no coordinates, no place');
   assert.match(inset.outline, /^m|^M/, 'the outline');
   assert.equal(prInset(new Map(), width), null, 'no Puerto Rico in the shapes: no inset');
+});
+
+test('areaMap round two: towns beside pins inside the frame, a ringed place, the frame\'s aspect, a variant, the context by class', () => {
+  const points = [
+    { point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a', town: 'Ames' },
+    { point: [-93.62, 42.03], n: 2, cls: 'chart-pin--yes', tip: 'b' },
+    { point: [-92.9, 41.7], n: 3, cls: 'chart-pin--no', tip: 'c', town: 'A town with a name far too long for this frame on either side of its pin, above it or below it' },
+  ];
+  const context = [{ point: [-93.5, 42.1], cls: 'a' }, { point: [-93.4, 42.0], cls: 'b' }, { point: [-93.3, 41.9], cls: 'b' }];
+  const svg = areaMap({ ...AREA, points, context, spread: true, towns: true, aspect: 0.72, self: 'ring', variant: 'wide', pad: 30 });
+  const text = String(svg);
+  const [w, h] = viewBox(text);
+  assert.equal(h, Math.round(w * 0.72), 'the aspect');
+  assert.match(text, /^<svg class="chart chart--area-map" data-fit="wide" viewBox=/, 'the variant');
+  assert.match(text, /<circle class="chart-self__ring" cx="[\d.-]+" cy="[\d.-]+" r="11"\/><circle class="chart-self__dot"/, 'the place ringed');
+  assert.doesNotMatch(text, /chart-this--map/, 'no ▲');
+  const towns = [...text.matchAll(/<text class="chart-pin__town" x="([\d.-]+)" y="([\d.-]+)" dy="0.35em" text-anchor="(\w+)">([^<]*)<\/text>/g)];
+  assert.deepEqual(towns.map((m) => m[4]), ['Ames'], 'a town that fits, and none that can\'t');
+  assert.deepEqual(svg.contextDrawnBy, { a: 1, b: 2 }, 'the context drawn, by class');
+  // Two pins at one place are spread past their radius, so each one's hairline back to the place shows.
+  const leads = [...text.matchAll(/<path class="chart-pin__lead" d="M([\d.-]+) ([\d.-]+)L([\d.-]+) ([\d.-]+)"/g)].map((m) => m.slice(1).map(Number));
+  assert.ok(leads.length >= 2 && leads.every(([x0, y0, x1, y1]) => Math.hypot(x1 - x0, y1 - y0) > 9), 'tied back, beyond the pin\'s edge');
+  // Without the options: no towns, a ▲, the default frame.
+  const plain = String(areaMap({ ...AREA, points }));
+  assert.doesNotMatch(plain, /chart-pin__town|chart-self__|data-fit/);
+  assert.equal(viewBox(plain)[1], Math.round(460 * 0.8));
+});
+
+test('prMap: Puerto Rico across the frame, padded; points off the island have no place', () => {
+  const map = prMap(shapes, 975, 22);
+  assert.equal(prMap(shapes, 975, 22), map, 'remembered');
+  assert.ok(map.height > 100 && map.height < 975 / 2, 'wider than tall');
+  const [x, y] = map.project([-66.1, 18.45]);
+  assert.ok(x >= 22 && x <= 975 - 22 && y >= 22 && y <= map.height - 22, 'a point on the island inside the padding');
+  assert.equal(map.project([-93.6, 42.0]), null, 'the mainland has no place');
+  assert.equal(prMap(new Map(), 975, 22), null, 'no Puerto Rico: no map');
 });
