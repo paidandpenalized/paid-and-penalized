@@ -1,0 +1,43 @@
+state,name,wr_high_mitigation_thousands,wr_high_mitigation_pct,wr_medium_mitigation_thousands,wr_medium_mitigation_pct,wr_low_mitigation_thousands,wr_low_mitigation_pct
+AK,Alaska,-8,-12,-13,-20,-19,-30
+AR,Arkansas,-25,-12,-41,-19,-61,-28
+AZ,Arizona,-67,-15,-106,-24,-155,-35
+CA,California,-864,-20,-1408,-32,-1965,-45
+CO,Colorado,-52,-14,-86,-23,-122,-32
+CT,Connecticut,-61,-20,-108,-36,-150,-50
+DC,District of Columbia,-19,-17,-32,-29,-46,-42
+DE,Delaware,-9,-15,-15,-24,-22,-34
+HI,Hawaii,-21,-16,-40,-30,-54,-41
+IA,Iowa,-22,-12,-36,-20,-55,-30
+ID,Idaho,-6,-8,-9,-11,-14,-17
+IL,Illinois,-135,-18,-214,-29,-306,-42
+IN,Indiana,-64,-11,-115,-20,-183,-32
+KY,Kentucky,-46,-11,-71,-17,-105,-26
+LA,Louisiana,-66,-13,-123,-25,-183,-37
+MA,Massachusetts,-65,-22,-111,-37,-153,-51
+MD,Maryland,-62,-18,-81,-24,-116,-35
+ME,Maine,-9,-14,-16,-24,-26,-38
+MI,Michigan,-100,-14,-154,-22,-222,-31
+MN,Minnesota,-32,-17,-53,-28,-75,-40
+MO,Missouri,-60,-17,-88,-25,-141,-39
+MT,Montana,-8,-10,-11,-14,-17,-22
+NC,North Carolina,-92,-13,-148,-22,-230,-33
+ND,North Dakota,-1,-5,-2,-6,-3,-13
+NE,Nebraska,-6,-9,-10,-13,-14,-20
+NH,New Hampshire,-7,-13,-12,-22,-18,-34
+NJ,New Jersey,-91,-17,-149,-27,-211,-39
+NM,New Mexico,-25,-10,-31,-13,-52,-22
+NV,Nevada,-41,-14,-66,-22,-98,-33
+NY,New York,-374,-19,-636,-32,-901,-46
+OH,Ohio,-88,-12,-147,-21,-218,-31
+OK,Oklahoma,-22,-9,-28,-12,-46,-19
+OR,Oregon,-66,-12,-114,-21,-176,-33
+PA,Pennsylvania,-96,-13,-155,-21,-226,-30
+RI,Rhode Island,-13,-16,-20,-25,-30,-37
+SD,South Dakota,-2,-6,-5,-15,-9,-29
+UT,Utah,-7,-9,-9,-11,-16,-19
+VA,Virginia,-90,-16,-154,-27,-218,-38
+VT,Vermont,-9,-22,-15,-36,-20,-49
+WA,Washington,-90,-15,-162,-27,-231,-38
+WI,Wisconsin,-39,-23,-70,-42,-100,-60
+WV,West Virginia,-17,-12,-24,-16,-38,-26

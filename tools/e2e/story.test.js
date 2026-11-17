@@ -796,8 +796,8 @@ describe('the worksheet on a narrow phone', () => {
   }));
 });
 
-// Below the story, the directory: each live program's card ends in a way to its page whose words sit on one line, as its
-// neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
+// Below the story, the directory: each live program's card (the three programs with data, then the scenario's card) ends
+// in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
 // row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom
 // edge (from 1200 px the six share one row).
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
@@ -839,7 +839,7 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
-      assert.deepEqual(f.go, [1, 1, 1], `${width} px: each card's way to its page on one line`);
+      assert.deepEqual(f.go, [1, 1, 1, 1], `${width} px: each card's way to its page on one line, the scenario's too`);
       assert.equal(f.names, 3, `${width} px: three groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
       assert.equal(f.bands, 6, `${width} px: six slips`);

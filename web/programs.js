@@ -41,6 +41,7 @@ const DEKS = {
   iqr: ['dekIqr', () => ({ share: fractionWord(IQR_REDUCTION_SHARE) })],
   pi: ['dekPi', () => ({ share: fractionWord(PI_REDUCTION_SHARE) })],
   team: ['dekTeam', () => ({ surgeries: spelled(TEAM_SURGERIES) })],
+  'work-requirement': ['dekWorkRequirement'],
 };
 
 // The one-sentence dek of the program with this id (SITE.programs), as plain text. An unknown id throws.

@@ -7,9 +7,29 @@ Code is licensed under MIT (LICENSE). Prose, charts and derived data are license
 Not covered by either license:
 - Source data from the Centers for Medicare & Medicaid Services (CMS) and other U.S. federal agencies.
   These are U.S. government works in the public domain; the CMS files in data/pinned/ are unmodified copies,
-  except data/pinned/pos-q2-2026/pos_hospitals.csv, a row and column subset of CMS's Provider of Services file
-  made by pipeline/py/pp_pipeline/pos_extract.py (the manifest records the full file's SHA-256 and URLs).
+  except the extracts and derived tables the manifest marks with `derivedFrom`, each made from a named CMS file by
+  a script in this repository, with the full file's SHA-256 and URL recorded:
+  data/pinned/pos-q2-2026/pos_hospitals.csv (a row and column subset of the Provider of Services file,
+  pipeline/py/pp_pipeline/pos_extract.py); the HCRIS extracts under data/pinned/hcris-fy2011 to hcris-fy2026
+  (cells and G-3 line 24 tables) and hcris-fy2024/hcris_fy2024_wse.csv (rows and cells subset from CMS's HCRIS
+  zips); data/pinned/hcris-puf/hcris_puf_sample.csv (a row and column sample of the Hospital Provider Cost Report
+  public use file); the hai-cy2017 to hai-cy2024 files (CMS's healthcare-associated infection file from
+  each archived hospital release); data/pinned/medicaid/cms64-fmr-fy2023-map-totals.csv (state totals and two DSH
+  rows read from the Medicaid Financial Management Report workbook for FY2023); and
+  data/pinned/medicaid/hcris-fy2023-state-miur.csv (each state's mean and standard deviation of Medicaid inpatient
+  utilization, computed from CMS's FY2023 HCRIS hospital file). The CMS-64 New Adult Group file in
+  data/pinned/medicaid/ is an unmodified copy.
   The Census Bureau's ZCTA gazetteer and the CMS county-to-CBSA crosswalk are unmodified copies too.
+- data/pinned/medicaid/urban-2026-table-a2-work-requirement.csv holds figures from Appendix Table A.2 of the Urban
+  Institute and Robert Wood Johnson Foundation report "Projected Reductions in Medicaid Expansion Enrollment Under
+  OBBBA's Work Requirements and Six-Month Redeterminations: National and State Estimates for 2028" (Buettgens, Karpman,
+  Haley, Carter, Kenney; March 2026), transcribed by hand from the report. They are not CMS data. The same figures, and
+  sums of them, appear in data/emitted/medicaid/fy2023/medicaid.json as `states.*.declines`, `states.*.urban_thousands`,
+  `scenarios[].decline_enrollment` and `scenarios[].decline_enrollment_scenario_states`. All of these are Urban
+  Institute and Robert Wood Johnson Foundation's published figures, or sums of them. This project's CC BY 4.0 grant does
+  not extend to them; they remain subject to Urban Institute and RWJF's own terms. The report states: "Copyright (c)
+  March 2026. Urban Institute. Permission is granted for reproduction of this file, with attribution to the Urban
+  Institute." Cite the Urban Institute wherever the figures appear. The report itself is not included.
 - data/pinned/us-atlas-3.0.1/counties-10m.json is an unmodified copy of us-atlas 3.0.1 by Mike Bostock, TopoJSON
   derived from the Census Bureau's cartographic boundary files, under the ISC license: "Copyright 2013-2019 Michael
   Bostock. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is

@@ -11,6 +11,7 @@ import { normalize } from '../../web/client/search.js';
 import { RELEASE_MS } from '../../web/client/topbar.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
+import { METHODS_PATH as WR_METHODS_PATH } from '../../sites/work-requirement/web/links.js';
 import { openFolds } from './axe.js';
 import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { samplePages } from './site.js';
@@ -35,6 +36,9 @@ const WIDTHS = [1280, 641, 320];
 const SNAP = 1;
 // The most Tab presses a walk may take before it fails: the longest page needs about half as many each way.
 const MAX_PRESSES = 1000;
+// The pages whose bar has no search: the work requirement's Methods. That site's Find sets its program page's hospital
+// over the program page's own data (sites/work-requirement/client/find.js), so it is on that page only.
+const NO_BAR_SEARCH = new Set([WR_METHODS_PATH]);
 
 const shared = useBrowser();
 
@@ -195,8 +199,9 @@ async function walk(page, key, done) {
 async function keyboardWalk(page, path) {
   // What the page offers, so a control a page lacks is a failure and not a skipped target. The theme toggle and the
   // search appear when the page's scripts have run. Every page's bar has a search (a program's, or the family's on the
-  // hub's pages); a program page also has its section menu.
+  // hub's pages) but NO_BAR_SEARCH's; a program page also has its section menu.
   const hasNav = path.startsWith(PROGRAM_PATH);
+  const hasSearch = !NO_BAR_SEARCH.has(path);
   const offered = await page.evaluate((feedbackLink) => ({
     // Two in the markup (the bar's and the footer's); the CSS shows one at any width.
     theme: [...document.querySelectorAll('.theme-toggle')].filter((b) => b.checkVisibility()).length,
@@ -206,9 +211,9 @@ async function keyboardWalk(page, path) {
   }), FEEDBACK_LINK);
   assert.equal(offered.theme, 1, 'one theme toggle');
   assert.equal(offered.feedback, 1, 'one feedback link in the footer');
-  assert.equal(offered.search, 1, 'the top bar\'s search');
+  assert.equal(offered.search, hasSearch ? 1 : 0, hasSearch ? 'the top bar\'s search' : 'no search in the top bar');
   if (hasNav) assert.ok(offered.nav > 0, 'the top bar\'s nav');
-  const wanted = ['theme', 'feedback', 'search', ...(hasNav ? Array.from({ length: offered.nav }, (_, i) => `nav ${i}`) : [])];
+  const wanted = ['theme', 'feedback', ...(hasSearch ? ['search'] : []), ...(hasNav ? Array.from({ length: offered.nav }, (_, i) => `nav ${i}`) : [])];
   const reached = (steps) => wanted.every((role) => steps.some((s) => s.role === role));
   const last = (steps) => steps.at(-1)?.desc;
 

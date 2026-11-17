@@ -1,4 +1,5 @@
-// CI size budget: no page may weigh more than its page type's budget. A page's weight is what a first visit loads,
+// CI size budget: no page may weigh more than its page type's budget, and no work-requirement data file more than its
+// kind's (JSON_BUDGETS, below). A page's weight is what a first visit loads,
 // brotli-compressed at quality 5: the page's HTML (its inline data scripts included), each stylesheet it links and
 // each script it loads (module or not), every file counted once per page. Not counted: fonts (already compressed
 // WOFF2), the favicon, and the JSON data files that scripts fetch later. Two more limits on every page: its scripts
@@ -15,7 +16,7 @@
 // chunks first.
 //
 // A page whose path matches no type throws: a new page type needs a budget (and a line in page-types.js).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { brotliCompressSync, constants } from 'node:zlib';
 import { DIST_DIR, isMain } from '../../pipeline/files.js';
@@ -58,7 +59,51 @@ export const PROGRAM_BUDGETS = {
   hacrp: HACRP_BUDGETS,
   // Readmissions starts at HACRP's budgets; any raise is a decision to record here, as above.
   hrrp: { ...HACRP_BUDGETS },
+  // The work requirement (a program page and Methods only), set 2026-11-10 by the rule above from the pages as built then
+  // (steps 1 and 2 of five): the program page 61.2 KB + 15% (70.4 KB) and Methods 24.4 KB + 15% (28.1 KB), rounded up.
+  // Steps 3 to 5 will weigh more: each raises the program budget as it lands, a decision recorded here.
+  // Step 3 (states), 2026-11-10: the program page 82.0 KB + 15% (94.3 KB), rounded up to 100 KB.
+  // Step 4 (one hospital), 2026-11-10: the program page 93.9 KB + 15% (108.0 KB), rounded up to 110 KB.
+  // Step 5 (exposed on both), 2026-11-10: the program page 122.7 KB + 15% (141.1 KB), rounded up to 150 KB.
+  // Methods built (its sections, the sensitivities figure and every pin's SHA-256), 2026-11-10: 41.1 KB + 15% (47.3 KB),
+  // rounded up to 50 KB.
+  'work-requirement': { program: 150 * KB, methods: 50 * KB },
 };
+// The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
+// most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:
+// the file's name without its hash; step 4's per-state files are one kind, wr-hosp). Set 2026-11-10 by the rule above,
+// the heaviest file of each kind + 15%, rounded up to the next 10 KB, after steps 3 and 5 moved into files of their own:
+// wr-strips 109.8 KB (step 1's, fetched with the page), wr-states 11.1 KB and wr-both 29.0 KB (fetched as their step
+// nears), wr-base 117.3 KB (the what-if's, fetched as the reader reaches for the slider), wr-hosp 23.1 KB (California's).
+// A new kind of wr- file needs a budget here.
+export const JSON_BUDGETS = {
+  'wr-strips': 130 * KB,
+  'wr-states': 20 * KB,
+  'wr-both': 40 * KB,
+  'wr-base': 140 * KB,
+  'wr-hosp': 30 * KB,
+};
+// A built data file's kind (wr-strips.0123abcd.json: 'wr-strips'; wr-hosp-ca.0123abcd.json: 'wr-hosp'), or null for a
+// file that is not a work-requirement data file.
+export function jsonKind(file) {
+  const m = /^(wr-[a-z0-9-]+?)\.[0-9a-f]{8}\.json$/.exec(file);
+  if (!m) return null;
+  return /^wr-hosp-[a-z]{2}$/.test(m[1]) ? 'wr-hosp' : m[1];
+}
+// Every work-requirement data file in distDir's assets: { file, kind, bytes }, in name order. A kind with no budget throws.
+export function measureJson(distDir, budgets = JSON_BUDGETS) {
+  const dir = join(distDir, 'assets');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).sort().flatMap((file) => {
+    const kind = jsonKind(file);
+    if (kind === null) return [];
+    if (budgets[kind] === undefined) throw new RangeError(`no budget for the data file "${file}" (kind "${kind}"): a new kind needs one in tools/ci/size-budget.js`);
+    return [{ file, kind, bytes: brotliSize(readFileSync(join(dir, file))) }];
+  });
+}
+// The data files over their kind's budget, each with its budget.
+export const jsonOverBudget = (rows, budgets = JSON_BUDGETS) => rows.filter((r) => r.bytes > budgets[r.kind]).map((r) => ({ ...r, budget: budgets[r.kind] }));
+
 // The budget in bytes of a page of this type (and, for a program-keyed type, this program).
 export function budgetOf({ type, program }, budgets = BUDGETS, programBudgets = PROGRAM_BUDGETS) {
   if (PROGRAM_TYPES.includes(type)) {
@@ -170,6 +215,15 @@ if (isMain(import.meta.url)) {
   const PARTS = { total: '', js: ', scripts', blocking: ', blocking scripts' };
   for (const { path, type, program, part, bytes, budget } of over)
     console.error(`OVER BUDGET ${path} (${program ? `${program} ` : ''}${type}${PARTS[part]}): ${kb(bytes)} > ${kb(budget)}`);
-  if (over.length > 0) process.exit(1);
-  console.log(`size budget: ${rows.length} pages within budget`);
+  const data = measureJson(process.argv[2] ?? DIST_DIR);
+  for (const kind of Object.keys(JSON_BUDGETS)) {
+    const ofKind = data.filter((r) => r.kind === kind);
+    if (ofKind.length === 0) continue;
+    const heaviest = ofKind.reduce((a, b) => (b.bytes > a.bytes ? b : a));
+    console.log(`${`data ${kind}`.padEnd(16)} ${String(ofKind.length).padStart(5)} files  heaviest ${kb(heaviest.bytes).padStart(9)} of ${kb(JSON_BUDGETS[kind])}  ${heaviest.file}`);
+  }
+  const overData = jsonOverBudget(data);
+  for (const { file, kind, bytes, budget } of overData) console.error(`OVER BUDGET ${file} (data ${kind}): ${kb(bytes)} > ${kb(budget)}`);
+  if (over.length > 0 || overData.length > 0) process.exit(1);
+  console.log(`size budget: ${rows.length} pages and ${data.length} data files within budget`);
 }

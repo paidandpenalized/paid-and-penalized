@@ -4,7 +4,10 @@
 // data-sorted-up and data-sorted-down, a CSV download and a tooltip layer). The build
 // fails if a value the chart plots is missing from the table.
 //   n            the figure's number on its page (a positive integer)
-//   takeaway     the finding, in a sentence built from data; source: the source line (text or Safe)
+//   takeaway     the finding, in a sentence built from data (text, or Safe markup: e.g. the text in a span a script
+//                rewrites); source: the source line (text or Safe)
+//   capTag       optional: a tag (Safe markup, e.g. the scenario tag) set after the takeaway, the figure's one tag for
+//                what all its numbers are
 //   svg          a chart from this kit (Safe, starting <svg), drawn about phone wide
 //   svgWide      optional: the same chart drawn on a wider viewBox for screens 560px and up (charts.css shows one
 //                of the two), so its text keeps its size instead of growing with the chart
@@ -42,7 +45,7 @@ const isChart = (svg) => svg instanceof Safe && svg.text.startsWith('<svg ');
 
 function checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key }) {
   if (!Number.isInteger(n) || n < 1) throw new RangeError(`figure: n must be a positive integer, got ${n}`);
-  if (typeof takeaway !== 'string' || !takeaway) throw new TypeError(`figure ${n}: a takeaway is required`);
+  if (!(typeof takeaway === 'string' || takeaway instanceof Safe) || !String(takeaway)) throw new TypeError(`figure ${n}: a takeaway is required`);
   if (chart !== null) {
     if (!(chart instanceof Safe) || svg !== undefined) throw new TypeError(`figure ${n}: chart must be Safe markup, given in place of svg`);
   } else if (typeof alt !== 'string' || !alt) throw new TypeError(`figure ${n}: alt text is required`);
@@ -110,8 +113,9 @@ export const imageOf = (svg, alt, fit) => new Safe(html`<svg ${alt === null ? ht
 export const imagePair = ({ svg, svgWide }, alt) => html`${imageOf(svg, alt, 'narrow')}
 ${imageOf(svgWide, alt, 'wide')}`;
 
-export function figure({ n, takeaway, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null }) {
+export function figure({ n, takeaway, capTag = null, svg, svgWide = null, chart = null, source, claimLevel = 'official', table, alt, csvName = `figure-${n}`, note = null, key = null, tableHidden = false }) {
   checkArgs({ n, takeaway, svg, svgWide, chart, source, claimLevel, table, alt, csvName, note, key });
+  if (capTag !== null && !(capTag instanceof Safe)) throw new TypeError(`figure ${n}: a caption's tag must be Safe markup`);
   const { columns, rows } = table;
   const cells = rows.map((row) => row.map((c, j) => cellOf(c, columns[j].numeric)));
   if (chart === null) checkPlotted(n, svg, columns, cells);
@@ -119,12 +123,12 @@ export function figure({ n, takeaway, svg, svgWide = null, chart = null, source,
   const claim = CLAIMS[claimLevel];
   const image = chart ?? (svgWide ? imagePair({ svg, svgWide }, alt) : imageOf(svg, alt, null));
   return html`<figure class="fig" id="figure-${n}" data-figure>
-<figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}</figcaption>
+<figcaption class="fig__cap" id="figure-${n}-cap"><span class="fig__n">${COPY.figure} ${n}.</span> ${takeaway}${capTag ? html` ${capTag}` : ''}</figcaption>
 ${key && html`<ul class="fig__key" role="list">${key.map((k) => html`<li><span class="fig__swatch fig__swatch--${k.swatch}" aria-hidden="true"></span>${k.label}</li>`)}</ul>
 `}${image}
 ${note && html`<p class="small muted fig__note">${note}</p>
 `}<p class="source fig__source">${claim && html`<span class="fig__claim">${claim}</span> · `}${source}</p>
-<details class="fig__table"><summary>${COPY.showTable}</summary>
+<details class="fig__table"${tableHidden ? html` hidden` : ''}><summary>${COPY.showTable}</summary>
 ${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap" data-sorted-up="${COPY.sortedUp}" data-sorted-down="${COPY.sortedDown}">
 <thead><tr>${columns.map((c) => html`<th scope="col"${c.numeric ? html` data-numeric` : ''}>${c.name}</th>`)}</tr></thead>
 <tbody>${cells.map((row) => html`<tr>${row.map((c, j) => tableCell(c, columns[j], j))}</tr>`)}</tbody>

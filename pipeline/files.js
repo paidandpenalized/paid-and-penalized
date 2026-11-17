@@ -44,14 +44,22 @@ export const hacrpPath = (fy) => `data/emitted/hacrp/fy${fy}/hacrp.json`;
 export const hrrpPath = (fy) => `data/emitted/hrrp/fy${fy}/hrrp.json`;
 // The dollar estimates for a fiscal year, repo-relative (written by `run.py emit`; see pp_engine/dollars.py).
 export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
+// The Medicaid work-requirement scenario file for a base fiscal year (the HCRIS year), repo-relative (written by `run.py emit`).
+export const medicaidPath = (fy) => `data/emitted/medicaid/fy${fy}/medicaid.json`;
 
 export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');
 }
 
-export function readPinned(id, encoding = 'utf8') {
+// The manifest's entry for a pinned input.
+export function pinnedEntry(id) {
   const entry = readManifest().find((e) => e.id === id);
   if (!entry) throw new RangeError(`no pinned input "${id}" in the manifest`);
+  return entry;
+}
+
+export function readPinned(id, encoding = 'utf8') {
+  const entry = pinnedEntry(id);
   return readFileSync(PINNED_DIR + entry.path, encoding);
 }
 

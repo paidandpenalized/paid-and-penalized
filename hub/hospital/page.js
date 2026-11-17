@@ -2,9 +2,11 @@
 // estimate: the record card, the net of the three programs (its stamp and the common fiscal year's note) with each
 // program's dollars as rows adding to it, each beside its peers' median; the headline that compares the net with the
 // same-state peers' median, over the frame the page's script draws the peer swarm in; the what-if section's rows; the
-// peer table's fold; the source and fairness lines. Without one (Maryland's all-payer model, or no inputs): the record
-// card, the status and why, and the program pages it has. Everything a reader needs is in the HTML; the script (entry
-// hub-hospital, hub/client/hospital.js) adds the swarm, the peer toggle, the strips and the peer table, on these hooks:
+// peer table's fold; the source and fairness lines. After the what-if, apart from the net and never added to it, the
+// Medicaid work-requirement band (medicaid.js: a scenario, not a payment), for a hospital the scenario file has a row for.
+// Without one (Maryland's all-payer model, or no inputs): the record card, the status and why, the program pages it has,
+// and the Medicaid band as above. Everything a reader needs is in the HTML; the script (entry hub-hospital,
+// hub/client/hospital.js) adds the swarm, the peer toggle, the strips and the peer table, on these hooks:
 //   [data-peers]        the sticky peer row; its buttons, and the disabled toggles' notes under it ([data-peer-note]), are
 //                       hidden until the script
 //   [data-headline]     the headline; [data-swarm], an empty <div> for the canvas (not displayed while empty), and
@@ -21,6 +23,7 @@ import { html } from '../../web/render/html.js';
 import { SITE, hospitalPathOf, programById, underConstruction } from '../../web/site.js';
 import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
+import { medicaidBand } from './medicaid.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
 import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
@@ -268,7 +271,7 @@ const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
 <p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
 ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
-function estimatedBody(h, master, group, { fy, all, sets, hrrp }) {
+function estimatedBody(h, master, group, { fy, all, sets, hrrp, medicaid }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
 ${peerRow(h, group)}
@@ -280,7 +283,7 @@ ${netBlock(h, master, group.figures, fy, sets)}
 ${figure(h, group, { fy, all })}
 </div>
 ${whatifSection(h, group, { fy, hrrp })}
-<div class="wrap"><div class="hh__tbl">
+${medicaidBand(h, medicaid, { net: true })}<div class="wrap"><div class="hh__tbl">
 <details class="hh__det" data-peer-table><summary>${fill('tableSummary')} <span>${fill('tableCount', { n: count(peers.length), group: group.group })}</span></summary></details>
 </div></div>
 ${notes(fy, true)}
@@ -288,7 +291,7 @@ ${notes(fy, true)}
 }
 
 // The page of a hospital with no estimate: the record card, its status and why, and the program pages it has.
-function variantBody(h, master, fy) {
+function variantBody(h, master, fy, medicaid) {
   const maryland = h.status === 'maryland';
   const links = ROWS.map((r) => r.id).filter((id) => pageOf(h, id));
   return html`<article class="hh hh--none" data-ccn="${h.ccn}">
@@ -307,15 +310,17 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 </section>` : ''}
 </div>
 </div>
-${notes(fy, false)}
+${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
 </article>`;
 }
 
 // The page at hospitalPathOf('hub', h.ccn). h: the hospital (hub/model.js hubHospitals); hospitals: every one of them (its
 // peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital master
 // record (the Type field's ownership and urban or rural); assets: the build's (the fiscal year is the shell's); robots:
-// the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note).
-export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null }) {
+// the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer factor (none: no note);
+// medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario file; a hospital with no
+// row in it gets no band).
+export function hospitalPage({ h, hospitals, facts, assets, robots, master = null, hrrp = null, medicaid }) {
   const fy = String(assets.shell.fy);
   const place = { name: h.name, place: placeText(h) };
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
@@ -331,7 +336,7 @@ export function hospitalPage({ h, hospitals, facts, assets, robots, master = nul
     description,
     path: hospitalPathOf('hub', h.ccn),
     robots,
-    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp }) : variantBody(h, master, fy),
+    body: h.est ? estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp, medicaid }) : variantBody(h, master, fy, medicaid),
     assets,
     scripts: h.est ? [assets.js['hub-hospital']] : [],
     preloadFonts: FONTS,

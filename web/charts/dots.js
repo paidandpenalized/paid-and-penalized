@@ -7,22 +7,25 @@ import { pathNumbers } from './pathd.js';
 // [[x, y], ...] -> the path's d: the dots in x then y order, the first placed absolutely and each next one by a
 // relative move from the last (a dot's h0 ends where it starts), so a path of thousands stays short. Coordinates are
 // rounded to a tenth before the differences are taken, so the moves add up exactly. Each pair is written as tightly as
-// path data allows (pathd.js pathNumbers).
+// path data allows (pathd.js pathNumbers). run: each dot's own length in tenths of a unit (0: h0). A figure scaled with
+// CSS zoom needs one (1: h.1, a tenth longer than round): Firefox draws a zero-length segment under zoom as a streak
+// to the next dot; the next move then starts from the run's end, so the dots stay where they were.
 const tenth = (v) => Math.round(v * 10);
 const step = (d) => (d / 10).toString();
-export function dotsD(points) {
+export function dotsD(points, { run = 0 } = {}) {
   const pts = points.map(([x, y]) => [tenth(x), tenth(y)]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const seg = `h${pathNumbers(run / 10)}`;
   let out = '';
   let last = null;
   for (const [x, y] of pts) {
-    out += last ? `m${pathNumbers((x - last[0]) / 10, (y - last[1]) / 10)}h0` : `M${pathNumbers(x / 10, y / 10)}h0`;
+    out += last ? `m${pathNumbers((x - last[0] - run) / 10, (y - last[1]) / 10)}${seg}` : `M${pathNumbers(x / 10, y / 10)}${seg}`;
     last = [x, y];
   }
   return out;
 }
 
-// One path of dots in a class, diameter d (viewBox units); '' when there are none.
-export const dotsPath = (points, cls, d) => (points.length ? html`<path class="chart-dots ${cls}" stroke-width="${step(tenth(d))}" d="${dotsD(points)}"/>` : '');
+// One path of dots in a class, diameter d (viewBox units); '' when there are none. run: as dotsD's.
+export const dotsPath = (points, cls, d, { run = 0 } = {}) => (points.length ? html`<path class="chart-dots ${cls}" stroke-width="${step(tenth(d))}" d="${dotsD(points, { run })}"/>` : '');
 
 // A stable spread in [0, 1) for item i (a golden-ratio sequence), for jitter that is the same on every build.
 export const spread = (i) => ((i * 0.6180339887498949) % 1 + 1) % 1;

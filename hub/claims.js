@@ -14,10 +14,10 @@ export const METHOD_CONSTANTS = Object.freeze({
   HAC_TOP_SHARE: 'number', IQR_REDUCTION_SHARE: 'number', PI_REDUCTION_SHARE: 'number', TEAM_SURGERIES: 'number',
 });
 
-// Each program's name, by its registry id, and the row that gives it as CMS does.
+// Each program's name, by its registry id, and the row that gives it as CMS does (a scenario's: as the statute heads it).
 export const PROGRAM_NAME_CLAIMS = Object.freeze({
   hrrp: 'HUB-17', hacrp: 'HUB-18', hvbp: 'HUB-19', 'wage-index': 'HUB-20', dsh: 'HUB-21', ime: 'HUB-22', iqr: 'HUB-23',
-  pi: 'HUB-24', team: 'HUB-25',
+  pi: 'HUB-24', team: 'HUB-25', 'work-requirement': 'HUB-26',
 });
 
 export const CLAIMS = Object.freeze({

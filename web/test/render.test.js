@@ -184,11 +184,12 @@ test('shell: the program tabs are All programs and the programs with dollar esti
     ['/', 'All programs', 'page', 'tab'],
     ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
   ]);
-  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp']);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
   assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
-  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a></div></nav>'), 'the row ends at the last program with estimates');
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, then the scenario');
+  assert.ok(header.includes('<a class="tab" href="/work-requirement/"><span>Work requirement</span> <span class="tab__ab">Medicaid</span></a></div></nav>'), 'the row ends at the scenario, the last listed program');
   // The programs under consideration have no tab, and the row no gap or label before where they were.
   for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
   assert.doesNotMatch(header, /tab--soon|tabs__gap/);
@@ -201,6 +202,8 @@ test('shell: the program tabs are All programs and the programs with dollar esti
   assert.doesNotMatch(headerOf(team), /aria-current="page"/);
   const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
   assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
+  const wr = tabsOf(page({ ...PAGE, path: '/work-requirement/', program: 'work-requirement' }));
+  assert.deepEqual(wr.filter(([, , current]) => current).map(([href]) => href), ['/work-requirement/']);
   assert.throws(() => page({ ...PAGE, program: 'nope' }), /nope/);
 });
 
@@ -211,7 +214,8 @@ test('shell: with a followed hospital, each tab opens that program\'s page for i
   assert.equal(href('HRRP'), '/hrrp/hospital/990001/');
   assert.equal(href('HACRP'), '/hacrp/hospital/990001/');
   assert.equal(href('HVBP'), '/hvbp/');
-  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs and the programs with estimates');
+  assert.equal(href('Medicaid'), '/work-requirement/', 'the scenario has no hospital pages: its folder');
+  assert.equal(tabs.length, 1 + LISTED_PROGRAMS.length, 'All programs, the programs with estimates and the scenario');
   // Not in the Readmissions file: the Readmissions folder.
   const notTdr = tabsOf(page({ ...PAGE, program: 'hacrp', hospital: { ...FOLLOWED, inHrrp: false } }));
   assert.equal(notTdr[1][0], '/hrrp/');
@@ -254,6 +258,11 @@ test('shell: the chip is empty and hidden without a hospital; with one it names 
   assert.match(headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: 48000 } })), /<\/span>\+\$48K<\/span>/);
   const none = headerOf(page({ ...PAGE, hospital: { ...FOLLOWED, net: null } }));
   assert.doesNotMatch(none, /chip__v|NaN|\$0/);
+  // chipNet false (a page whose numbers are of another kind): the name only, the chip marked for the script.
+  assert.ok(headerOf(page({ ...PAGE, chipNet: false })).includes('<p class="chip" data-chip data-chip-plain hidden></p>'));
+  const named = /<p class="chip" data-chip data-chip-plain>[\s\S]*?<\/p>/.exec(headerOf(page({ ...PAGE, hospital: FOLLOWED, chipNet: false })))?.[0];
+  assert.ok(named?.includes('<span class="chip__t">Exampleton &lt;General&gt; &amp; Sons</span>'), named);
+  assert.doesNotMatch(named, /chip__v|\$58K/);
 });
 
 test('shell: the numbered section menu only when the page gives sections, the current one marked', () => {
@@ -284,8 +293,21 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the ones under
   // consideration, linked to their placeholder pages.
   for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
-    assert.match(foot, new RegExp(`<a href="${href}">${name} <span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
+    assert.match(foot, new RegExp(`<a href="${href}">${name}\u00a0<span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
   }
+  // The scenario's figure (Dalton's review 11-11): on one line like the others, its national range of Medicaid revenue
+  // lost, low to high, and the word "scenario", in the same figure column; what it is in full, in its base year's
+  // dollars, is its title and hidden words for a screen reader. Not an estimate for the family's fiscal year, so no
+  // "Estimated FY2026" before it, and no tag box (the footer row is the one place a scenario number goes without it).
+  const full = 'Medicaid revenue hospitals could lose a year, a scenario in 2023 dollars';
+  assert.ok(foot.includes(`<li><a href="/work-requirement/">Work requirement\u00a0<span class="ft__ab">Medicaid</span></a> <span class="ft__v" title="${full}">$4.0–9.0M scenario<span class="vh">, ${full}</span></span></li>`), 'the scenario\'s range, its word and its full meaning');
+  // Every program's row is the same shape: a plain item, the name and its code, then one figure; the only scenario
+  // markup is that one row's title and hidden words.
+  const items = /<ul class="ft__list" role="list">([\s\S]*?)<\/ul>/.exec(foot)[1].match(/<li[^>]*>[\s\S]*?<\/li>/g);
+  assert.equal(items.length, 4);
+  for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+\u00a0<span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
+  assert.equal(items.filter((item) => item.includes(' title=')).length, 1, 'one row with a title');
+  assert.doesNotMatch(foot, /ft__scen|scen-tag|could be lost/, 'no tag box and no old wording');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(considered.startsWith('Under consideration: '));
   assert.deepEqual([...considered.matchAll(/<a href="([^"]+)" title="[^"]+">([^<]+)<\/a>/g)].map((m) => [m[1], m[2]]),
@@ -598,6 +620,15 @@ test('topbar.js: the section in view is the last whose top has passed the line, 
   assert.equal(sectionInView([300, 900, 1500], 100), 0);
   assert.equal(sectionInView([-50, 90, 1500], 100), 1);
   assert.equal(sectionInView([-900, -400, -10], 100), 2);
+});
+
+test('topbar.js: a sideways menu scrolls only to bring its marked item whole into view, the item a pad in from its left edge', async () => {
+  const { stripScroll } = await import('../client/topbar.js');
+  const menu = { scroll: 0, view: 390 };
+  assert.equal(stripScroll({ left: 20, width: 200 }, menu), 0, 'whole in view: no scroll');
+  assert.equal(stripScroll({ left: 300, width: 200 }, menu), 284, 'cut at the right: brought in');
+  assert.equal(stripScroll({ left: 40, width: 100 }, { scroll: 200, view: 390 }), 24, 'gone past at the left: brought back');
+  assert.equal(stripScroll({ left: 4, width: 100 }, { scroll: 50, view: 390 }), 0, 'never before the start');
 });
 
 // The share card's tags on a page: { name or property: content }.

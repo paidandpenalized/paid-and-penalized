@@ -30,6 +30,8 @@
 /* The followed hospital: a torn-off record tab in the form's red, its name cut short before its net. */
 .chip { display: inline-flex; flex: 0 1 auto; align-items: stretch; min-width: 0; max-width: 360px; border: 1.5px solid var(--pen); background: var(--paper); font-size: var(--fs-sm); line-height: 1.3; }
 .chip[hidden] { display: none; }
+/* A chip with the name only (data-chip-plain) gives the name the figure's room too. */
+.chip[data-chip-plain] { max-width: 480px; }
 .chip__k { display: flex; align-items: center; padding: 0 7px; border-right: 1.5px solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 600 0.6875rem/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
 .chip__n { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 8px; font-weight: 600; text-decoration: none; }
 .chip__t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -108,10 +110,14 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .ft__f .field__label { margin-bottom: 8px; }
 .ft__f a { color: var(--ink); }
 .ft__list, .ft__links { margin: 0; padding: 0; list-style: none; }
-.ft__list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; max-width: none; }
+.ft__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; max-width: none; }
+/* A program's code stays with its name's last word (a no-break space, shell.js) and never breaks itself; a long name
+   may wrap on a folded phone. A figure that no longer fits beside them (the work requirement's range on a phone) takes
+   the next line, still at the right edge. */
 .ft__list a { font-weight: 600; text-decoration: none; }
+.ft__list .ft__v { margin-left: auto; }
 .ft__list a:hover { text-decoration: underline; text-decoration-color: var(--ink); }
-.ft__ab { margin-left: 4px; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
+.ft__ab { margin-left: 4px; white-space: nowrap; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
 .ft__v { flex: none; color: var(--ink-2); font: 400 0.75rem/1.3 var(--font-type); white-space: nowrap; }
 .ft__soon { max-width: none; margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--ink-3); font: 400 0.75rem/1.5 var(--font-type); }
 .ft__f .ft__soon a { color: inherit; }

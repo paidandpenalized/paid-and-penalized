@@ -1,10 +1,12 @@
 // What the hub reads at build time: the newest dollar estimates, the newest hospital master, the HACRP site's emitted
-// file for the same year (which hospitals CMS scored and decided), the Readmissions site's newest emitted file and the US
-// atlas. File reads live here; the model, the asset and the pages stay pure.
+// file for the same year (which hospitals CMS scored and decided), the Readmissions site's newest emitted file, the
+// work-requirement scenario's newest emitted file (its national roll-ups, the footer's figure) and the US atlas. File
+// reads live here; the model, the asset and the pages stay pure.
 import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
+import { rowsByCcn } from '../engine/js/medicaid/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
-import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
+import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
 import { masterByCcn } from '../pipeline/master.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
 
@@ -54,6 +56,10 @@ let loaded = null;
 //   hrrp          { fy, hospitals: Map<ccn, record>, national } from the Readmissions site's newest emitted file: a hospital
 //                 in it has a Readmissions page, and its record's factor (paf) is the newer-factor note's; national is its
 //                 history's row for each year CMS published ({ fy, n, nPen, ... }), which the Methods page's counts read
+//   medicaid      { fy, national, columns, hospitals, states } from the work-requirement scenario's newest emitted file:
+//                 fy is its base year (the year of its dollars), national its low, middle and high roll-ups, columns and
+//                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
+//                 a hospital page's Medicaid band reads (hospital/medicaid.js)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 export function loadHub() {
   if (loaded) return loaded;
@@ -65,6 +71,8 @@ export function loadHub() {
   const hacrpFile = hacrpPath(dollars.fy);
   if (!existsSync(REPO_ROOT + hacrpFile)) throw new RangeError(`hub: the dollar estimates are FY${dollars.fy} but there is no ${hacrpFile}: emit the HACRP site's year first (make emit)`);
   const hacrp = readJson(REPO_ROOT + hacrpFile);
+  // Read as the hub reads the other sites' emitted files, by path: the hub imports no site's code.
+  const medicaid = readJson(REPO_ROOT + medicaidPath(newestYear('data/emitted/medicaid')));
   loaded = {
     fy: dollars.fy,
     builtAt: dollars.built_at,
@@ -72,6 +80,7 @@ export function loadHub() {
     master: masterByCcn(masterFile),
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
+    medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
     shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
   };
   return loaded;

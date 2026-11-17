@@ -153,6 +153,12 @@ export const COPY = typesetCopy({
   // screen reader hears the name after it ({name}).
   dirOpen: 'Open {ab}',
   dirOpenLabel: 'Open {ab}, {name}',
+  // A scenario (web/site.js `scenario`): no payment, so a card of its own under its own group's heading (GROUP_WORDS):
+  // its national range of Medicaid revenue lost, low case to high, with the scenario tag, and the way to its page.
+  dirScenario: 'Scenarios, not payments',
+  dirScenarioSub: 'Medicaid revenue hospitals could lose a year, low case to high',
+  dirOpenScenario: 'Open the scenario',
+  dirOpenScenarioLabel: 'Open the scenario, {name}',
   // A program whose page here is under construction: its card's link (to the placeholder page) says so.
   dirBuilding: '{ab}: under construction',
   dirBuildingLabel: '{ab}: under construction, {name}',
@@ -212,4 +218,4 @@ export const COPY = typesetCopy({
 
 // What a program does to payment (web/site.js `group`), in words, in the order the directory shows the groups: the
 // directory's group headings and the placeholder pages' kickers (hub/coming.js).
-export const GROUP_WORDS = Object.freeze({ quality: COPY.dirGroup, price: COPY.soonPrice, reporting: COPY.soonReporting, episode: COPY.soonEpisode });
+export const GROUP_WORDS = Object.freeze({ quality: COPY.dirGroup, scenario: COPY.dirScenario, price: COPY.soonPrice, reporting: COPY.soonReporting, episode: COPY.soonEpisode });

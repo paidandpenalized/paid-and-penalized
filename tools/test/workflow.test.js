@@ -30,7 +30,8 @@ test('event data reaches scripts through env only: no ${{ }} inside run blocks, 
     if (run) runIndent = run[1].length + (run[2] ? 2 : 0); // a "- run:" step's sibling keys sit two deeper
     if (!l.includes('${{')) continue;
     assert.ok(runIndent < 0, `\${{ }} inside a run block: ${l}`);
-    assert.match(l, /^\s*(if: \$\{\{|group: |[A-Z_]+: \$\{\{)/, l);
+    // matrix.shard is a literal from this file's own matrix (1 or 2), not event data.
+    assert.match(l, /^\s*(if: \$\{\{|group: |[A-Z_]+: \$\{\{|E2E_SHARD: '\$\{\{ matrix\.shard \}\}\/2'$)/, l);
   }
 });
 
@@ -76,7 +77,9 @@ test('the browser job runs on a pinned runner with a time limit: Chromium only, 
   assert.match(job, /^ {4}runs-on: ubuntu-24\.04$/m);
   assert.match(job, /^ {4}timeout-minutes: 30$/m);
   // One file and one tab at a time (tools/e2e/concurrency.js): more at once timed out the heaviest pages on CI.
-  assert.match(job, /^ {8}env:\n {10}E2E_CONCURRENCY: '1'\n {8}run: npm run e2e$/m);
+  assert.match(job, /^ {8}env:\n {10}E2E_CONCURRENCY: '1'\n {10}E2E_SHARD: '\$\{\{ matrix\.shard \}\}\/2'\n {8}run: npm run e2e$/m);
+  // Two shards by file (tools/e2e/shard.js); one failing does not cancel the other, so both results show.
+  assert.match(job, /^ {4}strategy:\n {6}fail-fast: false\n {6}matrix:\n {8}shard: \[1, 2\]$/m);
   // The commands in order: the browser is installed before the checks run, and the site is built before they read it.
   // Chromium alone: Firefox and WebKit run in the launch command on a machine that has them, not on every push.
   assert.deepEqual(commandsOf(job), ['npm ci', 'npx playwright install --with-deps chromium', 'make build', 'npm run e2e']);

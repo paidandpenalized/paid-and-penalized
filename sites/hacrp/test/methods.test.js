@@ -259,8 +259,10 @@ test('the changes and the sources: every changelog entry with its date and items
   const newestFile = (dir, name) => readJson(`${REPO_ROOT}data/emitted/${dir}/fy${newestYear(`data/emitted/${dir}`)}/${name}.json`);
   const shared = new Set([['hospital', 'hospital_master'], ['dollars', 'dollars'], ['hacrp', 'hacrp'], ['hacrp-history', 'hacrp_history']]
     .flatMap(([dir, name]) => newestFile(dir, name).sources));
-  const otherSites = readdirSync(`${REPO_ROOT}sites`)
-    .filter((site) => site !== 'hacrp' && existsSync(`${REPO_ROOT}data/emitted/${site}`))
+  // Another site's emitted file is data/emitted/<site>/fy<YYYY>/<site>.json; the Medicaid scenarios' file has no site of its
+  // own yet (their page is work-requirement) and sits at data/emitted/medicaid/.../medicaid.json.
+  const otherSites = [...readdirSync(`${REPO_ROOT}sites`).filter((site) => site !== 'hacrp'), 'medicaid']
+    .filter((site) => existsSync(`${REPO_ROOT}data/emitted/${site}`))
     .flatMap((site) => newestFile(site, site).sources)
     .filter((id) => !shared.has(id));
   const used = new Set(DATA.pinsUsed.map((e) => e.id));

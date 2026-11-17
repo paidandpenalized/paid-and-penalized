@@ -12,6 +12,7 @@ import { shellFacts } from '../../hub/model.js';
 import { HUB } from '../../hub/pages.js';
 import { HACRP } from '../../sites/hacrp/web/generate.js';
 import { HRRP } from '../../sites/hrrp/web/generate.js';
+import { WR } from '../../sites/work-requirement/web/generate.js';
 import { DIST_DIR, REPO_ROOT, isMain, writeFileMkdir } from '../files.js';
 import { SITE } from '../../web/site.js';
 import { buildAssets, writeHashed } from './assets.js';
@@ -26,7 +27,7 @@ import { redirectsFile } from './redirects.js';
 // SITE.sites) returns its two dates for the corrections page, { updated: { cmsReleased, changed } }; updated is the
 // dates of the program sites run before, by id. Last: the hub lists those dates, and writes robots.txt and sitemap.xml,
 // listing every page an earlier site emitted as indexable.
-export const SITES = [HACRP, HRRP, HUB];
+export const SITES = [HACRP, HRRP, WR, HUB];
 // Shared by every site: the head's theme script (the reader's light/dark choice for the visit, put back before the
 // page paints), then the shell's script (the theme buttons, the followed hospital, the phone's search button, the
 // tabs' scroll) and the sticky header's (its offset and the section menu's scroll-spy), which layout.js loads on every
@@ -71,7 +72,7 @@ export function mergeEntries(...sets) {
 // createContext copies it with the shell added.
 export function buildContext({ outDir, env, assets }) {
   const { hub, hospitals, facts: story } = hubModel();
-  const facts = shellFacts({ facts: story, builtAt: hub.builtAt, fy: hub.fy });
+  const facts = shellFacts({ facts: story, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid });
   const hubUrl = writeHashed(join(outDir, 'assets'), 'hub-hospitals', 'json', JSON.stringify(hubAsset(hospitals, hub)));
   return createContext({ outDir, env, assets, shell: { ...facts, hubUrl } });
 }

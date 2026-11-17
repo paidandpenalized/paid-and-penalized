@@ -298,6 +298,16 @@ test('follow: a ?h= naming a known hospital fills the chip, points the tabs and 
   assert.deepEqual(hrefs(r.tabs), ['/hospital/99000a/', ...SITE.programs.map((p) => own[p.id] ?? `${p.path}?h=99000A`)]);
 });
 
+test('follow: on a page that marks its chip data-chip-plain (the work requirement\'s, R29), the chip names the hospital with no figure', async () => {
+  const p = page();
+  p.chip.dataset.chipPlain = '';
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=99000a', here: '/work-requirement/?h=99000a', load: async () => ({ fy: 2026, byCcn: ROWS }), doc: doc() });
+  assert.equal(p.chip.hidden, false);
+  const name = p.chip.children[1];
+  assert.deepEqual(name.children.map((c) => c.className), ['chip__t']);
+  assert.equal(name.children[0].textContent, 'Sample Medical');
+});
+
 test('follow: a hospital the Readmissions site lists gets its own Readmissions page', async () => {
   const r = run({ search: '?h=990001' });
   await r.done;
@@ -383,6 +393,38 @@ test('follow again (a pick on the front page): the chip names the new hospital a
   assert.equal(p.wordmark.getAttribute('href'), '/?h=99000A');
   const own = { hrrp: '/hrrp/?h=99000A', hacrp: '/hacrp/hospital/99000a/' };
   assert.deepEqual(hrefs(p.tabs), ['/hospital/99000a/', ...SITE.programs.map((x) => own[x.id] ?? `${x.path}?h=99000A`)], 'not the first hospital\'s pages');
+});
+
+test('follow a pick the hub can\'t name (FOLLOW_EVENT, picked): the chip is emptied and hidden, every link back at the server\'s address', async () => {
+  const p = page({ hospital: null });
+  const load = async () => ({ fy: 2026, byCcn: ROWS });
+  const d = doc();
+  const at = (search, picked) => follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search, here: `/work-requirement/${search}`, load, doc: d, picked });
+  await at('?h=990001', true);
+  assert.equal(p.chip.hidden, false);
+  assert.notDeepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)]);
+  await at('?h=990002', true);
+  assert.equal(p.chip.hidden, true, 'no chip naming the hospital picked before');
+  assert.deepEqual(p.chip.children, []);
+  assert.deepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)], 'every tab at the server\'s href');
+  assert.equal(p.wordmark.getAttribute('href'), '/');
+  // A known pick after it follows again, and a failed asset on a pick stops the follow too.
+  await at('?h=99000A', true);
+  assert.equal(p.chip.children[1].children[0].textContent, 'Sample Medical');
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990001', here: '/work-requirement/?h=990001', load: async () => { throw new Error('down'); }, doc: d, picked: true });
+  assert.equal(p.chip.hidden, true);
+  assert.deepEqual(hrefs(p.tabs), ['/', ...SITE.programs.map((x) => x.path)]);
+});
+
+test('follow on arrival (not a pick): an unknown ?h= after a followed hospital leaves the header as it was', async () => {
+  const p = page({ hospital: null });
+  const load = async () => ({ fy: 2026, byCcn: ROWS });
+  const d = doc();
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990001', here: '/?h=990001', load, doc: d });
+  const before = hrefs(p.tabs);
+  await follow({ hospital: null, chip: p.chip, wordmark: p.wordmark, tabs: p.tabs, search: '?h=990002', here: '/?h=990002', load, doc: d });
+  assert.equal(p.chip.hidden, false);
+  assert.deepEqual(hrefs(p.tabs), before);
 });
 
 test('rewriteLinks: only the front page and a program\'s folder are rewritten; another link, an external one and a missing tab are left', () => {

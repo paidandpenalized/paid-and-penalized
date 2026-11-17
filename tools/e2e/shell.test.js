@@ -142,6 +142,35 @@ describe('the header on a phone', { concurrency: CONCURRENCY }, () => {
       assert.equal((await headerFacts(page)).more, true, 'and comes back');
     });
   });
+
+  // The Readmissions program page's menu runs past a phone's width by its third item, so opening there scrolls the menu.
+  it('a program page opened at its third section: the section menu marks that item and scrolls it whole into view, and the page stays at the section', async () => {
+    const path = programById('hrrp').path;
+    await withPage(tabs, { path, watched: true }, async (page, { seen }) => {
+      const third = await page.evaluate(() => document.querySelectorAll('.topbar .nav a[data-nav]')[2]?.dataset.nav);
+      assert.ok(third, 'the menu has a third item');
+      await page.goto('about:blank');
+      await visit(page, tabs.base, `${path}#${third}`);
+      await settle(page);
+      const facts = () => page.evaluate((id) => {
+        const nav = document.querySelector('.topbar .nav');
+        const marked = nav.querySelector('a[aria-current="true"]');
+        const n = nav.getBoundingClientRect();
+        const m = marked.getBoundingClientRect();
+        const sticky = parseFloat(document.documentElement.style.getPropertyValue('--sticky-top'));
+        return { marked: marked.dataset.nav, left: m.left - n.left, right: n.right - m.right, scrollLeft: nav.scrollLeft, y: window.scrollY, top: document.getElementById(id).getBoundingClientRect().top - sticky };
+      }, third);
+      const f = await facts();
+      assert.equal(f.marked, third, 'the third item is marked');
+      assert.ok(f.scrollLeft > 0, 'the menu scrolled sideways to it');
+      assert.ok(f.left >= -0.5 && f.right >= -0.5, `the marked item is whole in the menu (${Math.round(f.left)} px from its left, ${Math.round(f.right)} px from its right)`);
+      assert.ok(Math.abs(f.top) <= 2, `the section's top stays under the header (${f.top.toFixed(1)} px off)`);
+      await settle(page);
+      await settle(page);
+      assert.equal((await facts()).y, f.y, 'the menu\'s scroll leaves the page where it was');
+      await assertQuiet(seen, 'a program page opened at its third section');
+    });
+  });
 });
 
 // A keyboard in the rows that scroll sideways on a phone (the program tabs, a program's numbered section menu): each item
@@ -638,5 +667,33 @@ describe('the theme button', () => {
     assert.deepEqual(system, dark, 'the system\'s dark is the button\'s');
     await page.emulateMedia({ colorScheme: 'light' });
     await assertQuiet(seen, 'hub stylesheet and theme');
+  }));
+});
+
+// The footer's program names and codes ("Readmissions HRRP", "Work requirement Medicaid") never part at a phone's
+// width, on a page of each family (the 11-10 build report's launch fix-up); and at a folded phone's 280 px a long name
+// wraps inside its row rather than running past it.
+describe('the footer on a phone', { concurrency: CONCURRENCY }, () => {
+  // The lines an element's words sit on: its text boxes' tops, a new line wherever one sits half a line below the last
+  // (WebKit sets a smaller span's box a fraction of a pixel off its line's).
+  const linesOf = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const half = parseFloat(getComputedStyle(el).lineHeight) / 2;
+    const tops = [...range.getClientRects()].map((r) => r.top).sort((a, b) => a - b);
+    return tops.filter((top, i) => i === 0 || top - tops[i - 1] > half).length;
+  };
+  const tabs = useContext(shared, { width: 390 });
+  for (const path of ['/', ...LISTED_PROGRAMS.map((p) => p.path)]) it(`${path} at 390 px: every program's name and code are on one line`, () => withPage(tabs, { path }, async (page) => {
+    const links = await page.evaluate(`[...document.querySelectorAll('footer .ft__list a')].map((el) => [el.textContent, (${linesOf})(el)])`);
+    assert.ok(links.length >= 3, 'the footer lists its programs');
+    assert.deepEqual(links.filter(([, lines]) => lines !== 1), [], 'names and codes broken across lines');
+    await assertNoSideways(page, `${path} at 390 px`);
+  }));
+  const folded = useContext(shared, { width: 280 });
+  it('/ at 280 px: every program row stays inside the footer', () => withPage(folded, { path: '/' }, async (page) => {
+    const over = await page.evaluate(() => [...document.querySelectorAll('footer .ft__list li')]
+      .flatMap((li) => [...li.children].filter((el) => el.getBoundingClientRect().right > li.getBoundingClientRect().right + 0.5).map((el) => el.textContent)));
+    assert.deepEqual(over, [], 'past the row\'s edge');
   }));
 });

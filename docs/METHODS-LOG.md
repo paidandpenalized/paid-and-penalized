@@ -472,3 +472,64 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   FY2025, none yet in FY2026) and no other row changes.
 - For hospitals already in v2, no value changes except `other_operating_income` and `operating_margin` (about 1,900
   hospitals a full year). Settled shares move by 0.04 points at most; no year's early flag changes.
+
+## medicaid methods_version 1 (2026-11-10)
+- `data/emitted/medicaid/fy2023/medicaid.json` holds the Medicaid work-requirement scenarios: a modeled loss of hospital
+  Medicaid revenue for each active acute-care or critical access hospital, from its FY2023 cost report, in 2023 dollars.
+  It is modeled, not reported. `fy` is the HCRIS base year. It is built by `run.py medicaid build` (also run by
+  `run.py emit`) from the pinned state inputs (CMS-64 VIII spending, the FMR check, Urban's enrollment declines, the state
+  MIUR cuts) and the repo's emitted HCRIS layer, hospital master and dollar estimates.
+- Method, per hospital (`pp_engine/medicaid/exposure.py`):
+  1. Revenue at risk: Medicaid net revenue (S-10 I line 2) times its expansion share, the state's VIII share of Medicaid
+     spending scaled by the hospital's non-maternity share of Medicaid days over its state's (capped at 1). A hospital
+     under 200 Medicaid days keeps the state's share unchanged (DATA-B-03, decided 2026-11-05).
+  2. Revenue lost: step 1 times the state's decline in expansion enrollment under the scenario, times the reader's use
+     rate (75% to 125%, default 100%).
+  3. The lost patients' care, costed at the hospital's Medicaid cost per dollar of Medicaid revenue (capped at 5), splits:
+     93% become uninsured (CBO, 2034), of whom 56% still use care (it becomes uncompensated care) and 44% do not
+     (cost removed); the rest find other coverage that is taken to pay the care's cost.
+  4. Margins after: operating margin (G-3 line 5 plus other operating income over line 3 plus the same) and total margin
+     (line 29 over line 3 plus line 25), before and after. Filing errors and operating-margin outliers (outside 2
+     interquartile ranges) stay in the dollar sums and leave the margin sums.
+- Scenarios: low, middle and high losses are Urban Institute and RWJF's (March 2026, Appendix Table A.2) work-requirement
+  declines under high, medium and low state mitigation. Middle is the default. The official federal estimates (CMS's
+  interim final rule, CBO) line up with the low case.
+- Decisions that shape the numbers: the method (FY2023 base, S-10 line 2, the scenario inputs, no projection, the
+  use-rate what-if; DATA-B-03, decided 2026-11-04); cost reports through the HCRIS layer as filed, nothing annualized,
+  the hospital-specific share and its 200-day floor, and line 24's operating entries in the operating margin (DATA-B-03,
+  decided 2026-11-05); "as filed" and "settled" labels on measured cost-report numbers (DATA-B-04, decided 2026-11-04);
+  Maryland not modeled because of all-payer rates (DATA-B-03, decided 2026-11-06), its hospitals out of the national,
+  group and sensitivity roll-ups (class `all_payer`). A state's roll-up is null unless the state has a scenario, so no
+  state without one shows a dollar figure. Non-expansion states and Wisconsin (no VIII group) have no scenario; a
+  hospital without a base-year cost report has none either.
+- State classes: every state or territory in the hospital master has an entry in `states`. Classes: `scenario`,
+  `no_viii_group` (Wisconsin), `not_expansion`, `all_payer` (Maryland) and `territory` (Puerto Rico, Guam, the U.S.
+  Virgin Islands, American Samoa, the Northern Mariana Islands: not in Urban's table, not modeled, roll-up null; Puerto
+  Rico's CMS-64 VIII share is kept as information only). Their hospitals carry the same class (55 `territory` rows) and
+  no `share_factor`. Territories had no loss, so no total moved. `viii_basis` is `ffy2023` for all but North Carolina and
+  South Dakota, which are `latest4`: CMS-64 has no complete FFY2023 for them, so their latest four quarters stand in,
+  and their next-year and net-of-DSH sensitivities equal the base share.
+- Which roll-up to quote: `national` and the groups cover every hospital with a cost report outside Maryland, including
+  the ones in states with no scenario (`national.hospitals` counts them all, 4,327). Dollar totals and counts come from
+  `national`. Any percent or margin headline comes from `groups.expansion_states`: added uncompensated care is +24.8%
+  of those hospitals' uncompensated cost, but +13.4% over `national`, because `national` spreads it over hospitals with
+  no loss. 21 acute hospitals with a cost report have no urban/rural flag (`urban` null) and are in neither the `rural`
+  nor the `urban` group.
+- `middle_lost` is 0 for a hospital scored out as a filing error and for one with no Medicaid revenue; the reason is in
+  its `flags`. A page shows the reason, never "$0".
+- Groups: critical access, acute, rural (critical access or non-urban), urban, expansion states, our safety-net flag (the
+  Medicaid DSH deeming tests read from the cost report; not an official list), and (added in this version) public,
+  nonprofit and for-profit from the master's ownership field (Government, Nonprofit, For-profit; Unknown and blank are
+  in none), fewer than 50 beds, and 300 or more beds. Sensitivities: lines 2 + 5, next year's share, share net of DSH,
+  use rate at its ends, state share only.
+- FY2023 results, national, Maryland out (4,327 hospitals with a cost report, 3,044 in scenario states):
+
+  | Scenario | Revenue lost | Added uncompensated care | Lose 1 point of operating margin | Total margin positive to negative |
+  |---|---|---|---|---|
+  | Low | $4.83B | $3.36B | 94 | 16 |
+  | Middle | $7.93B | $5.51B | 234 | 36 |
+  | High | $11.49B | $7.97B | 395 | 50 |
+
+- Each hospital's row carries its base fields rounded (dollars to whole dollars; ratios and shares to 6 places), so a
+  browser rerun matches the roll-ups to rounding, not exactly. The cost reports are early: FY2023 is under 80% settled
+  (the HCRIS layer's flag), and the page re-bases to FY2024 at about 80% settled.

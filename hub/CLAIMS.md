@@ -4,11 +4,12 @@ Every sentence on the hub's pages (the front page, the hospital pages across the
 placeholder pages and the not-found page) and in what every page shares (the shell and footer, the program deks and the
 rule constants they print, the registry's program names) that states a fact about CMS's programs, the law or Medicare's
 payment system carries a claim id (`HUB-NN`), or a list of them when it states more than one, in its copy file
-(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/client/story/copy.js`, `web/copy.js`) or, for a rule
+(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/client/story/copy.js`, `web/copy.js`,
+`web/medicaid/copy.js`) or, for a rule
 constant (`web/programs.js`) or a program's name (`web/site.js` `long`), in the hub's claims map (`hub/claims.js`). The
 copy gate (`pipeline/test/copy-gate.test.js`) holds this register to the same rules as the program sites'. Each id is a row here:
 the claim in this site's own words, the primary source that supports it, a short quotation from that source, and the
-date it was last checked. Shared copy also cites the program sites' rows (`HACRP-NN`, `HRRP-NN`) where one already
+date it was last checked. Shared copy also cites the program sites' rows (`HACRP-NN`, `HRRP-NN`, `WR-NN`) where one already
 supports the sentence; those are listed under "Program rows the hub cites", not repeated here. Sentences that describe
 only this site's own arithmetic or framing carry no id. Statements about the site itself (privacy, accessibility,
 testing, licensing, the feedback form) are checked against the code and config, in the last section.
@@ -41,10 +42,11 @@ A claim marked `unverified` may not be used in copy.
 | HUB-23 | CMS's name for the quality reporting program is the Hospital Inpatient Quality Reporting Program. | https://www.cms.gov/medicare/quality/initiatives/hospital-quality-initiative/inpatient-reporting-program | "The Hospital Inpatient Quality Reporting Program" | 2026-11-08 |
 | HUB-24 | CMS's name for the electronic health records program is the Medicare Promoting Interoperability Program. | https://www.cms.gov/medicare/regulations-guidance/promoting-interoperability-programs | "The Medicare Promoting Interoperability Program" | 2026-11-08 |
 | HUB-25 | CMS's name for the surgical episodes model is the Transforming Episode Accountability Model (TEAM). | https://www.cms.gov/priorities/innovation/innovation-models/team-model | "TEAM (Transforming Episode Accountability Model)" | 2026-11-08 |
+| HUB-26 | The 2025 reconciliation law (Public Law 119-21, section 71119) adds the Medicaid work requirement to the Social Security Act under the heading "Community Engagement Requirement for Applicable Individuals" (section 1902(xx)). | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "SEC. 71119. REQUIREMENT FOR STATES TO ESTABLISH MEDICAID COMMUNITY ENGAGEMENT REQUIREMENTS FOR CERTAIN INDIVIDUALS." … "(xx) Community Engagement Requirement for Applicable Individuals" | 2026-11-10 |
 
 ## Program rows the hub cites
 
-Shared copy (`web/`, `hub/`) may cite either program site's rows (`pipeline/test/copy-gate.test.js` `citeError`). These
+Shared copy (`web/`, `hub/`) may cite any program site's rows (`pipeline/test/copy-gate.test.js` `citeError`). These
 already support hub sentences, so the hub cites them instead of repeating them:
 
 - Readmissions: HRRP-04 (only the part above the peer-group median counts), HRRP-06 (the cut applies to base operating
@@ -59,6 +61,11 @@ already support hub sentences, so the hub cites them instead of repeating them:
   after both), HACRP-83 (the uncompensated care payment is a share of a national amount), HACRP-86 and HACRP-87 (each
   factor multiplies the base; above 1 a bonus, below 1 a cut), HACRP-91 (Maryland's hospitals are not eligible for a
   readmissions penalty).
+- Work requirement: WR-01 (states must make community engagement a condition of eligibility) and WR-02 (the people it
+  applies to are the expansion group's adults), in the scenario's dek (`dekWorkRequirement`); and, on a hospital page's
+  Medicaid band, WR-05 and WR-18 (Urban's mitigation scenarios and its table of each state's expansion-enrollment
+  decline; `wbHow`), WR-03 (Urban projects the expansion group only; `web/medicaid/copy.js` why_not_expansion) and WR-10
+  (Maryland's all-payer model; why_all_payer), the reasons the work-requirement pages give in the same words.
 
 ## Notes on the sources
 
@@ -126,6 +133,13 @@ already support hub sentences, so the hub cites them instead of repeating them:
   wage index page "Wage Index", its DSH page "Disproportionate Share Hospital (DSH)", its IME page "Indirect Medical
   Education (IME)"), the row quotes the IPPS rule's heading or the page's own sentence. "Medicare Disproportionate Share
   Hospital and Uncompensated Care Payments" joins two of the rule's headings; it is not one name CMS uses.
+- **HUB-26** is the work-requirement scenario's `long`: the heading of the subsection the law adds to the Social Security
+  Act (section 1902(xx), 42 U.S.C. 1396a), read 2026-11-10 in the enrolled law on govinfo (139 Stat. 306-307). The law
+  has no short title in its enrolled text ("An Act To provide for reconciliation pursuant to title II of H. Con. Res.
+  14", H.R. 1, July 4, 2025), so the site names it by its public law number, not "One Big Beautiful Bill Act". The
+  section's own heading speaks of "Medicaid community engagement requirements"; the subsection heading is the
+  requirement's name in the Act it amends, so `long` takes that one. The work requirement is a scenario here, not a CMS
+  payment program: CMS gives it no program name.
 - **Fiscal years.** The hub's dollars, the front page and the hospital pages are FY2026 (`data/emitted/dollars/fy2026`);
   HUB-04 and the HUB-06/07 figures cite the FY2026 rule. The Readmissions site's pages are FY2027 (HRRP-14, HRRP-19); the
   deks name no year and the rules they state (the 3 percent cap, 30 days, 2 percent, a quarter and three-quarters, the
@@ -163,6 +177,7 @@ Each source above, fetched with `curl -sIL` (at most two requests a second per h
 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/wage-index | 200 | direct |
 | https://www.cms.gov/medicare/payment/prospective-payment-systems/acute-inpatient-pps/disproportionate-share-hospital-dsh | 200 | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | 200 to a browser-like client (redirects to the section's full path); a plain `curl` gets the bot check | api (the eCFR renderer API, 200) |
+| https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (2026-11-10; about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
 | https://docs.google.com/forms/d/e/1FAIpQLSekdB41siZs44_4gLNBGD2OqalK2TGNk7o8Q0bHl20ggYBy_Q/viewform | 200 (the form's public page, read only; nothing submitted) | direct |
 
 
@@ -183,10 +198,13 @@ labels, or a statement about the site: the next section).
 | `web/copy.js` | dekIqr | HUB-06 |
 | `web/copy.js` | dekPi | HUB-07 |
 | `web/copy.js` | dekTeam | HUB-11, HUB-12 |
+| `web/copy.js` | dekWorkRequirement | WR-01, WR-02 |
 | `web/copy.js` | yearSplitHrrp, yearSplitCard | HACRP-12 |
 | `web/copy.js` | notInHrrp | HRRP-11, HRRP-12, HRRP-13, HRRP-16 |
+| `web/medicaid/copy.js` | why_not_expansion (the work-requirement pages and the hub's Medicaid band) | WR-03 |
+| `web/medicaid/copy.js` | why_all_payer (the same) | WR-10 |
 | `hub/claims.js` | HRRP_CAP_PCT, HAC_CUT_PCT, VBP_WITHHOLD_PCT, HRRP_WINDOW_DAYS, HAC_TOP_SHARE, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES (`web/programs.js`) | HRRP-09, HACRP-01, HUB-01, HRRP-23, HACRP-02, HUB-06, HUB-07, HUB-11 |
-| `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25 |
+| `hub/claims.js` | the programs' names, `web/site.js` programs[].long: hrrp, hacrp, hvbp, wage-index, dsh, ime, iqr, pi, team, work-requirement | HUB-17, HUB-18, HUB-19, HUB-20, HUB-21, HUB-22, HUB-23, HUB-24, HUB-25, HUB-26 |
 | `hub/home/copy.js` | hrrpText | HRRP-06, HRRP-09, HRRP-04 |
 | `hub/home/copy.js` | hacHead | HACRP-01, HACRP-02 |
 | `hub/home/copy.js` | hacText | HACRP-17, HACRP-02, HACRP-01, HACRP-75 |
@@ -217,6 +235,7 @@ labels, or a statement about the site: the next section).
 | `hub/hospital/copy.js` | fyNote, whyHrrpYear, whyHrrpYearOut | HACRP-12 |
 | `hub/hospital/copy.js` | whyHacCut, statusHacCut, partHacCut, partUnscoredCut, wiIfHacOn | HACRP-01 |
 | `hub/hospital/copy.js` | whatifStanding | HRRP-04, HACRP-02, HUB-02 |
+| `hub/hospital/copy.js` | wbHow (the Medicaid band) | WR-05, WR-18 |
 
 ## Statements about this site
 
@@ -241,9 +260,11 @@ primary source applies). "True" means the code does what the sentence says.
 | axe on every kind of page, light and dark, desktop and phone, each time the site changes; keyboard paths in Chrome; Firefox and Safari's engine before each launch. | `hub/copy.js` a11yBrief4, a11yTested | `tools/e2e/lib.js` (light and dark), `tools/e2e/axe.js` (1280, 390, 320), `tools/e2e/site.js` sample pages, `.github/workflows/ci.yml` (push and pull request, Chromium); `npm run e2e:launch` runs all three engines by hand | True as built |
 | Follows dark mode, reduced motion and Windows high contrast. | `hub/copy.js` a11yBrief3, a11yBuilt | `prefers-color-scheme`, `prefers-reduced-motion`, `forced-colors` rules in `web/styles/*.css`, `hub/styles.css` | Present |
 | Uses public CMS data and shows no patient information. | `web/copy.js` affiliation | Inputs are `data/pinned/` public files (`manifest.json`) | True |
+| Each Medicare program's site reproduces CMS's published results, shows the arithmetic and looks up any hospital; the Medicaid work-requirement site is a scenario, not a payment, that models what the requirement could cost each hospital and shows its arithmetic. | `hub/copy.js` aboutWhat, termsWhat | HACRP and Readmissions: each program page's reproduction checks against CMS's files and each hospital page's worksheet. The work requirement: `sites/work-requirement/web/program/` (step 1's strips, a dot per hospital at its scenario loss, and the Find; step 2's chain and its worksheets, `chain.js`), the page's kicker and description call it a scenario, not a payment (`sites/work-requirement/web/copy.js` kicker, description), and each step's heading carries the scenario tag (`web/render/shell.js` scenarioTag) | True |
 | Built from public data, CMS's above all; deterministic, published code. | `hub/copy.js` aboutBrief3, aboutAi | `data/pinned/manifest.json`; the repository is public | True |
 | The formula has not been told which hospitals employ the author. | `hub/copy.js` aboutCoi | No CCN-specific branch in `engine/`; the one fixed CCN, `hub/model.js` EXAMPLE_CCN, is picked by a stated rule (`exampleRule`) | True of the code |
 | These hospitals have no page here. | `web/copy.js` notInHrrp (the Readmissions Methods page); `hub/copy.js` notFoundHospitals (the not-found page) | `hospital/`, `hacrp/hospital/`, `hrrp/hospital/` in the build hold no critical access, IPPS-excluded or Puerto Rico CCN; Maryland's hospitals, in CMS's files, have hub and HACRP pages, and the not-found line names no rule that would exclude them | True |
-| Each program's pages name the CMS file they use and when CMS released it. | `hub/copy.js` termsAsOf, correctionsCms | The HACRP pages and the Readmissions program, hospital and place pages each carry a source line with the file and its posting date; the data dictionaries point to Methods, which lists every file read | True |
+| Each Medicare program's pages name the CMS file they use and when CMS released it; the Medicaid work-requirement pages name each data source they use and its date. | `hub/copy.js` termsAsOf, correctionsCms | The HACRP pages and the Readmissions program, hospital and place pages each carry a source line with the file and its posting date; the data dictionaries point to Methods, which lists every file read. The work-requirement pages: the program page and Methods close on the same as-of line (`sites/work-requirement/web/pages/parts.js` asOf: the cost reports' CMS file date and settled share, CMS-64's dataset date, Urban's table and the day it was copied, the penalty year and the day those estimates last changed, the day the numbers changed), and Methods lists every pinned input of the scenario file with the source's own date, the retrieval date and its SHA-256 (`sites/work-requirement/web/pages/methods.js` sourcesSection; `sites/work-requirement/test/methods.test.js` holds both) | True |
 | The site says how close an estimate is: for a value CMS publishes, the largest difference from it; for dollars, how the estimates compare with hospitals' cost reports. | `hub/copy.js` estimateHow | The recompute pages give the largest difference; the hub and HACRP dollar pages give the back-test's likely range (`hub/model.js` netRange, `engine/js/dollars/ranges.js`); the Readmissions Methods page gives its estimate's share within 15% of cost reports (`sites/hrrp/web/view.js` accuracy) | True |
+| Each site's line on the corrections page gives the date of the CMS file it uses (a scenario's: the newest date CMS gives any CMS file it uses) and the day its numbers last changed. | `hub/copy.js` correctionsSite, correctionsSiteScenario | `hub/corrections.js` siteLine; HACRP: its file's Provider Data Catalog release date (`sites/hacrp/web/generate.js`); Readmissions: the supplemental file's posting date (`sites/hrrp/web/data.js`); the work requirement: `sites/work-requirement/web/data.js` newestCmsDate over the scenario file's sources (CMS-served inputs; a release or modified date, else the Last-Modified of the CMS file a pin was cut from; never a download date) | True |
 | Each fix is logged with its date; numbers are not changed quietly. | `hub/copy.js` correctionsBrief1, correctionsProcess | `hub/corrections.js` reads `corrections/`; its first entry logs the whole-site review's corrections and the 2026-11-02 rewording | True |

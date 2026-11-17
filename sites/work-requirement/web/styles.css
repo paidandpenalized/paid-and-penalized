@@ -1,0 +1,503 @@
+/* The work-requirement site's own rules, linked after the shared stylesheet (web/styles/) and the chart and what-if kit.
+   The program page's steps (pages/program.js), each a section the section menu opens (the html element's scroll-padding
+   keeps an anchored step clear of the sticky header). Step 1 (program/finding.js) sets its words beside its stage from
+   900px: the page's top, the chips and the ranges on the left, the stage's head and Figure 1 on the right. */
+.step { padding: 32px 0; border-bottom: 1px solid var(--line); }
+.wr-step { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.wr-step__words, .wr-step__stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start; }
+.wr-step__words > *, .wr-step__stage > *, .wr-step__pin > *, .wr-step__fig > * { min-width: 0; }
+/* The words column's width and the gap beside it, which the scroll story's stage starts after. */
+.wr-scrolly { --wr-words: 22rem; --wr-gap: 40px; }
+@media (min-width: 900px) {
+  .wr-step { grid-template-columns: minmax(0, var(--wr-words)) minmax(0, 1fr); column-gap: var(--wr-gap); }
+}
+@media (min-width: 1200px) {
+  .wr-scrolly { --wr-words: 28rem; --wr-gap: 44px; }
+}
+
+/* The scroll story (client/stage.js), only with the script from 900px: it sets .wr-scrolly--on and wraps each stage's
+   parts in a pin and a figure part, which without it are no boxes at all (display: contents), so the stacked page is the
+   build's. Each stage spans the whole story beside the words and stops above the named table (--wr-tail); its pin sticks
+   under the header, step 1's with the head at its top, the others under the head (--wr-head); only the step in view
+   (data-on) shows its figure, fading in and out (cuts under reduced motion: base.css); the others are only unseen
+   (transparent, out of the pointer's way), so a screen reader still reads them. No panel: each figure sits on the
+   paper. The field's canvas (client/field.js) lies over the window while dots fly. */
+.wr-step__pin, .wr-step__fig { display: contents; }
+.wr-scrolly--on { position: relative; }
+.wr-scrolly--on > .step { border-bottom: 0; }
+.wr-scrolly--on > .step:last-of-type > .wr-step__words { min-height: calc(100vh - var(--sticky-top, 0px) - 32px); }
+.wr-scrolly--on .wr-step__stage { position: absolute; top: 0; right: 0; bottom: var(--wr-tail, 0px); left: calc(var(--wr-words) + var(--wr-gap)); display: block; pointer-events: none; }
+.page.wr:has(> .wr-scrolly--on) { padding-top: 0; }
+.wr-scrolly--on .wr-step__pin { position: sticky; top: calc(var(--sticky-top, 0px) + var(--wr-head, 0px)); display: grid; gap: 8px; max-height: calc(100vh - var(--sticky-top, 0px) - var(--wr-head, 0px)); padding-top: 10px; overflow: hidden auto; scrollbar-width: thin; }
+.wr-scrolly--on .wr-finding .wr-step__pin { top: var(--sticky-top, 0px); max-height: calc(100vh - var(--sticky-top, 0px)); }
+.wr-scrolly--on .wr-step__fig { display: grid; gap: 12px; align-content: start; opacity: 0; transition: opacity 0.3s; }
+.wr-scrolly--on .wr-step__stage[data-on] .wr-step__fig { opacity: 1; pointer-events: auto; }
+.wr-scrolly--on .wr-step__stage[data-flying] .wr-step__fig { opacity: 0; pointer-events: none; transition: none; }
+.wr-scrolly--on .wr-step__fig :is(.fig__cap, .fig__note, .fig__source) { max-width: none; }
+/* The table's toggle beside the source line while the table is shut, so the drawing has that row's room. */
+.wr-scrolly--on .fig:not(:has(> .fig__table[open])) { grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; }
+.wr-scrolly--on .fig:not(:has(> .fig__table[open])) > :not(.fig__source, .fig__table) { grid-column: 1 / -1; }
+.wr-scrolly--on .fig:not(:has(> .fig__table[open])) > .fig__table { align-self: end; }
+/* The head, compact: the switch's buttons and the slider's row a little shorter, the label in the small caption size. */
+.wr-scrolly--on .wr-stage__head { gap: 6px 20px; padding: 0 0 6px; pointer-events: auto; }
+.wr-scrolly--on .wr-switch__opt span { padding: 5px 12px; }
+.wr-scrolly--on .wr-use__lab { font-size: var(--fs-xs); line-height: 1.2; }
+.wr-scrolly--on .wr-use__track .wi-range { height: 24px; }
+.wr-field { position: fixed; inset: 0; z-index: 5; display: none; width: 100vw; height: 100vh; pointer-events: none; opacity: 1; transition: opacity 0.3s; }
+.wr-field--on { display: block; }
+.wr-field--out { opacity: 0; }
+.wr-finding { padding-top: 16px; }
+.wr-how { padding-top: 12px; }
+.wr-finding > .wr-step__words { gap: 12px; }
+
+/* The page's top: the title in about three lines at the column's width, the dek under it, so the ranges under them
+   start on the first screen at 1280 by 720. */
+.wr__top { gap: 6px; }
+.wr__top h1 { font-size: clamp(2rem, 6vw, 2.25rem); }
+@media (min-width: 900px) {
+  .wr__top h1 { font-size: 2.15rem; }
+  .wr__top .dek { font-size: var(--fs-sm); line-height: 1.5; }
+}
+
+/* The stage's head (program/controls.js): the scenario switch and the use-rate what-if on one row, hidden until the
+   script shows them. The switch is three radios drawn as one segmented control; the slider is the kit's (.wi-track). */
+.wr-stage__head { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 24px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.wr-stage__head[hidden] { display: none; }
+.wr-switch { margin: 0; padding: 0; border: 0; min-width: 0; }
+.wr-switch legend { margin-bottom: 4px; padding: 0; }
+.wr-switch__row { display: flex; border: var(--rule) solid var(--ink); }
+.wr-switch__opt { position: relative; display: block; cursor: pointer; }
+.wr-switch__opt + .wr-switch__opt { border-left: var(--rule) solid var(--ink); }
+.wr-switch__opt input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.wr-switch__opt span { display: block; min-width: 4rem; padding: 6px 12px; background: var(--paper); font: 600 var(--fs-base)/1.2 var(--font-body); text-align: center; }
+.wr-switch__opt:hover span { background: var(--paper-2); }
+.wr-switch__opt input:checked + span { background: var(--ink); color: var(--paper); }
+.wr-switch__opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; z-index: 1; }
+.wr-use { display: grid; gap: 0; flex: 1 1 18rem; min-width: 0; }
+.wr-use__lab { font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.wr-use__row { display: flex; align-items: center; gap: 10px; }
+.wr-use__track { flex: 1 1 7rem; min-width: 6rem; max-width: 12rem; }
+.wr-use__v { min-width: 3.2em; font: 700 var(--fs-base)/1 var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-use__reset { min-height: var(--target-min); padding: 0 2px; border: 0; background: none; color: var(--ink); font: 600 var(--fs-sm)/1.2 var(--font-body); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; white-space: nowrap; }
+.wr-use__reset[hidden], .wr-use__note[hidden] { display: none; }
+.wr-use__note { flex: 1 1 8rem; min-width: 0; color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+
+/* A step's own heading in step 1's words column (the title is the page's h1): a cap rule over the ranges. */
+.wr-sec { padding-top: 8px; border-top: 5px double var(--ink); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; }
+.wr-sec .scen-tag { margin-left: 6px; letter-spacing: 0.04em; }
+.wr-sec__sub { margin-top: -8px; }
+
+/* The ranges: label, low to high, the selected case's value, and a hairline with a tick per case. */
+.wr-ranges { display: grid; gap: 8px; }
+/* A range: the label over the value, the bar beside the value, the selected case's value under it. */
+.wr-range { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "lab lab" "v bar" "mid mid"; column-gap: 16px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.wr-range__lab { grid-area: lab; font-size: var(--fs-sm); color: var(--ink-2); }
+.wr-range__v { grid-area: v; font: 700 1.375rem/1.15 var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-range__mid { grid-area: mid; font: 400 var(--fs-xs)/1.35 var(--font-type); color: var(--ink-2); }
+.wr-range__bar { grid-area: bar; align-self: center; display: block; width: 100%; max-width: 12rem; height: auto; }
+.wr-range__track { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-range__tick { stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-range__dot { fill: var(--pen); }
+.wr-counts { color: var(--ink-2); }
+
+/* The group chips (client/chips.js shows them): round-ended buttons, one pressed at a time, and a state picker. */
+.wr-chips { display: grid; gap: 8px; }
+.wr-chips[hidden] { display: none; }
+.wr-chips__head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.wr-chips__clear { min-height: var(--target-min); padding: 0 2px; border: 0; background: none; color: var(--ink); font-size: var(--fs-sm); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.wr-chips__row { display: flex; flex-wrap: wrap; gap: 6px; }
+.wr-chip { min-height: 32px; padding: 3px 11px; border: 1.5px solid var(--ink); border-radius: 16px; background: var(--paper); color: var(--ink); font: 400 var(--fs-sm)/1.1 var(--font-body); cursor: pointer; }
+select.wr-chip { min-height: 32px; padding-right: 6px; }
+.wr-chip:hover:not([aria-pressed="true"]) { background: var(--paper-2); }
+.wr-chip[aria-pressed="true"], .wr-chip--on { background: var(--ink); color: var(--paper); }
+.wr-chips__out { color: var(--ink-2); }
+
+/* Figure 1, the three strips (program/strips.js). The selected case's strip is tall, its dots in the pen; the others'
+   lighter. A group's dots sit over a gray outline of every hospital, with both medians. */
+.chart--strips { max-width: calc(var(--vb) * 1.15px); }
+.wr-strip__rule { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-strip__rule--top { stroke: var(--ink); stroke-width: 2px; }
+.wr-strip__edge { fill: var(--pen); }
+.wr-strip__name { fill: var(--ink-2); font: 400 15px var(--font-display); }
+.wr-strip__name--on { fill: var(--ink); font-size: 19px; }
+.wr-strip__money { fill: var(--ink-2); font: 700 14px var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-strip__money--on { fill: var(--ink); font-size: 19px; }
+.chart--strips[data-fit="narrow"] .wr-strip__money--on { font-size: 15px; }
+/* The cases not selected: --pen-scar, lighter than the pen in the light theme and darker in the dark, 3:1 or more on
+   both papers in both (test/finding.test.js holds the pair to it). */
+.wr-dots { stroke: var(--pen-scar); }
+.wr-dots--on { stroke: var(--pen); }
+/* The cases not selected: each column of dots drawn as one bar (strips.js columnsD), in the same inks. */
+.wr-cols { fill: none; stroke: var(--pen-scar); stroke-linecap: butt; }
+.wr-cols--on { stroke: var(--pen); }
+.wr-dots--lit { fill: none; stroke: var(--ink); stroke-linecap: round; }
+.wr-outline { fill: var(--ink-3); fill-opacity: 0.2; }
+.wr-median { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.wr-median--off { stroke: var(--ink-3); stroke-dasharray: 2 2; }
+.wr-median--all { stroke: var(--ink-2); stroke-dasharray: 3 3; }
+.wr-median__label { font-family: var(--font-type); font-size: 11px; }
+.wr-thread__line { fill: none; stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-thread__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-thread__name { font-size: 13px; }
+.wr-strip__note { font-size: 11.5px; }
+/* Step 2 (program/how.js): the words column's big line, Urban's three cases (the page's case marked), and the ways into
+   the worksheets. */
+.wr-how__big { font: 400 clamp(1.6rem, 4vw, 2rem)/1.08 var(--font-display); letter-spacing: -0.005em; max-width: 18ch; }
+.wr-how__cases { margin-top: 4px; }
+.wr-cases { display: grid; margin: -8px 0 0; padding: 0; border-top: 1px solid var(--ink); list-style: none; }
+.wr-case { display: grid; max-width: none; grid-template-columns: minmax(0, 1fr); gap: 1px; padding: 7px 8px 8px; border-bottom: 1px solid var(--line); }
+.wr-case[aria-current="true"] { background: var(--pen-tint); box-shadow: inset 3px 0 0 var(--pen); }
+.wr-case__name b { margin-right: 6px; font: 400 1.125rem/1.1 var(--font-display); }
+.wr-case__n { font: 700 var(--fs-sm)/1.3 var(--font-type); }
+.wr-case__mit { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-type); }
+.wr-case__d { font-size: var(--fs-sm); line-height: 1.4; }
+.wr-case__note { color: var(--ink-2); font: 400 var(--fs-xs)/1.3 var(--font-type); }
+.wr-case__note::before { content: "◂ "; }
+.wr-mit { min-height: var(--target-min); padding: 0; border: 0; background: none; color: var(--ink); font: 600 var(--fs-sm)/1.3 var(--font-body); text-decoration: underline; text-decoration-color: var(--pen); text-underline-offset: 3px; cursor: pointer; }
+
+/* Figure 2, the chain (program/chain.js): each link's words and button beside its drawing, all drawings on one dollar
+   scale under one axis. The chain reads its own width: below 600px a link's words sit over its drawing (the phone
+   drawing); from 600px they sit beside it (the wide one). */
+.wr-chain { container-type: inline-size; display: grid; gap: 6px; }
+.wr-chain__top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; max-width: none; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); }
+.wr-chain__status { color: var(--ink); }
+.wr-chain__links { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.wr-link { display: grid; gap: 4px; max-width: none; padding-top: 6px; border-top: 1px solid var(--line); }
+.wr-link__head { display: grid; gap: 2px; align-content: start; justify-items: start; }
+.wr-link__lab { font: 700 0.9375rem/1.25 var(--font-body); }
+.wr-link__n { margin-right: 4px; color: var(--pen-ink); font: 700 var(--fs-sm)/1 var(--font-type); }
+.wr-link__basis { color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.wr-lines { display: inline-flex; white-space: nowrap; align-items: center; gap: 6px; min-height: var(--target-min); margin-top: 3px; padding: 2px 8px 2px 6px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 600 var(--fs-xs)/1.2 var(--font-type); cursor: pointer; }
+.wr-lines::before { content: ""; flex: none; width: 10px; height: 11px; border: 1.5px solid currentColor; background: linear-gradient(currentColor, currentColor) 1.5px 2.5px / 5px 1.5px no-repeat, linear-gradient(currentColor, currentColor) 1.5px 5.5px / 5px 1.5px no-repeat; }
+.wr-lines:hover { background: var(--paper-2); }
+.wr-lines[data-open] { background: var(--ink); color: var(--paper); }
+.chart--chain { max-width: calc(var(--vb) * 1.15px); }
+.chart--chain .chart-note { font-size: 12px; }
+.chart--chain[data-fit="wide"] { display: none; }
+.chart--chain[data-fit="narrow"] { display: block; }
+@container (min-width: 600px) {
+  .wr-link { grid-template-columns: 13.25rem minmax(0, 1fr); column-gap: 12px; }
+  .wr-chain__axis { padding-left: calc(13.25rem + 12px); }
+  .chart--chain[data-fit="narrow"] { display: none; }
+  .chart--chain[data-fit="wide"] { display: block; }
+}
+.wr-bar--ink { fill: var(--ink); }
+.wr-bar--pen { fill: var(--pen); }
+.wr-bar--rew { fill: var(--rew); }
+.wr-bar--scar { fill: var(--pen-scar); }
+.wr-bar--net { fill: var(--pen-seq-4); }
+.wr-bar--hatch { stroke: var(--neutral); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-band { fill: var(--pen-tint); }
+.wr-case-tick { stroke: var(--ink-2); stroke-width: 1px; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.wr-case-tick--on { stroke: var(--ink); stroke-dasharray: none; }
+.wr-bracket { fill: none; stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.wr-val { fill: var(--ink); font: 700 22px var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.chart--chain[data-fit="narrow"] .wr-val { font-size: 18px; }
+.wr-val--in { fill: var(--paper); }
+.wr-val--sm { fill: var(--ink); font-family: var(--font-type); font-weight: 700; }
+
+/* The worksheets: native popovers, docked over the words column under the sticky header (the figure stays in view),
+   each a ruled form of numbered lines; the result lines in a stronger rule. */
+.wr-ws { max-width: none; margin: 0; padding: 0; border: var(--rule) solid var(--pen); background: var(--paper); color: var(--ink); }
+/* --sticky-top is the header's height (web/client/topbar.js); without the script, about the header's own height. */
+.wr-ws:popover-open { position: fixed; inset: auto; top: calc(var(--sticky-top, 8.75rem) + 12px); left: max(var(--gutter), (100vw - var(--page)) / 2 + var(--gutter)); display: block; width: min(30rem, 100vw - 2 * var(--gutter)); max-height: calc(100dvh - var(--sticky-top, 8.75rem) - 24px); overflow: auto; overscroll-behavior: contain; box-shadow: 0 6px 24px -10px var(--ink-3); }
+.wr-ws::backdrop { background: transparent; }
+.wr-ws__head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); }
+.wr-ws__t { color: var(--pen-ink); font: 700 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.wr-ws__x { flex: none; width: 32px; height: 32px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 700 1.1rem/1 var(--font-type); cursor: pointer; }
+.wr-ws__x:hover { background: var(--paper-2); }
+.wr-ws__lines { width: 100%; border-collapse: collapse; }
+.wr-wl > * { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: baseline; }
+.wr-wl__n { width: 2.5rem; padding-right: 0; }
+.wr-wl__n .field__no { color: var(--pen-ink); }
+.wr-wl__d { font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.wr-wl__d small { display: block; margin-top: 2px; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-body); }
+.wr-wl__d small.wr-wl__rg { color: var(--ink); font-family: var(--font-type); }
+.wr-wl__d .scen-tag, .wr-wl__d .wr-tag { margin-top: 4px; }
+.wr-wl__op { color: var(--ink-2); font-family: var(--font-type); }
+.wr-wl__v { font: 700 var(--fs-base)/1.3 var(--font-type); font-variant-numeric: tabular-nums; text-align: right !important; white-space: nowrap; }
+.wr-wl--eq > * { background: var(--paper-2); }
+.wr-wl--res > * { border-top: var(--rule) solid var(--ink); }
+.wr-wl--res .wr-wl__v { color: var(--pen-ink); font-size: 1.1rem; }
+.wr-wl--head > * { padding-bottom: 2px; border-bottom: 0; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; }
+.wr-wl--part > * { padding-block: 3px; border-bottom-style: dotted; }
+.wr-wl--part .wr-wl__d { padding-left: 18px; font-weight: 400; }
+.wr-wl--part .wr-wl__v { font-weight: 400; }
+.wr-ws__foot { padding: 8px 12px 10px; color: var(--ink-2); }
+.wr-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+/* The measured tag's shorter words on a phone, so it keeps to one line beside a worksheet line's amount. */
+.wr-tag__short { display: none; }
+@media (max-width: 479px) {
+  .wr-tag__long { display: none; }
+  .wr-tag__short { display: inline; }
+}
+/* What "mitigation" means, at the head of the second worksheet. */
+.wr-mitig { display: grid; gap: 6px; padding: 10px 12px 12px; border-bottom: var(--rule) solid var(--pen); font-size: var(--fs-sm); line-height: 1.45; }
+.wr-mitig__h { font: 400 1.125rem/1.2 var(--font-display); }
+.wr-mitig__cases { display: grid; gap: 2px; margin: 2px 0 0; padding: 0; list-style: none; font: 400 var(--fs-xs)/1.4 var(--font-type); }
+.wr-mitcase { padding: 2px 6px; }
+.wr-mitcase[aria-current="true"] { background: var(--pen-tint); box-shadow: inset 3px 0 0 var(--pen); }
+.wr-mitcase b { font-family: var(--font-body); }
+
+/* Step 3 (program/states.js): the selected state's headline, its worksheet card (the worksheets' lines, .wr-wl) and its most
+   exposed hospitals; the list of states takes the name's place once the script runs. Figure 3: the contours deepen in
+   pen with the share of patient revenue lost; the states' dots in pen, those without a scenario hollow in the hatched
+   gutter. The labels' sizes are states.js LABEL_FONTS's. */
+.wr-states { padding-top: 12px; }
+.wr-sthead { display: grid; gap: 8px; }
+.wr-sthead__big { font: 400 clamp(1.6rem, 4vw, 2rem)/1.08 var(--font-display); letter-spacing: -0.005em; max-width: 20ch; }
+.wr-sthead__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-stcard { border: 3px solid var(--pen); background: var(--paper); }
+.wr-stcard__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 8px 12px; border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); }
+.wr-stcard__h { color: var(--pen-ink); }
+.wr-stcard__name { font: 400 1.25rem/1.15 var(--font-display); }
+.wr-stcard__name[hidden], .wr-stcard__pick[hidden] { display: none; }
+.wr-stcard__pick { max-width: 100%; min-height: var(--target-min); padding: 2px 6px; border: 1.5px solid var(--ink); background: var(--paper); color: var(--ink); font: 400 1.125rem/1.15 var(--font-display); cursor: pointer; }
+.wr-stcard__body { display: grid; gap: 8px; padding-bottom: 10px; }
+.wr-stcard__body > p, .wr-stcard__body > .wr-hits { margin: 0; padding: 0 12px; }
+.wr-stcard__body > p:first-child { padding-top: 10px; }
+.wr-stcard__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-stcard__lines .wr-wl > * { padding-block: 5px; }
+.wr-stcard__lines .wr-wl__d > :is(.scen-tag, .wr-tag) { margin: 0 0 0 6px; vertical-align: 1px; }
+/* R34: the one tag that may take two lines, the card's measured tag, where at 320px the label column is narrower than its
+   words: it breaks only at the " · " between its halves (chain.js measuredTag wrap), each half kept whole. */
+.wr-stcard__lines .wr-tag--wrap { white-space: normal; }
+.wr-tag__part { white-space: nowrap; }
+.wr-stcard__body > * { min-width: 0; }
+.wr-hits__h { min-height: var(--target-min); padding-block: 6px; line-height: 1.3; }
+details.wr-hits > .wr-hits__h { cursor: pointer; }
+.wr-hits__sub { margin-left: 4px; color: var(--ink-2); font-size: var(--fs-xs); }
+.wr-hits__list { display: grid; margin: 4px 0 0; padding: 0; list-style: none; }
+.wr-hit { display: grid; grid-template-columns: minmax(0, 1fr) 4.5rem 3.5rem; gap: 8px; align-items: center; max-width: none; padding: 5px 0; border-top: 1px solid var(--line); font-size: var(--fs-sm); line-height: 1.3; }
+.wr-hit__name small { display: block; color: var(--ink-2); font-size: var(--fs-xs); }
+.wr-hit__bar { display: block; height: 8px; }
+.wr-hit__bar i { display: block; height: 100%; background: var(--pen); }
+.wr-hit__v { font: 700 var(--fs-sm)/1.2 var(--font-type); font-variant-numeric: tabular-nums; text-align: right; }
+.chart--states { max-width: calc(var(--vb) * 1.1px); }
+.wr-states .fig__note { max-width: none; }
+.wr-iso { fill: var(--pen); fill-opacity: 0.07; }
+.wr-iso__line { fill: none; stroke: var(--pen-ink); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.wr-iso__label { fill: var(--pen-ink); font: 700 11px var(--font-type); }
+.wr-iso__title { fill: var(--pen-ink); font: 600 11px var(--font-body); }
+.wr-gutter { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st__head { fill: var(--ink); font: 600 11px var(--font-body); }
+.wr-st__whisker { fill: none; stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st { cursor: pointer; }
+.wr-st__dot { fill: var(--pen); fill-opacity: 0.9; stroke: var(--paper); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-st:hover .wr-st__dot { fill-opacity: 1; stroke: var(--ink); }
+.wr-st__ring { fill: none; stroke: var(--ink); stroke-width: 2.5px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.wr-st__hollow { fill: var(--paper); stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-st:hover .wr-st__hollow { stroke: var(--ink); }
+.wr-st--on .wr-st__hollow { stroke: var(--ink); stroke-width: 2.5px; }
+.wr-st__code, .wr-st__name, .wr-st__gut, .wr-st__fn, .wr-iso__label, .wr-iso__title, .wr-st__head { pointer-events: none; }
+.wr-st__code { fill: var(--ink); font: 700 11.5px var(--font-type); }
+.wr-st__name { fill: var(--ink); font: 600 13px var(--font-body); }
+.wr-st__gut, .wr-st__fn { fill: var(--ink-2); font: 400 11px var(--font-type); }
+/* A gutter state's code sits on its own patch of paper over the hatching. */
+.wr-st__gut { fill: var(--ink); }
+.wr-st__gutbg { fill: var(--paper); pointer-events: none; }
+.wr-st__leader { stroke: var(--ink-2); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+.chart--states[data-fit="narrow"] :is(.wr-st__code, .wr-st__fn) { font-size: 9.5px; }
+.chart--states[data-fit="narrow"] .wr-st__gut { font-size: 10.5px; }
+.chart--states[data-fit="narrow"] .wr-st__name { font-size: 12px; }
+
+/* Step 4 (program/hospital.js): the record card (the family's red-ruled form, formField) with its stamp, the scenario's three
+   cases (the selected one tinted), the cost report and the Medicare penalties beside it; Figure 4, the nested bar in ink
+   and pen with the expansion part enlarged under it, then the four factor rows, each a rug of the state's other hospitals
+   and a mark for this one. The labels' sizes are hospital.js HB_FONTS's. */
+.wr-hosp { padding-top: 12px; }
+.wr-hpick[hidden], [data-h-noscript][hidden], .wr-thread-none[hidden] { display: none; }
+.wr-hrand { min-height: var(--target-min); padding: 0; border: 0; background: none; color: var(--ink); font: 600 var(--fs-sm)/1.3 var(--font-body); text-decoration: underline; text-decoration-color: var(--pen); text-underline-offset: 3px; cursor: pointer; }
+.wr-hcard[aria-busy="true"] { opacity: 0.6; }
+.wr-rec { grid-template-columns: minmax(0, 1fr); }
+.wr-rec .field__value.wr-rec__name { font: 400 1.45rem/1.1 var(--font-display); }
+.wr-rec__link { display: inline-block; margin-top: 2px; font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.wr-rec__verdict { display: grid; gap: 8px; justify-items: start; padding-block: 12px; }
+.wr-rec__verdict .stamp { margin-left: 4px; font-size: 1.15rem; text-align: center; line-height: 1.15; }
+.wr-rec__verdict .stamp small { display: block; font: 400 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.06em; }
+.wr-rec__why { font-size: var(--fs-sm); line-height: 1.5; }
+.wr-rec__sec .field__label { flex-wrap: wrap; }
+.wr-rec__sec .field__label :is(.scen-tag, .wr-tag, .est-tag) { margin-left: 0; vertical-align: 0; text-transform: none; }
+.wr-rec__sec .field__label .wr-tag { text-transform: uppercase; }
+.wr-rec__t { width: 100%; margin-top: 4px; border-collapse: collapse; font: 400 var(--fs-sm)/1.35 var(--font-type); font-variant-numeric: tabular-nums; }
+.wr-rec__t :is(th, td) { padding: 4px 5px; border-bottom: 1px solid var(--line); text-align: right; }
+.wr-rec__t td { white-space: nowrap; }
+/* R35: a case's value in words ("under 0.001%") breaks between them, so three of them fit the card at any width. */
+.wr-rec__t td.wr-rec__words { white-space: normal; }
+.wr-rec__t tbody th { color: var(--ink-2); font: 400 var(--fs-sm)/1.3 var(--font-body); text-align: left; }
+.wr-rec__t thead th { color: var(--ink-2); font: 600 var(--fs-xs)/1.2 var(--font-body); }
+.wr-rec__t .on { background: var(--pen-tint); color: var(--ink); font-weight: 700; }
+/* R35: on the narrowest phones (320px, and up to 374px, where a full-size row of three dollar amounts still outgrows the
+   card) the hospital's own numbers still read in place: tighter cells and the three cases' values a step smaller; the row
+   heads keep their size and wrap between words. */
+@media (max-width: 374px) {
+  .wr-rec__t :is(th, td) { padding-inline: 2px; }
+  .wr-rec__t td { font-size: var(--fs-xs); }
+}
+.wr-rec__dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; margin: 4px 0 0; font-size: var(--fs-sm); }
+.wr-rec__dl dt { color: var(--ink-2); }
+.wr-rec__dl dd { margin: 0; font: 400 var(--fs-sm)/1.45 var(--font-type); text-align: right; white-space: nowrap; }
+.wr-rec__p { margin-top: 4px; font-size: var(--fs-sm); line-height: 1.45; }
+.wr-rec__note { color: var(--ink-2); font-size: var(--fs-xs); }
+.chart--hosp { max-width: calc(var(--vb) * 1.1px); }
+.wr-hosp .fig__note { max-width: none; }
+.wr-hfig[hidden], .wr-hnone[hidden] { display: none; }
+.wr-hfig { display: grid; gap: 6px; }
+.wr-hb__npr { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__m2 { fill: var(--paper-2); stroke: var(--ink-2); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__exp { fill: var(--pen-tint); stroke: var(--pen); stroke-width: 1.2px; vector-effect: non-scaling-stroke; }
+.wr-hb__lost { fill: var(--pen); }
+.wr-hb__box, .wr-hb__link { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.wr-hb__tick { stroke: var(--pen-ink); stroke-width: 1.5px; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; }
+.wr-hb__leader { stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-hb__main { fill: var(--ink); font: 600 12px var(--font-body); }
+.wr-hb__note { fill: var(--ink-2); font: 400 11px var(--font-body); }
+.wr-hb__loss { fill: var(--pen-ink); font: 700 12px var(--font-body); }
+.wr-hb__zoom { fill: var(--ink-2); font: 400 10.5px var(--font-type); }
+.wr-facs { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 20px; }
+@media (min-width: 560px) { .wr-facs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.wr-fac { min-width: 0; padding: 6px 0 4px; border-top: 1px solid var(--line); }
+.wr-fac__h { display: flex; justify-content: space-between; gap: 10px; font: 600 var(--fs-sm)/1.25 var(--font-body); }
+.wr-fac__h b { font: 700 var(--fs-base)/1.2 var(--font-type); white-space: nowrap; }
+.wr-fac__n { margin-top: 1px; color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.35; }
+.wr-fac__rug { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-top: 2px; color: var(--ink-2); font: 400 var(--fs-cap)/1.2 var(--font-type); }
+.wr-rug { display: block; width: 100%; height: 18px; }
+.wr-rug__line { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-rug__ticks { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-rug__me { stroke: var(--ink); stroke-width: 3px; vector-effect: non-scaling-stroke; }
+.wr-hnone { display: grid; gap: 10px; justify-items: start; max-width: 36rem; padding: 18px 20px; border: var(--rule) solid var(--ink); }
+.wr-hnone__why { font-size: var(--fs-sm); line-height: 1.5; }
+
+/* Step 5, exposed on both (web/program/both.js): the range, the finding, the corner's dollars, Figure 5 and the named
+   table, which spans both columns under them. */
+.wr-both__head { display: grid; gap: 6px; }
+.wr-both__big { font: 400 clamp(2.2rem, 5vw, 2.75rem)/1 var(--font-display); letter-spacing: -0.01em; }
+.wr-both__big small { margin: 0 0.15em; color: var(--ink-2); font: 400 0.42em var(--font-body); letter-spacing: 0; vertical-align: 0.4em; }
+.wr-both__lab { color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.45; }
+.wr-both__find { font-size: var(--fs-base); line-height: 1.45; }
+.wr-both__rule { line-height: 1.5; }
+.wr-both__read { padding: 10px 12px; border: 3px solid var(--pen); background: var(--paper); }
+.wr-both__rh { margin-bottom: 6px; font: 400 var(--fs-md)/1.2 var(--font-display); }
+.wr-both__dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; margin: 0; font-size: var(--fs-sm); line-height: 1.4; }
+.wr-both__dl dt .scen-tag, .wr-both__dl dt .est-tag { margin-left: 4px; }
+.wr-both__dl dd { margin: 0; color: var(--pen-ink); font: 700 var(--fs-sm)/1.4 var(--font-type); text-align: right; }
+.wr-both__shift, .wr-both__never { margin-top: 6px; }
+.wr-both__you { line-height: 1.45; }
+.wr-b__corner { fill: var(--pen-tint); }
+/* The hospitals outside the corner are context, in the pen ramp's palest step, so the corner's full pen stands apart (a
+   pale step can't reach 3:1 on the paper; the corner's dots, the count and the table carry the finding). */
+.wr-bdots { stroke: var(--pen-seq-1); }
+.wr-bdots--on { stroke: var(--pen); }
+.wr-bdots--strip { stroke: var(--ink-3); }
+.wr-b__cutline { stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.wr-b__count { fill: var(--ink); font: 600 17px var(--font-body); }
+.chart--both[data-fit="narrow"] .wr-b__count { font-size: 14px; }
+.wr-b__sub, .wr-b__line { fill: var(--ink-2); font: 600 11px var(--font-body); }
+.wr-b__cut { fill: var(--ink); font: 600 11px var(--font-body); }
+.wr-b__strip { fill: var(--ink); font: 600 11px var(--font-body); }
+.chart--both[data-fit="narrow"] .wr-b__strip { font-size: 10.5px; }
+.wr-b__name { fill: var(--ink); font: 600 13px var(--font-body); }
+.wr-b__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-b__leader { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-b__tick { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.wr-axtag rect { fill: var(--paper); stroke: var(--pen); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+/* The figure's estimate tag drawn as the family's (.est-tag): capitals in the pen's ink, letter-spaced, at the tags' size. */
+.wr-axtag__t { fill: var(--pen-ink); font: 600 12px var(--font-body); letter-spacing: 0.08em; }
+.wr-b__count, .wr-b__sub, .wr-b__line, .wr-b__cut, .wr-b__strip, .wr-b__name, .wr-axtag { pointer-events: none; }
+.wr-named { grid-column: 1 / -1; padding-top: 10px; border-top: 5px double var(--ink); }
+.wr-named__sum { min-height: var(--target-min); font: 400 var(--fs-lg)/1.2 var(--font-display); cursor: pointer; }
+.wr-named__lead { margin: 8px 0 10px; }
+.wr-named__wrap { overflow-x: auto; }
+.wr-named__t { width: 100%; min-width: 36rem; }
+.wr-named__t thead th { white-space: normal; }
+.wr-named__t thead th.num { width: 6.5em; }
+.wr-named__t th small { display: block; color: var(--ink-3); font: 400 var(--fs-xs)/1.3 var(--font-body); }
+.wr-named__t td.num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.wr-named__t th.num { text-align: right; }
+.wr-named__grp { text-align: center; }
+.wr-named__grp .scen-tag, .wr-named__grp .est-tag { margin-left: 4px; }
+.wr-named[data-limited] .wr-named__more { display: none; }
+.wr-named__all { margin-top: 8px; }
+[data-b-all][hidden] { display: none; }
+
+/* ---------- Methods (pages/methods.js): the family's contents-and-sections layout (pages.css .doc), with the steps as a
+   numbered list, the parameters and pins as printout tables, and the sensitivities drawn (methods/sens.js). ---------- */
+.wr-meth__lede { max-width: 60ch; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.45; color: var(--ink-2); }
+.wr-meth .doc__sec > p, .wr-meth__steps, .wr-meth__list, .wr-meth__links { max-width: var(--measure); }
+.wr-meth__steps, .wr-meth__list, .wr-meth__links { display: grid; gap: 10px; margin: 0; padding-left: 1.1em; }
+.wr-meth__steps { padding-left: 1.4em; }
+.wr-meth__links { gap: 4px; }
+.wr-meth__sub { margin-top: 8px; font: 700 var(--fs-md)/1.3 var(--font-body); }
+.wr-meth__params td:nth-child(2), .wr-meth__pins td.nw { font-family: var(--font-type); white-space: nowrap; }
+/* A hash in two lines of 32 characters: the whole SHA-256, at a width the file's name can share. */
+.wr-meth__hash code { display: block; width: 32ch; font: 400 var(--fs-xs)/1.35 var(--font-type); word-break: break-all; }
+.wr-meth__pins th[scope="row"] { min-width: 16rem; font-weight: 400; }
+.wr-meth .cite { margin-top: 36px; }
+/* The as-of block both pages close on (pages/parts.js asOf; Dalton's review 11-11): the five sources in a grid, each its
+   small label over its value, one column on a phone, two from 560px and three across the page from 900px (the middle
+   column a little wider, for the expansion share's long source, so each of the first row's values takes two lines), so
+   the block is two short rows, not a narrow column of wrapped lines; the family's rule over it, with less air around it. */
+:is(.wr, .wr-meth) > .asof { margin-top: 0; padding-top: 8px; }
+:is(.wr, .wr-meth) .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px var(--gutter); }
+:is(.wr, .wr-meth) .asof__list > div { display: block; grid-column: auto; }
+:is(.wr, .wr-meth) .asof__list dt { font-size: var(--fs-xs); line-height: 1.3; }
+:is(.wr, .wr-meth) .asof__list dd { max-width: none; font-size: var(--fs-xs); line-height: 1.35; }
+@media (min-width: 560px) { :is(.wr, .wr-meth) .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { :is(.wr, .wr-meth) .asof__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); } }
+.wr-sens__band { fill: var(--pen-tint); stroke: var(--pen); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.wr-sens__row--base .wr-sens__band { fill: var(--pen); fill-opacity: 0.35; }
+.wr-sens__tick { stroke: var(--pen); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.wr-sens__dot { fill: var(--ink); stroke: var(--paper); stroke-width: 1.5px; }
+
+@media (forced-colors: active) {
+  .wr-bar--ink, .wr-bar--pen, .wr-bar--rew, .wr-bar--scar, .wr-bar--net { fill: CanvasText; }
+  .wr-band { fill: Canvas; stroke: GrayText; }
+  .wr-case-tick, .wr-case-tick--on, .wr-bracket { stroke: CanvasText; }
+  .wr-val--in { fill: Canvas; }
+  .wr-switch__opt input:checked + span { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .wr-case[aria-current="true"], .wr-mitcase[aria-current="true"] { outline: 2px solid CanvasText; outline-offset: -2px; }
+  .wr-lines[data-open] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .wr-dots, .wr-dots--on, .wr-dots--lit, .wr-cols, .wr-cols--on, .wr-median, .wr-thread__line, .wr-range__tick { stroke: CanvasText; }
+  .wr-median--off, .wr-median--all, .wr-strip__rule, .wr-range__track { stroke: GrayText; }
+  .wr-strip__edge, .wr-thread__dot, .wr-range__dot { fill: CanvasText; }
+  .wr-outline { fill: GrayText; }
+  .wr-chip[aria-pressed="true"], .wr-chip--on { background: Highlight; color: HighlightText; }
+  .wr-iso { fill: Canvas; }
+  .wr-iso__line, .wr-st__whisker, .wr-st__leader, .wr-gutter { stroke: GrayText; }
+  .wr-st__gutbg { fill: Canvas; }
+  .wr-st__dot, .wr-hit__bar i { fill: CanvasText; background: CanvasText; }
+  .wr-st__ring, .wr-st__hollow { stroke: CanvasText; }
+  .wr-hb__lost { fill: CanvasText; }
+  .wr-hb__exp { fill: Canvas; stroke: CanvasText; }
+  .wr-hb__m2, .wr-hb__npr { fill: Canvas; stroke: CanvasText; }
+  .wr-hb__tick, .wr-hb__leader, .wr-rug__me { stroke: CanvasText; }
+  .wr-hb__box, .wr-hb__link, .wr-rug__ticks, .wr-rug__line { stroke: GrayText; }
+  .wr-rec__t .on { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .wr-b__corner { fill: Canvas; }
+  .wr-bdots, .wr-bdots--strip, .wr-axtag rect { stroke: GrayText; }
+  .wr-bdots--on, .wr-b__cutline, .wr-b__leader, .wr-b__tick { stroke: CanvasText; }
+  .wr-b__dot { fill: CanvasText; }
+  .wr-sens__band { fill: Canvas; stroke: CanvasText; }
+  .wr-sens__tick { stroke: CanvasText; }
+  .wr-sens__dot { fill: CanvasText; stroke: Canvas; }
+}
+
+/* Touch screens: every control the page draws takes the kit's touch height (--control-h, 44px under a coarse pointer:
+   tokens.css), as the shared fields and the hub's controls do (the 11-15 audit's deferral): the switch's options, the
+   chips and pickers, the link-styled buttons, the worksheet's close, the figures' "Show table" (kept a list item, so its
+   arrow stays) and sort buttons, and the use-rate slider's box. A button the page hides stays hidden (:not([hidden])).
+   The random pick's button sits in a sentence, so its target grows by padding that negative margins take back out of
+   the line: the sentence keeps its line height. */
+@media (pointer: coarse) {
+  :is(.wr, .wr-meth) :is(.wr-chip, select.wr-chip, .wr-chips__clear, .wr-use__reset, .wr-stcard__pick, .wr-hits__h, .fig__sort) { min-height: var(--control-h); }
+  :is(.wr, .wr-meth) :is(.wr-mit, .wr-named__all .wr-hrand, .wr-lines):not([hidden]) { display: inline-flex; align-items: center; min-height: var(--control-h); }
+  /* WebKit draws a native select at its own height and ignores min-height: drawn as a menu button, it takes a height. */
+  :is(.wr, .wr-meth) :is(select.wr-chip, select.wr-stcard__pick) { -webkit-appearance: menulist-button; appearance: menulist-button; height: var(--control-h); }
+  :is(.wr, .wr-meth) .wr-hpick .wr-hrand { --pad: calc((var(--control-h) - 1lh) / 2); padding-block: var(--pad); margin-block: calc(-1 * var(--pad)); }
+  :is(.wr, .wr-meth) .fig__table > summary { min-height: var(--control-h); padding-block: calc((var(--control-h) - 1lh) / 2); box-sizing: border-box; }
+  :is(.wr, .wr-meth) .wr-switch__opt span { display: flex; align-items: center; justify-content: center; min-height: var(--control-h); }
+  :is(.wr, .wr-meth) .wi-range, .wr-scrolly--on .wr-use__track .wi-range { height: var(--control-h); }
+  .wr-ws__x { width: var(--control-h); height: var(--control-h); }
+  /* The chips stay round-ended at the taller height. */
+  .wr-chip { border-radius: calc(var(--control-h) / 2); }
+}

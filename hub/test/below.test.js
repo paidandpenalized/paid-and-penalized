@@ -10,7 +10,7 @@ import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, footerOf } from '../../pipeline/test/helpers.js';
 import { HAC_TOP_SHARE, programDek } from '../../web/programs.js';
 import { copyText } from '../../web/render/components.js';
-import { count, factorText, fractionWord, money, numberWord, pct } from '../../web/render/format.js';
+import { count, factorText, fractionWord, money, moneyRange, numberWord, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { feedbackFor } from '../../web/render/layout.js';
 import { SITE, hospitalPathOf, underConstruction } from '../../web/site.js';
@@ -46,7 +46,8 @@ test('the directory: #programs with its kicker, a heading that counts the progra
   const withData = SITE.programs.filter((p) => p.inData);
   const building = withData.filter(underConstruction).length;
   assert.ok(building > 0, 'the heading\'s under-construction clause shows (none: dirHeadAll)');
-  const considered = SITE.programs.length - withData.length;
+  // A scenario (no payment) is neither live with data nor under consideration: it has a card of its own.
+  const considered = SITE.programs.filter((p) => !p.inData && !p.scenario).length;
   assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData.length - building).replace(/^./, (c) => c.toUpperCase())} live, ${numberWord(building)} under construction, ${numberWord(considered)} under consideration.`);
   const lede = words(element(section, '<p class="bsec__lede"', 'p'));
   assert.ok(lede.includes(money(facts.gross)), lede);
@@ -169,6 +170,27 @@ test('the programs under consideration: six dashed slips in three named groups, 
     slips.push(...found);
   });
   assert.equal(slips.length, 6);
+});
+
+test('the scenarios, not payments: under their own sub-head, a card per scenario with its name, statutory name, dek, national range of revenue lost with its tag, and the way to its page; never a slip', () => {
+  const section = element(out, '<section class="bsec" id="programs"', 'section');
+  const scenarios = SITE.programs.filter((p) => p.scenario);
+  assert.deepEqual(scenarios.map((p) => p.id), ['work-requirement']);
+  const block = element(section, '<div class="dir dir--scen"', 'div');
+  assert.ok(section.indexOf('<p class="grp cap"><span>Scenarios, not payments</span>') < section.indexOf(block), 'the sub-head, then the cards');
+  const cards = elements(block, '<article class="pc pc--scen"', 'article');
+  assert.equal(cards.length, scenarios.length);
+  cards.forEach((card, i) => {
+    const p = scenarios[i];
+    const { year, lost } = assets.shell.programs[p.id].scenario;
+    assert.ok(card.includes(`<h3><span>${escapeHtml(p.name)}</span> <abbr class="ab" title="${escapeHtml(p.long)}">${escapeHtml(p.ab)}</abbr></h3>`), p.id);
+    assert.ok(words(card).includes(programDek(p.id)), p.id);
+    assert.ok(card.includes(`<p class="pc__big">${moneyRange(lost.low, lost.high)} <span class="scen-tag">SCENARIO · ${year} $</span></p>`), p.id);
+    assert.match(card, new RegExp(`<a class="go" href="${p.path}"`), p.id);
+  });
+  for (const p of scenarios) assert.ok(!elements(section, '<a class="slip"', 'a').some((s) => s.includes(`href="${p.path}"`)), `${p.id}: no slip`);
+  // The scenario's figure comes from the shell's facts: a directory without them stops.
+  assert.throws(() => directory({ programs: SITE.programs, facts, fy, hospitals }), /work-requirement/);
 });
 
 test('methods in brief: its kicker, heading, a paragraph with the back-test from the data, three numbered points and the way to the methods', () => {
@@ -330,7 +352,7 @@ test('the claims the directory\'s words make stop the build when the data no lon
     const e = change({ ...est });
     return { ...e, pct: pctOf(e) };
   };
-  const render = (change) => directory({ programs: SITE.programs, facts, fy, hospitals: hospitals.map((h) => (h.est ? { ...h, est: changed(change, h.est) } : h)) });
+  const render = (change) => directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals: hospitals.map((h) => (h.est ? { ...h, est: changed(change, h.est) } : h)) });
   // Most Readmissions cuts are small; the HAC program is one step (a cut or $0); value-based purchasing has both sides.
   assert.throws(() => render((e) => ({ ...e, hrrp: e.hrrp * 20 })), /no longer bear out/);
   assert.throws(() => render((e) => ({ ...e, hac: e.hac === 0 ? 1 : e.hac })), /no longer bear out/);
@@ -350,8 +372,8 @@ test('a histogram whose labels would count hospitals its bars do not draw stops 
     return { ...h, est: { ...h.est, pct: { ...h.est.pct, hrrp: Number.NaN } } };
   });
   assert.ok(broken);
-  assert.throws(() => directory({ programs: SITE.programs, facts, fy, hospitals: changed }), /labels do not count its bars/);
-  assert.doesNotThrow(() => directory({ programs: SITE.programs, facts, fy, hospitals }));
+  assert.throws(() => directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals: changed }), /labels do not count its bars/);
+  assert.doesNotThrow(() => directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals }));
 });
 
 test('the words below the story carry no digit: every number arrives through a placeholder', () => {
@@ -360,9 +382,9 @@ test('the words below the story carry no digit: every number arrives through a p
 
 test('the Readmissions card says which year its pages show while it differs from the estimates\', and nothing once they agree', () => {
   const card = (out) => /<article class="pc">[\s\S]*?<\/article>/.exec(out)[0];
-  const later = String(directory({ programs: SITE.programs, facts, fy, hospitals, hrrpFy: fy + 1 }));
+  const later = String(directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals, hrrpFy: fy + 1 }));
   assert.ok(card(later).includes(`<p class="pc__yr">Its pages show CMS’s FY${fy + 1} file. This card uses FY${fy}, the latest year all three programs share.</p>`));
   assert.equal(later.split('class="pc__yr"').length - 1, 1, 'under the Readmissions card only');
-  assert.doesNotMatch(String(directory({ programs: SITE.programs, facts, fy, hospitals, hrrpFy: fy })), /pc__yr/);
-  assert.doesNotMatch(String(directory({ programs: SITE.programs, facts, fy, hospitals })), /pc__yr/, 'no year given: the estimates\'');
+  assert.doesNotMatch(String(directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals, hrrpFy: fy })), /pc__yr/);
+  assert.doesNotMatch(String(directory({ programs: SITE.programs, figures: assets.shell.programs, facts, fy, hospitals })), /pc__yr/, 'no year given: the estimates\'');
 });

@@ -4,17 +4,21 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
+import { COPY as REASON_COPY } from '../../web/medicaid/copy.js';
+import { caseShareTexts, shareRange } from '../../web/medicaid/format.js';
 import { HAC_CUT_PCT } from '../../web/programs.js';
 import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
+import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';
 import { peerFigures, peersOf } from '../hospital/peers.js';
 import { shareText, signedShareText } from '../hospital/text.js';
@@ -33,7 +37,7 @@ const pick = (pred, what) => {
   assert.ok(h, `the data has ${what}`);
   return h;
 };
-const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp });
+const render = (h, robots = null) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: HUB.medicaid });
 // The markup of one element, from its opening tag's attribute to its closing tag (the first after it).
 const block = (text, attr, close) => {
   const at = text.indexOf(attr);
@@ -405,4 +409,157 @@ test('a net one program makes alone shows that program\'s likely range: the HAC 
   const [lo, hi] = alone.netRange;
   assert.ok(lo < alone.est.net && alone.est.net < hi && hi < 0);
   assert.ok(mainOf(render(alone)).includes(`<span class="hh__rng-v">${moneyRange(lo, hi)}</span>`));
+});
+
+// ---------- the Medicaid work-requirement band (hospital/medicaid.js) ----------
+const WR = HUB.medicaid;
+const renderWr = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: WR });
+// The page with the scenario file holding no row for h (medicaidBand's no-band case).
+const renderNoRow = (h) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: { ...WR, hospitals: new Map([...WR.hospitals].filter(([ccn]) => ccn !== h.ccn)) } });
+const wrBand = (page) => /<section class="hh__wb"[\s\S]*?<\/section>\n/.exec(page)?.[0] ?? null;
+const wrOf = (h) => hospitalScenario(WR, h.ccn);
+const wrCol = Object.fromEntries(WR.columns.map((name, i) => [name, i]));
+const IN_FILE = HOSPITALS.filter((h) => wrOf(h));
+// Five estimated hospitals with a loss to draw, spread through the dollar file's order.
+const DRAWN = HOSPITALS.filter((h) => h.est && wrOf(h)?.shares);
+const FIVE = [0, 1, 2, 3, 4].map((i) => DRAWN[Math.floor((i * (DRAWN.length - 1)) / 4)]);
+
+test('the Medicaid band sits after the what-if, apart from the net: taking it out leaves the page without it, byte for byte', () => {
+  assert.equal(new Set(FIVE.map((h) => h.ccn)).size, 5, 'five different hospitals');
+  for (const h of FIVE) {
+    const page = renderWr(h);
+    const band = wrBand(page);
+    assert.ok(band, 'the band');
+    assert.equal(page.replace(band, ''), renderNoRow(h), 'everything else, the net and its rows included, is the page without the band');
+    assert.ok(page.indexOf(band) > page.indexOf('<section class="hh__progs" id="whatif"'), 'after the what-if');
+    assert.ok(page.indexOf(band) > page.indexOf('</section>', page.indexOf('<section class="hh__progs"')), 'outside it');
+    assert.ok(page.indexOf(band) < page.indexOf('data-peer-table'), 'before the peer table');
+    assert.ok(band.includes('Medicaid scenario (not a payment)'), 'named a scenario, not a payment');
+    assert.ok(band.includes(esc('never added to the Medicare net above')), 'and never added to the net');
+    // Its dollars (Dalton's review 11-11) are the scenario's own, in its dollar line and its middle case alone: no
+    // Medicare dollar is repeated in it, and nothing in it is summed with the net (the page without it is byte for byte).
+    const dollarsIn = band.replace(/<p class="hh__wbd">[^<]*<\/p>/, '').replace(/<li class="hh__wbk--mid">[^<]*<\/li>/, '');
+    assert.doesNotMatch(dollarsIn, /\$\d/, 'no dollar figure outside the scenario\'s dollar line and middle case');
+    assert.doesNotMatch(band, /<script|<button|data-row|data-sum/, 'no script, control or hook the page\'s script reads');
+  }
+});
+
+test('the band for a hospital with a loss to draw: the work-requirement page\'s shares at the default use rate (the file\'s own middle case), a range, the tag, the bar and the link', () => {
+  for (const h of FIVE) {
+    const band = wrBand(renderWr(h));
+    const { shares } = wrOf(h);
+    const row = WR.hospitals.get(h.ccn);
+    assert.equal(shares[1], row[wrCol.middle_lost] / row[wrCol.net_patient_revenue], 'the middle case is the file\'s');
+    assert.ok(shares[0] < shares[1] && shares[1] < shares[2], 'low < middle < high');
+    const [lo, mid, hi] = caseShareTexts(shares);
+    assert.deepEqual(shareRange(shares), { low: lo, high: hi }, 'these print as two numbers');
+    assert.ok(band.includes(`<p class="hh__wbv">${lo} to ${hi}</p>`), 'the headline is the range, low to high');
+    assert.ok(band.includes(`<p class="hh__wbscale">${esc('Square-root scale, the same on every hospital’s page')}</p>`), 'the scale named under its axis');
+    assert.ok(band.includes(`<span class="scen-tag">SCENARIO · ${WR.fy} $</span>`), 'the scenario tag');
+    // The dollars: the same cases' Medicaid revenue lost at the default use rate, each step 4's string without its minus.
+    const lost = wrOf(h).lost.map((x) => money(x));
+    assert.equal(wrOf(h).lost[1], row[wrCol.middle_lost], 'the middle case\'s dollars are the file\'s');
+    assert.ok(band.includes(`<p class="hh__wbd">${lost[0]} to ${lost[2]} a year, in ${WR.fy} dollars</p>`), 'the dollar line under the range');
+    assert.ok(band.indexOf('class="hh__wbd"') > band.indexOf('class="hh__wbv"') && band.indexOf('class="hh__wbd"') < band.indexOf('class="hh__wbbar"'), 'under the headline, over the bar');
+    assert.ok(band.includes(`<li>Low case ${lo}</li><li class="hh__wbk--mid">Middle case ${mid} · ${lost[1]}</li><li>High case ${hi}</li>`), 'the three cases, the middle with its dollars');
+    assert.match(band, /<svg class="hh__wbsvg" viewBox="0 0 1000 28" preserveAspectRatio="none" aria-hidden="true"/, 'the server\'s drawing');
+    assert.match(band, /<rect class="hh__wb-band" x="[\d.]+" y="7" width="[\d.]+" height="14"\/><line class="hh__wb-mid" x1="[\d.]+"/, 'the range and the middle case\'s mark');
+    assert.ok(band.includes(`<a class="hh__deep" href="/work-requirement/?h=${h.ccn}">`), 'the link to the hospital on the work-requirement page');
+    assert.ok(!/NaN|undefined|Infinity/.test(band), 'no bad number');
+  }
+  // The scale every band shares: its top over the file's highest high case, its places square-root.
+  const top = scaleTop(WR);
+  const highest = Math.max(...[...WR.hospitals.keys()].map((ccn) => hospitalScenario(WR, ccn).shares?.[2] ?? 0));
+  assert.ok(highest <= top && top - highest < 0.01, 'the top is the highest share, up to the next whole percent');
+  assert.equal(placeOf(top / 4, top), 0.5, 'a quarter of the top sits halfway');
+  assert.deepEqual(scaleTicks(0.14), [0, 0.005, 0.01, 0.02, 0.05, 0.1]);
+});
+
+test('Maryland\'s page: the band says "Not modeled" and why, with no number', () => {
+  const band = wrBand(renderWr(MARYLAND));
+  assert.equal(wrOf(MARYLAND).reason, 'all_payer');
+  assert.ok(band.includes('<p class="stamp stamp--ink">Not modeled</p>'), 'the stamp');
+  assert.ok(band.includes(esc(REASON_COPY.why_all_payer.text)), 'the work-requirement page\'s reason');
+  assert.ok(band.includes(esc('The work-requirement pages model the Medicaid revenue a hospital could lose: not a payment.')), 'its note promises no scenario and names no net (the page has none)');
+  assert.doesNotMatch(band, /A scenario of what/, 'no promise of a scenario');
+  assert.doesNotMatch(band, /%|\$|<svg|hh__wbv|scen-tag/, 'no number, bar or tag');
+  assert.ok(band.includes(`href="/work-requirement/?h=${MARYLAND.ccn}"`), 'the link');
+  assert.ok(renderWr(MARYLAND).indexOf(band) > renderWr(MARYLAND).indexOf('class="hh__status"'), 'after its status');
+});
+
+test('a hospital with no scenario shows its reason line and never a number: no cost report, no expansion group, not an expansion state, a cost report with nothing to take', () => {
+  const fy = String(WR.fy);
+  for (const reason of ['no_cost_report', 'no_viii_group', 'not_expansion', 'no_medicaid']) {
+    const h = pick((x) => x.est && wrOf(x)?.reason === reason, `an estimated hospital whose scenario reason is ${reason}`);
+    const band = wrBand(renderWr(h));
+    const want = REASON_COPY[`why_${reason}`].text.replace('{state}', wrOf(h).stateName).replace('{fy}', fy);
+    assert.ok(textOf(band).includes(want), `${reason}: the reason line`);
+    assert.match(band, /<p class="stamp stamp--ink">[^<]+<\/p>/, `${reason}: the stamp`);
+    assert.doesNotMatch(band, /%|\$\d|<svg|hh__wbv|NaN|undefined/, `${reason}: no number or bar`);
+    assert.ok(band.includes(esc('not a payment, and never added to the Medicare net above.')) && !band.includes('A scenario of what'), `${reason}: a note that promises no scenario`);
+  }
+  // A hospital with no estimate the file has a row for gets its band too; one the file has none for gets none.
+  const noInputs = pick((x) => x.status === 'no-inputs' && wrOf(x), 'a hospital with no estimate in the scenario file');
+  assert.ok(wrBand(renderWr(noInputs)), 'a no-inputs hospital in the file');
+  for (const h of [pick((x) => x.est && !wrOf(x), 'an estimated hospital the scenario file has no row for'), pick((x) => !x.est && !wrOf(x), 'a hospital with no estimate the file has no row for')]) {
+    assert.equal(renderWr(h), render(h), 'no band, and nothing else changed');
+    assert.doesNotMatch(renderWr(h), /data-medicaid/);
+  }
+  assert.ok(IN_FILE.length > 0 && IN_FILE.length < HOSPITALS.length);
+});
+
+test('the band\'s stylesheet: every scenario mark from a theme token, the bar\'s strokes non-scaling', () => {
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  for (const cls of ['hh__wb-grid', 'hh__wb-base', 'hh__wb-band', 'hh__wb-mid']) {
+    const rule = new RegExp(`\\.${cls} \\{([^}]*)\\}`).exec(css)?.[1] ?? '';
+    assert.match(rule, /vector-effect: non-scaling-stroke/, `${cls}: non-scaling`);
+    assert.match(rule, /var\(--[a-z-0-9]+\)/, `${cls}: a token`);
+  }
+});
+
+// Ruling R32: the shares print with the fewest decimals (two, at most three) that keep the cases apart and off zero; one
+// still zero at three prints "under" the smallest it can; a range too small for two numbers heads the band as its bound.
+test('every drawn hospital\'s band: a range whose printed low and high differ, no share printed as zero, the work-requirement page\'s strings', () => {
+  let under = 0;
+  for (const ccn of WR.hospitals.keys()) {
+    const one = hospitalScenario(WR, ccn);
+    if (!one.shares) continue;
+    const texts = caseShareTexts(one.shares);
+    for (const t of texts) assert.doesNotMatch(t, /^0\.0+%$/, `${ccn}: no share printed as zero`);
+    const range = shareRange(one.shares);
+    if (range.under) {
+      under += 1;
+      assert.match(range.under, /^under 0\.00[1-9]%$/, `${ccn}: the bound`);
+      const bound = Number(range.under.replace(/[^\d.]/g, ''));
+      assert.ok(one.shares[2] < bound / 100, `${ccn}: the bound is above the high case`);
+      // Ruling R33: no case label prints the headline's bound or more; each prints the bound itself.
+      for (const t of texts) {
+        assert.ok(t.startsWith('under ') || Number(t.replace(/[^\d.]/g, '')) < bound, `${ccn}: a case printed at or above the bound (${t})`);
+        assert.equal(t, range.under, `${ccn}: the cases print the headline's bound`);
+      }
+    } else {
+      assert.notEqual(texts[0], texts[2], `${ccn}: the printed low and high differ`);
+      assert.deepEqual([range.low, range.high], [texts[0], texts[2]], `${ccn}: the headline is the printed low and high`);
+      assert.ok(!texts.some((t) => t.startsWith('under ')), `${ccn}: numbers only`);
+    }
+  }
+  assert.ok(under > 0, 'the file has a range too small for two numbers');
+  // The pages: a tiny-share hospital's band prints the bound and draws a visible range around its middle mark.
+  const tiny = pick((h) => h.est && wrOf(h)?.shares && shareRange(wrOf(h).shares).under, 'an estimated hospital whose range is too small for two numbers');
+  const band = wrBand(renderWr(tiny));
+  const want = caseShareTexts(wrOf(tiny).shares);
+  assert.ok(band.includes(`<p class="hh__wbv">${shareRange(wrOf(tiny).shares).under}</p>`), 'the bound as the headline');
+  assert.ok(band.includes(`<li>Low case ${want[0]}</li>`) && band.includes(`High case ${want[2]}</li>`), 'the cases as printed');
+  assert.ok(want.every((t) => t === shareRange(wrOf(tiny).shares).under), 'each case the headline\'s bound');
+  assert.doesNotMatch(band, /0\.00%|0\.000%/, 'no zero');
+  // Its dollars agree with the bound: tiny amounts, whole dollars, never "$0".
+  const tinyLost = wrOf(tiny).lost.map((x) => money(x));
+  assert.ok(band.includes(`<p class="hh__wbd">${tinyLost[0]} to ${tinyLost[2]} a year, in ${WR.fy} dollars</p>`), 'the dollar line');
+  assert.ok(tinyLost.every((t) => /^\$[1-9]\d{0,2}$/.test(t)), `tiny dollars (${tinyLost})`);
+  assert.doesNotMatch(/<p class="hh__wbv">(.*?)<\/p>/.exec(band)[1], / to /, 'no "X to X"');
+  const width = Number(/class="hh__wb-band" x="[\d.]+" y="7" width="([\d.]+)"/.exec(band)[1]);
+  assert.ok(width >= 12, 'a visible range');
+  assert.deepEqual(rangeBox(0, 0), { x: 0, width: 12 });
+  assert.deepEqual(rangeBox(995, 1000), { x: 988, width: 12 });
+  assert.deepEqual(rangeBox(100, 300), { x: 100, width: 200 });
 });
