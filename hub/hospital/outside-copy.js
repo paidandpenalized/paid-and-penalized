@@ -83,7 +83,7 @@ export const COPY = typesetCopy({
   // the state's name (likeTextNoState for a code STATE_NAMES lacks). likeTextNotListed*: the not_listed group, which is
   // out of the programs only as far as the files show, so its sentence says what the files list and claims nothing more
   // ({hacrpFy}, {hrrpFy}: the master's programYears; likeTextNotListedSome*: {k} of them a file lists, the
-  // Readmissions-only hospitals).
+  // Readmissions-only hospitals). likeAlt: the US map's name (the map has no place for the territories).
   likeHeading: 'Hospitals like this one',
   'likeCount.critical_access': 'critical access hospitals',
   'likeCount.psychiatric': 'psychiatric hospitals',
@@ -100,6 +100,7 @@ export const COPY = typesetCopy({
   likeTextNotListed: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
   likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
   likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
+  likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}. Puerto Rico and the other territories are not drawn.',
   likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance, formatted;

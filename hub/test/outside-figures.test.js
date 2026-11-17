@@ -3,17 +3,22 @@
 // never by name or CCN; failure messages print no hospital's name, CCN or figure.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { gzipSync } from 'node:zlib';
+import { STATE_NAMES } from '../../engine/js/states.js';
 import { ASSETS } from '../../pipeline/test/helpers.js';
-import { areaMap, miles, nearestTo, pointOf } from '../../web/charts/geo.js';
+import { areaMap, miles, nearestTo, pointOf, usProjected } from '../../web/charts/geo.js';
+import { count } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { hospitalPathOf } from '../../web/site.js';
+import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
-import { fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_MAX_MILES, milesText, nearBlock } from '../hospital/outside-figures.js';
+import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
+import { NEAREST_K, NEAR_MAX_MILES, likeBlock, milesText, nearBlock } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
+import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
 
-const { hub: HUB, hospitals: HOSPITALS, outside: OUTSIDE } = hubModel();
+const { hub: HUB, hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS } = hubModel();
 const FY = String(ASSETS.shell.fy);
 const ESTIMATED = HOSPITALS.filter((h) => h.est);
 const esc = (text) => String(escapeHtml(text));
@@ -99,8 +104,8 @@ test('nearBlock: rural emergency and unlisted acute pages have it too', () => {
 
 test('nearBlock: none on a federal or psychiatric page; none when the nearest is over 250 miles', () => {
   for (const group of ['va', 'dod', 'psychiatric', 'childrens', 'cancer', 'long_term', 'inactive']) {
-    const h = OUTSIDE.find((x) => x.group === group && placed(x));
-    if (h) assert.equal(near(h), '', `${group}: no nearest hospitals`);
+    const h = pick((x) => x.group === group && placed(x), `a ${group} hospital with a place`);
+    assert.equal(near(h), '', `${group}: no nearest hospitals`);
   }
   const cah = pick((x) => x.group === 'critical_access' && placed(x), 'a critical access hospital with a place');
   // A point in the Pacific, far from any hospital the programs adjust.
@@ -132,4 +137,106 @@ test('outside page: the nearest hospitals bring the figure script; a page withou
   const main = mainOf(page);
   assert.ok(main.indexOf('class="hh__near"') > main.indexOf('class="wrap hh__hero"') && main.indexOf('class="hh__near"') < main.indexOf('class="hh__notes"'), 'after the hero, before the notes');
   assert.ok(!outsidePage(args).includes(`src="${ASSETS.js.figure}"`), 'no figure script without them');
+});
+
+// Hospitals like this one. Counts are checked against a recount from the hospital master itself (every record the dollar
+// file does not estimate, grouped by its reason code), not against likeCounts, which the page reads.
+const like = (h) => String(likeBlock(h, { counts: LIKE_COUNTS, sameGroup: sameGroup(h), shapes: HUB.shapes, programYears: HUB.programYears }));
+const YEARS = { hacrpFy: String(HUB.programYears.hacrp), hrrpFy: String(HUB.programYears.hrrp) };
+const textOf = (block) => block.replace(/<[^>]*>/g, '');
+const projected = (h) => usProjected(HUB.shapes, [pointOf(h)], MAP_WIDTH)[0];
+const mapped = (h) => placed(h) && projected(h) !== null;
+const DOLLAR_CCNS = new Set(HUB.dollars.hospitals.map((r) => r.ccn));
+const RECOUNT = (() => {
+  const out = new Map();
+  for (const [ccn, r] of HUB.master) {
+    if (DOLLAR_CCNS.has(ccn)) continue;
+    const g = likeGroupOf(r);
+    if (!out.has(g)) out.set(g, { n: 0, byState: new Map(), listed: 0 });
+    const c = out.get(g);
+    c.n += 1;
+    c.byState.set(r.state, (c.byState.get(r.state) ?? 0) + 1);
+    if (r.programs.hacrp.inProgram || r.programs.hrrp.inProgram) c.listed += 1;
+  }
+  return out;
+})();
+// The sentence the block should print for h, filled from the recount.
+function expectedLike(h) {
+  const c = RECOUNT.get(h.group);
+  const state = STATE_NAMES[h.state];
+  const values = { n: count(c.n), kinds: fillOutside(`likeCount.${h.group}`), ...(state ? { ns: count(c.byState.get(h.state)), state } : {}) };
+  if (h.group !== 'not_listed') return fillOutside(state ? 'likeText' : 'likeTextNoState', values);
+  const some = c.listed > 0;
+  return fillOutside(`likeTextNotListed${some ? 'Some' : ''}${state ? '' : 'NoState'}`, { ...values, ...YEARS, ...(some ? { k: count(c.listed) } : {}) });
+}
+
+test('likeBlock: the count and state count equal a recount from the master', () => {
+  for (const group of RECOUNT.keys()) {
+    const h = pick((x) => x.group === group && STATE_NAMES[x.state], `a ${group} hospital in a named state`);
+    const block = like(h);
+    assert.ok(block.includes('class="hh__like"'), `${group}: the section`);
+    assert.ok(block.includes(esc(fillOutside('likeHeading'))), `${group}: the heading`);
+    assert.ok(block.includes(`<span class="hh__likek">${count(RECOUNT.get(group).n)}</span>`), `${group}: the big count is the group's national count`);
+    assert.ok(textOf(block).includes(esc(expectedLike(h))), `${group}: the sentence names the national and state counts from the master`);
+    const own = `own.${group}`;
+    assert.ok(hasOutside(own) ? block.includes(esc(fillOutside(own))) : !block.includes('class="hh__likeown"'), `${group}: its own program's line where it has one`);
+  }
+  // not_listed pages say what the files list, never that the programs adjust none of them.
+  const nl = pick((x) => x.group === 'not_listed', 'an unlisted acute hospital');
+  assert.ok(!/adjust none/.test(textOf(like(nl))), 'not_listed: no "adjust none" sentence');
+  // A territory STATE_NAMES lacks: the national count alone.
+  const terr = pick((x) => !STATE_NAMES[x.state], 'a hospital in a territory without a state name');
+  assert.ok(textOf(like(terr)).includes(esc(expectedLike(terr))), 'a territory: the sentence without a state');
+});
+
+test('likeBlock: the map marks this hospital, and the dot count equals the group\'s mappable hospitals minus one', () => {
+  for (const group of ['critical_access', 'psychiatric', 'va']) {
+    const h = pick((x) => x.group === group && mapped(x), `a ${group} hospital on the US map`);
+    const block = like(h);
+    const svg = /<svg [^>]*role="img"[^>]*>/.exec(block)?.[0];
+    assert.ok(svg, `${group}: an image`);
+    assert.ok(/aria-label="[^"]+"/.test(svg), `${group}: named`);
+    assert.ok(block.includes('class="chart-land"'), `${group}: the state lines`);
+    // The same group's other hospitals the projection places, counted here, against the dots in the path.
+    const others = sameGroup(h).filter((x) => x.ccn !== h.ccn);
+    const want = usProjected(HUB.shapes, others.map(pointOf), MAP_WIDTH).filter(Boolean).length;
+    const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(block)?.[1] ?? '';
+    assert.ok((d.match(/h0/g) ?? []).length === want, `${group}: a dot for each other mappable hospital of the group`);
+    // This hospital: a ring and a dot at its place.
+    const [x, y] = projected(h);
+    assert.ok(block.includes(`<circle class="hh__likering" cx="${x}" cy="${y}"`) && block.includes(`<circle class="hh__likeme" cx="${x}" cy="${y}"`), `${group}: this hospital ringed at its place`);
+    assert.ok(block.indexOf('class="hh__likeme"') > block.indexOf('hh__likedot'), `${group}: drawn over the other dots`);
+  }
+});
+
+test('likeBlock: no map for a Puerto Rico or Guam hospital, or one without coordinates, and the text is still there', (t) => {
+  const cases = [
+    pick((x) => x.state === 'PR', 'a Puerto Rico hospital'),
+    pick((x) => x.state === 'GU', 'a Guam hospital'),
+    pick((x) => !placed(x), 'a hospital without coordinates'),
+  ];
+  for (const h of cases) {
+    const block = like(h);
+    assert.ok(!block.includes('<svg'), 'no map');
+    assert.ok(textOf(block).includes(esc(expectedLike(h))), 'the count and sentence');
+  }
+  const none = OUTSIDE.filter((x) => !mapped(x)).length;
+  assert.ok(none > 0, 'some pages have no map');
+  t.diagnostic(`${none} outside pages have no "hospitals like this one" map (a territory the US map has no inset for, or no coordinates)`);
+});
+
+// The page-weight ceiling for an outside page, gzip: the HACRP hospital page for the example CCN measured about 39 KB
+// gzip on the 11-17 build; this allows that plus room for the shell's growth. A rendered page is measured here, not dist/.
+const PAGE_GZIP_MAX = 45 * 1024;
+
+test('outside page weight: a critical access page (nearest plus like map) is within the HACRP hospital page\'s gzip size', () => {
+  const h = pick((x) => x.group === 'critical_access' && mapped(x) && !x.listed && near(x) !== '', 'a critical access hospital with both figures');
+  const page = outsidePage({
+    h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears,
+    near: nearBlock(h, { estimated: ESTIMATED, outsideSameGroup: sameGroup(h), shapes: HUB.shapes, counties: HUB.counties, fy: FY }),
+    like: likeBlock(h, { counts: LIKE_COUNTS, sameGroup: sameGroup(h), shapes: HUB.shapes, programYears: HUB.programYears }),
+  });
+  const main = mainOf(page);
+  assert.ok(main.indexOf('class="hh__like"') > main.indexOf('class="hh__near"') && main.indexOf('class="hh__like"') < main.indexOf('class="hh__notes"'), 'after the nearest hospitals, before the notes');
+  assert.ok(gzipSync(page).length <= PAGE_GZIP_MAX, 'gzip size within PAGE_GZIP_MAX');
 });

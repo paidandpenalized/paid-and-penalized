@@ -317,8 +317,8 @@ export function hospitalPage(args) {
 
 // The page of a hospital outside the penalty programs (hub/outside.js outsideHospitals) at the same path. args as
 // hospitalPage's, but with no hospitals, facts or hrrp (it has no peers), and: programYears, loadHub().programYears
-// (required: the years its reasons name); near and like, its figure blocks ('' for none; near: outside-figures.js
-// nearBlock, which brings the figure script).
+// (required: the years its reasons name); near and like, its figure blocks ('' for none; outside-figures.js nearBlock,
+// which brings the figure script, and likeBlock).
 export function outsidePage(args) {
   const fy = String(args.assets.shell.fy);
   const place = { name: args.h.name, place: placeText(args.h) };
