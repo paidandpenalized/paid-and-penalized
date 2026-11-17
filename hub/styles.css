@@ -855,6 +855,8 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 @media (min-width: 1024px) {
   .hh__hero { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); padding-top: 30px; }
   .hh__none { padding-top: 34px; }
+  /* No stamp (a program file lists the hospital): the reason and links sit level with the card's middle, not at its top. */
+  .hh__none--plain { align-self: center; padding-top: 0; }
   .hh__sechead, .hh__row { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
 }
 @media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }

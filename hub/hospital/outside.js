@@ -79,10 +79,13 @@ export function outsideDescription(h, place, fy) {
 export function outsideBody(h, { master, fy, programYears, medicaid, near = '', like = '' }) {
   if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: programYears needs the master\'s HACRP and HRRP years');
   const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
+  // The Medicaid band, where the scenario file has a row. Its dek says Medicare's penalty programs don't touch the hospital,
+  // so a hospital a program file lists keeps the default.
+  const band = medicaidBand(h, medicaid, { net: false, note: h.listed ? null : fillOutside('wbNoteOutside') });
   // Its program pages: Readmissions where that site has one (never a hospital-acquired conditions page: the HACRP site has
-  // pages only for the dollar file's hospitals), and the work-requirement page where the scenario file has a row. The band's
-// dek says Medicare's penalty programs don't touch the hospital, so a hospital a program file lists keeps the default.
-  const links = [h.inHrrp && deepLink(h, 'hrrp'), medicaid.hospitals.has(h.ccn) && wbLink(h.ccn)].filter(Boolean);
+  // pages only for the dollar file's hospitals), and the work-requirement page only where the band, which ends on the same
+  // link a little further down, doesn't show. No pages: no list.
+  const links = [h.inHrrp && deepLink(h, 'hrrp'), !band && medicaid.hospitals.has(h.ccn) && wbLink(h.ccn)].filter(Boolean);
   const stamped = !h.listed;
   // An inactive-group hospital has no reason line: the closed note is its explanation. Its wording holds only for an end
   // by the year's end (web/render/closed.js endedBy), so a later end stops the build rather than leave a bare stamp.
@@ -91,7 +94,7 @@ export function outsideBody(h, { master, fy, programYears, medicaid, near = '', 
   return html`<article class="hh hh--none hh--out" data-ccn="${h.ccn}">
 <div class="wrap hh__hero">
 ${recordCard(h, master, fy)}
-<div class="hh__none">
+<div class="hh__none${stamped ? '' : ' hh__none--plain'}">
 <section class="hh__status"${stamped ? html` aria-labelledby="hh-status-h"` : ''}>
 ${stamped ? html`<h2 class="stamp stamp--ink hh__sh hh__sh--fit" id="hh-status-h">${stampText()}</h2>` : ''}
 ${reasonLines(h, years).map((line) => html`<p class="hh__st">${line}</p>`)}
@@ -103,6 +106,6 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 ${note}
 </div>
 </div>
-${medicaidBand(h, medicaid, { net: false, note: h.listed ? null : fillOutside('wbNoteOutside') })}${near}${like}${sourceNote(years, near !== '')}
+${band}${near}${like}${sourceNote(years, near !== '')}
 </article>`;
 }

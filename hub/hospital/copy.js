@@ -28,6 +28,9 @@ export const COPY = typesetCopy({
   recordTitle: 'Hospital record · FY{fy}',
   recordCcn: 'CCN {ccn}',
   fieldHospital: 'Hospital',
+  // A hospital no CMS file names (the master's stand-in name): the name the page shows, and the card's note under it.
+  nameStandIn: 'Hospital {ccn}',
+  nameNotInCms: 'Name not in CMS files',
   fieldLocation: 'Location',
   fieldType: 'Type',
   // The kind of a hospital that isn't a short-term acute care one (the master's kind), first in its Type field.
@@ -43,6 +46,7 @@ export const COPY = typesetCopy({
   typeTeachMinor: 'Minor teaching',
   typeTeachNone: 'Not a teaching hospital',
   typeBeds: '{beds} beds',
+  typeBed: '{beds} bed',
   typeUrban: 'Urban',
   typeRural: 'Rural',
 

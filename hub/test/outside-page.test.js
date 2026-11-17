@@ -15,6 +15,8 @@ import { outsideDescription } from '../hospital/outside.js';
 import { outsidePage } from '../hospital/page.js';
 import { LIKE_GROUPS } from '../outside.js';
 import { mainOf } from './helpers.js';
+import { chipOf, headerOf } from '../../pipeline/test/helpers.js';
+import { cmsNamed } from '../../pipeline/master.js';
 
 const { hub: HUB, hospitals: HOSPITALS, facts: FACTS, outside: OUTSIDE } = hubModel();
 const FY = String(ASSETS.shell.fy);
@@ -109,8 +111,7 @@ test('outside page: the Medicaid band shows with the outside dek where the scena
   assert.ok(page.includes(esc(fillOutside('wbNoteOutside'))), 'with the outside dek');
   assert.ok(!page.includes(esc(COPY.wbNoteAlone)), 'not the default dek');
   assert.ok(page.includes(`href="${wrHref(drawn)}"`), 'and the work-requirement link');
-  const pages = page.slice(page.indexOf('class="hh__pages"'), page.indexOf('</section>', page.indexOf('class="hh__pages"')));
-  assert.ok(pages.includes(`href="${wrHref(drawn)}"`), 'the program pages list the work-requirement page');
+  assert.equal(occurrences(page, `href="${wrHref(drawn)}"`), 1, 'the link once, in the band: not again in the program pages');
   const hero = page.indexOf('class="wrap hh__hero"');
   assert.ok(hero < page.indexOf('data-medicaid') && page.indexOf('data-medicaid') < page.indexOf('class="hh__notes"'), 'after the hero, before the notes');
 
@@ -223,4 +224,52 @@ test('outside page: the description says closed exactly when the page shows the 
   const place = { name: 'Invented Hospital', place: 'Nowhere, ZZ' };
   assert.ok(outsideDescription(later, place, FY) === fillOutside('descriptionOutside', place), 'its group\'s description');
   assert.ok(outsideDescription({ ...later, inactive: { date: `${Number(FY)}-09-30`, reason: 'merger or closure' } }, place, FY) === fillOutside('descriptionOutsideClosed', place), 'an end within the year: closed');
+});
+
+// The band carries the work-requirement link, so the hero's program pages never repeat it: a hospital with a Readmissions
+// page lists that alone; one with no other page has no list at all.
+test('outside page: the program pages leave the work-requirement link to the band, and a list left empty is dropped', () => {
+  const pagesOf = (main) => (main.includes('class="hh__pages"') ? main.slice(main.indexOf('class="hh__pages"'), main.indexOf('</section>', main.indexOf('class="hh__pages"'))) : null);
+  const withBand = OUTSIDE.filter((x) => HUB.medicaid.hospitals.has(x.ccn));
+  assert.ok(withBand.some((x) => x.inHrrp) && withBand.some((x) => !x.inHrrp), 'the data has banded hospitals with and without a Readmissions page');
+  for (const h of withBand) {
+    const main = mainOf(render(h));
+    assert.ok(main.includes('data-medicaid'), 'the band shows');
+    assert.equal(occurrences(main, `href="${wrHref(h)}"`), 1, 'the work-requirement link once');
+    const pages = pagesOf(main);
+    if (h.inHrrp) assert.ok(pages && !pages.includes(wrHref(h)), 'the list holds the Readmissions page alone');
+    else assert.equal(pages, null, 'no list');
+  }
+});
+
+test('outside page: the header\'s HACRP tab opens the program\'s folder (the HACRP site has no page for the hospital)', () => {
+  const h = pick((x) => x.group === 'critical_access', 'a critical access hospital');
+  const tab = /<a class="tab"[^>]*href="([^"]*)"[^>]*>(?:<span>)?Hospital-acquired conditions/.exec(headerOf(render(h)));
+  assert.ok(tab, 'the HACRP tab');
+  assert.equal(tab[1], SITE.sites.hacrp.path, 'its folder');
+});
+
+// A hospital no CMS file names: the master keeps its stand-in name; the page shows "Hospital <CCN>" in the h1 (display
+// type, no parenthetical), a mono note on the card, the title and the header's chip.
+test('outside page: a hospital no CMS file names goes by "Hospital <CCN>", with a note on its card', () => {
+  const h = pick((x) => !cmsNamed(x.name, x.ccn), 'an outside hospital no CMS file names');
+  const page = render(h);
+  const shown = COPY.nameStandIn.replace('{ccn}', h.ccn);
+  assert.ok(mainOf(page).includes(`<h1 class="field__value hh__name">${esc(shown)}</h1>`), 'the h1');
+  assert.ok(mainOf(page).includes(`<div class="field__note">${esc(COPY.nameNotInCms)}</div>`), 'the card\'s note');
+  assert.ok(!page.includes(esc(h.name)), 'the stand-in name nowhere on the page');
+  assert.ok(chipOf(page)?.includes(esc(shown)), 'the chip');
+  assert.match(page, new RegExp(`<title>${esc(shown)},`), 'the title');
+  assert.ok(HUB.master.get(h.ccn).name === h.name, 'the master keeps its stand-in');
+  const named = pick((x) => cmsNamed(x.name, x.ccn), 'an outside hospital a CMS file names');
+  assert.ok(!mainOf(render(named)).includes(esc(COPY.nameNotInCms)), 'no note where a file names it');
+});
+
+test('outside page: one bed reads "1 bed", more read "beds"', () => {
+  const one = pick((x) => x.beds === 1, 'an outside hospital with one bed');
+  const many = pick((x) => Number.isInteger(x.beds) && x.beds > 1, 'an outside hospital with more beds');
+  const nb = (text) => text.replace(/ /g, '\u00a0');
+  assert.ok(mainOf(render(one)).includes(nb(COPY.typeBed.replace('{beds}', '1'))), 'singular');
+  assert.ok(!/\b1\u00a0beds\b/.test(mainOf(render(one))), 'never "1 beds"');
+  assert.ok(mainOf(render(many)).includes(nb(COPY.typeBeds.replace('{beds}', String(many.beds)))), 'plural');
 });

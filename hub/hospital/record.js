@@ -3,6 +3,7 @@
 // hospital master; its CCN, on the family's form), the links to its pages in the programs, and the note on a hospital
 // whose Medicare agreement has ended.
 import { has } from '../../engine/js/has.js';
+import { cmsNamed } from '../../pipeline/master.js';
 import { fillCopy, formField, formTitle } from '../../web/render/components.js';
 import { closedNoteMarkup } from '../../web/render/closed.js';
 import { count, dotList, placeText, unbroken } from '../../web/render/format.js';
@@ -25,19 +26,23 @@ function typeText(h, master) {
   const parts = [
     kindText(master?.kind),
     TEACH[h.teach] && fill(TEACH[h.teach]),
-    Number.isInteger(h.beds) && unbroken(fill('typeBeds', { beds: count(h.beds) })),
+    Number.isInteger(h.beds) && unbroken(fill(h.beds === 1 ? 'typeBed' : 'typeBeds', { beds: count(h.beds) })),
     own,
     typeof master?.urban === 'boolean' && master.kind !== 'rural_emergency' ? fill(master.urban ? 'typeUrban' : 'typeRural') : null,
   ].filter(Boolean);
   return parts.length ? dotList(parts) : null;
 }
 
-// The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { name, city, state, teach,
-// beds } (the hub hospital, or the same fields from the master); master: its master record, or null.
+// The name a page shows: the master's, or, for a hospital no CMS file names (the master's stand-in name, pipeline/master.js
+// cmsNamed), "Hospital <CCN>", the card noting that CMS's files give no name. The master keeps its stand-in.
+export const shownName = (h) => (cmsNamed(h.name, h.ccn) ? h.name : fill('nameStandIn', { ccn: h.ccn }));
+
+// The record card's first fields: the hospital (the page's h1), where it is and what it is. h: { ccn, name, city, state,
+// teach, beds } (the hub hospital, or the same fields from the master); master: its master record, or null.
 function recordSpecs(h, master) {
   const type = typeText(h, master);
   return [
-    { label: fill('fieldHospital'), value: h.name, as: 'h1', cls: 'hh__name', wide: true },
+    { label: fill('fieldHospital'), value: shownName(h), note: cmsNamed(h.name, h.ccn) ? null : fill('nameNotInCms'), as: 'h1', cls: 'hh__name', wide: true },
     { label: fill('fieldLocation'), value: placeText(h), wide: !type },
     type && { label: fill('fieldType'), value: type, size: 'sm' },
   ].filter(Boolean);

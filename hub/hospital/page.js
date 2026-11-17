@@ -26,7 +26,7 @@ import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { medicaidBand } from './medicaid.js';
 import { outsideBody, outsideDescription } from './outside.js';
-import { closed, deepLink, pageOf, recordCard } from './record.js';
+import { closed, deepLink, pageOf, recordCard, shownName } from './record.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
 import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
@@ -300,7 +300,7 @@ function shell({ h, assets, robots }, place, fy, { description, body, scripts },
     assets,
     scripts,
     preloadFonts: FONTS,
-    hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp, inHacrp },
+    hospital: { ccn: h.ccn, name: place.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp, inHacrp },
   });
 }
 
@@ -319,9 +319,10 @@ export function hospitalPage(args) {
 // The page of a hospital outside the penalty programs (hub/outside.js outsideHospitals) at the same path. args as
 // hospitalPage's, but with no hospitals, facts or hrrp (it has no peers), and: programYears, loadHub().programYears
 // (required: the years its reasons name); near and like, its figure blocks ('' for none; outside-figures.js nearBlock,
-// which brings the figure script, and likeBlock).
+// which brings the figure script, and likeBlock). A hospital no CMS file names goes by "Hospital <CCN>" in its title,
+// description and the header's chip, as on its card (record.js shownName).
 export function outsidePage(args) {
   const fy = String(args.assets.shell.fy);
-  const place = { name: args.h.name, place: placeText(args.h) };
+  const place = { name: shownName(args.h), place: placeText(args.h) };
   return shell(args, place, fy, outsideParts(args, fy, place), false);
 }
