@@ -109,8 +109,11 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     // Methods counts the hospital pages from data: every master hospital, the dollar file's plus the outside ones.
     const { outside: outsideHospitals } = hubModel();
     const allPages = hubHospitals(hub).length + outsideHospitals.length;
+    const listedOutside = outsideHospitals.filter((h) => { const { hacrp, hrrp } = hub.master.get(h.ccn).programs; return hacrp.inProgram || hrrp.inProgram; }).length;
     assert.equal(allPages, hub.master.size, 'a page for every master hospital');
-    assert.ok(text.includes(`Every hospital on Medicare’s hospital list has a page here: ${k(allPages)} in all, ${k(outsideHospitals.length)} of them outside Medicare’s penalty programs.`), 'the hospital pages count');
+    assert.ok(text.includes(`Every hospital on Medicare’s hospital list has a page here: ${k(allPages)} in all, ${k(outsideHospitals.length - listedOutside)} of them outside Medicare’s penalty programs.`), 'the hospital pages count');
+    // Outside the penalty programs: no program's file lists it, recounted from the master's own program flags.
+    assert.ok(listedOutside > 0 && listedOutside < outsideHospitals.length, 'some outside pages are for hospitals a program file lists');
 
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);

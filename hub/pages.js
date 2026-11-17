@@ -93,7 +93,7 @@ ${para('closeNation', {}, { ratio: pct(bands.national.ratio, 1) })}${para('close
 // The family Methods page: what an estimate is, how close the dollar estimates are (closeSection, from the dollar file's
 // back-test), how the hospital-acquired conditions and Readmissions counts differ from page to page (model.js hacCounts and
 // hrrpCounts, over every hub hospital), and which hospital a figure belongs to.
-function methods({ hospitals, fy, bands, hrrp, master, outside = 0, assets, robots }) {
+function methods({ hospitals, fy, bands, hrrp, master, outside = [], assets, robots }) {
   const counts = hacCounts(hospitals);
   const readmissions = hrrpCounts(hospitals, { fy, hrrpFy: hrrp.fy, national: hrrp.national });
   const closed = hospitals.filter((h) => h.est && endedBy(master.get(h.ccn)?.inactive ?? null, fy)).length;
@@ -114,7 +114,7 @@ ${closeSection(bands)}
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
 ${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}<p>${fillCopy(COPY, 'countsHrrp', { fy: String(fy), listed: count(readmissions.file.n), cut: count(readmissions.file.cut), est: count(readmissions.est), estCut: count(readmissions.estCut), other: count(readmissions.file.n - readmissions.est) })}${readmissions.newer ? ` ${fillCopy(COPY, 'countsHrrpNewer', { fy: String(hrrp.fy), listed: count(readmissions.newer.n), cut: count(readmissions.newer.cut) })}` : ''}</p>
-${para('countsPages', {}, { all: count(hospitals.length + outside), outside: count(outside) })}
+${para('countsPages', {}, { all: count(hospitals.length + outside.length), outside: count(outside.filter((h) => !h.listed).length) })}
 ${closed > 1 ? para('countsClosed', {}, { n: count(closed), fy: String(fy) }) : closed === 1 ? para('countsClosedOne', {}, { fy: String(fy) }) : ''}</section>
 <section class="block" id="ccn" aria-labelledby="ccn-h">
 <h2 id="ccn-h">${COPY.ccnHeading}</h2>
@@ -255,7 +255,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const model = hubModel();
   const { hub, hospitals: all, facts } = model;
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, hrrpFy: hub.hrrp.fy, assets, robots }) });
-  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, outside: hospitals ? 0 : model.outside.length, assets, robots }) });
+  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, // A test passing its own hospitals emits no outside pages, so it counts none.
+    outside: hospitals ? [] : model.outside, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
