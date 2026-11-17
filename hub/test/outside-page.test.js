@@ -162,3 +162,18 @@ test('outside page: its title, description, chip and scripts', () => {
   assert.ok(!page.includes(`src="${ASSETS.js['hub-hospital']}"`), 'no hospital script yet');
   assert.ok(page.includes('<article class="hh hh--none hh--out"'), 'the outside article');
 });
+
+test('outside page: the source line names the hospital list and each program file\'s year, not the dollar model or HVBP', () => {
+  const notesOf = (page) => /<div class="hh__notes">[\s\S]*?<\/div><\/div>/.exec(mainOf(page))?.[0] ?? '';
+  for (const group of LIKE_GROUPS) {
+    const h = pick((x) => x.group === group, `an outside hospital in group ${group}`);
+    const notes = notesOf(render(h));
+    assert.ok(notes.includes(esc(fillOutside('sourceOutside', YEARS))), `${group}: the outside source line`);
+    assert.ok(notes.includes(`FY${YEARS.hacrpFy}`) && notes.includes(`FY${YEARS.hrrpFy}`), `${group}: each file's year`);
+    assert.doesNotMatch(notes, /dollar model|HVBP|value-based/i, `${group}: no dollar model or HVBP`);
+  }
+  // With the nearest hospitals' figure (near), the dollar model joins it.
+  const h = OUTSIDE[0];
+  const page = hospitalPage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: '<section></section>' });
+  assert.ok(notesOf(page).includes(esc(fillOutside('sourceOutsideDollars'))), 'the dollar model beside the nearest hospitals');
+});

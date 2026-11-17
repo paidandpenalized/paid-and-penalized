@@ -4,14 +4,14 @@
 // hospital; why the programs don't adjust its pay, from the master's reason code for each program; the program pages it
 // has; the note on a hospital whose Medicare agreement has ended), the Medicaid band where the scenario file has a row,
 // the nearest hospitals in the programs and the hospitals like this one (each a figure block its own module draws, '' for
-// none), and the source line.
+// none), and the source line (the dollar model in it only beside the nearest hospitals' dollars).
 import { has } from '../../engine/js/has.js';
 import { fillCopy } from '../../web/render/components.js';
 import { html } from '../../web/render/html.js';
 import { COPY } from './copy.js';
 import { medicaidBand, wbLink } from './medicaid.js';
 import { OUTSIDE_COPY, fillOutside } from './outside-copy.js';
-import { closed, deepLink, notes, recordCard } from './record.js';
+import { closed, deepLink, recordCard } from './record.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -52,6 +52,11 @@ export function reasonLines(h, years) {
   return [['hacrp', hacrp], ['hrrp', hrrp]].filter(([, code]) => code !== null).map(([id, code]) => programLine(h, id, code, years));
 }
 
+// The source line: the hospital master's files and the program files that place it, and the dollar model only where the
+// page shows dollars (the nearest hospitals' figure, near). years: { hacrpFy, hrrpFy }, as text.
+const sourceNote = (years, dollars) => html`<div class="wrap"><div class="hh__notes">
+<p>${fillOutside('sourceOutside', years)}${dollars ? html` ${fillOutside('sourceOutsideDollars')}` : ''}</p></div></div>`;
+
 // The page's description: why the programs don't adjust its pay (and how Medicare pays it instead, for a group with a
 // line for that), or, for a federal, an unlisted or a closed hospital, what the page holds. place: { name, place }.
 export function outsideDescription(h, place) {
@@ -87,6 +92,6 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 ${closed(h, master, fy, { kept: false })}
 </div>
 </div>
-${medicaidBand(h, medicaid, { net: false, note: 'wbNoteOutside' })}${near}${like}${notes(fy, false)}
+${medicaidBand(h, medicaid, { net: false, note: 'wbNoteOutside' })}${near}${like}${sourceNote(years, String(near) !== '')}
 </article>`;
 }
