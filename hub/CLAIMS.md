@@ -4,8 +4,8 @@ Every sentence on the hub's pages (the front page, the hospital pages across the
 placeholder pages and the not-found page) and in what every page shares (the shell and footer, the program deks and the
 rule constants they print, the registry's program names) that states a fact about CMS's programs, the law or Medicare's
 payment system carries a claim id (`HUB-NN`), or a list of them when it states more than one, in its copy file
-(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/client/story/copy.js`, `web/copy.js`,
-`web/medicaid/copy.js`) or, for a rule
+(`hub/copy.js`, `hub/home/copy.js`, `hub/hospital/copy.js`, `hub/hospital/outside-copy.js`, `hub/client/story/copy.js`,
+`web/copy.js`, `web/medicaid/copy.js`) or, for a rule
 constant (`web/programs.js`) or a program's name (`web/site.js` `long`), in the hub's claims map (`hub/claims.js`). The
 copy gate (`pipeline/test/copy-gate.test.js`) holds this register to the same rules as the program sites'. Each id is a row here:
 the claim in this site's own words, the primary source that supports it, a short quotation from that source, and the
@@ -43,6 +43,19 @@ A claim marked `unverified` may not be used in copy.
 | HUB-24 | CMS's name for the electronic health records program is the Medicare Promoting Interoperability Program. | https://www.cms.gov/medicare/regulations-guidance/promoting-interoperability-programs | "The Medicare Promoting Interoperability Program" | 2026-11-08 |
 | HUB-25 | CMS's name for the surgical episodes model is the Transforming Episode Accountability Model (TEAM). | https://www.cms.gov/priorities/innovation/innovation-models/team-model | "TEAM (Transforming Episode Accountability Model)" | 2026-11-08 |
 | HUB-26 | The 2025 reconciliation law (Public Law 119-21, section 71119) adds the Medicaid work requirement to the Social Security Act under the heading "Community Engagement Requirement for Applicable Individuals" (section 1902(xx)). | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | "SEC. 71119. REQUIREMENT FOR STATES TO ESTABLISH MEDICAID COMMUNITY ENGAGEMENT REQUIREMENTS FOR CERTAIN INDIVIDUALS." … "(xx) Community Engagement Requirement for Applicable Individuals" | 2026-11-10 |
+| HUB-27 | Medicare pays a critical access hospital 101 percent of its reasonable costs; one that is not a meaningful electronic health record user is paid 100 percent (since fiscal year 2017). | https://www.law.cornell.edu/cfr/text/42/413.70 | "101 percent of the reasonable costs of the CAH" … "not a qualifying CAH" … "each subsequent fiscal year, 100 percent" | 2026-11-17 |
+| HUB-28 | An inpatient psychiatric facility paid under Medicare's psychiatric prospective payment system that does not submit the quality data CMS requires has its yearly update cut by 2.0 percentage points. | https://www.law.cornell.edu/cfr/text/42/412.424 | "that does not submit quality data to CMS" … "the applicable annual update to a Federal standard rate is reduced by 2.0 percentage points" | 2026-11-17 |
+| HUB-29 | The value-based purchasing and hospital-acquired conditions programs apply to subsection (d) hospitals, as the readmissions program does (HRRP-11). | https://www.law.cornell.edu/uscode/text/42/1395ww | "the term “hospital” means a subsection (d) hospital" … "the term “applicable hospital” means a subsection (d) hospital" | 2026-11-17 |
+| HUB-30 | A critical access hospital is in a rural area (or treated as rural) and has no more than 25 acute care inpatient beds. | https://www.law.cornell.edu/uscode/text/42/1395i-4 | "located in a county (or equivalent unit of local government) in a rural area" … "provides not more than 25 acute care inpatient beds" | 2026-11-17 |
+| HUB-31 | Medicare pays inpatient psychiatric facilities under a prospective payment system of their own, paid per day (per diem). | https://www.law.cornell.edu/cfr/text/42/412.400 | "a per diem-based prospective payment system for inpatient hospital services of inpatient psychiatric facilities" | 2026-11-17 |
+| HUB-32 | Medicare pays long-term care hospitals under a prospective payment system of their own. | https://www.law.cornell.edu/cfr/text/42/412.500 | "a prospective payment system for long-term care hospitals" | 2026-11-17 |
+| HUB-33 | A hospital excluded from the inpatient prospective payment system and not paid under another prospective system (children's and cancer hospitals) is paid its reasonable costs, up to a ceiling on the rate of increase in its inpatient operating costs per case. | https://www.law.cornell.edu/cfr/text/42/413.40 | "rate of increase in operating costs per case" … "recognized as reasonable" … "Hospitals excluded from the prospective payment systems" | 2026-11-17 |
+| HUB-34 | A rural emergency hospital provides emergency, observation and other outpatient services and may not provide inpatient services (apart from a distinct-part skilled nursing facility unit). | https://www.law.cornell.edu/cfr/text/42/485.502 | "providing emergency department services, observation care, and other outpatient medical and health services" … "The entity must not provide inpatient services" | 2026-11-17 |
+| HUB-35 | Medicare pays a rural emergency hospital the hospital outpatient payment for each service, increased by 5 percent, plus a monthly facility payment. | https://www.law.cornell.edu/cfr/text/42/419.92 | "the amount of payment that would otherwise apply under section 1833(t)" … "increased by 5 percent" … "paid a monthly facility payment" | 2026-11-17 |
+| HUB-36 | Medicare's hospital insurance (Part A) makes no payment to a federal provider of services, apart from narrow exceptions. | https://www.law.cornell.edu/uscode/text/42/1395f | "no payment may be made under this part" … "to any Federal provider of services" … "as a community institution or agency" | 2026-11-17 |
+| HUB-37 | The Health Resources and Services Administration (HRSA) created the Medicare Beneficiary Quality Improvement Project for the quality of care in critical access hospitals. | https://www.hrsa.gov/rural-health/grants/rural-hospitals/medicare-beneficiary-quality-improvement | "We created the Medicare Beneficiary Quality Improvement Project (MBQIP) to improve the quality of care patients receive in Critical Access Hospitals" | 2026-11-17 |
+| HUB-38 | Critical access hospitals' quality reporting through the Medicare Beneficiary Quality Improvement Project is voluntary. | https://www.hrsa.gov/rural-health/grants/rural-hospitals/flex | "Nearly 100% voluntarily reported quality measures through the Medicare Beneficiary Quality Improvement Project." | 2026-11-17 |
+| HUB-39 | The VA publishes quality data on how its medical centers meet quality standards (its Access to Care site). | https://www.accesstocare.va.gov/ | "Quality data on how VA medical centers and nursing homes are meeting quality standards." | 2026-11-17 |
 
 ## Program rows the hub cites
 
@@ -61,6 +74,10 @@ already support hub sentences, so the hub cites them instead of repeating them:
   after both), HACRP-83 (the uncompensated care payment is a share of a national amount), HACRP-86 and HACRP-87 (each
   factor multiplies the base; above 1 a bonus, below 1 a cut), HACRP-91 (Maryland's hospitals are not eligible for a
   readmissions penalty).
+- The page of a hospital outside the penalty programs (`hub/hospital/outside-copy.js`): HRRP-12 (children's, cancer,
+  psychiatric and long-term care hospitals paid outside the inpatient prospective payment system), HRRP-13 (critical
+  access hospitals paid on reasonable costs), HRRP-11 and HRRP-16 (Puerto Rico's hospitals not in Readmissions), and
+  HACRP-18 (subsection (d) hospitals are the ones paid under the inpatient prospective payment system), with HUB-29.
 - Work requirement: WR-01 (states must make community engagement a condition of eligibility) and WR-02 (the people it
   applies to are the expansion group's adults), in the scenario's dek (`dekWorkRequirement`); and, on a hospital page's
   Medicaid band, WR-05 and WR-18 (Urban's mitigation scenarios and its table of each state's expansion-enrollment
@@ -140,6 +157,44 @@ already support hub sentences, so the hub cites them instead of repeating them:
   section's own heading speaks of "Medicaid community engagement requirements"; the subsection heading is the
   requirement's name in the Act it amends, so `long` takes that one. The work requirement is a scenario here, not a CMS
   payment program: CMS gives it no program name.
+- **HUB-27 to HUB-39** (2026-11-17) are the page of a hospital outside the penalty programs
+  (`hub/hospital/outside-copy.js`), each read in full on the page cited (Cornell's eCFR and U.S. Code copies; HRSA's and
+  the VA's pages in Chrome).
+  - **HUB-27** is 42 CFR 413.70(a)(1) (inpatient) and (b) (outpatient: also "101 percent of the reasonable costs"), with
+    the electronic health record adjustment in (a)(6)(i) (100.66 percent in FY2015, 100.33 in FY2016, 100 from FY2017 for
+    a CAH that is not a qualifying CAH, that is not a meaningful EHR user; (a)(6)(ii) allows hardship exceptions). So
+    `reasonInstead.critical_access` says "or less for one that misses Medicare's electronic health record requirements",
+    in the words `dekPi` uses. The wireframe's "no Medicare program cuts its pay for quality" was cut: this adjustment is
+    a Medicare program that cuts a CAH's pay, and no source was checked for "quality".
+  - **HUB-28** is 42 CFR 412.424(d)(1)(vi)(A); (B) adds that the reduction applies to that year only. "Yearly payment
+    update" is the copy's word for "the applicable annual update to a Federal standard rate".
+  - **HUB-29** is 42 U.S.C. 1395ww(o)(1)(C)(i) (value-based purchasing) and (p)(2)(A) (hospital-acquired conditions:
+    "a subsection (d) hospital that meets the criteria described in subparagraph (B)"). Readmissions' (q)(5)(C) adds
+    Maryland's hospitals paid under 1814(b)(3) (HRRP-11, HACRP-91). HACRP-18 gives subsection (d) hospitals as the ones
+    paid under the inpatient prospective payment system, so the reason sentences cite both.
+  - **HUB-30** is 42 U.S.C. 1395i-4(c)(2)(B)(i) and (iii); 42 CFR 485.610(b) and 485.620(a) ("no more than 25 inpatient
+    beds") say the same. "Small rural hospitals" is the copy's summary of the two.
+  - **HUB-31 and HUB-32** are 42 CFR 412.400(a) (subpart N) and 412.500(a)(1) (subpart O). Psychiatric units and
+    rehabilitation hospitals are paid under their own systems too; no outside group here is a rehabilitation hospital.
+  - **HUB-33** is 42 CFR 413.40(a)(1) and (a)(2)(ii)(A). (a)(2)(i)(C) to (E) take psychiatric, rehabilitation and
+    long-term care hospitals out of it, leaving the excluded hospitals of 42 CFR 412.23 that have no system of their own,
+    children's (412.23(d)) and cancer (412.23(f)) hospitals. "Per stay" is the copy's word for "per case". The cancer
+    reason says "Hospitals Medicare classifies as cancer hospitals": 412.23(f) classifies a hospital that meets its
+    criteria; the master's `cancer` kind is Care Compare's "Dedicated Cancer Care", which this register does not check
+    against 412.23(f) hospital by hospital.
+  - **HUB-34** is 42 CFR 485.502 (subpart E), which also caps the annual average stay at 24 hours.
+  - **HUB-35** is 42 CFR 419.92(a)(1) and (b). Section 1833(t) is the hospital outpatient prospective payment system.
+    The copy says "plus a set percentage", not the 5 percent, to keep a rule number out of copy without a constant.
+  - **HUB-36** is 42 U.S.C. 1395f(c), part A. The exceptions are the statute's own: a federal provider "providing
+    services to the public generally as a community institution or agency", emergency services (1395f(d)) and some VA
+    admissions (1395f(h)); the copy says "apart from narrow exceptions". "Hospital insurance" is part A's name.
+  - **HUB-37 and HUB-38** are HRSA's MBQIP page (last reviewed July 2024) and its Flex page (last reviewed February
+    2024, the 2022 figure). Neither page uses the word "voluntary" for MBQIP itself; the Flex page says the hospitals
+    "voluntarily reported" through it. Both answer a plain `curl` with 403 and a browser with the page.
+  - **HUB-39** is the VA's Access to Care site, where the VA's quality page
+    (https://www.va.gov/QUALITYOFCARE/measure-up/Strategic_Analytics_for_Improvement_and_Learning_SAIL.asp) now
+    redirects. The VA's SAIL star ratings are not named in the copy: no current va.gov page listing them was found.
+    CMS also gives VA hospitals overall star ratings on Care Compare; the copy doesn't say the VA's data is the only one.
 - **Fiscal years.** The hub's dollars, the front page and the hospital pages are FY2026 (`data/emitted/dollars/fy2026`);
   HUB-04 and the HUB-06/07 figures cite the FY2026 rule. The Readmissions site's pages are FY2027 (HRRP-14, HRRP-19); the
   deks name no year and the rules they state (the 3 percent cap, 30 days, 2 percent, a quarter and three-quarters, the
@@ -179,6 +234,18 @@ Each source above, fetched with `curl -sIL` (at most two requests a second per h
 | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | 200 to a browser-like client (redirects to the section's full path); a plain `curl` gets the bot check | api (the eCFR renderer API, 200) |
 | https://www.govinfo.gov/content/pkg/PLAW-119publ21/html/PLAW-119publ21.htm | 200 (2026-11-10; about 1.2 MB, the enrolled law's text; sections 71119 and 1902(xx) read in full) | direct |
 | https://docs.google.com/forms/d/e/1FAIpQLSekdB41siZs44_4gLNBGD2OqalK2TGNk7o8Q0bHl20ggYBy_Q/viewform | 200 (the form's public page, read only; nothing submitted) | direct |
+| https://www.law.cornell.edu/cfr/text/42/413.70 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.424 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/uscode/text/42/1395i-4 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.400 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/412.500 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/413.40 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/485.502 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/cfr/text/42/419.92 | 200 (2026-11-17) | direct |
+| https://www.law.cornell.edu/uscode/text/42/1395f | 200 (2026-11-17) | direct |
+| https://www.hrsa.gov/rural-health/grants/rural-hospitals/medicare-beneficiary-quality-improvement | 200 to a browser (Chrome, 2026-11-17); 403 to a plain `curl` | browser |
+| https://www.hrsa.gov/rural-health/grants/rural-hospitals/flex | 200 to a browser (Chrome, 2026-11-17); 403 to a plain `curl` | browser |
+| https://www.accesstocare.va.gov/ | 200 (2026-11-17) | direct |
 
 
 ## Where each claim is used
@@ -236,6 +303,20 @@ labels, or a statement about the site: the next section).
 | `hub/hospital/copy.js` | whyHacCut, statusHacCut, partHacCut, partUnscoredCut, wiIfHacOn | HACRP-01 |
 | `hub/hospital/copy.js` | whatifStanding | HRRP-04, HACRP-02, HUB-02 |
 | `hub/hospital/copy.js` | wbHow (the Medicaid band) | WR-05, WR-18 |
+| `hub/claims.js` | CAH_COST_PCT, IPFQR_REDUCTION_PTS (`web/programs.js`; the outside page's rule numbers) | HUB-27, HUB-28 |
+| `hub/hospital/outside-copy.js` | reason.critical_access | HUB-30, HRRP-13, HUB-29, HACRP-18 |
+| `hub/hospital/outside-copy.js` | reason.psychiatric, reason.childrens, reason.cancer, reason.long_term | HRRP-12, HUB-29, HACRP-18 |
+| `hub/hospital/outside-copy.js` | reason.rural_emergency | HUB-34, HUB-29, HACRP-18 |
+| `hub/hospital/outside-copy.js` | reason.va, reason.dod | HUB-36 |
+| `hub/hospital/outside-copy.js` | reasonInstead.critical_access | HUB-27 |
+| `hub/hospital/outside-copy.js` | reasonInstead.psychiatric | HUB-31 |
+| `hub/hospital/outside-copy.js` | reasonInstead.long_term | HUB-32 |
+| `hub/hospital/outside-copy.js` | reasonInstead.childrens, reasonInstead.cancer | HUB-33 |
+| `hub/hospital/outside-copy.js` | reasonInstead.rural_emergency | HUB-35 |
+| `hub/hospital/outside-copy.js` | notInHrrpPuertoRico | HRRP-11, HRRP-16 |
+| `hub/hospital/outside-copy.js` | own.critical_access | HUB-37, HUB-38 |
+| `hub/hospital/outside-copy.js` | own.psychiatric | HUB-28 |
+| `hub/hospital/outside-copy.js` | own.va | HUB-39 |
 
 ## Statements about this site
 

@@ -4,14 +4,15 @@
 // programs[].long). The register covers the hub's pages and the copy every page shares (web/), so, like shared copy, this
 // map may cite a program site's row where one already supports the fact. Only the tests import this module.
 export {
-  HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IQR_REDUCTION_SHARE, PI_REDUCTION_SHARE, TEAM_SURGERIES,
-  VBP_WITHHOLD_PCT,
+  CAH_COST_PCT, HAC_CUT_PCT, HAC_TOP_SHARE, HRRP_CAP_PCT, HRRP_WINDOW_DAYS, IPFQR_REDUCTION_PTS, IQR_REDUCTION_SHARE,
+  PI_REDUCTION_SHARE, TEAM_SURGERIES, VBP_WITHHOLD_PCT,
 } from '../web/programs.js';
 
 export const CLAIM_PREFIX = 'HUB';
 export const METHOD_CONSTANTS = Object.freeze({
   HRRP_CAP_PCT: 'number', HAC_CUT_PCT: 'number', VBP_WITHHOLD_PCT: 'number', HRRP_WINDOW_DAYS: 'number',
   HAC_TOP_SHARE: 'number', IQR_REDUCTION_SHARE: 'number', PI_REDUCTION_SHARE: 'number', TEAM_SURGERIES: 'number',
+  CAH_COST_PCT: 'number', IPFQR_REDUCTION_PTS: 'number',
 });
 
 // Each program's name, by its registry id, and the row that gives it as CMS does (a scenario's: as the statute heads it).
@@ -29,5 +30,7 @@ export const CLAIMS = Object.freeze({
   IQR_REDUCTION_SHARE: 'HUB-06',
   PI_REDUCTION_SHARE: 'HUB-07',
   TEAM_SURGERIES: 'HUB-11',
+  CAH_COST_PCT: 'HUB-27',
+  IPFQR_REDUCTION_PTS: 'HUB-28',
   ...Object.fromEntries(Object.entries(PROGRAM_NAME_CLAIMS).map(([id, claim]) => [`name:${id}`, claim])),
 });

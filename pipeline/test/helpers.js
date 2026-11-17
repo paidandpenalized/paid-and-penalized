@@ -1,9 +1,9 @@
 // Shared test helpers for the page build.
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { repoFiles, writeFileMkdir } from '../files.js';
+import { REPO_ROOT, repoFiles, writeFileMkdir } from '../files.js';
 import { tags, textOf } from '../site/html.js';
 import { createSiteServer, listen, stop } from '../site/serve.js';
 
@@ -75,9 +75,15 @@ export function get(port, path) {
   });
 }
 
-// Every copy file (web/copy.js, hub/copy.js and each site's), tracked or not yet added, from one listing of the repo.
+// Every copy file (web/copy.js, hub/copy.js and each site's), tracked or not yet added, from one listing of the repo: each
+// copy.js under web/, hub/ or sites/, and each <name>-copy.js there that exports a COPY of its own (a page variant's
+// words, such as hub/hospital/outside-copy.js). A <name>-copy.js without one (group-copy.js, chip-copy.js) holds parts a
+// copy.js spreads in, which the guards read there.
 let copyList = null;
-export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter((p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)));
+const COPY_EXPORT = /^export (const|let|function) COPY\b/m;
+const isCopyFile = (p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)
+  || (/^(web|hub|sites)\/(.+\/)?[\w]+-copy\.js$/.test(p) && COPY_EXPORT.test(readFileSync(REPO_ROOT + p, 'utf8')));
+export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter(isCopyFile));
 
 // Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches", and the
 // words that call a page a stand-in for a later one ("interim", "temporary", "temporarily", "for now"). A program the site
