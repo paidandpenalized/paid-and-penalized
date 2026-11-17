@@ -4,11 +4,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LIKE_GROUPS } from '../outside.js';
-import { OUTSIDE_COPY, fillOutside } from '../hospital/outside-copy.js';
+import { COPY, fillOutside } from '../hospital/outside-copy.js';
 import { copyFiles } from '../../pipeline/test/helpers.js';
 
-const texts = () => Object.entries(OUTSIDE_COPY).map(([key, v]) => [key, typeof v === 'string' ? v : v.text]);
-const claimOf = (key) => (typeof OUTSIDE_COPY[key] === 'string' ? null : OUTSIDE_COPY[key]?.claim ?? null);
+const texts = () => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? v : v.text]);
+const claimOf = (key) => (typeof COPY[key] === 'string' ? null : COPY[key]?.claim ?? null);
 // The group whose page reuses the closed note instead of a reason of its own.
 const NO_REASON = new Set(['inactive']);
 
@@ -18,19 +18,19 @@ test('every LIKE_GROUPS group has a reason (inactive excepted) and a likeCount n
     if (NO_REASON.has(group) || group === 'not_listed') continue;
     assert.ok(fillOutside(`reason.${group}`, {}).length > 0, `reason.${group}`);
   }
-  assert.ok(!(`reason.inactive` in OUTSIDE_COPY), 'inactive reuses the closed note');
-  for (const key of ['notListedBoth', 'notListedHacrp', 'notListedHrrp', 'notInHrrpPuertoRico']) assert.ok(key in OUTSIDE_COPY, key);
+  assert.ok(!(`reason.inactive` in COPY), 'inactive reuses the closed note');
+  for (const key of ['notListedBoth', 'notListedHacrp', 'notListedHrrp', 'notInHrrpPuertoRico']) assert.ok(key in COPY, key);
 });
 
 test('every reason, reasonInstead and own line carries a claim', () => {
-  const keyed = Object.keys(OUTSIDE_COPY).filter((k) => /^(reason|reasonInstead|own)\./.test(k) || k === 'notInHrrpPuertoRico');
+  const keyed = Object.keys(COPY).filter((k) => /^(reason|reasonInstead|own)\./.test(k) || k === 'notInHrrpPuertoRico');
   assert.ok(keyed.length >= LIKE_GROUPS.length, 'the reason keys are there');
   for (const key of keyed) assert.ok([claimOf(key)].flat().filter(Boolean).length > 0, `${key}: no claim`);
-  for (const group of ['critical_access', 'psychiatric', 'va']) assert.ok(`own.${group}` in OUTSIDE_COPY, `own.${group}`);
+  for (const group of ['critical_access', 'psychiatric', 'va']) assert.ok(`own.${group}` in COPY, `own.${group}`);
 });
 
 test('no copy value counts the programs', () => {
-  assert.ok('wbNoteOutside' in OUTSIDE_COPY);
+  assert.ok('wbNoteOutside' in COPY);
   for (const [key, text] of texts()) assert.doesNotMatch(text, /\b(three|these three|both programs)\b/i, key);
 });
 

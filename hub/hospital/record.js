@@ -1,7 +1,7 @@
 // The parts every hospital page across the programs shares (hub/hospital/page.js, and outside.js for a hospital outside
 // the penalty programs): the record card at the top (the hospital, the page's h1; where it is; what it is, from the
-// hospital master; its CCN, on the family's form), the links to its pages in the programs, the note on a hospital whose
-// Medicare agreement has ended, and the source lines at the foot.
+// hospital master; its CCN, on the family's form), the links to its pages in the programs, and the note on a hospital
+// whose Medicare agreement has ended.
 import { has } from '../../engine/js/has.js';
 import { fillCopy, formField, formTitle } from '../../web/render/components.js';
 import { closedNoteMarkup } from '../../web/render/closed.js';
@@ -18,8 +18,8 @@ const TEACH = { major: 'typeTeachMajor', minor: 'typeTeachMinor', none: 'typeTea
 // else null.
 const kindText = (kind) => (kind && has(COPY, `typeKind.${kind}`) ? fill(`typeKind.${kind}`) : null);
 
-// The Type field: what the master knows (its kind where that isn't acute care, teaching, beds, ownership, urban or rural),
-// or null when it knows none of it. An ownership the master calls Unknown says nothing, so it is left out.
+// The Type field: what the master knows (its kind where that isn't acute care, teaching, beds, ownership, urban or rural,
+// the last left out where the kind already says rural), or null when it knows none of it. An ownership the master calls Unknown says nothing, so it is left out.
 function typeText(h, master) {
   const own = master?.own && master.own !== 'Unknown' ? master.own : null;
   const parts = [
@@ -27,7 +27,7 @@ function typeText(h, master) {
     TEACH[h.teach] && fill(TEACH[h.teach]),
     Number.isInteger(h.beds) && unbroken(fill('typeBeds', { beds: count(h.beds) })),
     own,
-    typeof master?.urban === 'boolean' ? fill(master.urban ? 'typeUrban' : 'typeRural') : null,
+    typeof master?.urban === 'boolean' && master.kind !== 'rural_emergency' ? fill(master.urban ? 'typeUrban' : 'typeRural') : null,
   ].filter(Boolean);
   return parts.length ? dotList(parts) : null;
 }
@@ -50,7 +50,7 @@ ${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
 </div>`;
 }
 
-// ---------- the links, the closed note and the notes ----------
+// ---------- the links and the closed note ----------
 
 // The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
 // hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
@@ -79,8 +79,3 @@ export function closed(h, master, fy, { kept = true } = {}) {
   const note = closedNoteMarkup({ ccn: h.ccn, inactive: master?.inactive ?? null, fy: Number(fy), dollars: h.est?.net ?? 0, kept }, 'hh__closed-tail');
   return note ? html`<p class="hh__closed">${note}</p>` : '';
 }
-
-// The source line, and with dollars on the page, what they are and the fairness line.
-export const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
-<p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
-${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;

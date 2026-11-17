@@ -124,15 +124,16 @@ export const COPY = typesetCopy({
   descriptionOutsideNotListed: "{name} in {place}: its Medicare record, and which of CMS's penalty program files list it.",
   descriptionOutsideClosed: "{name} in {place}: its Medicare record. CMS lists its Medicare agreement as ended.",
 });
-export const OUTSIDE_COPY = COPY;
 
-// The rules' numbers, by placeholder, as the sentences print them: "101%" and "two".
-const RULES = { costPct: () => rulePercent(CAH_COST_PCT), ipfqrPts: () => spelled(IPFQR_REDUCTION_PTS) };
+export const hasOutside = (key) => has(COPY, key);
 
-// OUTSIDE_COPY[key] typeset, with its rule placeholders filled from web/programs.js and the rest from values (strings,
-// formatted). A missing key, a missing value or an unused one throws (fillCopy).
+// The rules' numbers, by placeholder, as the sentences print them: "101%" and "two". Worked out once.
+const RULES = Object.entries({ costPct: rulePercent(CAH_COST_PCT), ipfqrPts: spelled(IPFQR_REDUCTION_PTS) });
+
+// COPY[key] typeset, with its rule placeholders filled from web/programs.js and the rest from values (strings, formatted).
+// A missing key, a missing value or an unused one throws (fillCopy).
 export function fillOutside(key, values = {}) {
   const text = has(COPY, key) ? copyText(COPY[key]) : '';
-  const rules = Object.fromEntries(Object.entries(RULES).filter(([name]) => text.includes(`{${name}}`)).map(([name, f]) => [name, f()]));
+  const rules = Object.fromEntries(RULES.filter(([name]) => text.includes(`{${name}}`)));
   return fillCopy(COPY, key, { ...rules, ...values });
 }

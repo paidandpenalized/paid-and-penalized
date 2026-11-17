@@ -9,7 +9,7 @@ import { ATLAS_ID, countyShapes, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
 import { masterByCcn } from '../pipeline/master.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
-import { outsideHospitals } from './outside.js';
+import { likeCounts, outsideHospitals } from './outside.js';
 
 // The inputs must agree before any page is built from them: the dollar estimates are for the year the master calls its
 // HACRP year (the common fiscal year the hub shows), every dollar CCN is in the master, and the Readmissions
@@ -96,13 +96,14 @@ let model = null;
 
 // The hub's hospitals (model.js hubHospitals) and their story facts (storyFacts), from loadHub's files, worked out once per
 // build: the build's context (the shell's facts and the hub's data asset, pipeline/site/build.js) and the hub's pages
-// (pages.js) share them. { hub: loadHub(), hospitals, facts, outside }, outside being the master's hospitals the dollar
-// file does not have (outside.js).
+// (pages.js) share them. { hub: loadHub(), hospitals, facts, outside, likeCounts }, outside being the master's hospitals the dollar
+// file does not have (outside.js) and likeCounts their counts by group, by state (outside.js likeCounts).
 export function hubModel() {
   if (model) return model;
   const hub = loadHub();
   const hospitals = hubHospitals(hub);
   const dollarCcns = new Set(hub.dollars.hospitals.map((r) => r.ccn));
-  model = { hub, hospitals, facts: storyFacts(hospitals), outside: outsideHospitals({ master: hub.master, dollarCcns, hrrp: hub.hrrp }) };
+  const outside = outsideHospitals({ master: hub.master, dollarCcns, hrrp: hub.hrrp });
+  model = { hub, hospitals, facts: storyFacts(hospitals), outside, likeCounts: likeCounts(outside) };
   return model;
 }

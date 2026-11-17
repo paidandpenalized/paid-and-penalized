@@ -5,12 +5,11 @@
 // has; the note on a hospital whose Medicare agreement has ended), the Medicaid band where the scenario file has a row,
 // the nearest hospitals in the programs and the hospitals like this one (each a figure block its own module draws, '' for
 // none), and the source line (the dollar model in it only beside the nearest hospitals' dollars).
-import { has } from '../../engine/js/has.js';
 import { fillCopy } from '../../web/render/components.js';
 import { html } from '../../web/render/html.js';
 import { COPY } from './copy.js';
 import { medicaidBand, wbLink } from './medicaid.js';
-import { OUTSIDE_COPY, fillOutside } from './outside-copy.js';
+import { fillOutside, hasOutside } from './outside-copy.js';
 import { closed, deepLink, recordCard } from './record.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -18,24 +17,24 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 // The groups of federal hospitals, which Medicare doesn't pay: their reason says so and no "instead" follows.
 const FEDERAL = new Set(['va', 'dod']);
 
-// The stamp, with a line break (hidden on a phone, styles.css .hh__br-wide) before "penalty", so the box fits two short
-// lines on a wide screen.
+// The stamp's markup, with a line break (hidden on a phone, styles.css .hh__br-wide) before "penalty", so the box fits two
+// short lines on a wide screen. The same on every page, so drawn once, when first needed.
+let stampMarkup = null;
 function stampText() {
-  const text = fillOutside('stamp');
-  const at = text.indexOf(' penalty');
-  if (at < 0) throw new RangeError('outside: the stamp has no "penalty" to break before');
-  return html`${text.slice(0, at)} <br class="hh__br-wide">${text.slice(at + 1)}`;
+  if (!stampMarkup) {
+    const text = fillOutside('stamp');
+    const at = text.indexOf(' penalty');
+    if (at < 0) throw new RangeError('outside: the stamp has no "penalty" to break before');
+    stampMarkup = html`${text.slice(0, at)} <br class="hh__br-wide">${text.slice(at + 1)}`;
+  }
+  return stampMarkup;
 }
 
-// The Readmissions line for a hospital its file doesn't list: in Puerto Rico, the program's own reason (it covers the
-// fifty states and DC); elsewhere, the file that leaves it out.
-const hrrpNotListed = (h, years) => (h.state === 'PR' ? fillOutside('notInHrrpPuertoRico') : fillOutside('notListedHrrp', { hrrpFy: years.hrrpFy }));
-
-// The line for one program's reason code where the two programs' codes differ. Only "not listed" has a line of its own
-// per program; any other pair of codes stops the build rather than guess at a reason.
-function programLine(h, id, code, years) {
-  if (code !== 'not_listed') throw new RangeError(`outside: ${h.ccn}: no wording for a ${id} reason of ${JSON.stringify(code)} that differs from the other program's`);
-  return id === 'hacrp' ? fillOutside('notListedHacrp', { hacrpFy: years.hacrpFy }) : hrrpNotListed(h, years);
+// The line for a program's file not listing the hospital. Readmissions, in Puerto Rico: the program's own reason (it covers
+// the fifty states and DC); elsewhere, the file that leaves it out.
+function notListedLine(h, id, years) {
+  if (id === 'hacrp') return fillOutside('notListedHacrp', { hacrpFy: years.hacrpFy });
+  return h.state === 'PR' ? fillOutside('notInHrrpPuertoRico') : fillOutside('notListedHrrp', { hrrpFy: years.hrrpFy });
 }
 
 // Why the programs don't adjust the hospital's pay, a paragraph each, from the master's reason code for each program
@@ -46,10 +45,15 @@ export function reasonLines(h, years) {
   const { hacrp, hrrp } = h.reasons;
   if (hacrp === hrrp) {
     if (hacrp === 'inactive') return [];
-    if (hacrp === 'not_listed') return h.state === 'PR' ? [fillOutside('notListedHacrp', { hacrpFy: years.hacrpFy }), hrrpNotListed(h, years)] : [fillOutside('notListedBoth', years)];
-    return [[`reason.${h.group}`, `reasonInstead.${h.group}`].filter((key) => has(OUTSIDE_COPY, key)).map((key) => fillOutside(key)).join(' ')];
+    if (hacrp === 'not_listed') return h.state === 'PR' ? ['hacrp', 'hrrp'].map((id) => notListedLine(h, id, years)) : [fillOutside('notListedBoth', years)];
+    return [[`reason.${h.group}`, `reasonInstead.${h.group}`].filter(hasOutside).map((key) => fillOutside(key)).join(' ')];
   }
-  return [['hacrp', hacrp], ['hrrp', hrrp]].filter(([, code]) => code !== null).map(([id, code]) => programLine(h, id, code, years));
+  // Codes that differ: only "not listed" has a line of its own per program; any other pair of codes stops the build rather
+  // than guess at a reason.
+  return [['hacrp', hacrp], ['hrrp', hrrp]].filter(([, code]) => code !== null).map(([id, code]) => {
+    if (code !== 'not_listed') throw new RangeError(`outside: ${h.ccn}: no wording for a ${id} reason of ${JSON.stringify(code)} that differs from the other program's`);
+    return notListedLine(h, id, years);
+  });
 }
 
 // The source line: the hospital master's files and the program files that place it, and the dollar model only where the
@@ -63,7 +67,7 @@ export function outsideDescription(h, place) {
   if (h.inactive) return fillOutside('descriptionOutsideClosed', place);
   if (FEDERAL.has(h.group)) return fillOutside('descriptionOutsideFederal', place);
   if (h.group === 'not_listed') return fillOutside('descriptionOutsideNotListed', place);
-  if (!has(OUTSIDE_COPY, `reasonInstead.${h.group}`)) throw new RangeError(`outside: no description for group ${h.group}`);
+  if (!hasOutside(`reasonInstead.${h.group}`)) throw new RangeError(`outside: no description for group ${h.group}`);
   return fillOutside('descriptionOutside', place);
 }
 
@@ -96,6 +100,6 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 ${note}
 </div>
 </div>
-${medicaidBand(h, medicaid, { net: false, note: 'wbNoteOutside' })}${near}${like}${sourceNote(years, String(near) !== '')}
+${medicaidBand(h, medicaid, { net: false, note: fillOutside('wbNoteOutside') })}${near}${like}${sourceNote(years, near !== '')}
 </article>`;
 }

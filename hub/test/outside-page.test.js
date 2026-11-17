@@ -1,4 +1,4 @@
-// The page of a hospital outside Medicare's penalty programs (hub/hospital/outside.js, through page.js hospitalPage), on
+// The page of a hospital outside Medicare's penalty programs (hub/hospital/outside.js, through page.js outsidePage), on
 // the pinned data. Rows are picked by property, never by name or CCN; failure messages print no hospital's name, CCN or
 // figure.
 import { test } from 'node:test';
@@ -11,7 +11,7 @@ import { SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { fillOutside } from '../hospital/outside-copy.js';
-import { hospitalPage } from '../hospital/page.js';
+import { outsidePage } from '../hospital/page.js';
 import { LIKE_GROUPS } from '../outside.js';
 import { mainOf } from './helpers.js';
 
@@ -20,7 +20,7 @@ const FY = String(ASSETS.shell.fy);
 const YEARS = { hacrpFy: String(HUB.programYears.hacrp), hrrpFy: String(HUB.programYears.hrrp) };
 const esc = (text) => String(escapeHtml(text));
 
-const render = (h, medicaid = HUB.medicaid) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid, programYears: HUB.programYears });
+const render = (h, medicaid = HUB.medicaid) => outsidePage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid, programYears: HUB.programYears });
 const pick = (pred, what) => {
   const h = OUTSIDE.find(pred);
   assert.ok(h, `the data has ${what}`);
@@ -174,7 +174,7 @@ test('outside page: the source line names the hospital list and each program fil
   }
   // With the nearest hospitals' figure (near), the dollar model joins it.
   const h = OUTSIDE[0];
-  const page = hospitalPage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: '<section></section>' });
+  const page = outsidePage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: '<section></section>' });
   assert.ok(notesOf(page).includes(esc(fillOutside('sourceOutsideDollars'))), 'the dollar model beside the nearest hospitals');
 });
 
@@ -184,7 +184,7 @@ test('outside page: an inactive-group hospital whose agreement ends after the ye
   const later = { ...record, inactive: { ...record.inactive, date: `${Number(FY)}-10-01` } };
   let message = null;
   try {
-    hospitalPage({ h: { ...h, inactive: later.inactive }, assets: ASSETS, robots: null, master: later, medicaid: HUB.medicaid, programYears: HUB.programYears });
+    outsidePage({ h: { ...h, inactive: later.inactive }, assets: ASSETS, robots: null, master: later, medicaid: HUB.medicaid, programYears: HUB.programYears });
   } catch (e) {
     message = e instanceof RangeError ? e.message : null;
   }

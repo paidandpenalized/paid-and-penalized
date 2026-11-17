@@ -1,5 +1,6 @@
 // A hospital's page across the programs, /hospital/<ccn>/, server-rendered, for every hospital in the dollar file, and, its
-// body drawn by outside.js, for every other hospital in the hospital master (one outside the penalty programs). With an
+// body drawn by outside.js (outsidePage), for every other hospital in the hospital master (one outside the penalty
+// programs). With an
 // estimate: the record card, the net of the three programs (its stamp and the common fiscal year's note) with each
 // program's dollars as rows adding to it, each beside its peers' median; the headline that compares the net with the
 // same-state peers' median, over the frame the page's script draws the peer swarm in; the what-if section's rows; the
@@ -25,7 +26,7 @@ import { arrow, estimateTag, hubPage } from '../parts.js';
 import { COPY } from './copy.js';
 import { medicaidBand } from './medicaid.js';
 import { outsideBody, outsideDescription } from './outside.js';
-import { closed, deepLink, notes, pageOf, recordCard } from './record.js';
+import { closed, deepLink, pageOf, recordCard } from './record.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
 import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
@@ -254,6 +255,11 @@ ${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
 </article>`;
 }
 
+// The source line, and with dollars on the page, what they are and the fairness line.
+export const notes = (fy, dollars) => html`<div class="wrap"><div class="hh__notes">
+<p>${fill('source', { fy })}${dollars ? html` ${fill('sourceDollars', { fy })}` : ''}</p>
+${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
+
 // A hub hospital's description, body and scripts: with an estimate, the net, its peers and the what-if (and the script
 // that draws them); without one (Maryland's, or no inputs), its status and why.
 function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, medicaid }, fy, place) {
@@ -278,19 +284,9 @@ function outsideParts({ h, master = null, medicaid, programYears, near = '', lik
   return { description: outsideDescription(h, place), body: outsideBody(h, { master, fy, programYears, medicaid, near, like }), scripts: [] };
 }
 
-// The page at hospitalPathOf('hub', h.ccn). h: the hospital, either a hub hospital (hub/model.js hubHospitals) or one
-// outside the penalty programs (hub/outside.js outsideHospitals; told apart by its `group`); hospitals: every hub hospital
-// (its peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital
-// master record (the Type field's kind, ownership and urban or rural); assets: the build's (the fiscal year is the
-// shell's); robots: the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer
-// factor (none: no note); medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario
-// file; a hospital with no row in it gets no band). For an outside hospital only: programYears, loadHub().programYears
-// (required: the years its reasons name); near and like, its figure blocks ('' for none).
-export function hospitalPage(args) {
-  const { h, assets, robots } = args;
-  const fy = String(assets.shell.fy);
-  const place = { name: h.name, place: placeText(h) };
-  const { description, body, scripts } = 'group' in h ? outsideParts(args, fy, place) : hubParts(args, fy, place);
+// The page shell around a body: the title, path, fonts and the header's hospital chip, shared by a hub hospital's page and
+// an outside hospital's. parts: { description, body, scripts }.
+function shell({ h, assets, robots }, place, fy, { description, body, scripts }) {
   return hubPage({
     title: `${fill('title', { ...place, fy })} · ${SITE.name}`,
     description,
@@ -302,4 +298,25 @@ export function hospitalPage(args) {
     preloadFonts: FONTS,
     hospital: { ccn: h.ccn, name: h.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp },
   });
+}
+
+// The page at hospitalPathOf('hub', h.ccn). h: a hub hospital (hub/model.js hubHospitals); hospitals: every hub hospital
+// (its peers are among them); facts: storyFacts(hospitals) (`n`, the hospitals with an estimate); master: h's hospital
+// master record (the Type field's kind, ownership and urban or rural); assets: the build's (the fiscal year is the
+// shell's); robots: the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer
+// factor (none: no note); medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario
+// file; a hospital with no row in it gets no band).
+export function hospitalPage(args) {
+  const fy = String(args.assets.shell.fy);
+  const place = { name: args.h.name, place: placeText(args.h) };
+  return shell(args, place, fy, hubParts(args, fy, place));
+}
+
+// The page of a hospital outside the penalty programs (hub/outside.js outsideHospitals) at the same path. args as
+// hospitalPage's, but with no hospitals, facts or hrrp (it has no peers), and: programYears, loadHub().programYears
+// (required: the years its reasons name); near and like, its figure blocks ('' for none).
+export function outsidePage(args) {
+  const fy = String(args.assets.shell.fy);
+  const place = { name: args.h.name, place: placeText(args.h) };
+  return shell(args, place, fy, outsideParts(args, fy, place));
 }
