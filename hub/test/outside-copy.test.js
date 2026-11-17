@@ -14,7 +14,8 @@ const NO_REASON = new Set(['inactive']);
 
 test('every LIKE_GROUPS group has a reason (inactive excepted) and a likeCount noun', () => {
   for (const group of LIKE_GROUPS) {
-    assert.equal(typeof fillOutside(`likeCount.${group}`), 'string', `likeCount.${group}`);
+    // The unlisted group's noun names the hospital-acquired conditions file's year.
+    assert.equal(typeof fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: 'X' } : {}), 'string', `likeCount.${group}`);
     if (NO_REASON.has(group) || group === 'not_listed') continue;
     assert.ok(fillOutside(`reason.${group}`, {}).length > 0, `reason.${group}`);
   }
@@ -55,12 +56,16 @@ test('the copy gate reads this file', () => {
   assert.ok(copyFiles().includes('hub/hospital/outside-copy.js'));
 });
 
+// What is true of every hospital in the group: the hospital-acquired conditions file lists none (its noun says so, with the
+// file's year), and the Readmissions file lists none or some (the sentences say which, with that file's year).
 test('the not_listed group\'s like-text says only what the files list, naming each file\'s year', () => {
+  const textOf = (key) => (typeof COPY[key] === 'string' ? COPY[key] : COPY[key].text);
+  assert.ok(textOf('likeCount.not_listed').includes('FY{hacrpFy}'), 'the noun names the hospital-acquired conditions file by year');
   const keys = Object.keys(COPY).filter((k) => k.startsWith('likeTextNotListed'));
   assert.equal(keys.length, 4, 'with and without a state, none listed and some');
   for (const key of keys) {
-    const text = typeof COPY[key] === 'string' ? COPY[key] : COPY[key].text;
-    assert.ok(text.includes('FY{hacrpFy}') && text.includes('FY{hrrpFy}'), `${key}: both files by year`);
+    const text = textOf(key);
+    assert.ok(text.includes('{kinds}') && text.includes('FY{hrrpFy}'), `${key}: the noun, and the Readmissions file by year`);
     assert.ok(!/adjust|penalty program/i.test(text), `${key}: no claim beyond the files`);
   }
   assert.ok(!('likeTextSome' in COPY) && !('likeTextSomeNoState' in COPY), 'no "adjust {k} of them" left');

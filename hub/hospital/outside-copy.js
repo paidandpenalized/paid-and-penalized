@@ -80,53 +80,52 @@ export const COPY = typesetCopy({
   'own.va': { text: 'The VA publishes its own quality data on how its medical centers meet quality standards.', claim: 'HUB-39' },
 
   // Hospitals like this one: the count of its group on the master and in its state. {kinds}: likeCount.<group>; {state}:
-  // the state's name (likeTextNoState for a code STATE_NAMES lacks). likeTextNotListed*: the not_listed group, which is
-  // out of the programs only as far as the files show, so its sentence says what the files list and claims nothing more
-  // ({hacrpFy}, {hrrpFy}: the master's programYears; likeTextNotListedSome*: {k} of them a file lists, the
-  // Readmissions-only hospitals). likeAlt: the US map's name (the map has no place for the territories).
+  // the state's name (likeTextNoState for a code STATE_NAMES lacks). The not_listed group is out of the programs only as
+  // far as the files show, so its noun and sentences say what the files list and claim nothing more: none of its
+  // hospitals is in the hospital-acquired conditions file (its noun, {hacrpFy}), and the Readmissions file ({hrrpFy})
+  // lists none of them or {k} (likeTextNotListedSome*). Years: the master's programYears. likeAlt: the US map's name (the
+  // map has no place for the territories).
   likeHeading: 'Hospitals like this one',
   'likeCount.critical_access': 'critical access hospitals',
   'likeCount.psychiatric': 'psychiatric hospitals',
   'likeCount.va': 'VA medical centers',
   'likeCount.dod': 'Department of Defense hospitals',
   'likeCount.childrens': "children's hospitals",
-  'likeCount.not_listed': "acute care hospitals that a CMS program file doesn't list",
+  'likeCount.not_listed': "acute care hospitals that CMS's FY{hacrpFy} hospital-acquired conditions file doesn't list",
   'likeCount.rural_emergency': 'rural emergency hospitals',
   'likeCount.cancer': 'cancer hospitals',
   'likeCount.inactive': 'acute care hospitals whose Medicare agreements CMS lists as ended',
   'likeCount.long_term': 'long-term care hospitals',
   likeText: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. Medicare's penalty programs adjust none of them.",
   likeTextNoState: "{n} {kinds} are on Medicare's hospital list. Medicare's penalty programs adjust none of them.",
-  likeTextNotListed: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
-  likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
-  likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
-  likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
+  likeTextNotListed: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hrrpFy} Readmissions file doesn't list them either.",
+  likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hrrpFy} Readmissions file doesn't list them either.",
+  likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
+  likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
   likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}. Puerto Rico and the other territories are not drawn.',
 
-  // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance, formatted;
-  // {k} of the {n} nearest with a net cut, in words for none and all), the table's columns, the map's name, key and
-  // tooltips, and a distance in words (nearMiles*: the caption's and a tooltip's) and in the table (nearUnderMile: "under
-  // 1", never "0").
+  // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance in words,
+  // web/render/miles.js; {k} of the {n} nearest with a net cut, in words for none and all, and its own words for a table
+  // of one), the table's columns, and the map's name, keyboard hint, key and tooltips.
   nearHeading: "The nearest hospitals in Medicare's penalty programs",
   nearCaption: 'The closest is {miles} away; the programs cut {k} of the {n} nearest on net.',
   nearCaptionNone: 'The closest is {miles} away; the programs cut none of the {n} nearest on net.',
   nearCaptionAll: 'The closest is {miles} away; the programs cut all {n} nearest on net.',
+  nearCaptionOneCut: 'The closest is {miles} away; the programs cut it on net.',
+  nearCaptionOneNotCut: "The closest is {miles} away; the programs don't cut it on net.",
   nearColRank: '#',
   nearColHospital: 'Hospital',
   nearColMiles: 'Miles',
   nearColNet: 'Estimated FY{fy} net change',
   nearColShare: 'Share of Medicare inpatient pay',
-  nearAlt: "Map of the area around this hospital, with the {n} nearest hospitals in Medicare's penalty programs numbered as in the table.",
+  nearAlt: "Map of the area around this hospital, with the nearest hospitals in Medicare's penalty programs numbered as in the table.",
+  nearKeys: 'Arrow keys step through the hospitals on the map.',
   nearThis: 'This hospital: {name}',
   nearTip: '{n}. {who}: an estimated {net} on net ({share}), {distance} away',
   nearKeyThis: 'This hospital',
   nearKeyCut: 'Cut on net',
   nearKeyNotCut: 'Not cut on net',
   nearKeyOther: 'Other {kinds}',
-  nearMiles: '{n} miles',
-  nearMilesAbout: 'about a mile',
-  nearMilesUnder: 'less than a mile',
-  nearUnderMile: 'under {one}',
 
   // The Medicaid band's dek on this page (medicaidBand's note).
   wbNoteOutside: "Medicare's penalty programs don't touch this hospital, but Medicaid's work requirement could. A scenario, not a payment.",

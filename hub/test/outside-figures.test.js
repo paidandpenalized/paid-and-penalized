@@ -9,11 +9,12 @@ import { ASSETS } from '../../pipeline/test/helpers.js';
 import { areaMap, miles, nearestTo, pointOf, usProjected } from '../../web/charts/geo.js';
 import { count } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
+import { milesText } from '../../web/render/miles.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_MAX_MILES, likeBlock, milesText, nearBlock } from '../hospital/outside-figures.js';
+import { NEAREST_K, NEAR_MAX_MILES, likeBlock, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
 import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -23,7 +24,9 @@ const FY = String(ASSETS.shell.fy);
 const ESTIMATED = HOSPITALS.filter((h) => h.est);
 const esc = (text) => String(escapeHtml(text));
 const sameGroup = (h) => OUTSIDE.filter((x) => x.group === h.group);
-const near = (h) => String(nearBlock(h, { estimated: ESTIMATED, outsideSameGroup: sameGroup(h), shapes: HUB.shapes, counties: HUB.counties, fy: FY }));
+// The figures' context, built once as the build builds it.
+const CTX = outsideFigureContext({ hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS, shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy });
+const near = (h) => String(nearBlock(h, CTX));
 const pick = (pred, what) => {
   const h = OUTSIDE.find(pred);
   assert.ok(h, `the data has ${what}`);
@@ -34,6 +37,11 @@ const placed = (h) => pointOf(h) !== null;
 const bodyOf = (block) => block.slice(block.indexOf('<tbody>'), block.indexOf('</tbody>'));
 const rowsOf = (block) => bodyOf(block).split('<tr').slice(1);
 const linkedCcns = (block) => rowsOf(block).map((row) => /href="\/hospital\/([0-9a-z]+)\/"/.exec(row)?.[1]?.toUpperCase() ?? null);
+// The rows a page should list, written out again: every estimated hospital by distance from h (ties by the lower CCN),
+// the first NEAREST_K, only those within NEAR_MAX_MILES; and every one, unlimited (all).
+const byDistance = (h) => ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, d: miles(pointOf(h), pointOf(x)) })).sort((a, b) => a.d - b.d || (a.ccn < b.ccn ? -1 : 1));
+const within = (h) => byDistance(h).slice(0, NEAREST_K).filter((x) => x.d <= NEAR_MAX_MILES);
+const NEAR_GROUP_NAMES = ['critical_access', 'rural_emergency', 'not_listed'];
 
 test('nearestTo: returns the k nearest, nearest first, ties by CCN', () => {
   // On the equator, a degree of longitude apart; two rows tie at the same place; one has no place; one is skipped.
@@ -52,6 +60,8 @@ test('nearestTo: returns the k nearest, nearest first, ties by CCN', () => {
   assert.deepEqual(got[0], { ccn: '000001', point: [0.5, 0], miles: got[0].miles }, 'each row is the input row with miles added');
   assert.equal(nearestTo(rows, [0, 0], { k: 10 }).length, 6, 'fewer than k placed rows: all of them');
   assert.equal(nearestTo(rows, [0, 0], { k: 10 })[0].ccn, '000006', 'nothing skipped by default');
+  assert.deepEqual(nearestTo(rows, [0, 0], { k: 0 }), [], 'k of zero: none');
+  assert.deepEqual(nearestTo(rows, [0, 0], { k: -1 }), [], 'k below zero: none');
 });
 
 test('areaMap: context dots are plain circles under the pins, inside the frame only', () => {
@@ -67,7 +77,7 @@ test('areaMap: context dots are plain circles under the pins, inside the frame o
 });
 
 test('nearBlock: on a critical access page, 5 rows, all estimated, sorted by miles, caption counts match the rows', () => {
-  const h = pick((x) => x.group === 'critical_access' && placed(x), 'a critical access hospital with a place');
+  const h = pick((x) => x.group === 'critical_access' && placed(x) && within(x).length === NEAREST_K, 'a critical access hospital with NEAREST_K estimated hospitals close');
   const block = near(h);
   assert.ok(block.includes('class="hh__near"'), 'the section');
   const ccns = linkedCcns(block);
@@ -75,10 +85,8 @@ test('nearBlock: on a critical access page, 5 rows, all estimated, sorted by mil
   const byCcn = new Map(ESTIMATED.map((x) => [x.ccn, x]));
   assert.ok(ccns.every((c) => c && byCcn.has(c)), 'each row links an estimated hospital');
   for (const c of ccns) assert.ok(block.includes(`href="${hospitalPathOf('hub', c)}"`), 'linked to its hub page');
-  // The nearest, written out again: every estimated hospital by distance (ties by the lower CCN), the first k.
-  const at = pointOf(h);
-  const all = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, d: miles(at, pointOf(x)) })).sort((a, b) => a.d - b.d || (a.ccn < b.ccn ? -1 : 1));
-  assert.deepEqual(ccns, all.slice(0, NEAREST_K).map((x) => x.ccn), 'the k nearest, nearest first');
+  const all = byDistance(h);
+  assert.deepEqual(ccns, within(h).map((x) => x.ccn), 'the k nearest, nearest first');
   // The caption: the closest one's distance, and how many of the rows the programs cut on net.
   const rows = ccns.map((c) => byCcn.get(c));
   const k = rows.filter((x) => x.est.net < 0).length;
@@ -92,13 +100,16 @@ test('nearBlock: on a critical access page, 5 rows, all estimated, sorted by mil
   assert.equal((block.match(/class="chart-pin /g) ?? []).length, NEAREST_K, 'a pin per row');
   assert.ok(block.includes('class="chart chart--area-map"'), 'the area map');
   assert.ok(block.includes('data-figure'), 'a figure the tooltip script wires');
+  // The keyboard hint the figure script names as the map's description, as HACRP's hospital page has one.
+  const id = /<figure class="fig hh__nearmap" id="([^"]+)"/.exec(block)?.[1];
+  assert.ok(id && block.includes(`<p id="${id}-keys" hidden>${esc(fillOutside('nearKeys'))}</p>`), 'the map\'s keyboard hint, after it');
 });
 
 test('nearBlock: rural emergency and unlisted acute pages have it too', () => {
   const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
   for (const group of ['rural_emergency', 'not_listed']) {
     const h = pick((x) => x.group === group && placed(x) && nearestTo(rows, pointOf(x), { k: 1 })[0].miles <= NEAR_MAX_MILES, `a ${group} hospital near one the programs adjust`);
-    assert.equal(linkedCcns(near(h)).length, NEAREST_K, `${group}: the nearest hospitals`);
+    assert.deepEqual(linkedCcns(near(h)), within(h).map((x) => x.ccn), `${group}: the nearest hospitals`);
   }
 });
 
@@ -124,14 +135,39 @@ test('nearBlock: Puerto Rico not_listed pages follow the distance rule', () => {
   const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
   for (const h of pr) {
     const close = nearestTo(rows, pointOf(h), { k: 1 })[0].miles <= NEAR_MAX_MILES;
-    assert.equal(linkedCcns(near(h)).length, close ? NEAREST_K : 0, 'a Puerto Rico page has the nearest hospitals exactly when one is close');
+    assert.ok(linkedCcns(near(h)).length === within(h).length && (within(h).length > 0) === close, 'a Puerto Rico page has the nearest hospitals exactly when one is close');
+  }
+});
+
+// Only hospitals within NEAR_MAX_MILES are listed, not just the closest: a page whose k-th nearest is farther lists fewer.
+test('nearBlock: rows beyond NEAR_MAX_MILES are left out, though nearer than the k-th', () => {
+  // Candidates found with the kit's nearestTo (fast), each then checked against the full sort.
+  const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
+  const short = OUTSIDE.filter((x) => NEAR_GROUP_NAMES.includes(x.group) && placed(x)).filter((x) => {
+    const got = nearestTo(rows, pointOf(x), { k: NEAREST_K });
+    return got[0].miles <= NEAR_MAX_MILES && got.at(-1).miles > NEAR_MAX_MILES;
+  }).filter((x) => within(x).length > 0 && byDistance(x)[NEAREST_K - 1].d > NEAR_MAX_MILES);
+  assert.ok(short.length > 0, 'the data has a page whose k-th nearest is beyond the limit');
+  for (const h of short) {
+    const block = near(h);
+    const want = within(h);
+    assert.deepEqual(linkedCcns(block), want.map((x) => x.ccn), 'only those within the limit, nearest first');
+    // The caption, written out again for the rows listed: its own words for a table of one.
+    const k = want.filter((x) => ESTIMATED.find((e) => e.ccn === x.ccn).est.net < 0).length;
+    const miles1 = milesText(want[0].d);
+    const caption = want.length === 1 ? fillOutside(k ? 'nearCaptionOneCut' : 'nearCaptionOneNotCut', { miles: miles1 })
+      : k === 0 ? fillOutside('nearCaptionNone', { miles: miles1, n: String(want.length) })
+        : k === want.length ? fillOutside('nearCaptionAll', { miles: miles1, n: String(want.length) })
+          : fillOutside('nearCaption', { miles: miles1, n: String(want.length), k: String(k) });
+    assert.ok(block.includes(esc(caption)), 'the caption counts the rows listed');
+    assert.ok(want.length > 1 || !block.includes('<svg'), 'a table of one stands alone (an area map needs two)');
   }
 });
 
 test('outside page: the nearest hospitals bring the figure script; a page without them has none', () => {
   const h = pick((x) => x.group === 'critical_access' && placed(x) && !x.listed, 'a critical access hospital with a place');
   const args = { h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears };
-  const block = nearBlock(h, { estimated: ESTIMATED, outsideSameGroup: sameGroup(h), shapes: HUB.shapes, counties: HUB.counties, fy: FY });
+  const block = nearBlock(h, CTX);
   const page = outsidePage({ ...args, near: block });
   assert.ok(page.includes(`src="${ASSETS.js.figure}"`), 'the figure script');
   const main = mainOf(page);
@@ -141,8 +177,10 @@ test('outside page: the nearest hospitals bring the figure script; a page withou
 
 // Hospitals like this one. Counts are checked against a recount from the hospital master itself (every record the dollar
 // file does not estimate, grouped by its reason code), not against likeCounts, which the page reads.
-const like = (h) => String(likeBlock(h, { counts: LIKE_COUNTS, sameGroup: sameGroup(h), shapes: HUB.shapes, programYears: HUB.programYears }));
+const like = (h) => String(likeBlock(h, CTX));
 const YEARS = { hacrpFy: String(HUB.programYears.hacrp), hrrpFy: String(HUB.programYears.hrrp) };
+// A group's noun: the unlisted acute group's names the hospital-acquired conditions file's year.
+const kindsOf = (group) => fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: YEARS.hacrpFy } : {});
 const textOf = (block) => block.replace(/<[^>]*>/g, '');
 const projected = (h) => usProjected(HUB.shapes, [pointOf(h)], MAP_WIDTH)[0];
 const mapped = (h) => placed(h) && projected(h) !== null;
@@ -157,6 +195,8 @@ const RECOUNT = (() => {
     c.n += 1;
     c.byState.set(r.state, (c.byState.get(r.state) ?? 0) + 1);
     if (r.programs.hacrp.inProgram || r.programs.hrrp.inProgram) c.listed += 1;
+    if (g === 'not_listed') c.inHacrp = (c.inHacrp ?? 0) + Number(Boolean(r.programs.hacrp.inProgram));
+    if (g === 'not_listed') c.inHrrp = (c.inHrrp ?? 0) + Number(Boolean(r.programs.hrrp.inProgram));
   }
   return out;
 })();
@@ -164,10 +204,10 @@ const RECOUNT = (() => {
 function expectedLike(h) {
   const c = RECOUNT.get(h.group);
   const state = STATE_NAMES[h.state];
-  const values = { n: count(c.n), kinds: fillOutside(`likeCount.${h.group}`), ...(state ? { ns: count(c.byState.get(h.state)), state } : {}) };
+  const values = { n: count(c.n), kinds: kindsOf(h.group), ...(state ? { ns: count(c.byState.get(h.state)), state } : {}) };
   if (h.group !== 'not_listed') return fillOutside(state ? 'likeText' : 'likeTextNoState', values);
   const some = c.listed > 0;
-  return fillOutside(`likeTextNotListed${some ? 'Some' : ''}${state ? '' : 'NoState'}`, { ...values, ...YEARS, ...(some ? { k: count(c.listed) } : {}) });
+  return fillOutside(`likeTextNotListed${some ? 'Some' : ''}${state ? '' : 'NoState'}`, { ...values, hrrpFy: YEARS.hrrpFy, ...(some ? { k: count(c.listed) } : {}) });
 }
 
 test('likeBlock: the count and state count equal a recount from the master', () => {
@@ -181,9 +221,16 @@ test('likeBlock: the count and state count equal a recount from the master', () 
     const own = `own.${group}`;
     assert.ok(hasOutside(own) ? block.includes(esc(fillOutside(own))) : !block.includes('class="hh__likeown"'), `${group}: its own program's line where it has one`);
   }
-  // not_listed pages say what the files list, never that the programs adjust none of them.
+  // not_listed pages say what the files list, never that the programs adjust none of them. What they say holds for every
+  // hospital of the group: none is in the hospital-acquired conditions file (its noun), and the Readmissions file lists
+  // exactly the ones the sentence counts.
   const nl = pick((x) => x.group === 'not_listed', 'an unlisted acute hospital');
   assert.ok(!/adjust none/.test(textOf(like(nl))), 'not_listed: no "adjust none" sentence');
+  const c = RECOUNT.get('not_listed');
+  assert.ok(c.inHacrp === 0, 'not_listed: the hospital-acquired conditions file lists none of the group');
+  assert.ok(c.inHrrp === c.listed, 'not_listed: the listed ones are all in the Readmissions file');
+  const nlMapped = pick((x) => x.group === 'not_listed' && mapped(x), 'an unlisted acute hospital on the US map');
+  assert.ok(like(nlMapped).includes(esc(fillOutside('nearKeyOther', { kinds: kindsOf('not_listed') }))), 'not_listed: the map key names the group by its noun');
   // A territory STATE_NAMES lacks: the national count alone.
   const terr = pick((x) => !STATE_NAMES[x.state], 'a hospital in a territory without a state name');
   assert.ok(textOf(like(terr)).includes(esc(expectedLike(terr))), 'a territory: the sentence without a state');
@@ -232,8 +279,8 @@ test('outside page weight: a critical access page (nearest plus like map) is wit
   const h = pick((x) => x.group === 'critical_access' && mapped(x) && !x.listed && near(x) !== '', 'a critical access hospital with both figures');
   const page = outsidePage({
     h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears,
-    near: nearBlock(h, { estimated: ESTIMATED, outsideSameGroup: sameGroup(h), shapes: HUB.shapes, counties: HUB.counties, fy: FY }),
-    like: likeBlock(h, { counts: LIKE_COUNTS, sameGroup: sameGroup(h), shapes: HUB.shapes, programYears: HUB.programYears }),
+    near: nearBlock(h, CTX),
+    like: likeBlock(h, CTX),
   });
   const main = mainOf(page);
   assert.ok(main.indexOf('class="hh__like"') > main.indexOf('class="hh__near"') && main.indexOf('class="hh__like"') < main.indexOf('class="hh__notes"'), 'after the nearest hospitals, before the notes');
