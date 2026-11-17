@@ -111,12 +111,13 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
 .ft__f a { color: var(--ink); }
 .ft__list, .ft__links { margin: 0; padding: 0; list-style: none; }
 .ft__list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 10px; max-width: none; }
-/* A program's name and code stay one line; a figure that no longer fits beside them (the work requirement's range on a
-   phone) takes the next line, still at the right edge. */
-.ft__list a { font-weight: 600; text-decoration: none; white-space: nowrap; }
+/* A program's code stays with its name's last word (a no-break space, shell.js) and never breaks itself; a long name
+   may wrap on a folded phone. A figure that no longer fits beside them (the work requirement's range on a phone) takes
+   the next line, still at the right edge. */
+.ft__list a { font-weight: 600; text-decoration: none; }
 .ft__list .ft__v { margin-left: auto; }
 .ft__list a:hover { text-decoration: underline; text-decoration-color: var(--ink); }
-.ft__ab { margin-left: 4px; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
+.ft__ab { margin-left: 4px; white-space: nowrap; color: var(--pen-ink); font: 400 0.6875rem/1 var(--font-type); }
 .ft__v { flex: none; color: var(--ink-2); font: 400 0.75rem/1.3 var(--font-type); white-space: nowrap; }
 .ft__soon { max-width: none; margin-top: 7px; padding-top: 6px; border-top: 1px dashed var(--line); color: var(--ink-3); font: 400 0.75rem/1.5 var(--font-type); }
 .ft__f .ft__soon a { color: inherit; }

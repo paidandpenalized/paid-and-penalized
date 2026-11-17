@@ -131,7 +131,7 @@ export function familyFooter({ feedback, shell }) {
     const link = html`<a href="${p.path}" title="${p.name}">${p.ab}</a>`;
     return i ? html` <span class="nw">· ${link}</span>` : link;
   });
-  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name} <span class="ft__ab">${p.ab}</span></a> ${figureOf(programs[p.id], estimated)}</li>`)}</ul>
+  const listed = html`<ul class="ft__list" role="list">${LISTED_PROGRAMS.map((p) => html`<li><a href="${p.path}">${p.name}\u00a0<span class="ft__ab">${p.ab}</span></a> ${figureOf(programs[p.id], estimated)}</li>`)}</ul>
 <p class="ft__soon">${COPY.footConsidered} ${considered}</p>`;
   const site = html`<ul class="ft__links" role="list">${Object.entries(SITE.pages).map(([name, href]) => html`<li><a href="${href}">${name === 'terms' ? COPY.termsLink : COPY[name]}</a></li>`)}</ul>`;
   const asOf = html`<p>${fillAround((marks) => fill('footEstimates', marks), { hospitals: html`<span class="ft__lead">${fill('footHospitals', { n: count(hospitals) })}</span>` })}</p>

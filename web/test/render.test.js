@@ -293,19 +293,19 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   // 1: the programs with dollar estimates, each with its figure (testAssets' invented facts), then the ones under
   // consideration, linked to their placeholder pages.
   for (const [href, name, figure] of [['/hrrp/', 'Readmissions', '−$2.0M'], ['/hacrp/', 'Hospital-acquired conditions', '−$1.0M'], ['/hvbp/', 'Value-based purchasing', '$500K moved']]) {
-    assert.match(foot, new RegExp(`<a href="${href}">${name} <span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
+    assert.match(foot, new RegExp(`<a href="${href}">${name}\u00a0<span class="ft__ab">[^<]+</span></a> <span class="ft__v"><span class="vh">Estimated FY2026: </span>${figure.replace('$', '\\$')}</span>`), name);
   }
   // The scenario's figure (Dalton's review 11-11): on one line like the others, its national range of Medicaid revenue
   // lost, low to high, and the word "scenario", in the same figure column; what it is in full, in its base year's
   // dollars, is its title and hidden words for a screen reader. Not an estimate for the family's fiscal year, so no
   // "Estimated FY2026" before it, and no tag box (the footer row is the one place a scenario number goes without it).
   const full = 'Medicaid revenue hospitals could lose a year, a scenario in 2023 dollars';
-  assert.ok(foot.includes(`<li><a href="/work-requirement/">Work requirement <span class="ft__ab">Medicaid</span></a> <span class="ft__v" title="${full}">$4.0–9.0M scenario<span class="vh">, ${full}</span></span></li>`), 'the scenario\'s range, its word and its full meaning');
+  assert.ok(foot.includes(`<li><a href="/work-requirement/">Work requirement\u00a0<span class="ft__ab">Medicaid</span></a> <span class="ft__v" title="${full}">$4.0–9.0M scenario<span class="vh">, ${full}</span></span></li>`), 'the scenario\'s range, its word and its full meaning');
   // Every program's row is the same shape: a plain item, the name and its code, then one figure; the only scenario
   // markup is that one row's title and hidden words.
   const items = /<ul class="ft__list" role="list">([\s\S]*?)<\/ul>/.exec(foot)[1].match(/<li[^>]*>[\s\S]*?<\/li>/g);
   assert.equal(items.length, 4);
-  for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+ <span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
+  for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+\u00a0<span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
   assert.equal(items.filter((item) => item.includes(' title=')).length, 1, 'one row with a title');
   assert.doesNotMatch(foot, /ft__scen|scen-tag|could be lost/, 'no tag box and no old wording');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];

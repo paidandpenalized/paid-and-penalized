@@ -670,20 +670,30 @@ describe('the theme button', () => {
   }));
 });
 
-// The footer's program codes ("HRRP", "HACRP", "Medicaid") never break across lines at a phone's width, on a page of
-// each family: the hub, both Medicare programs and the work requirement (the 11-10 build report's launch fix-up).
-describe('the footer at 390 px', { concurrency: CONCURRENCY }, () => {
+// The footer's program names and codes ("Readmissions HRRP", "Work requirement Medicaid") never part at a phone's
+// width, on a page of each family (the 11-10 build report's launch fix-up); and at a folded phone's 280 px a long name
+// wraps inside its row rather than running past it.
+describe('the footer on a phone', { concurrency: CONCURRENCY }, () => {
+  // The lines an element's words sit on: its text boxes' tops, a new line wherever one sits half a line below the last
+  // (WebKit sets a smaller span's box a fraction of a pixel off its line's).
+  const linesOf = (el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const half = parseFloat(getComputedStyle(el).lineHeight) / 2;
+    const tops = [...range.getClientRects()].map((r) => r.top).sort((a, b) => a - b);
+    return tops.filter((top, i) => i === 0 || top - tops[i - 1] > half).length;
+  };
   const tabs = useContext(shared, { width: 390 });
-  for (const path of ['/', ...LISTED_PROGRAMS.map((p) => p.path)]) it(`${path}: every program's name and code are on one line`, () => withPage(tabs, { path }, async (page) => {
-    // A program's link (its name and code) is one line box: its code never drops under its name.
-    // The link is an inline block (one rect however it wraps), so count the lines its words sit on.
-    const links = await page.evaluate(() => [...document.querySelectorAll('footer .ft__list a')].map((el) => {
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      return [el.textContent, new Set([...range.getClientRects()].map((r) => Math.round(r.bottom))).size];
-    }));
+  for (const path of ['/', ...LISTED_PROGRAMS.map((p) => p.path)]) it(`${path} at 390 px: every program's name and code are on one line`, () => withPage(tabs, { path }, async (page) => {
+    const links = await page.evaluate(`[...document.querySelectorAll('footer .ft__list a')].map((el) => [el.textContent, (${linesOf})(el)])`);
     assert.ok(links.length >= 3, 'the footer lists its programs');
     assert.deepEqual(links.filter(([, lines]) => lines !== 1), [], 'names and codes broken across lines');
     await assertNoSideways(page, `${path} at 390 px`);
+  }));
+  const folded = useContext(shared, { width: 280 });
+  it('/ at 280 px: every program row stays inside the footer', () => withPage(folded, { path: '/' }, async (page) => {
+    const over = await page.evaluate(() => [...document.querySelectorAll('footer .ft__list li')]
+      .flatMap((li) => [...li.children].filter((el) => el.getBoundingClientRect().right > li.getBoundingClientRect().right + 0.5).map((el) => el.textContent)));
+    assert.deepEqual(over, [], 'past the row\'s edge');
   }));
 });

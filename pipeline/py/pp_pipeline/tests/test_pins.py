@@ -30,6 +30,13 @@ class Pins(unittest.TestCase):
                     self.assertEqual(zip_.get("archive"), f"r2://{hcris_pins.BUCKET}/{hcris_pins.archive_key(zip_['sha256'])}",
                                      zip_["file"])
 
+    def test_an_archived_zip_is_not_described_as_unarchived(self):
+        for entry in read_manifest():
+            src = entry.get("derivedFrom") or {}
+            if "archive" in src:
+                with self.subTest(entry["id"]):
+                    self.assertNotIn("No archive copy", src.get("note", ""))
+
     def test_no_unlisted_pinned_files(self):
         listed = {e["path"] for e in read_manifest()}
         on_disk = {p.relative_to(PINNED_DIR).as_posix() for p in PINNED_DIR.rglob("*") if p.is_file()}
