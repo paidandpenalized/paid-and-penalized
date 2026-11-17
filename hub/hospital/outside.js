@@ -77,6 +77,10 @@ export function outsideBody(h, { master, fy, programYears, medicaid, near = '', 
   // pages only for the dollar file's hospitals), and the work-requirement page where the scenario file has a row.
   const links = [h.inHrrp && deepLink(h, 'hrrp'), medicaid.hospitals.has(h.ccn) && wbLink(h.ccn)].filter(Boolean);
   const stamped = !h.listed;
+  // An inactive-group hospital has no reason line: the closed note is its explanation. Its wording holds only for an end
+  // by the year's end (web/render/closed.js endedBy), so a later end stops the build rather than leave a bare stamp.
+  const note = closed(h, master, fy, { kept: false });
+  if (h.group === 'inactive' && !note) throw new RangeError(`outside: ${h.ccn}: an inactive-group hospital whose Medicare agreement did not end by the end of FY${fy} has no closed note to explain its page`);
   return html`<article class="hh hh--none hh--out" data-ccn="${h.ccn}">
 <div class="wrap hh__hero">
 ${recordCard(h, master, fy)}
@@ -89,7 +93,7 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 <h2 class="h-sm" id="hh-pages-h">${fill('pagesHeading')}</h2>
 <ul class="hh__plist" role="list">${links.map((link) => html`<li>${link}</li>`)}</ul>
 </section>` : ''}
-${closed(h, master, fy, { kept: false })}
+${note}
 </div>
 </div>
 ${medicaidBand(h, medicaid, { net: false, note: 'wbNoteOutside' })}${near}${like}${sourceNote(years, String(near) !== '')}

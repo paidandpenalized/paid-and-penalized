@@ -115,7 +115,7 @@ export const COPY = typesetCopy({
 
   // The source line at the page's foot: the hospital master's own files ({hacrpFy}, {hrrpFy}: the master's programYears),
   // and, on a page that shows the nearest hospitals' estimated dollars, the dollar model after it.
-  sourceOutside: "Source: CMS's hospital list (Care Compare's hospital file, the inpatient prospective payment system's impact file and the Provider of Services file) and CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files, which say whether a hospital is in each program.",
+  sourceOutside: "Source: this site's hospital list, from CMS's Care Compare hospital file, inpatient prospective payment system impact file and Provider of Services file, and CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files, which say whether a hospital is in each program.",
   sourceOutsideDollars: "The nearest hospitals' dollars come from this site's dollar model.",
 
   // The page's description: a group with reasonInstead, a federal hospital, a not_listed one and an inactive one.

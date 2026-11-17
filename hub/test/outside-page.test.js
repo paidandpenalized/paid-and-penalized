@@ -57,12 +57,12 @@ test('outside page: one per like group has the stamp, its reason and claim-backe
     const h = pick((x) => x.group === group && !x.listed, `an unlisted outside hospital in group ${group}`);
     const page = render(h);
     const main = words(page);
-    assert.equal(occurrences(main, STAMP), 1, `${group}: the stamp once`);
-    assert.match(mainOf(page), /Not in Medicare’s <br class="hh__br-wide">penalty programs/, `${group}: the stamp breaks before "penalty" on desktop`);
+    assert.ok(occurrences(main, STAMP) === 1, `${group}: the stamp once`);
+    assert.ok(/Not in Medicare’s <br class="hh__br-wide">penalty programs/.test(mainOf(page)), `${group}: the stamp breaks before "penalty" on desktop`);
     const reasons = reasonTexts(h);
     if (group !== 'inactive') assert.ok(reasons.length > 0, `${group}: a reason to show`);
     for (const text of reasons) assert.ok(main.includes(esc(text)), `${group}: its reason line`);
-    assert.doesNotMatch(main, COUNTS_PROGRAMS, `${group}: no count of the programs`);
+    assert.ok(!COUNTS_PROGRAMS.test(main), `${group}: no count of the programs`);
     assert.ok(main.includes('class="form hh__card"'), `${group}: the record card`);
     assert.ok(main.indexOf('class="form hh__card"') < main.indexOf(STAMP), `${group}: the card, then the stamp`);
     assert.ok(main.includes(esc(COPY['typeKind.' + h.kind] ?? '')) || h.kind === 'acute', `${group}: the Type field names its kind`);
@@ -84,7 +84,7 @@ test('outside page: a listed hospital has no stamp, links its Readmissions page 
   assert.ok(h.inHrrp, 'it has a Readmissions page');
   const page = render(h);
   const main = words(page);
-  assert.equal(occurrences(main, STAMP), 0, 'no stamp');
+  assert.ok(occurrences(main, STAMP) === 0, 'no stamp');
   assert.ok(main.includes(`href="${hospitalPathOf('hrrp', h.ccn, { inHrrp: true })}"`), 'its Readmissions page');
   assert.ok(main.includes(esc(fillOutside('notListedHacrp', { hacrpFy: YEARS.hacrpFy }))), 'HACRP\'s file doesn\'t list it');
   assert.ok(main.includes(`FY${YEARS.hacrpFy}`), 'naming the HACRP file\'s year');
@@ -96,8 +96,8 @@ test('outside page: no outside page links a HACRP hospital page, and only those 
   for (const h of OUTSIDE) {
     const main = mainOf(render(h));
     assert.ok(!main.includes(`href="${SITE.sites.hacrp.path}hospital/`), 'no HACRP hospital link');
-    assert.equal(main.includes(`href="${hospitalPathOf('hrrp', h.ccn, { inHrrp: true })}"`), h.inHrrp, 'a Readmissions link exactly when it has a page');
-    assert.equal(occurrences(words(render(h)), STAMP), h.listed ? 0 : 1, 'the stamp exactly when no program lists it');
+    assert.ok(main.includes(`href="${hospitalPathOf('hrrp', h.ccn, { inHrrp: true })}"`) === h.inHrrp, 'a Readmissions link exactly when it has a page');
+    assert.ok(occurrences(words(render(h)), STAMP) === (h.listed ? 0 : 1), 'the stamp exactly when no program lists it');
   }
 });
 
@@ -132,7 +132,7 @@ test('outside page: an inactive hospital shows the closed note', () => {
   for (const h of inactive) {
     assert.ok(endedBy(h.inactive, Number(FY)), 'its agreement ended by the year\'s end');
     const main = mainOf(render(h));
-    assert.match(main, new RegExp(`<p class="hh__closed">CMS lists this hospital’s Medicare agreement under CCN ${h.ccn} as ended`), `${h.group}: the closed note`);
+    assert.ok(main.includes(`<p class="hh__closed">CMS lists this hospital’s Medicare agreement under CCN ${h.ccn} as ended`), `${h.group}: the closed note`);
     assert.ok(!main.includes('keeps it in its totals'), 'not in any total of this site, so the note doesn\'t say it is');
   }
   for (const h of OUTSIDE.filter((x) => !x.inactive).slice(0, 50)) assert.ok(!mainOf(render(h)).includes('hh__closed'), 'no note on an active hospital');
@@ -153,12 +153,12 @@ test('outside page: not_listed in Puerto Rico gets the Readmissions Puerto Rico 
 test('outside page: its title, description, chip and scripts', () => {
   const byGroup = (group) => render(pick((x) => x.group === group && !x.listed && !x.inactive, `an active hospital in group ${group}`));
   const description = (page) => /<meta name="description" content="([^"]*)">/.exec(page)[1];
-  assert.match(description(byGroup('critical_access')), /how Medicare pays it instead/, 'a group Medicare pays another way');
-  assert.match(description(byGroup('va')), /don’t adjust its pay\.$/, 'a federal hospital');
-  assert.match(description(byGroup('not_listed')), /penalty program files list it/, 'a hospital a file doesn\'t list');
-  assert.match(description(render(pick((x) => x.group === 'inactive', 'an inactive-group hospital'))), /as ended/, 'a closed hospital');
+  assert.ok(/how Medicare pays it instead/.test(description(byGroup('critical_access'))), 'a group Medicare pays another way');
+  assert.ok(/don’t adjust its pay\.$/.test(description(byGroup('va'))), 'a federal hospital');
+  assert.ok(/penalty program files list it/.test(description(byGroup('not_listed'))), 'a hospital a file doesn\'t list');
+  assert.ok(/as ended/.test(description(render(pick((x) => x.group === 'inactive', 'an inactive-group hospital')))), 'a closed hospital');
   const page = byGroup('psychiatric');
-  assert.match(page, new RegExp(`<title>[^<]*FY${FY}`), 'the title names the fiscal year');
+  assert.ok(new RegExp(`<title>[^<]*FY${FY}`).test(page), 'the title names the fiscal year');
   assert.ok(!page.includes(`src="${ASSETS.js['hub-hospital']}"`), 'no hospital script yet');
   assert.ok(page.includes('<article class="hh hh--none hh--out"'), 'the outside article');
 });
@@ -170,10 +170,24 @@ test('outside page: the source line names the hospital list and each program fil
     const notes = notesOf(render(h));
     assert.ok(notes.includes(esc(fillOutside('sourceOutside', YEARS))), `${group}: the outside source line`);
     assert.ok(notes.includes(`FY${YEARS.hacrpFy}`) && notes.includes(`FY${YEARS.hrrpFy}`), `${group}: each file's year`);
-    assert.doesNotMatch(notes, /dollar model|HVBP|value-based/i, `${group}: no dollar model or HVBP`);
+    assert.ok(!/dollar model|HVBP|value-based/i.test(notes), `${group}: no dollar model or HVBP`);
   }
   // With the nearest hospitals' figure (near), the dollar model joins it.
   const h = OUTSIDE[0];
   const page = hospitalPage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, programYears: HUB.programYears, near: '<section></section>' });
   assert.ok(notesOf(page).includes(esc(fillOutside('sourceOutsideDollars'))), 'the dollar model beside the nearest hospitals');
+});
+
+test('outside page: an inactive-group hospital whose agreement ends after the year would have no explanation, so the build stops', () => {
+  const h = pick((x) => x.group === 'inactive', 'an inactive-group hospital');
+  const record = HUB.master.get(h.ccn);
+  const later = { ...record, inactive: { ...record.inactive, date: `${Number(FY)}-10-01` } };
+  let message = null;
+  try {
+    hospitalPage({ h: { ...h, inactive: later.inactive }, assets: ASSETS, robots: null, master: later, medicaid: HUB.medicaid, programYears: HUB.programYears });
+  } catch (e) {
+    message = e instanceof RangeError ? e.message : null;
+  }
+  assert.ok(message !== null, 'a RangeError');
+  assert.ok(/no closed note/.test(message) && !message.includes(h.name), 'saying why, naming no hospital beyond its CCN');
 });
