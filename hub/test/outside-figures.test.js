@@ -189,7 +189,7 @@ test('likeBlock: the count and state count equal a recount from the master', () 
   assert.ok(textOf(like(terr)).includes(esc(expectedLike(terr))), 'a territory: the sentence without a state');
 });
 
-test('likeBlock: the map marks this hospital, and the dot count equals the group\'s mappable hospitals minus one', () => {
+test('likeBlock: the map marks this hospital, and the dot count equals the group\'s mappable hospitals', () => {
   for (const group of ['critical_access', 'psychiatric', 'va']) {
     const h = pick((x) => x.group === group && mapped(x), `a ${group} hospital on the US map`);
     const block = like(h);
@@ -197,11 +197,10 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
     assert.ok(svg, `${group}: an image`);
     assert.ok(/aria-label="[^"]+"/.test(svg), `${group}: named`);
     assert.ok(block.includes('class="chart-land"'), `${group}: the state lines`);
-    // The same group's other hospitals the projection places, counted here, against the dots in the path.
-    const others = sameGroup(h).filter((x) => x.ccn !== h.ccn);
-    const want = usProjected(HUB.shapes, others.map(pointOf), MAP_WIDTH).filter(Boolean).length;
+    // The group's hospitals the projection places (this one's own dot sits under its ring), counted here, against the dots in the path.
+    const want = usProjected(HUB.shapes, sameGroup(h).map(pointOf), MAP_WIDTH).filter(Boolean).length;
     const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(block)?.[1] ?? '';
-    assert.ok((d.match(/h0/g) ?? []).length === want, `${group}: a dot for each other mappable hospital of the group`);
+    assert.ok((d.match(/h0/g) ?? []).length === want, `${group}: a dot for each mappable hospital of the group`);
     // This hospital: a ring and a dot at its place.
     const [x, y] = projected(h);
     assert.ok(block.includes(`<circle class="hh__likering" cx="${x}" cy="${y}"`) && block.includes(`<circle class="hh__likeme" cx="${x}" cy="${y}"`), `${group}: this hospital ringed at its place`);

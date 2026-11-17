@@ -323,12 +323,15 @@ export function areaMap({ shapes, counties = [], center, points, context = [], r
       body: html`<circle class="chart-pin ${p.cls}" cx="${x}" cy="${y}" r="9"/><text class="chart-pin__n" x="${x}" y="${y}" dy="0.35em" text-anchor="middle">${String(p.n)}</text>`,
     });
   });
-  return new Safe(html`<svg class="chart chart--area-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
+  const svg = new Safe(html`<svg class="chart chart--area-map" viewBox="0 0 ${width} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${width}">`.text
     + `<rect class="chart-sea" width="${width}" height="${height}"/>${land.map((d) => `<path class="chart-geo-land" d="${d}"/>`).join('')}`
     + `<g class="chart-geo-counties">${inner.map((d) => `<path d="${d}"/>`).join('')}</g>`
     + `${land.map((d) => `<path class="chart-geo-state" d="${d}"/>`).join('')}`
     + html`${ringsDrawn}${reference}${dots.reverse()}${mark({ tip: center.tip, value: null, hit: null, body: html`<path class="chart-this chart-this--map" d="M${cx} ${r2(cy - 12)}l10 18h-20z"/>` })}`.text
     + '</svg>');
+  // How many context dots fell inside the frame: a caller keys its legend on this, not on the markup.
+  svg.contextDrawn = reference.length;
+  return svg;
 }
 
 // ---------- hospitals as dots ----------

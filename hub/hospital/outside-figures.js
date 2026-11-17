@@ -44,6 +44,13 @@ function placedOf(estimated) {
   return PLACED.get(estimated);
 }
 
+// A group's context points ({ ccn, point, cls }), worked out once per list of the group's outside hospitals.
+const CONTEXT = new WeakMap();
+function contextOf(outsideSameGroup) {
+  if (!CONTEXT.has(outsideSameGroup)) CONTEXT.set(outsideSameGroup, outsideSameGroup.map((x) => ({ ccn: x.ccn, point: pointOf(x), cls: CONTEXT_CLS })).filter((c) => c.point));
+  return CONTEXT.get(outsideSameGroup);
+}
+
 // The caption: the closest one's distance and how many of the rows the programs cut on net, in words for none and all.
 function caption(rows) {
   const k = rows.filter((r) => r.est.net < 0).length;
@@ -53,10 +60,17 @@ function caption(rows) {
   return fillOutside('nearCaption', { ...values, k: String(k) });
 }
 
-// The map's key: this hospital, a pin cut on net and one not, and the context dots where the map draws any.
+// A map's key: a list of items, each a swatch class and its words.
 const keyItem = (swatch, label) => html`<li><span class="${swatch}" aria-hidden="true"></span>${label}</li>`;
+const keyList = (cls, items) => html`<ul class="fig__key ${cls}" role="list">${items.map(([swatch, label]) => keyItem(swatch, label))}</ul>`;
+// The nearest map's key: this hospital, a pin cut on net and one not, and the context dots where the map draws any.
 function key(h, withContext) {
-  return html`<ul class="fig__key hh__nkey" role="list">${keyItem('fig__swatch fig__swatch--this', fillOutside('nearKeyThis'))}${keyItem('hh__nsw hh__nsw--cut', fillOutside('nearKeyCut'))}${keyItem('hh__nsw', fillOutside('nearKeyNotCut'))}${withContext ? keyItem('hh__nsw hh__nsw--ctx', fillOutside('nearKeyOther', { kinds: fillOutside(`likeCount.${h.group}`) })) : ''}</ul>`;
+  return keyList('hh__nkey', [
+    ['fig__swatch fig__swatch--this', fillOutside('nearKeyThis')],
+    ['hh__nsw hh__nsw--cut', fillOutside('nearKeyCut')],
+    ['hh__nsw', fillOutside('nearKeyNotCut')],
+    ...(withContext ? [['hh__nsw hh__nsw--ctx', fillOutside('nearKeyOther', { kinds: fillOutside(`likeCount.${h.group}`) })]] : []),
+  ]);
 }
 
 // The nearest hospitals in the programs, or '' for a hospital without a place, outside NEAR_GROUPS, or whose closest such
@@ -70,7 +84,7 @@ export function nearBlock(h, { estimated, outsideSameGroup, shapes, counties, fy
   if (!rows.length || rows[0].miles > NEAR_MAX_MILES) return '';
   const cut = (r) => r.est.net < 0;
   const who = (r) => [r.name, placeText(r)].filter(Boolean).join(', ');
-  const context = outsideSameGroup.filter((x) => x.ccn !== h.ccn).map((x) => ({ point: pointOf(x), cls: CONTEXT_CLS }));
+  const context = contextOf(outsideSameGroup).filter((x) => x.ccn !== h.ccn);
   const map = areaMap({
     shapes, counties, context, width: NEAR_MAP_WIDTH,
     label: fillOutside('nearAlt', { n: String(rows.length) }),
@@ -93,7 +107,7 @@ export function nearBlock(h, { estimated, outsideSameGroup, shapes, counties, fy
 <p class="hh__nearcap">${caption(rows)}</p>
 ${map ? html`<figure class="fig hh__nearmap" id="hh-near-map" data-figure>
 ${map}
-${key(h, String(map).includes(`class="${CONTEXT_CLS}"`))}
+${key(h, map.contextDrawn > 0)}
 </figure>` : ''}
 </div>
 <div class="hh__neartab">${table}</div>
@@ -110,53 +124,64 @@ const RING_R = 11;
 
 // The sentence under the heading: the group's national count (the big figure, h.group's count on Medicare's hospital
 // list), the count in h's state where STATE_NAMES names it, and what the programs do about them. An unlisted acute
-// hospital's says only what CMS's files list ({k}: the group's hospitals some file lists), never that the programs adjust
-// none of them. years: { hacrpFy, hrrpFy }, as text.
-function likeSentence(h, c, sameGroup, years) {
+// hospital's says only what CMS's files list ({k}: the group's hospitals some file lists, c.listed), never that the
+// programs adjust none of them. kinds: the group's noun; programYears: the master's { hacrp, hrrp }.
+function likeSentence(h, c, kinds, programYears) {
   const state = STATE_NAMES[h.state];
-  const values = { kinds: fillOutside(`likeCount.${h.group}`), ...(state ? { ns: count(c.byState.get(h.state)), state } : {}) };
+  const values = { kinds, ...(state ? { ns: count(c.byState.get(h.state)), state } : {}) };
   let key = state ? 'likeText' : 'likeTextNoState';
   if (h.group === 'not_listed') {
-    const k = sameGroup.filter((x) => x.listed).length;
-    key = `likeTextNotListed${k ? 'Some' : ''}${state ? '' : 'NoState'}`;
-    Object.assign(values, years, k ? { k: count(k) } : {});
+    key = `likeTextNotListed${c.listed ? 'Some' : ''}${state ? '' : 'NoState'}`;
+    Object.assign(values, { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) }, c.listed ? { k: count(c.listed) } : {});
   }
   return fillAround((marks) => fillOutside(key, { ...values, ...marks }), { n: html`<span class="hh__likek">${count(c.n)}</span>` });
 }
 
+// The US map's body, the same for every page of a group: the land and the group's hospitals as faint dots, this one's
+// among them (its ring and dot, drawn over it on each page, cover it). Worked out once per group and shapes.
+const LIKE_BODIES = new WeakMap();
+function likeBody(shapes, group, sameGroup) {
+  if (!LIKE_BODIES.has(shapes)) LIKE_BODIES.set(shapes, new Map());
+  const bodies = LIKE_BODIES.get(shapes);
+  if (bodies.get(group)?.n !== sameGroup.length) {
+    const { height, paths } = usPaths(shapes, MAP_WIDTH);
+    const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean).join('');
+    const dots = usPoints({ shapes, points: sameGroup.map((o) => ({ point: pointOf(o), cls: LIKE_DOT })), sizes: { [LIKE_DOT]: LIKE_DOT_D }, width: MAP_WIDTH });
+    bodies.set(group, { n: sameGroup.length, height, body: html`<g class="chart-land"><path d="${land}"/></g>${dots}` });
+  }
+  return bodies.get(group);
+}
+
 // The US map: every state's outline over the land (the home map's projection and shapes, at its width), the group's
-// other hospitals as faint dots, and h ringed in the pen ink. null where the projection has no place for h (a territory
+// hospitals as faint dots, and h ringed in the pen ink. null where the projection has no place for h (a territory
 // with no inset, Puerto Rico included, or no coordinates): the page then shows the text alone.
 function likeMap(h, { sameGroup, shapes, label }) {
   const [at] = usProjected(shapes, [pointOf(h)], MAP_WIDTH);
   if (!at) return null;
   const [x, y] = at;
-  const { height, paths } = usPaths(shapes, MAP_WIDTH);
-  const land = US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean).join('');
-  const dots = usPoints({ shapes, points: sameGroup.filter((o) => o.ccn !== h.ccn).map((o) => ({ point: pointOf(o), cls: LIKE_DOT })), sizes: { [LIKE_DOT]: LIKE_DOT_D }, width: MAP_WIDTH });
-  return html`<svg class="chart chart--like-map" viewBox="0 0 ${MAP_WIDTH} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${MAP_WIDTH}"><g class="chart-land"><path d="${land}"/></g>${dots}<circle class="hh__likering" cx="${x}" cy="${y}" r="${RING_R}"/><circle class="hh__likeme" cx="${x}" cy="${y}" r="${ME_R}"/></svg>`;
+  const { height, body } = likeBody(shapes, h.group, sameGroup);
+  return html`<svg class="chart chart--like-map" viewBox="0 0 ${MAP_WIDTH} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${MAP_WIDTH}">${body}<circle class="hh__likering" cx="${x}" cy="${y}" r="${RING_R}"/><circle class="hh__likeme" cx="${x}" cy="${y}" r="${ME_R}"/></svg>`;
 }
 
 // Hospitals like this one, on every outside page. h: an OutsideHospital; counts: hubModel().likeCounts (each group's
-// national count and counts by state, worked out once); sameGroup: the outside hospitals of h's group, h among them (the
-// map's dots, and the unlisted group's listed ones); shapes: loadHub()'s; programYears: the master's { hacrp, hrrp }.
+// national count, count of listed ones and counts by state, worked out once); sameGroup: the outside hospitals of h's
+// group, h among them (the map's dots); shapes: loadHub()'s; programYears: the master's { hacrp, hrrp }.
 export function likeBlock(h, { counts, sameGroup, shapes, programYears }) {
   const c = counts.get(h.group);
   if (!c || c.n !== sameGroup.length) throw new RangeError('outside: likeBlock needs the counts and every hospital of the page\'s group');
   const kinds = fillOutside(`likeCount.${h.group}`);
-  const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
   const map = likeMap(h, { sameGroup, shapes, label: fillOutside('likeAlt', { kinds }) });
   const own = `own.${h.group}`;
   return html`<section class="hh__like" aria-labelledby="hh-like-h">
 <div class="wrap"><div class="hh__likei">
 <div class="hh__liket">
 <h2 id="hh-like-h">${fillOutside('likeHeading')}</h2>
-<p class="hh__likes">${likeSentence(h, c, sameGroup, years)}</p>
+<p class="hh__likes">${likeSentence(h, c, kinds, programYears)}</p>
 ${hasOutside(own) ? html`<p class="hh__likeown">${fillOutside(own)}</p>` : ''}
 </div>
 ${map ? html`<figure class="fig hh__likemap">
 ${map}
-<ul class="fig__key hh__lkey" role="list">${keyItem('hh__lsw hh__lsw--me', fillOutside('nearKeyThis'))}${keyItem('hh__nsw hh__nsw--ctx', fillOutside('nearKeyOther', { kinds }))}</ul>
+${keyList('hh__lkey', [['hh__lsw hh__lsw--me', fillOutside('nearKeyThis')], ['hh__nsw hh__nsw--ctx', fillOutside('nearKeyOther', { kinds })]])}
 </figure>` : ''}
 </div></div>
 </section>`;

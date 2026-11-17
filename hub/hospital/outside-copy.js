@@ -100,8 +100,8 @@ export const COPY = typesetCopy({
   likeTextNotListed: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
   likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files don't list them.",
   likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
-  likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}. Puerto Rico and the other territories are not drawn.',
   likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hacrpFy} hospital-acquired conditions and FY{hrrpFy} Readmissions files list {k} of them.",
+  likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}. Puerto Rico and the other territories are not drawn.',
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance, formatted;
   // {k} of the {n} nearest with a net cut, in words for none and all), the table's columns, the map's name, key and

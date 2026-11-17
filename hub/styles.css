@@ -810,9 +810,10 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
    and compact area map left; the table right, which sticks beside the map as the reader scrolls down it and lets go at
    the section's end (the grid's row ends there). A phone stacks them, map then table, with nothing sticky. */
 .hh__near { margin-top: 26px; }
-.hh__neari { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 26px; border-top: 1px solid var(--line); }
-.hh__neart { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
-.hh__neart h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
+/* The two sections' shared grid (nearest, and hospitals like this one below): text left, figure right under a rule. */
+.hh__neari, .hh__likei { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 26px; border-top: 1px solid var(--line); }
+.hh__neart, .hh__liket { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
+.hh__neart h2, .hh__liket h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
 .hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .hh__nearmap { margin-top: 4px; }
 .hh__neartab { min-width: 0; align-self: start; }
@@ -832,24 +833,17 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__near .near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
 .hh__near .near--cut .near__n { border-color: var(--pen); background: var(--pen); color: var(--on-mark); }
 @media (min-width: 720px) {
-  .hh__neari { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 36px; }
+  .hh__neari, .hh__likei { column-gap: 36px; }
+  .hh__neari { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .hh__likei { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
   .hh__neartab { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
 }
-@media (min-width: 1024px) { .hh__neari { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); } }
-@media (forced-colors: active) {
-  .hh__ctx { fill: GrayText; }
-  .hh__nsw, .hh__near .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
-  .hh__nsw--cut, .hh__near .near--cut .near__n { background: CanvasText; color: Canvas; }
-  .hh__nsw--ctx { background: GrayText; }
-}
+@media (min-width: 1024px) { .hh__neari, .hh__likei { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); } }
 
 /* Hospitals like this one (outside-figures.js likeBlock), under a rule: the heading, the group's count large (the
    sentence's first figure) and the own-program line left; the US map of the group right, its other hospitals faint and
    this one in the pen ink inside a ring. A phone stacks them, text then map. */
 .hh__like { margin-top: 26px; }
-.hh__likei { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 26px; border-top: 1px solid var(--line); }
-.hh__liket { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
-.hh__liket h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
 .hh__likes, .hh__likeown { font-size: var(--fs-md); line-height: 1.5; }
 .hh__likek { display: block; margin-bottom: 6px; font: 700 clamp(2.75rem, 4.6vw, 3.5rem)/1 var(--font-type); letter-spacing: -0.02em; }
 .hh__likeown { color: var(--ink-2); }
@@ -858,9 +852,12 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__likering { fill: none; stroke: var(--pen); stroke-width: 2px; vector-effect: non-scaling-stroke; }
 .hh__likeme { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .hh__lsw { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pen); box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--pen); margin: 0 3px; }
-@media (min-width: 720px) { .hh__likei { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); column-gap: 36px; } }
-@media (min-width: 1024px) { .hh__likei { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); } }
+/* Forced colors, for both sections (after the like section's rules, which these override). */
 @media (forced-colors: active) {
+  .hh__ctx { fill: GrayText; }
+  .hh__nsw, .hh__near .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .hh__nsw--cut, .hh__near .near--cut .near__n { background: CanvasText; color: Canvas; }
+  .hh__nsw--ctx { background: GrayText; }
   .hh__likedot { stroke: GrayText; }
   .hh__likering { stroke: CanvasText; }
   .hh__likeme { fill: CanvasText; stroke: Canvas; }

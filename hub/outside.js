@@ -47,13 +47,15 @@ export function outsideHospitals({ master, dollarCcns, hrrp }) {
   return rows;
 }
 
-// How many outside hospitals are in each group, and in each state within it: Map<group, { n, byState: Map<state, n> }>.
+// How many outside hospitals are in each group, how many of them some program's file lists, and how many in each state:
+// Map<group, { n, listed, byState: Map<state, n> }>.
 export function likeCounts(outside) {
   const counts = new Map();
   for (const h of outside) {
     let g = counts.get(h.group);
-    if (!g) counts.set(h.group, (g = { n: 0, byState: new Map() }));
+    if (!g) counts.set(h.group, (g = { n: 0, listed: 0, byState: new Map() }));
     g.n += 1;
+    if (h.listed) g.listed += 1;
     g.byState.set(h.state, (g.byState.get(h.state) ?? 0) + 1);
   }
   return counts;

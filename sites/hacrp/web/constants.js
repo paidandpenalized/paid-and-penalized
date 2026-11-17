@@ -77,8 +77,6 @@ export const RINGS_MAX = 3;
 // hatched ends show.
 export const RULER_ROOM_LOW = 0.15;
 export const RULER_ROOM_HIGH = 0.18;
-// The nearest-hospitals map's drawn width, the family's (web/charts/geo.js), which the hub's pages share.
-export { NEAR_MAP_WIDTH } from '../../../web/charts/geo.js';
 
 export const CLAIMS = {
   REDUCTION_PCT: 'HACRP-01',
