@@ -3,7 +3,7 @@
 // order, then writes Cloudflare's _headers (headers.js) and _redirects (redirects.js).
 // A production build (PP_ENV=production, or Workers Builds' build of main: buildEnv in context.js) is the only one that
 // may be indexed (robotsFor in context.js holds the rule for pages).
-import { mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { hubAsset } from '../../hub/asset.js';
@@ -102,7 +102,19 @@ export async function build({ outDir = DIST_DIR, env = buildEnv(process.env), si
   return { pages: ctx.pages, env };
 }
 
+// How many files dist/ holds and their total size: Workers Free caps a deploy's files, so the summary prints the count.
+export function distStats(dir) {
+  const files = readdirSync(dir, { recursive: true, withFileTypes: true }).filter((e) => e.isFile());
+  return { files: files.length, bytes: files.reduce((sum, e) => sum + statSync(join(e.parentPath, e.name)).size, 0) };
+}
+
+// The build's one-line summary: the pages, the files and size of dist/, and the env.
+export function summaryLine({ pages, env, files, bytes }) {
+  const size = bytes >= 2 ** 30 ? `${(bytes / 2 ** 30).toFixed(1)} GB` : `${(bytes / 2 ** 20).toFixed(1)} MB`;
+  return `dist/: ${pages} pages, ${files.toLocaleString('en-US')} files, ${size} (env ${env ?? 'unset'})`;
+}
+
 if (isMain(import.meta.url)) {
   const { pages, env } = await build();
-  console.log(`dist/: ${pages} pages (env ${env ?? 'unset'})`);
+  console.log(summaryLine({ pages, env, ...distStats(DIST_DIR) }));
 }

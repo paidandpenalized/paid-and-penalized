@@ -20,7 +20,8 @@ import { correctionsContent, readCorrections } from './corrections.js';
 import { comingPage } from './coming.js';
 import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
-import { hospitalPage } from './hospital/page.js';
+import { hospitalPage, outsidePage } from './hospital/page.js';
+import { likeBlock, nearBlock, outsideFigureContext } from './hospital/outside-figures.js';
 import { hacCounts, hrrpCounts, stateTotals, storyFacts } from './model.js';
 import { ROWS } from './hospital/peers.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
@@ -209,15 +210,26 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
-// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
-// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
+// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate, or Maryland's (its
+// page has no figures but says why), has the hub's robots value; one with no inputs is never indexed (never). facts: the
 // hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor); medicaid:
 // loadHub().medicaid (its Medicaid band).
 function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
-    const r = h.est ? robots : never;
+    const r = h.est || h.status === 'maryland' ? robots : never;
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp, medicaid }) });
+  }
+}
+
+// The page of every other hospital in the master (hospital/outside.js), the hub's robots value on each. The figures'
+// context (outside-figures.js) is worked out once here and shared by every page. model: hubModel(), whose hub holds the
+// master, the shapes and the program years.
+function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots }) {
+  const figures = outsideFigureContext({ hospitals, outside, likeCounts, master: hub.master, shapes: hub.shapes, counties: hub.counties, programYears: hub.programYears, fy: hub.fy });
+  for (const h of outside) {
+    const text = outsidePage({ h, assets: ctx.assets, robots, master: hub.master.get(h.ccn), hrrp: hub.hrrp, medicaid: hub.medicaid, programYears: hub.programYears, near: nearBlock(h, figures), like: likeBlock(h, figures) });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots, text });
   }
 }
 
@@ -230,7 +242,8 @@ function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, 
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null, released = SITE.hub.released } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released });
-  const { hub, hospitals: all, facts } = hubModel();
+  const model = hubModel();
+  const { hub, hospitals: all, facts } = model;
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, hrrpFy: hub.hrrp.fy, assets, robots }) });
   ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
@@ -241,6 +254,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, medicaid: hub.medicaid, robots, never });
+  // The outside pages only with the real model: a test that passes its own hospitals has no master to match them.
+  if (!hospitals) outsidePages(ctx, { model, robots });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });

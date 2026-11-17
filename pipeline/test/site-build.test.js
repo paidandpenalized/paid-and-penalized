@@ -17,7 +17,7 @@ import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../si
 import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
-import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
+import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, distStats, mergeEntries, summaryLine } from '../site/build.js';
 import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf, filesAt, lookup } from '../site/address.js';
@@ -250,6 +250,18 @@ test('buildContext, the build\'s own path to a context, writes the hub\'s asset 
     assert.match(hubUrl, /^\/assets\/hub-hospitals\.[0-9a-f]{8}\.json$/);
     assert.ok(existsSync(join(dir, hubUrl)), 'the asset the facts name is written');
     assert.deepEqual(Object.keys(facts), ['fy', 'hospitals', 'changed', 'programs']);
+  }));
+
+test('build: the summary line names the file count, the size and the pages', () =>
+  withTemp(async (dir) => {
+    const out = join(dir, 'dist');
+    await build({ outDir: out, env: 'preview', sites: [] });
+    const { files, bytes } = distStats(out);
+    assert.equal(files, readdirSync(out, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).length);
+    assert.ok(files > 0 && bytes > 0);
+    const line = summaryLine({ pages: 7, env: 'preview', files: 13123, bytes: 1288490188 });
+    assert.ok(line.includes('7 pages') && line.includes('13,123 files') && line.includes('1.2 GB') && line.includes('env preview'), 'pages, files, size and env');
+    assert.ok(summaryLine({ pages: 1, env: undefined, files: 2, bytes: 3 }).includes('env unset'));
   }));
 
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {

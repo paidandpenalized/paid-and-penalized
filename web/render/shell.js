@@ -23,7 +23,7 @@ const fill = (key, values) => fillCopy(COPY, key, values);
 const themeToggle = html`<button type="button" class="theme-toggle" aria-pressed="false" hidden>${icon('theme')}<span class="vh">${COPY.themeToggle}</span></button>`;
 
 // The followed hospital's page in a program (hospitalPathOf: 'hub' for its own page), or null when it has none there.
-const pageFor = (hospital, id) => hospitalPathOf(id, hospital.ccn, { inHrrp: hospital.inHrrp, inHub: hospital.inHub });
+const pageFor = (hospital, id) => hospitalPathOf(id, hospital.ccn, { inHrrp: hospital.inHrrp, inHub: hospital.inHub, inHacrp: hospital.inHacrp });
 
 // The program tabs, in the registry's order: All programs, then the listed programs, the ones with dollar estimates
 // (web/site.js). The programs under consideration have no tab; the footer's first field and the front page's directory
@@ -65,8 +65,9 @@ const sectionMenu = (sections, current) => html`<div class="wrap fam__sub"><nav 
 // hospital's page, its CCN.
 //   path      the page's path
 //   program   the current program's id (SITE.programs), or null on the family's own pages
-//   hospital  { ccn, name, net: number|null, inHrrp, inHub? } or null; inHub false (a hospital the dollar file lacks): it
-//             has no hub or HACRP page, so the chip's name, All programs and the HACRP tab link to none
+//   hospital  { ccn, name, net: number|null, inHrrp, inHub?, inHacrp? } or null; inHub false (a hospital the dollar file
+//             lacks): it has no hub or HACRP page, so the chip's name, All programs and the HACRP tab link to none; inHacrp
+//             (default: inHub) false with inHub true (an outside hospital: the hub has a page for it): no HACRP page only
 //   sections  [{ id, label, href }] or null; current: a section id or null
 //   chipNet   false on a page whose numbers are of another kind than the family's Medicare estimates (the work
 //             requirement's Medicaid scenario): the chip names the hospital only, so its net never sits beside them

@@ -3,6 +3,7 @@
 // never by name or CCN; failure messages print no hospital's name, CCN or figure.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { isDeepStrictEqual } from 'node:util';
 import { gzipSync } from 'node:zlib';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { ASSETS } from '../../pipeline/test/helpers.js';
@@ -14,7 +15,7 @@ import { hospitalPathOf } from '../../web/site.js';
 import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_MAX_MILES, likeBlock, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
+import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, likeBlock, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
 import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -25,7 +26,7 @@ const ESTIMATED = HOSPITALS.filter((h) => h.est);
 const esc = (text) => String(escapeHtml(text));
 const sameGroup = (h) => OUTSIDE.filter((x) => x.group === h.group);
 // The figures' context, built once as the build builds it.
-const CTX = outsideFigureContext({ hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS, shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy });
+const CTX = outsideFigureContext({ hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS, master: HUB.master, shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy });
 const near = (h) => String(nearBlock(h, CTX));
 const pick = (pred, what) => {
   const h = OUTSIDE.find(pred);
@@ -41,7 +42,6 @@ const linkedCcns = (block) => rowsOf(block).map((row) => /href="\/hospital\/([0-
 // the first NEAREST_K, only those within NEAR_MAX_MILES; and every one, unlimited (all).
 const byDistance = (h) => ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, d: miles(pointOf(h), pointOf(x)) })).sort((a, b) => a.d - b.d || (a.ccn < b.ccn ? -1 : 1));
 const within = (h) => byDistance(h).slice(0, NEAREST_K).filter((x) => x.d <= NEAR_MAX_MILES);
-const NEAR_GROUP_NAMES = ['critical_access', 'rural_emergency', 'not_listed'];
 
 test('nearestTo: returns the k nearest, nearest first, ties by CCN', () => {
   // On the equator, a degree of longitude apart; two rows tie at the same place; one has no place; one is skipped.
@@ -109,7 +109,7 @@ test('nearBlock: rural emergency and unlisted acute pages have it too', () => {
   const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
   for (const group of ['rural_emergency', 'not_listed']) {
     const h = pick((x) => x.group === group && placed(x) && nearestTo(rows, pointOf(x), { k: 1 })[0].miles <= NEAR_MAX_MILES, `a ${group} hospital near one the programs adjust`);
-    assert.deepEqual(linkedCcns(near(h)), within(h).map((x) => x.ccn), `${group}: the nearest hospitals`);
+    assert.ok(isDeepStrictEqual(linkedCcns(near(h)), within(h).map((x) => x.ccn)), `${group}: the nearest hospitals`);
   }
 });
 
@@ -143,7 +143,7 @@ test('nearBlock: Puerto Rico not_listed pages follow the distance rule', () => {
 test('nearBlock: rows beyond NEAR_MAX_MILES are left out, though nearer than the k-th', () => {
   // Candidates found with the kit's nearestTo (fast), each then checked against the full sort.
   const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
-  const short = OUTSIDE.filter((x) => NEAR_GROUP_NAMES.includes(x.group) && placed(x)).filter((x) => {
+  const short = OUTSIDE.filter((x) => NEAR_GROUPS.has(x.group) && placed(x)).filter((x) => {
     const got = nearestTo(rows, pointOf(x), { k: NEAREST_K });
     return got[0].miles <= NEAR_MAX_MILES && got.at(-1).miles > NEAR_MAX_MILES;
   }).filter((x) => within(x).length > 0 && byDistance(x)[NEAREST_K - 1].d > NEAR_MAX_MILES);
@@ -151,7 +151,7 @@ test('nearBlock: rows beyond NEAR_MAX_MILES are left out, though nearer than the
   for (const h of short) {
     const block = near(h);
     const want = within(h);
-    assert.deepEqual(linkedCcns(block), want.map((x) => x.ccn), 'only those within the limit, nearest first');
+    assert.ok(isDeepStrictEqual(linkedCcns(block), want.map((x) => x.ccn)), 'only those within the limit, nearest first');
     // The caption, written out again for the rows listed: its own words for a table of one.
     const k = want.filter((x) => ESTIMATED.find((e) => e.ccn === x.ccn).est.net < 0).length;
     const miles1 = milesText(want[0].d);
@@ -285,4 +285,14 @@ test('outside page weight: a critical access page (nearest plus like map) is wit
   const main = mainOf(page);
   assert.ok(main.indexOf('class="hh__like"') > main.indexOf('class="hh__near"') && main.indexOf('class="hh__like"') < main.indexOf('class="hh__notes"'), 'after the nearest hospitals, before the notes');
   assert.ok(gzipSync(page).length <= PAGE_GZIP_MAX, 'gzip size within PAGE_GZIP_MAX');
+});
+
+test('outsideFigureContext: refuses an unlisted acute hospital that the HACRP file lists', () => {
+  const nl = OUTSIDE.find((x) => x.group === 'not_listed');
+  assert.ok(nl, 'the data has an unlisted acute hospital');
+  const rec = HUB.master.get(nl.ccn);
+  const listed = new Map(HUB.master).set(nl.ccn, { ...rec, programs: { ...rec.programs, hacrp: { ...rec.programs.hacrp, inProgram: true } } });
+  const args = { hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS, master: HUB.master, shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy };
+  assert.doesNotThrow(() => outsideFigureContext(args));
+  assert.throws(() => outsideFigureContext({ ...args, master: listed }), /HACRP file/);
 });

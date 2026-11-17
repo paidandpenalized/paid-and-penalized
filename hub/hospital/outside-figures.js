@@ -25,7 +25,7 @@ export const NEAR_MAX_MILES = 250;
 
 // The groups whose pages show the nearest hospitals: hospitals that serve the same kind of community as the ones the
 // programs adjust (a federal, psychiatric or other specialty hospital's nearest acute hospitals say nothing about it).
-const NEAR_GROUPS = new Set(['critical_access', 'rural_emergency', 'not_listed']);
+export const NEAR_GROUPS = new Set(['critical_access', 'rural_emergency', 'not_listed']);
 
 // The class of a context dot (the same group's other hospitals) on the nearest map.
 const CONTEXT_CLS = 'hh__ctx';
@@ -50,13 +50,15 @@ const kindsOf = (group, years) => fillOutside(`likeCount.${group}`, group === 'n
 //              each page's own among them, under the ring the page draws) }
 //   shapes, counties, years ({ hacrpFy, hrrpFy }, text), fy (the dollar estimates' fiscal year, text)
 // hospitals: the hub's (hubHospitals); outside: hubModel().outside; likeCounts: hubModel().likeCounts, which must count
-// the same hospitals; shapes, counties: loadHub()'s; programYears: the master's { hacrp, hrrp }; fy: the dollar file's year.
-export function outsideFigureContext({ hospitals, outside, likeCounts, shapes, counties, programYears, fy }) {
+// the same hospitals; master: loadHub().master (by CCN: no unlisted acute hospital may be in the HACRP file, which its
+// group's noun says); shapes, counties: loadHub()'s; programYears: the master's { hacrp, hrrp }; fy: the dollar file's year.
+export function outsideFigureContext({ hospitals, outside, likeCounts, master, shapes, counties, programYears, fy }) {
   if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: the figures need the master\'s HACRP and HRRP years');
   const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
   const estimated = hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
   const members = new Map();
   for (const h of outside) {
+    if (h.group === 'not_listed' && master.get(h.ccn)?.programs.hacrp.inProgram) throw new RangeError('outside: an unlisted acute hospital is in the HACRP file');
     if (!members.has(h.group)) members.set(h.group, []);
     members.get(h.group).push(h);
   }

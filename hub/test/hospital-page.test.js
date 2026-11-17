@@ -16,7 +16,7 @@ import { HAC_CUT_PCT } from '../../web/programs.js';
 import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
-import { loadHub } from '../data.js';
+import { hubModel, loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
 import { hospitalPage } from '../hospital/page.js';
@@ -28,6 +28,7 @@ import { mainOf } from './helpers.js';
 
 const HUB = loadHub();
 const HOSPITALS = hubHospitals(HUB);
+const { outside: OUTSIDE } = hubModel();
 const FACTS = storyFacts(HOSPITALS);
 const FY = String(ASSETS.shell.fy);
 const esc = (text) => escapeHtml(text);
@@ -368,7 +369,7 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     await generateHub(base, { hospitals: [], master: new Map() });
     const ctx = createContext({ outDir: join(dir, 'b'), env: 'production', assets: ASSETS });
     await generateHub(ctx, { released: true });
-    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length, 'one page per hospital in the dollar file');
+    assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + OUTSIDE.length, 'one page per hospital in the master');
     let bad = 0;
     let wrongCanonical = 0;
     for (const h of HOSPITALS) {
@@ -379,9 +380,9 @@ test('the hub writes a page for every hospital in the dollar file, each at its a
     }
     assert.equal(bad, 0, 'pages with NaN, undefined or Infinity');
     assert.equal(wrongCanonical, 0, 'pages without their canonical address');
-    // The hub released: a page with an estimate is indexed (one without has no figures: Maryland's, or no inputs).
+    // The hub released: every page is indexed but one with no inputs (it has no figures).
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
-    assert.equal(indexed, HOSPITALS.filter((h) => h.est).length, 'hospital pages with an estimate indexable');
+    assert.equal(indexed, HOSPITALS.filter((h) => h.status !== 'no-inputs').length + OUTSIDE.length, 'hospital pages indexable');
   }));
 
 test('a hospital whose Medicare agreement ended before or during the year carries the note on its net (no estimate: under its status); one still in Medicare carries none', () => {
