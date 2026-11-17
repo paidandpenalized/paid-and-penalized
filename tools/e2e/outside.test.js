@@ -8,8 +8,10 @@
 // so no message here prints a hospital's name, CCN or figure.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { PROGRAM_PATH } from '../ci/page-types.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, assertNoSideways, assertQuiet, settle, useBrowser, useContext, withPage } from './lib.js';
+import { hubModel } from '../../hub/data.js';
 import { outsideHospitalSample } from './site.js';
 
 const shared = useBrowser();
@@ -37,7 +39,7 @@ for (const [where, width] of WIDTHS) {
           }
           const stamp = page.locator('#hh-status-h');
           assert.equal(await stamp.isVisible(), true, 'the stamp shows');
-          assert.equal(squash(await stamp.textContent()), STAMP, 'the stamp\'s words');
+          assert.ok(squash(await stamp.textContent()) === STAMP, 'the stamp\'s words');
           assert.ok(await page.locator('.hh__likei svg').first().isVisible(), 'the US map shows');
           const near = page.locator('.hh__near');
           if (sample === CAH) {
@@ -61,36 +63,49 @@ describe('the family search finds a hospital outside the penalty programs', { co
   const desktop = useContext(shared, { width: 1280 });
   const phone = useContext(shared, { width: 390, options: { hasTouch: true, isMobile: true } });
   const name = CAH.hospital.name;
+  // A distinctive part of the name: its longest word.
+  const word = name.split(/\s+/).reduce((a, b) => (b.length > a.length ? b : a), '');
 
-  it('typing part of its name lists it with its kind, and Enter opens its page', () => withPage(desktop, { path: '/', watched: true }, async (page, { seen }) => {
-    const form = page.locator('.topbar form#omni[data-hub]');
+  // Types the word in the form's box, moves to the option for the sample (its title is the name) by the arrow keys, checks that
+  // option shows its kind (and, in a box with a state, the state), and presses Enter; resolves once the sample's page has opened.
+  async function findAndOpen(page, form, what) {
     const box = form.getByRole('combobox');
     await box.focus();
-    await box.pressSequentially(name);
-    const option = form.getByRole('option').filter({ has: page.locator('.omni__k') }).first();
-    await option.waitFor();
-    assert.equal(await form.locator('[role="option"] .omni__k').first().isVisible(), true, 'an option shows its kind');
-    assert.match(await option.locator('.omni__s').textContent(), /\b[A-Z]{2}\b/, 'the option names its state');
+    await box.pressSequentially(word);
+    const options = form.getByRole('option');
+    await options.first().waitFor();
+    const titles = await options.evaluateAll((els) => els.map((el) => el.querySelector('.omni__t')?.textContent ?? ''));
+    const at = titles.findIndex((t) => t === name);
+    assert.ok(at >= 0, `${what}: the hospital is listed`);
+    const picked = options.nth(at);
+    assert.ok((await picked.locator('.omni__k').textContent()).trim().length > 0, `${what}: the option shows its kind`);
+    assert.ok(/\b[A-Z]{2}\b/.test(await picked.locator('.omni__s').textContent()), `${what}: the option names its state`);
+    for (let i = 0; i < titles.length && await picked.getAttribute('aria-selected') !== 'true'; i++) await box.press('ArrowDown');
+    assert.ok(await picked.getAttribute('aria-selected') === 'true', `${what}: the option is the active one`);
     await box.press('Enter');
     await page.waitForURL((url) => url.pathname === CAH.path);
     await page.waitForLoadState('networkidle');
-    assert.equal(await page.locator('#hh-status-h').isVisible(), true, 'its page opened, with the stamp');
+    assert.equal(await page.locator('#hh-status-h').isVisible(), true, `${what}: its page opened, with the stamp`);
+  }
+
+  it('typing part of its name lists it with its kind, and Enter opens its page', () => withPage(desktop, { path: '/', watched: true }, async (page, { seen }) => {
+    await findAndOpen(page, page.locator('.topbar form#omni[data-hub]'), 'the desktop search');
     await assertQuiet(seen, 'search to an outside hospital');
   }));
 
   it('on a phone the find button opens the search, and Enter opens its page', () => withPage(phone, { path: '/', watched: true }, async (page, { seen }) => {
     await page.locator('.fam__find').click();
-    const form = page.locator('.fam__end form#omni');
-    const box = form.getByRole('combobox');
-    await box.pressSequentially(name);
-    await form.getByRole('option').first().waitFor();
-    assert.equal(await form.locator('[role="option"] .omni__k').first().isVisible(), true, 'an option shows its kind');
-    await box.press('Enter');
-    await page.waitForURL((url) => url.pathname === CAH.path);
-    await page.waitForLoadState('networkidle');
-    assert.equal(await page.locator('#hh-status-h').isVisible(), true, 'its page opened, with the stamp');
+    await findAndOpen(page, page.locator('.fam__end form#omni'), 'the phone search');
     await assertQuiet(seen, 'phone search to an outside hospital');
   }));
+
+  // The chip a followed hospital shows on a program's folder (the shell, from the hub's asset), which an estimated hospital
+  // has and an outside one has not: proved on the estimated one first, so the selector is known to find it when it shows.
+  const ESTIMATED = hubModel().hospitals.find((h) => h.est);
+  const chipOn = async (page) => {
+    await page.waitForLoadState('networkidle');
+    return page.locator('[data-chip]');
+  };
 
   it('the tabs on its page carry it to each program folder, which shows no chip and nothing wrong; the wordmark likewise', () => withPage(desktop, { path: CAH.path, watched: true }, async (page, { seen }) => {
     const ccn = await page.locator('.topbar').getAttribute('data-hospital');
@@ -100,13 +115,23 @@ describe('the family search finds a hospital outside the penalty programs', { co
     assert.ok(folders.length >= 3 && folders.every((h) => h.endsWith(`?h=${ccn}`)), 'every folder tab carries the hospital');
     const hacrp = folders.find((h) => h.startsWith('/hacrp/'));
     assert.ok(hacrp, 'a HACRP tab');
-    assert.equal(hacrp.split('?')[0], '/hacrp/', 'the HACRP tab opens the program folder, not a hospital page');
+    assert.ok(hacrp.split('?')[0] === '/hacrp/', 'the HACRP tab opens the program folder, not a hospital page');
     const wordmark = await page.locator('a.wordmark').getAttribute('href');
-    assert.equal(wordmark, `/?h=${ccn}`, 'the wordmark carries the hospital');
+    assert.ok(wordmark === `/?h=${ccn}`, 'the wordmark carries the hospital');
     await assertQuiet(seen, 'the outside hospital\'s page');
+
+    // The selector finds the chip where a hospital in the programs is followed.
+    await withPage(desktop, { path: `${PROGRAM_PATH}?h=${ESTIMATED.ccn}`, watched: true }, async (opened, { seen: now }) => {
+      const chip = await chipOn(opened);
+      assert.equal(await chip.count(), 1, 'the chip exists for an estimated hospital');
+      await chip.waitFor({ state: 'visible' });
+      await assertQuiet(now, 'a followed estimated hospital');
+    });
     for (const [what, href] of [['the HACRP tab', hacrp], ['the home link', wordmark]]) {
       await withPage(desktop, { path: href, watched: true }, async (opened, { seen: now }) => {
-        assert.equal(await opened.locator('[data-chip]').isHidden(), true, `${what}: no chip appears`);
+        const chip = await chipOn(opened);
+        assert.equal(await chip.count(), 1, `${what}: the chip element is in the page`);
+        assert.equal(await chip.isHidden(), true, `${what}: no chip appears`);
         await assertQuiet(now, what);
       });
     }
