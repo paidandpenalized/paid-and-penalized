@@ -84,7 +84,7 @@ export const COPY = typesetCopy({
   // far as the files show, so its noun and sentences say what the files list and claim nothing more: none of its
   // hospitals is in the hospital-acquired conditions file (its noun, {hacrpFy}), and the Readmissions file ({hrrpFy})
   // lists none of them or {k} (likeTextNotListedSome*). Years: the master's programYears. likeAlt: the US map's name (the
-  // map has no place for the territories).
+  // map has no place for the territories but Puerto Rico, which it draws in an inset).
   likeHeading: 'Hospitals like this one',
   'likeCount.critical_access': 'critical access hospitals',
   'likeCount.psychiatric': 'psychiatric hospitals',
@@ -102,7 +102,11 @@ export const COPY = typesetCopy({
   likeTextNotListedNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hrrpFy} Readmissions file doesn't list them either.",
   likeTextNotListedSome: "{n} {kinds} are on Medicare's hospital list, {ns} of them in {state}. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
   likeTextNotListedSomeNoState: "{n} {kinds} are on Medicare's hospital list. CMS's FY{hrrpFy} Readmissions file lists {k} of them.",
-  likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}. Puerto Rico and the other territories are not drawn.',
+  likeAlt: 'A US map with this hospital ringed and a dot for each of the other {kinds}, Puerto Rico in a box at the lower right. The other territories are not drawn.',
+  // The US map's figure caption ({n}: the group's count, as the sentence's big figure); the unlisted acute group's noun
+  // ends on the file that doesn't list them, so its caption names the list first.
+  likeCaption: "The {n} {kinds} on Medicare's hospital list; this one in red.",
+  likeCaptionNotListed: "Medicare's hospital list holds {n} {kinds}; this one in red.",
 
   // The nearest hospitals with an estimate: the heading, the caption ({miles}: the closest one's distance in words,
   // web/render/miles.js; {k} of the {n} nearest with a net cut, in words for none and all, and its own words for a table

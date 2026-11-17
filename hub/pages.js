@@ -7,6 +7,7 @@ import { REPO_ROOT } from '../pipeline/files.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
+import { counter } from '../web/charts/figure.js';
 import { fillCopy, printout } from '../web/render/components.js';
 import { absLogPct, count, pct } from '../web/render/format.js';
 import { escapeHtml, html } from '../web/render/html.js';
@@ -223,12 +224,16 @@ function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, 
 }
 
 // The page of every other hospital in the master (hospital/outside.js), the hub's robots value on each. The figures'
-// context (outside-figures.js) is worked out once here and shared by every page. model: hubModel(), whose hub holds the
-// master, the shapes and the program years.
+// context (outside-figures.js) is worked out once here and shared by every page; each page numbers its figures in order
+// (a counter of its own, the nearest hospitals' map first). model: hubModel(), whose hub holds the master, the shapes and
+// the program years.
 function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots }) {
   const figures = outsideFigureContext({ hospitals, outside, likeCounts, master: hub.master, shapes: hub.shapes, counties: hub.counties, programYears: hub.programYears, fy: hub.fy });
   for (const h of outside) {
-    const text = outsidePage({ h, assets: ctx.assets, robots, master: hub.master.get(h.ccn), hrrp: hub.hrrp, medicaid: hub.medicaid, programYears: hub.programYears, near: nearBlock(h, figures), like: likeBlock(h, figures) });
+    const next = counter();
+    const near = nearBlock(h, figures, next);
+    const like = likeBlock(h, figures, next);
+    const text = outsidePage({ h, assets: ctx.assets, robots, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots, text });
   }
 }

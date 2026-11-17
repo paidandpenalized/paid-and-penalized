@@ -3,11 +3,14 @@
 // NEAREST_K of the nearest hospitals the dollar file estimates within NEAR_MAX_MILES, on an area map beside a table of
 // their estimated net change. Server-drawn; the figure script (web/client/figure.js) adds the pins' tooltips, their keys
 // and the table's scroll box. The hospitals like this one (likeBlock), on every page: how many of its group Medicare's
-// hospital list holds, nationally and in its state, beside a US map of them with this one marked (static: no script).
-// Both read one context, worked out once per build (outsideFigureContext).
+// hospital list holds, nationally and in its state, beside a US map of them with this one marked (static: no script),
+// Puerto Rico in an inset of its own. Both read one context, worked out once per build (outsideFigureContext). Each map
+// is a numbered figure ("Figure N.", web/charts/figure.js's caption), numbered in page order by the page's counter.
 import { STATE_NAMES } from '../../engine/js/states.js';
-import { keysHintFor } from '../../web/charts/figure.js';
-import { areaMap, nearestTo, NEAR_MAP_WIDTH, pointOf, US_MAP_CODES, usPaths, usPoints, usProjected } from '../../web/charts/geo.js';
+import { COPY as SHARED } from '../../web/copy.js';
+import { counter, keysHintFor } from '../../web/charts/figure.js';
+import { dotsPath } from '../../web/charts/dots.js';
+import { areaMap, nearestTo, NEAR_MAP_WIDTH, pointOf, prInset, US_MAP_CODES, usPaths, usProjected } from '../../web/charts/geo.js';
 import { fillAround, printout } from '../../web/render/components.js';
 import { count, placeText } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
@@ -15,6 +18,7 @@ import { milesCell, milesText } from '../../web/render/miles.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { MAP_WIDTH } from '../asset.js';
 import { fillOutside, hasOutside } from './outside-copy.js';
+import { shownName } from './record.js';
 import { signedMoney, signedShareText } from './text.js';
 
 // Reading aids, not method constants: how many nearest hospitals a page lists at most, and how far one may be to be
@@ -27,27 +31,49 @@ export const NEAR_MAX_MILES = 250;
 // programs adjust (a federal, psychiatric or other specialty hospital's nearest acute hospitals say nothing about it).
 export const NEAR_GROUPS = new Set(['critical_access', 'rural_emergency', 'not_listed']);
 
-// The class of a context dot (the same group's other hospitals) on the nearest map.
+// The class of a context dot (the same group's other hospitals) on the nearest map, and its radius in viewBox units.
 const CONTEXT_CLS = 'hh__ctx';
+const CONTEXT_R = 3;
+// The nearest map's reading aids (web/charts/geo.js areaMap): room between the pins and the frame's edge, so no pin is
+// cut off; at most this many states labeled by postal code; colliding pins spread apart.
+const NEAR_PAD = 30;
+const NEAR_LABELS = 4;
 // The nearest map's figure id (its keyboard hint is <id>-keys).
 const NEAR_FIG_ID = 'hh-near-map';
 
-// Hospitals like this one: the US map's dots for the group's hospitals (their class and diameter, in viewBox units at
-// MAP_WIDTH, the home map's frame), and this hospital as a dot in the pen ink inside a ring (radii, the same units).
+// Hospitals like this one: the US map's dots for the group's hospitals (their class, in viewBox units at MAP_WIDTH, the
+// home map's frame), and this hospital as a dot in the pen ink inside a ring (radii, the same units). A dot's diameter
+// follows the group's size, so a sparse group (a few dozen) still shows where a dense one (over a thousand) doesn't
+// blot the map: LIKE_DOT_MAX for a group of up to LIKE_DOT_FULL hospitals, shrinking with the square root of the count
+// beyond it (the dots' ink per area held about even), never under LIKE_DOT_MIN (about 3px on a desktop page).
 const LIKE_DOT = 'hh__likedot';
-const LIKE_DOT_D = 4.4;
+const LIKE_DOT_MIN = 4.8;
+const LIKE_DOT_MAX = 9;
+const LIKE_DOT_FULL = 250;
+export const likeDotSize = (n) => Math.max(LIKE_DOT_MIN, Math.min(LIKE_DOT_MAX, LIKE_DOT_MAX * Math.sqrt(LIKE_DOT_FULL / Math.max(n, 1))));
 const ME_R = 5;
+// Puerto Rico's code over its inset, in viewBox units at MAP_WIDTH (about the map's other small type on a desktop page).
+const INSET_LABEL_SIZE = 18;
 const RING_R = 11;
 
 // A group's noun ("critical access hospitals"): the unlisted acute group's names the hospital-acquired conditions file's
 // year, the one thing true of all its hospitals. years: { hacrpFy, hrrpFy }, as text.
 const kindsOf = (group, years) => fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: years.hacrpFy } : {});
 
+// Where a hospital goes on the "like this one" map: Albers USA's place, or, for a Puerto Rico hospital, its place in the
+// inset (web/charts/geo.js prInset); null where the map has none (another territory, or no coordinates).
+const likeAt = (shapes, inset, h) => {
+  const point = pointOf(h);
+  if (!point) return null;
+  return h.state === 'PR' ? inset?.project(point) ?? null : usProjected(shapes, [point], MAP_WIDTH)[0];
+};
+
 // Everything the two figures read that is the same for every page, worked out once per build:
 //   estimated  the hospitals the dollar file estimates, each with its place ({ ...h, point }), those without one left out
 //   groups     each group's { counts (likeCounts' entry), kinds (its noun), context (its hospitals' places, for the
-//              nearest map's dots: { ccn, point, cls }), like ({ height, body }: the US map's land and the group's dots,
-//              each page's own among them, under the ring the page draws) }
+//              nearest map's dots: { ccn, point, cls }), like ({ height, body }: the US map's land, Puerto Rico's inset
+//              and the group's dots, each page's own among them, under the ring the page draws) }
+//   inset      Puerto Rico's inset on the US map (prInset), or null
 //   shapes, counties, years ({ hacrpFy, hrrpFy }, text), fy (the dollar estimates' fiscal year, text)
 // hospitals: the hub's (hubHospitals); outside: hubModel().outside; likeCounts: hubModel().likeCounts, which must count
 // the same hospitals; master: loadHub().master (by CCN: no unlisted acute hospital may be in the HACRP file, which its
@@ -63,12 +89,15 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
     members.get(h.group).push(h);
   }
   const { height, paths } = usPaths(shapes, MAP_WIDTH);
-  const land = html`<g class="chart-land"><path d="${US_MAP_CODES.map((code) => paths.get(code)).filter(Boolean).join('')}"/></g>`;
+  const inset = prInset(shapes, MAP_WIDTH);
+  // Puerto Rico's box: a hairline frame, its code above it, the island drawn as land with the states.
+  const box = inset ? html`<rect class="hh__inset" x="${inset.box.x}" y="${inset.box.y}" width="${inset.box.width}" height="${inset.box.height}"/><text class="hh__insetlab" x="${inset.box.x + inset.box.width}" y="${inset.box.y}" dy="-4" text-anchor="end" font-size="${INSET_LABEL_SIZE}">PR</text>` : '';
+  const land = html`<g class="chart-land"><path d="${[...US_MAP_CODES.map((code) => paths.get(code)), inset?.outline].filter(Boolean).join('')}"/></g>${box}`;
   const groups = new Map();
   for (const [group, list] of members) {
     const counts = likeCounts.get(group);
     if (counts?.n !== list.length) throw new RangeError(`outside: the counts of group ${group} are not its hospitals'`);
-    const dots = usPoints({ shapes, points: list.map((o) => ({ point: pointOf(o), cls: LIKE_DOT })), sizes: { [LIKE_DOT]: LIKE_DOT_D }, width: MAP_WIDTH });
+    const dots = html`<g class="chart-us__points">${dotsPath(list.map((o) => likeAt(shapes, inset, o)).filter(Boolean), LIKE_DOT, likeDotSize(list.length))}</g>`;
     groups.set(group, {
       counts,
       kinds: kindsOf(group, years),
@@ -77,7 +106,7 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
     });
   }
   if (groups.size !== likeCounts.size) throw new RangeError('outside: the counts hold a group with no hospitals');
-  return Object.freeze({ estimated, groups, shapes, counties, years, fy: String(fy) });
+  return Object.freeze({ estimated, groups, inset, shapes, counties, years, fy: String(fy) });
 }
 const groupOf = (ctx, h) => {
   const g = ctx.groups.get(h.group);
@@ -97,6 +126,9 @@ function caption(rows) {
   return fillOutside('nearCaption', { ...values, k: String(k) });
 }
 
+// A figure's caption, in the kit's words and look (web/charts/figure.js): "Figure N." and its sentence.
+const figCaption = (n, text) => html`<figcaption class="fig__cap"><span class="fig__n">${SHARED.figure} ${String(n)}.</span> ${text}</figcaption>`;
+
 // A map's key: a list of items, each a swatch class and its words.
 const keyItem = (swatch, label) => html`<li><span class="${swatch}" aria-hidden="true"></span>${label}</li>`;
 const keyList = (cls, items) => html`<ul class="fig__key ${cls}" role="list">${items.map(([swatch, label]) => keyItem(swatch, label))}</ul>`;
@@ -112,9 +144,11 @@ function key(kinds, withContext) {
 
 // The nearest hospitals in the programs, or '' for a hospital without a place, outside NEAR_GROUPS, or with no estimated
 // hospital within NEAR_MAX_MILES. The rows: up to NEAREST_K of the nearest, only those within NEAR_MAX_MILES. The map
-// needs two (web/charts/geo.js areaMap), so a table of one stands alone. h: an OutsideHospital; ctx:
-// outsideFigureContext's.
-export function nearBlock(h, ctx) {
+// needs two (web/charts/geo.js areaMap), so a table of one stands alone, its caption a paragraph; with the map, the
+// caption is the figure's. On a phone the table folds each row's share of Medicare inpatient pay under its dollars
+// (hub/styles.css), so it fits the screen. h: an OutsideHospital; ctx: outsideFigureContext's; next: the page's figure
+// counter (web/charts/figure.js counter), called only when the map is drawn.
+export function nearBlock(h, ctx, next = counter()) {
   const point = pointOf(h);
   if (!point || !NEAR_GROUPS.has(h.group)) return '';
   const rows = nearestTo(ctx.estimated, point, { k: NEAREST_K }).filter((r) => r.miles <= NEAR_MAX_MILES);
@@ -124,8 +158,8 @@ export function nearBlock(h, ctx) {
   const who = (r) => [r.name, placeText(r)].filter(Boolean).join(', ');
   const map = areaMap({
     shapes: ctx.shapes, counties: ctx.counties, context: g.context.filter((x) => x.ccn !== h.ccn), width: NEAR_MAP_WIDTH,
-    label: fillOutside('nearAlt'),
-    center: { point, tip: fillOutside('nearThis', { name: h.name }) },
+    label: fillOutside('nearAlt'), pad: NEAR_PAD, contextR: CONTEXT_R, spread: true, labels: NEAR_LABELS,
+    center: { point, tip: fillOutside('nearThis', { name: shownName(h) }) },
     points: rows.map((r, i) => ({
       point: r.point, n: i + 1,
       // The kit's pin classes: filled in the pen ink for a cut, on paper for none.
@@ -133,21 +167,23 @@ export function nearBlock(h, ctx) {
       tip: fillOutside('nearTip', { n: String(i + 1), who: who(r), net: signedMoney(r.est.net), share: signedShareText(r.est.share), distance: milesText(r.miles) }),
     })),
   });
-  // The kit's table (web/styles/charts.css .gb--near), as HACRP's: a cut's row is near--yes, its number in the pen ink.
-  const table = printout(html`<table class="gb gb--near" aria-labelledby="hh-near-h">
-<thead><tr><th scope="col" class="num">${fillOutside('nearColRank')}</th><th scope="col">${fillOutside('nearColHospital')}</th><th scope="col" class="num">${fillOutside('nearColMiles')}</th><th scope="col" class="num">${fillOutside('nearColNet', { fy: ctx.fy })}</th><th scope="col" class="num">${fillOutside('nearColShare')}</th></tr></thead>
-<tbody>${rows.map((r, i) => html`<tr${cut(r) ? html` class="near--yes"` : ''}><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${hospitalPathOf('hub', r.ccn)}">${r.name}</a><span class="near__city">${placeText(r)}</span></th><td class="num">${milesCell(r.miles)}</td><td class="num near__cut${cut(r) ? ' near__cut--pen' : ''}">${signedMoney(r.est.net)}</td><td class="num">${signedShareText(r.est.share)}</td></tr>`)}</tbody>
+  // The kit's table (web/styles/charts.css .gb--near), as HACRP's: a cut's row is near--yes, its number in the pen ink. The
+  // share has a column of its own on a wide screen and a line under the dollars on a phone (hh__nshare): CSS shows one.
+  const shareCol = fillOutside('nearColShare');
+  const table = printout(html`<table class="gb gb--near hh__ntab" aria-labelledby="hh-near-h">
+<thead><tr><th scope="col" class="num">${fillOutside('nearColRank')}</th><th scope="col">${fillOutside('nearColHospital')}</th><th scope="col" class="num">${fillOutside('nearColMiles')}</th><th scope="col" class="num">${fillOutside('nearColNet', { fy: ctx.fy })}<span class="hh__nshare">${shareCol}</span></th><th scope="col" class="num hh__sharec">${shareCol}</th></tr></thead>
+<tbody>${rows.map((r, i) => html`<tr${cut(r) ? html` class="near--yes"` : ''}><td class="num"><span class="near__n">${String(i + 1)}</span></td><th scope="row"><a href="${hospitalPathOf('hub', r.ccn)}">${r.name}</a><span class="near__city">${placeText(r)}</span></th><td class="num">${milesCell(r.miles)}</td><td class="num near__cut${cut(r) ? ' near__cut--pen' : ''}">${signedMoney(r.est.net)}<span class="hh__nshare">${signedShareText(r.est.share)}</span></td><td class="num hh__sharec">${signedShareText(r.est.share)}</td></tr>`)}</tbody>
 </table>`);
   return html`<section class="hh__near" aria-labelledby="hh-near-h">
 <div class="wrap"><div class="hh__neari">
 <div class="hh__neart">
 <h2 id="hh-near-h">${fillOutside('nearHeading')}</h2>
-<p class="hh__nearcap">${caption(rows)}</p>
 ${map ? html`<figure class="fig hh__nearmap" id="${NEAR_FIG_ID}" data-figure>
+${figCaption(next(), caption(rows))}
 ${map}
 ${key(g.kinds, map.contextDrawn > 0)}
 </figure>
-${keysHintFor(NEAR_FIG_ID, fillOutside('nearKeys'))}` : ''}
+${keysHintFor(NEAR_FIG_ID, fillOutside('nearKeys'))}` : html`<p class="hh__nearcap">${caption(rows)}</p>`}
 </div>
 <div class="hh__neartab">${table}</div>
 </div></div>
@@ -169,29 +205,35 @@ function likeSentence(h, c, kinds, years) {
   return fillAround((marks) => fillOutside(key, { ...values, ...marks }), { n: html`<span class="hh__likek">${count(c.n)}</span>` });
 }
 
-// The US map: every state's outline over the land (the home map's projection and shapes, at its width), the group's
-// hospitals as faint dots, and h ringed in the pen ink. null where the projection has no place for h (a territory
-// with no inset, Puerto Rico included, or no coordinates): the page then shows the text alone.
-function likeMap(h, { like }, shapes, label) {
-  const [at] = usProjected(shapes, [pointOf(h)], MAP_WIDTH);
+// The US map: every state's outline over the land (the home map's projection and shapes, at its width), Puerto Rico in its
+// inset, the group's hospitals as dots, and h ringed in the pen ink. null where the map has no place for h (another
+// territory, or no coordinates): the page then shows the text alone, across the section.
+function likeMap(h, { like }, ctx, label) {
+  const at = likeAt(ctx.shapes, ctx.inset, h);
   if (!at) return null;
   const [x, y] = at;
   return html`<svg class="chart chart--like-map" viewBox="0 0 ${MAP_WIDTH} ${like.height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${MAP_WIDTH}">${like.body}<circle class="hh__likering" cx="${x}" cy="${y}" r="${RING_R}"/><circle class="hh__likeme" cx="${x}" cy="${y}" r="${ME_R}"/></svg>`;
 }
 
-// Hospitals like this one, on every outside page. h: an OutsideHospital; ctx: outsideFigureContext's.
-export function likeBlock(h, ctx) {
+// The US map's caption: how many of the group the list holds, and this one marked. The unlisted acute group's noun ends
+// on what the file doesn't list, so its caption puts the list first.
+const likeCaption = (h, g) => fillOutside(h.group === 'not_listed' ? 'likeCaptionNotListed' : 'likeCaption', { n: count(g.counts.n), kinds: g.kinds });
+
+// Hospitals like this one, on every outside page. h: an OutsideHospital; ctx: outsideFigureContext's; next: the page's
+// figure counter, called only when the map is drawn.
+export function likeBlock(h, ctx, next = counter()) {
   const g = groupOf(ctx, h);
-  const map = likeMap(h, g, ctx.shapes, fillOutside('likeAlt', { kinds: g.kinds }));
+  const map = likeMap(h, g, ctx, fillOutside('likeAlt', { kinds: g.kinds }));
   const own = `own.${h.group}`;
   return html`<section class="hh__like" aria-labelledby="hh-like-h">
-<div class="wrap"><div class="hh__likei">
+<div class="wrap"><div class="hh__likei${map ? '' : ' hh__likei--solo'}">
 <div class="hh__liket">
 <h2 id="hh-like-h">${fillOutside('likeHeading')}</h2>
 <p class="hh__likes">${likeSentence(h, g.counts, g.kinds, ctx.years)}</p>
 ${hasOutside(own) ? html`<p class="hh__likeown">${fillOutside(own)}</p>` : ''}
 </div>
 ${map ? html`<figure class="fig hh__likemap">
+${figCaption(next(), likeCaption(h, g))}
 ${map}
 ${keyList('hh__lkey', [['hh__lsw hh__lsw--me', fillOutside('nearKeyThis')], ['hh__nsw hh__nsw--ctx', fillOutside('nearKeyOther', { kinds: g.kinds })]])}
 </figure>` : ''}

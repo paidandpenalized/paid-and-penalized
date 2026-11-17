@@ -5,17 +5,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isDeepStrictEqual } from 'node:util';
 import { gzipSync } from 'node:zlib';
+import { readFileSync } from 'node:fs';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { ASSETS } from '../../pipeline/test/helpers.js';
-import { areaMap, miles, nearestTo, pointOf, usProjected } from '../../web/charts/geo.js';
+import { areaMap, miles, nearestTo, pointOf, prInset, usProjected } from '../../web/charts/geo.js';
 import { count } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
 import { milesText } from '../../web/render/miles.js';
 import { hospitalPathOf } from '../../web/site.js';
+import { counter } from '../../web/charts/figure.js';
 import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, likeBlock, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
+import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
 import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -182,7 +184,9 @@ const YEARS = { hacrpFy: String(HUB.programYears.hacrp), hrrpFy: String(HUB.prog
 // A group's noun: the unlisted acute group's names the hospital-acquired conditions file's year.
 const kindsOf = (group) => fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: YEARS.hacrpFy } : {});
 const textOf = (block) => block.replace(/<[^>]*>/g, '');
-const projected = (h) => usProjected(HUB.shapes, [pointOf(h)], MAP_WIDTH)[0];
+// Where the map puts a hospital: Albers USA's place, or Puerto Rico's inset for a Puerto Rico hospital.
+const INSET = prInset(HUB.shapes, MAP_WIDTH);
+const projected = (h) => (h.state === 'PR' ? INSET.project(pointOf(h)) : usProjected(HUB.shapes, [pointOf(h)], MAP_WIDTH)[0]);
 const mapped = (h) => placed(h) && projected(h) !== null;
 const DOLLAR_CCNS = new Set(HUB.dollars.hospitals.map((r) => r.ccn));
 const RECOUNT = (() => {
@@ -244,8 +248,9 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
     assert.ok(svg, `${group}: an image`);
     assert.ok(/aria-label="[^"]+"/.test(svg), `${group}: named`);
     assert.ok(block.includes('class="chart-land"'), `${group}: the state lines`);
-    // The group's hospitals the projection places (this one's own dot sits under its ring), counted here, against the dots in the path.
-    const want = usProjected(HUB.shapes, sameGroup(h).map(pointOf), MAP_WIDTH).filter(Boolean).length;
+    // The group's hospitals the map places, Puerto Rico's in its inset (this one's own dot sits under its ring), counted
+    // here, against the dots in the path.
+    const want = sameGroup(h).filter(mapped).length;
     const d = /<path class="chart-dots hh__likedot"[^>]* d="([^"]*)"/.exec(block)?.[1] ?? '';
     assert.ok((d.match(/h0/g) ?? []).length === want, `${group}: a dot for each mappable hospital of the group`);
     // This hospital: a ring and a dot at its place.
@@ -255,20 +260,102 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
   }
 });
 
-test('likeBlock: no map for a Puerto Rico or Guam hospital, or one without coordinates, and the text is still there', (t) => {
-  const cases = [
-    pick((x) => x.state === 'PR', 'a Puerto Rico hospital'),
-    pick((x) => x.state === 'GU', 'a Guam hospital'),
-    pick((x) => !placed(x), 'a hospital without coordinates'),
-  ];
-  for (const h of cases) {
-    const block = like(h);
-    assert.ok(!block.includes('<svg'), 'no map');
-    assert.ok(textOf(block).includes(esc(expectedLike(h))), 'the count and sentence');
+test('likeBlock: a Puerto Rico hospital is ringed in the inset at the lower right; Guam, or no coordinates: no map, the words across the section', (t) => {
+  const pr = pick((x) => x.state === 'PR' && placed(x), 'a Puerto Rico hospital with a place');
+  const block = like(pr);
+  const { box } = INSET;
+  const [x, y] = projected(pr);
+  assert.ok(x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height, 'its place is inside the inset');
+  assert.ok(block.includes(`<circle class="hh__likering" cx="${x}" cy="${y}"`), 'ringed there');
+  assert.ok(block.includes(`<rect class="hh__inset" x="${box.x}" y="${box.y}"`), 'the inset\'s box');
+  // The box sits in the frame's lower right, clear of every state's outline (Florida's tip included).
+  const height = Number(/viewBox="0 0 \d+ (\d+)"/.exec(block)[1]);
+  assert.ok(box.x > MAP_WIDTH / 2 && box.y > height / 2 && box.x + box.width <= MAP_WIDTH && box.y + box.height <= height, 'in the frame\'s lower right');
+  const states = usProjected(HUB.shapes, OUTSIDE.filter((o) => o.state !== 'PR' && placed(o)).map(pointOf), MAP_WIDTH).filter(Boolean);
+  assert.ok(states.every(([sx, sy]) => sx < box.x || sy < box.y), 'no mainland hospital falls in the box');
+  // Every Puerto Rico hospital of the group is a dot in the box.
+  const inBox = sameGroup(pr).filter((o) => o.state === 'PR' && placed(o));
+  assert.ok(inBox.every((o) => projected(o) !== null), 'each Puerto Rico hospital has a place in the inset');
+  for (const h of [pick((x) => x.state === 'GU', 'a Guam hospital'), pick((x) => !placed(x), 'a hospital without coordinates')]) {
+    const solo = like(h);
+    assert.ok(!solo.includes('<svg'), 'no map');
+    assert.ok(solo.includes('class="hh__likei hh__likei--solo"'), 'the words take the section');
+    assert.ok(textOf(solo).includes(esc(expectedLike(h))), 'the count and sentence');
   }
+  assert.ok(!block.includes('hh__likei--solo'), 'a page with a map keeps two columns');
   const none = OUTSIDE.filter((x) => !mapped(x)).length;
   assert.ok(none > 0, 'some pages have no map');
   t.diagnostic(`${none} outside pages have no "hospitals like this one" map (a territory the US map has no inset for, or no coordinates)`);
+});
+
+test('likeBlock: a sparse group\'s dots are drawn larger than a dense group\'s, within a floor and a ceiling', () => {
+  const sizes = [...LIKE_COUNTS].map(([group, c]) => [group, c.n, likeDotSize(c.n)]).sort((a, b) => a[1] - b[1]);
+  for (let i = 1; i < sizes.length; i++) assert.ok(sizes[i][2] <= sizes[i - 1][2], 'never larger for a larger group');
+  assert.ok(sizes[0][2] > sizes.at(-1)[2], 'the sparsest group\'s dots larger than the densest\'s');
+  assert.ok(likeDotSize(1) === likeDotSize(2) && likeDotSize(1e6) === likeDotSize(1e7), 'a ceiling and a floor');
+  // The block draws the group's own size.
+  for (const group of ['critical_access', 'long_term']) {
+    const h = pick((x) => x.group === group && mapped(x), `a ${group} hospital on the US map`);
+    const width = Number(/<path class="chart-dots hh__likedot" stroke-width="([\d.]+)"/.exec(like(h))?.[1]);
+    assert.equal(width, Math.round(likeDotSize(LIKE_COUNTS.get(group).n) * 10) / 10, `${group}: the dots' diameter`);
+  }
+});
+
+// Each map is a numbered figure, numbered in page order: the nearest hospitals' map first where the page has it.
+test('figures: "Figure N." captions, numbered in page order, the nearest map\'s caption its sentence', () => {
+  const cap = (block) => [...block.matchAll(/<figcaption class="fig__cap"><span class="fig__n">Figure (\d+)\.<\/span> ([^<]*)<\/figcaption>/g)].map((m) => [Number(m[1]), m[2]]);
+  const both = pick((x) => x.group === 'critical_access' && mapped(x) && within(x).length === NEAREST_K, 'a critical access hospital with both maps');
+  const next = counter();
+  const n = cap(String(nearBlock(both, CTX, next)));
+  const l = cap(String(likeBlock(both, CTX, next)));
+  assert.deepEqual([n.length, l.length], [1, 1], 'a caption on each map');
+  assert.deepEqual([n[0][0], l[0][0]], [1, 2], 'numbered in order');
+  assert.ok(!String(nearBlock(both, CTX)).includes('class="hh__nearcap"'), 'the sentence is the figure\'s caption, not a paragraph too');
+  assert.equal(l[0][1], esc(fillOutside('likeCaption', { n: count(LIKE_COUNTS.get('critical_access').n), kinds: kindsOf('critical_access') })), 'the US map\'s caption counts the group');
+  const nl = pick((x) => x.group === 'not_listed' && mapped(x), 'an unlisted acute hospital on the map');
+  assert.ok(cap(like(nl))[0][1].startsWith(esc(fillOutside('likeCaptionNotListed', { n: count(LIKE_COUNTS.get('not_listed').n), kinds: kindsOf('not_listed') }))), 'the unlisted group\'s caption names the list first');
+  // A page with only the US map numbers it 1; one with no map takes no number.
+  const alone = pick((x) => x.group === 'psychiatric' && mapped(x), 'a psychiatric hospital on the map');
+  const k = counter();
+  assert.equal(nearBlock(alone, CTX, k), '');
+  assert.equal(cap(String(likeBlock(alone, CTX, k)))[0][0], 1, 'the US map alone is Figure 1');
+  const k2 = counter();
+  assert.ok(!String(likeBlock(pick((x) => !placed(x), 'a hospital without coordinates'), CTX, k2)).includes('fig__cap'));
+  assert.equal(k2(), 1, 'no number taken without a map');
+});
+
+// The table folds each row's share under its dollars on a phone: both are in the markup, each tagged for CSS to show one.
+test('nearBlock: the share of Medicare inpatient pay, as a column and as the line under the dollars, the same value', () => {
+  const h = pick((x) => x.group === 'critical_access' && placed(x) && within(x).length === NEAREST_K, 'a critical access hospital with NEAREST_K close');
+  const block = near(h);
+  const head = block.slice(block.indexOf('<thead>'), block.indexOf('</thead>'));
+  assert.ok(head.includes(`<span class="hh__nshare">${esc(fillOutside('nearColShare'))}</span>`) && head.includes(`<th scope="col" class="num hh__sharec">${esc(fillOutside('nearColShare'))}</th>`), 'the heading in both places');
+  for (const row of rowsOf(block)) {
+    const folded = /<span class="hh__nshare">([^<]*)<\/span><\/td>/.exec(row)?.[1];
+    const col = /<td class="num hh__sharec">([^<]*)<\/td>/.exec(row)?.[1];
+    assert.ok(folded && folded === col, 'the folded share is the column\'s');
+  }
+  const css = readFileSync(new URL('../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /@media \(max-width: 599px\) \{\s*\.hh__ntab \.hh__sharec \{ display: none; \}\s*\.hh__ntab \.hh__nshare \{ display: block;/, 'a phone hides the column and shows the line');
+  assert.match(css, /\n\.hh__nshare \{ display: none; \}/, 'a wide screen shows the column alone');
+});
+
+// The nearest map asks the kit for its reading aids: state labels, colliding pins spread apart, room at the edges.
+test('nearBlock: the map labels states and keeps every pin whole inside its frame, apart from the others', () => {
+  const rows = ESTIMATED.filter(placed).map((x) => ({ ccn: x.ccn, point: pointOf(x) }));
+  const pages = OUTSIDE.filter((x) => NEAR_GROUPS.has(x.group) && placed(x) && nearestTo(rows, pointOf(x), { k: 2 }).at(-1).miles <= NEAR_MAX_MILES);
+  let labeled = 0;
+  for (const h of pages.filter((_, i) => i % 25 === 0)) {
+    const block = near(h);
+    const [w, ht] = /viewBox="0 0 (\d+) (\d+)"/.exec(block).slice(1).map(Number);
+    const pins = [...block.matchAll(/<circle class="chart-pin [^"]*" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => m.slice(1).map(Number));
+    for (const [x, y, r] of pins) assert.ok(x - r >= 0 && x + r <= w && y - r >= 0 && y + r <= ht, 'a pin whole inside the frame');
+    for (let i = 0; i < pins.length; i++) for (let j = i + 1; j < pins.length; j++) assert.ok(Math.hypot(pins[i][0] - pins[j][0], pins[i][1] - pins[j][1]) >= pins[i][2] + pins[j][2], 'no pin over another');
+    const labels = block.match(/<text class="chart-geo-label"/g)?.length ?? 0;
+    assert.ok(labels <= 4, 'at most four labels');
+    if (labels) labeled += 1;
+  }
+  assert.ok(labeled > 0, 'maps carry state labels');
 });
 
 // The page-weight ceiling for an outside page, gzip: the HACRP hospital page for the example CCN measured about 39 KB
