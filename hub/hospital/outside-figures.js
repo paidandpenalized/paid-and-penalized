@@ -230,16 +230,10 @@ export function nearBlock(h, ctx, next = counter()) {
     ...ctx.programContext.filter((x) => !listed.has(x.ccn) && inBox(x)),
     ...g.context.filter((x) => x.ccn !== h.ccn && inBox(x)),
   ];
-  // A town is named once, beside the nearest pin in it.
-  const towns = new Set();
-  const townOf = (r) => {
-    const k = `${r.city}|${r.state}`;
-    if (!r.city || towns.has(k)) return null;
-    towns.add(k);
-    return r.city;
-  };
+  // Every pin carries its town: the kit names a town once (by its city and state), beside the nearest of its pins where
+  // the name fits (web/charts/pin-layout.js townLabels), in each drawing.
   const pins = rows.map((r, i) => ({
-    point: r.point, n: i + 1, town: townOf(r),
+    point: r.point, n: i + 1, town: r.city || null, townKey: `${r.city}|${r.state}`,
     // The kit's pin classes: filled in the pen ink for a cut, on paper for none.
     cls: cut(r) ? 'chart-pin--yes' : 'chart-pin--no',
     tip: fillOutside('nearTip', { n: String(i + 1), who: who(r), net: signedMoney(r.est.net), share: signedShareText(r.est.share), distance: milesText(r.miles) }),

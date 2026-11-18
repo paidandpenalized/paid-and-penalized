@@ -305,8 +305,8 @@ function ringsOf(projection, f) {
 // The area around a place: every state's outline clipped to a frame fitted around the given points (with room), a
 // numbered dot at each, and the place itself as a ▲. Each dot is a mark (its tooltip, its number) so the keyboard
 // steps through them. A point that isn't a pair of finite numbers is left out; with fewer than two, no map (null).
-//   center   { point, tip }; points [{ point, n, cls, tip, town }] (n: the number printed on the dot; cls: its class;
-//            town: text, set beside it with aids.towns)
+//   center   { point, tip }; points [{ point, n, cls, tip, town, townKey }] (n: the number printed on the dot; cls: its
+//            class; town: text, set beside it with aids.towns, once per townKey: its text by default)
 //   context  [{ point, cls }]: other places for reference, each a plain small circle of its class (not a mark: no
 //            tooltip, no number), under the pins, drawn only where it falls inside the frame
 //   label    the image's accessible name
@@ -319,7 +319,7 @@ function ringsOf(projection, f) {
 //                left out, so no dot peeks from under a pin's edge
 //     dense      true: the context drawn as one path of dots per class (web/charts/dots.js), not a circle each: a few
 //                hundred dots in a few hundred bytes
-//     towns      true: a pin given a town has it set beside it where it fits (pin-layout.js townLabels)
+//     towns      true: a pin given a town has it set beside it where it fits, each town once (pin-layout.js townLabels)
 //     ring       true: the place drawn as a dot in the pen ink inside a ring (a page whose other maps mark it so), not a ▲
 //     labels     up to this many states labeled by postal code, the largest in the frame first (pin-layout.js stateLabels)
 //     pad        the room between the fitted points and the frame's edge

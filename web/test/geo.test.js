@@ -8,7 +8,7 @@ import { geoCentroid, geoConicEqualArea, geoContains, geoPath } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
 import { absoluteD } from '../charts/pathd.js';
-import { spreadPins } from '../charts/pin-layout.js';
+import { spreadPins, townLabels } from '../charts/pin-layout.js';
 import { STATES, STATE_NAMES } from '../../engine/js/states.js';
 import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, prMap, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
 
@@ -345,6 +345,23 @@ test('prInset: Puerto Rico in a box at the US map\'s lower right, clear of every
   assert.equal(inset.project(null), null, 'no coordinates, no place');
   assert.match(inset.outline, /^m|^M/, 'the outline');
   assert.equal(prInset(new Map(), width), null, 'no Puerto Rico in the shapes: no inset');
+});
+
+// A town is named once, by the first of its pins where its name fits: a pin's townKey (its text by default) says which
+// pins share a town, so two towns of one name in two states are each named.
+test('townLabels: a town once, beside the first of its pins where it fits; a later pin gets it when the first has no room', () => {
+  const frame = { width: 200, height: 100, labels: [] };
+  const ames = { town: 'Ames', townKey: 'Ames|IA' };
+  const both = townLabels([ames, ames], [[50, 30], [150, 70]], { ...frame, obstacles: [] });
+  assert.equal(both.length, 1, 'named once');
+  assert.ok(both[0].x < 100, 'beside the first pin');
+  // The first pin boxed in by an obstacle and the frame's edge: the second pin takes the name.
+  const later = townLabels([ames, ames], [[195, 50], [50, 50]], { ...frame, obstacles: [{ x: 195, y: 50, r: 60 }] });
+  assert.equal(later.length, 1, 'named once');
+  assert.ok(later[0].x < 100, 'beside the second pin');
+  // One name, two towns (two keys): each named; with no key, the text is the key.
+  assert.equal(townLabels([ames, { town: 'Ames', townKey: 'Ames|NE' }], [[50, 30], [150, 70]], { ...frame, obstacles: [] }).length, 2, 'two towns of one name');
+  assert.equal(townLabels([{ town: 'Ames' }, { town: 'Ames' }], [[50, 30], [150, 70]], { ...frame, obstacles: [] }).length, 1, 'no key: the text');
 });
 
 test('areaMap round two: towns beside pins inside the frame, a ringed place, the frame\'s aspect, a variant, the context by class', () => {

@@ -150,24 +150,28 @@ function spotAt({ axis, d, anchor }, x, y, w, h, off) {
   const far = near + d * h;
   return { x, y: near + d * h / 2, anchor, box: { x0: x - w / 2, x1: x + w / 2, y0: Math.min(near, far), y1: Math.max(near, far) } };
 }
-// points: the pins ({ town }: text, or none); at: where each is drawn ([[x, y]], in pin order); labels: stateLabels'.
-// Returns [{ text, x, y, anchor }].
+// A town is named once, beside the first of its pins where its words fit: a pin's townKey (its text by default) says
+// which pins share a town, so a later pin in it takes the name when the first had no room.
+// points: the pins ({ town, townKey }: text, or none); at: where each is drawn ([[x, y]], in pin order); labels:
+// stateLabels'. Returns [{ text, x, y, anchor }].
 export function townLabels(points, at, { width, height, obstacles, labels }) {
   const boxes = labels.map((l) => ({ x0: l.x - LABEL_HALF_W, x1: l.x + LABEL_HALF_W, y0: l.y - LABEL_HALF_H, y1: l.y + LABEL_HALF_H }));
   const out = [];
+  const named = new Set();
   const hitsBox = (b) => boxes.some((o) => b.x0 < o.x1 && b.x1 > o.x0 && b.y0 < o.y1 && b.y1 > o.y0);
   const hitsCircle = (b) => obstacles.some((c) => {
     const nx = Math.max(b.x0, Math.min(c.x, b.x1));
     const ny = Math.max(b.y0, Math.min(c.y, b.y1));
     return Math.hypot(c.x - nx, c.y - ny) < c.r;
   });
-  points.forEach(({ town }, i) => {
-    if (!town) return;
+  points.forEach(({ town, townKey = town }, i) => {
+    if (!town || named.has(townKey)) return;
     const [x, y] = at[i];
     const w = town.length * TOWN_CHAR;
     const spot = SPOTS.map((s) => spotAt(s, x, y, w, TOWN_SIZE, PIN_R + TOWN_GAP))
       .find(({ box: b }) => b.x0 >= 2 && b.x1 <= width - 2 && b.y0 >= 2 && b.y1 <= height - 2 && !hitsBox(b) && !hitsCircle(b));
     if (!spot) return;
+    named.add(townKey);
     boxes.push(spot.box);
     out.push({ text: town, x: spot.x, y: spot.y, anchor: spot.anchor });
   });
