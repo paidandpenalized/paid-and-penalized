@@ -502,74 +502,61 @@ export function usProjected(shapes, points, width) {
   });
 }
 
+// Puerto Rico fitted across a frame width units wide, pad units in from every edge, as tall as the island's outline
+// needs: a conic equal-area projection of its own (as a locator map's), the frame's top-left corner at origin(height).
+// f: Puerto Rico's feature. { projection, x, y (the frame's corner), height, project([lon, lat]) -> [x, y] to a tenth, or
+// null outside the frame }.
+function prFit(f, width, pad, origin = () => [0, 0]) {
+  const [[, south], [, north]] = geoBounds(f);
+  const inset = (north - south) * PARALLEL_INSET;
+  const projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitWidth(width - 2 * pad, f);
+  const [[, y0], [, y1]] = geoPath(projection).bounds(f);
+  const height = Math.ceil(y1 - y0 + 2 * pad);
+  const [x, y] = origin(height);
+  projection.fitExtent([[x + pad, y + pad], [x + width - pad, y + height - pad]], f);
+  const inFrame = ([px, py]) => px >= x && px <= x + width && py >= y && py <= y + height;
+  return {
+    projection, x, y, height,
+    project: (p) => {
+      const at = Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) ? projection(p) : null;
+      return at && inFrame(at) ? at.map(r1) : null;
+    },
+  };
+}
+// Puerto Rico's maps, remembered per shapes and key (the map's role and sizes): make(f) builds one from the island's
+// feature; null, without asking make, where the shapes lack Puerto Rico.
+const PR_MAPS = new WeakMap();
+function prRemembered(shapes, key, make) {
+  if (!PR_MAPS.has(shapes)) PR_MAPS.set(shapes, new Map());
+  const maps = PR_MAPS.get(shapes);
+  if (!maps.has(key)) maps.set(key, shapes.has('PR') ? make(shapes.get('PR')) : null);
+  return maps.get(key);
+}
+
 // Puerto Rico's inset on the US map. Albers USA has no place for Puerto Rico, so a map that shows it draws it in a box of its
-// own at the lower right, in the Atlantic off Florida, as Albers USA itself sets Alaska and Hawaii at the lower left: a
-// projection of its own (a conic equal-area, as a locator map's), fitted to the island's outline from the same shapes, in
-// a box PR_INSET_SHARE of the map's width across, as tall as the outline needs, against the frame's lower-right corner.
-// { box: { x, y, width, height }, outline (its d), project([lon, lat]) -> [x, y] to a tenth, or null outside the box },
-// or null where the shapes lack Puerto Rico. Remembered per width.
+// own at the lower right, in the Atlantic off Florida, as Albers USA itself sets Alaska and Hawaii at the lower left
+// (prFit), in a box PR_INSET_SHARE of the map's width across, as tall as the outline needs, against the frame's
+// lower-right corner. { box: { x, y, width, height }, outline (its d), project([lon, lat]) -> [x, y] to a tenth, or null
+// outside the box }, or null where the shapes lack Puerto Rico. Remembered per width. Its outline is drawn unthinned, as
+// it always has been (the map of Puerto Rico alone, prMap, thins its own as the other maps do).
 const PR_INSET_SHARE = 0.11;
 const PR_INSET_PAD = 5;
 // The inset's gap from the frame's edges, as usPaths fits the states (2 units in).
 const US_EDGE = 2;
-const INSETS = new Map();
-export function prInset(shapes, width) {
-  const key = String(width);
-  if (INSETS.get(key)?.shapes === shapes) return INSETS.get(key).inset;
-  const f = shapes.get('PR');
-  let entry = null;
-  if (f) {
-    const w = Math.round(width * PR_INSET_SHARE);
-    const [[, south], [, north]] = geoBounds(f);
-    const inset = (north - south) * PARALLEL_INSET;
-    const projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitWidth(w - 2 * PR_INSET_PAD, f);
-    const [[, y0], [, y1]] = geoPath(projection).bounds(f);
-    const h = Math.ceil(y1 - y0 + 2 * PR_INSET_PAD);
-    const box = { x: width - US_EDGE - w, y: usMapHeight(width) - US_EDGE - h, width: w, height: h };
-    projection.fitExtent([[box.x + PR_INSET_PAD, box.y + PR_INSET_PAD], [box.x + w - PR_INSET_PAD, box.y + h - PR_INSET_PAD]], f);
-    const inBox = ([x, y]) => x >= box.x && x <= box.x + w && y >= box.y && y <= box.y + h;
-    entry = {
-      box,
-      outline: relativePath(geoPath(projection).digits(DIGITS))(f),
-      project: (p) => {
-        const at = Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) ? projection(p) : null;
-        return at && inBox(at) ? at.map(r1) : null;
-      },
-    };
-  }
-  INSETS.set(key, { shapes, inset: entry });
-  return entry;
-}
+export const prInset = (shapes, width) => prRemembered(shapes, `inset:${width}`, (f) => {
+  const w = Math.round(width * PR_INSET_SHARE);
+  const { projection, x, y, height, project } = prFit(f, w, PR_INSET_PAD, (h) => [width - US_EDGE - w, usMapHeight(width) - US_EDGE - h]);
+  return { box: { x, y, width: w, height }, outline: relativePath(geoPath(projection).digits(DIGITS))(f), project };
+});
 
-// Puerto Rico on a map of its own: the island's outline fitted across a frame of the given width (the same projection as
-// the inset's), pad units in from every edge so a mark at the coast stays inside, as tall as the outline needs. For a
-// Puerto Rico hospital's page, where the US map's inset would be too small to read. { height, outline (its d),
-// project([lon, lat]) -> [x, y] to a tenth, or null outside the frame }, or null where the shapes lack Puerto Rico.
-const PR_MAPS = new Map();
-export function prMap(shapes, width, pad) {
-  const key = `${width}:${pad}`;
-  if (PR_MAPS.get(key)?.shapes === shapes) return PR_MAPS.get(key).map;
-  const f = shapes.get('PR');
-  let map = null;
-  if (f) {
-    const [[, south], [, north]] = geoBounds(f);
-    const inset = (north - south) * PARALLEL_INSET;
-    const projection = geoConicEqualArea().rotate([-geoCentroid(f)[0], 0]).parallels([south + inset, north - inset]).fitWidth(width - 2 * pad, f);
-    const [[, y0], [, y1]] = geoPath(projection).bounds(f);
-    const height = Math.ceil(y1 - y0 + 2 * pad);
-    projection.fitExtent([[pad, pad], [width - pad, height - pad]], f);
-    map = {
-      height,
-      outline: outlinePath(projection)(f),
-      project: (p) => {
-        const at = Array.isArray(p) && p.length === 2 && p.every(Number.isFinite) ? projection(p) : null;
-        return at && at[0] >= 0 && at[0] <= width && at[1] >= 0 && at[1] <= height ? at.map(r1) : null;
-      },
-    };
-  }
-  PR_MAPS.set(key, { shapes, map });
-  return map;
-}
+// Puerto Rico on a map of its own: the island's outline fitted across a frame of the given width (prFit, the inset's
+// projection), pad units in from every edge so a mark at the coast stays inside. For a Puerto Rico hospital's page, where
+// the US map's inset would be too small to read. { height, outline (its d), project([lon, lat]) -> [x, y] to a tenth, or
+// null outside the frame }, or null where the shapes lack Puerto Rico.
+export const prMap = (shapes, width, pad) => prRemembered(shapes, `map:${width}:${pad}`, (f) => {
+  const { projection, height, project } = prFit(f, width, pad);
+  return { height, outline: outlinePath(projection)(f), project };
+});
 
 // The year map: every state's outline as a faint land, and the hospitals as dots, one path per class (drawn in the
 // order given, so the last class sits on top). groups [{ cls, points: [[x, y]], size? }] already projected
