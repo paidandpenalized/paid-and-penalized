@@ -39,7 +39,7 @@ import { mountStates } from './states.js';
 import { mountWhatif } from './whatif.js';
 
 const DRAWINGS = ['narrow', 'wide'];
-// The width from which the wide drawing shows and the phone's hides (web/styles/charts.css .chart[data-fit]).
+// The width from which the wide drawing shows and the phone's hides (web/styles/charts-map.css .chart[data-fit]).
 export const WIDE_MEDIA = '(min-width: 560px)';
 
 // Step 1's strips, redrawn for the state and for what only this step shows: the Find's matches (lit, item indexes) and

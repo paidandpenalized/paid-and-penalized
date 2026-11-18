@@ -232,7 +232,8 @@ test('yearMapFigure: the key names each kind of mark the map draws, in its shape
     const [dot, r, h] = ['.chart-years__dots path', `.chart-years__dots .${YEAR_CLASSES.scar}`, `.chart-years__dots .${YEAR_HOLE}`].map((sel) => parseFloat(decls(block, sel)['stroke-width']));
     assert.ok(h < r && r >= dot, `ring ${r}, hole ${h}, dot ${dot}`);
   }
-  assert.equal(decls(css, `.${YEAR_HOLE}`).stroke, decls(css, '.chart-land, .chart-land path').fill);
+  const mapCss = readFileSync(new URL('../../../web/styles/charts-map.css', import.meta.url), 'utf8');
+  assert.equal(decls(css, `.${YEAR_HOLE}`).stroke, decls(mapCss, '.chart-land, .chart-land path').fill);
   const swatch = (k) => decls(sheet, `.ymap__sw--${k}`);
   const tone = (k) => decls(css, `.${YEAR_CLASSES[k]}`).stroke;
   assert.match(swatch('scar').border, new RegExp(`^[\\d.]+px solid ${tone('scar').replace(/[()]/g, '\\$&')}$`));

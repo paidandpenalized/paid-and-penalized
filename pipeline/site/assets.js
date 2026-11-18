@@ -15,8 +15,11 @@ const STYLES = WEB + 'styles/';
 const FIRST = ['tokens.css', 'base.css', 'components.css'];
 // The program sites' chart and what-if kit (what web/charts/ and web/whatif/ draw): in web/styles/, but out of the shared
 // bundle, since only a program site's pages draw them. A program site's own sheet carries them, first (its manifest's
-// styles: sites/hacrp/web/generate.js).
-export const KIT_STYLES = Object.freeze(['web/styles/charts.css', 'web/styles/whatif.css']);
+// styles: sites/hacrp/web/generate.js). The chart kit is two files: the map kit (MAP_KIT_STYLE: the figure's frame and
+// the area map, which the hub's page of a hospital outside the programs draws too, so the hub's sheet carries it alone),
+// then the rest (charts.css).
+export const MAP_KIT_STYLE = 'web/styles/charts-map.css';
+export const KIT_STYLES = Object.freeze([MAP_KIT_STYLE, 'web/styles/charts.css', 'web/styles/whatif.css']);
 
 export const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 export const hash8 = (text) => sha256(text).slice(0, 8);

@@ -411,10 +411,14 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
     assert.ok(!css(site).includes(root) && !css(hub).includes(root) && !css(hrrp).includes(root), `only HACRP's stylesheet holds ${root}`);
   }
   for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
-  // The chart kit (charts.css) rides in HACRP's sheet and the hub's (the area map on a page outside the programs), never the
-  // shared one; the what-if kit in HACRP's alone. The kit's dot rules draw the hub's scale bar too.
-  for (const rule of ['.chart-tile', '.fig__key', '.chart-dots--ink']) {
+  // The map kit (charts-map.css) rides in HACRP's sheet and the hub's (the area map on a page outside the programs), never
+  // the shared one; its dot rules draw the hub's scale bar too. The rest of the chart kit (charts.css) and the what-if kit
+  // ride in HACRP's alone: the hub's every page loads its sheet, and a hospital page's weight has a budget.
+  for (const rule of ['.fig__key', '.chart-dots--ink', '.chart--area-map', '.gb--near']) {
     assert.ok(css(hacrp).includes(rule) && css(hub).includes(rule) && !css(site).includes(rule), `HACRP's and the hub's stylesheets hold ${rule}, the shared one doesn't`);
+  }
+  for (const rule of ['.chart-tile', '.fig__claim', '.chart-step']) {
+    assert.ok(css(hacrp).includes(rule) && !css(hub).includes(rule) && !css(site).includes(rule), `only HACRP's stylesheet holds ${rule}`);
   }
   assert.ok(css(hacrp).includes('.wi-cliff__pit') && !css(site).includes('.wi-cliff__pit') && !css(hub).includes('.wi-cliff__pit'), 'only HACRP\'s stylesheet holds the what-if kit');
   // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's

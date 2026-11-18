@@ -6,6 +6,7 @@
 import { REPO_ROOT } from '../pipeline/files.js';
 import { cmsNamed } from '../pipeline/master.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
+import { MAP_KIT_STYLE } from '../pipeline/site/assets.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
 import { counter } from '../web/charts/figure.js';
@@ -278,7 +279,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
 // entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box
 // (hubPage does, for every hub page), the home page's story (hub/client/home.js), and a hospital page's swarm, peer
 // toggle, strips and peer table (hub/client/hospital.js; pages with an estimate only). styles: the hub's own pages'
-// styles (each page's rules under its root class), led by the chart kit's (web/styles/charts.css: the area map and its
-// figure on the page of a hospital outside the programs), in a stylesheet of their own (/assets/hub.<hash>.css), which
-// hubPage links after the shared one; the program sites' pages never load it.
-export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: ['web/styles/charts.css', 'hub/styles.css'], generate: generateHub };
+// styles (each page's rules under its root class), led by the map kit's (web/styles/charts-map.css, the part of the chart
+// kit that the page of a hospital outside the programs draws: the area map and its figure), in a stylesheet of their own
+// (/assets/hub.<hash>.css), which hubPage links after the shared one; the program sites' pages never load it.
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: [MAP_KIT_STYLE, 'hub/styles.css'], generate: generateHub };

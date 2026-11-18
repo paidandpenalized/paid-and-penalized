@@ -28,7 +28,8 @@ Code for paidandpenalized.org: a family of explainer sites for CMS hospital paym
   in `og/`, drawn by `tools/og/`).
 - `pipeline/site/`: the page build. `build.js` empties `dist/`, builds the assets (`assets.js`: the shared stylesheet,
   `tokens.css` then the rest of `web/styles/` but the chart and what-if kit (`KIT_STYLES`, which a program site's own
-  sheet carries; the hub's sheet carries the chart kit, `charts.css`, for its hospital pages' maps); a stylesheet per site from its manifest's `styles`, named by its id, which
+  sheet carries; the chart kit is `charts-map.css`, the part the hub's page of a hospital outside the programs draws, then
+  `charts.css`, and the hub's sheet carries `charts-map.css` alone); a stylesheet per site from its manifest's `styles`, named by its id, which
   its pages link after the shared one through `layout.js` `page({ sheets })`; one ES module per JS entry, led by the
   license notices of any package code it bundles; all content-hashed), writes the hub's data asset once and computes the shell's facts that every
   page shows (`ctx.assets.shell`), then runs each site in its `SITES` list (hub last). Each site exports

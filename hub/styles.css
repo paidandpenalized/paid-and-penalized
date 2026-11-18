@@ -813,7 +813,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 .hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
 .hh__nearmap { margin-top: 4px; }
 /* The map's two drawings (outside-figures.js nearBlock), each held to the kit's cap for its width (the area map lifts the
-   cap, charts.css .chart--area-map, which would blow its pins and words up in a wide column), and each shown where its
+   cap, charts-map.css .chart--area-map, which would blow its pins and words up in a wide column), and each shown where its
    column is about its own width: the phone drawing up to 480px and in the narrow two-column layout (720 to 859px), the
    wider one otherwise. */
 .hh__nearmap .chart--area-map { max-width: calc(var(--vb) * 1.12px + 0.8rem); }
@@ -850,7 +850,7 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 /* A figure's number and its sentence, as HACRP's hospital page sets them (sites/hacrp/web/styles.css .hsec .fig__n). */
 .hh--out .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
 .hh--out .fig__cap { font-size: var(--fs-md); line-height: 1.4; text-wrap: pretty; }
-/* The table is the kit's (web/styles/charts.css .gb--near), as on HACRP's hospital page. */
+/* The table is the kit's (web/styles/charts-map.css .gb--near), as on HACRP's hospital page. */
 @media (min-width: 720px) {
   .hh__neari, .hh__likei { column-gap: 36px; }
   .hh__neari { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }

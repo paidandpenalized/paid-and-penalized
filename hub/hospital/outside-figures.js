@@ -40,7 +40,7 @@ export const NEAR_GROUPS = new Set(['critical_access', 'rural_emergency', 'not_l
 const CONTEXT_CLS = 'hh__ctx';
 const PROGRAM_CLS = 'hh__ctxe';
 // The nearest map's reading aids (web/charts/geo.js areaMap's aids). It is drawn twice, on the kit's phone-wide viewBox
-// and a wider one, so its pins and words keep their size (charts.css shows one).
+// and a wider one, so its pins and words keep their size (charts-map.css shows one).
 //   gap         the room kept between two spread pins (the kit's default is 8), so a cluster of pins in one town reads as
 //               separate pins on the phone's narrower drawing
 //   clear       the context dots a pin or the ring would cover left out
@@ -254,7 +254,7 @@ export function nearBlock(h, ctx, next = counter()) {
 ${wide}`;
   // The key names a kind of dot either drawing shows.
   const drawn = narrow ? Object.fromEntries([CONTEXT_CLS, PROGRAM_CLS].map((cls) => [cls, (narrow.contextDrawnBy[cls] ?? 0) + (wide.contextDrawnBy[cls] ?? 0)])) : {};
-  // The kit's table (web/styles/charts.css .gb--near), as HACRP's: a cut's row is near--yes, its number in the pen ink. The
+  // The kit's table (web/styles/charts-map.css .gb--near), as HACRP's: a cut's row is near--yes, its number in the pen ink. The
   // share has a column of its own on a wide screen and a line under the dollars on a phone (hh__nshare): CSS shows one.
   const shareCol = fillOutside('nearColShare');
   const table = printout(html`<table class="gb gb--near hh__ntab" aria-labelledby="hh-near-h">

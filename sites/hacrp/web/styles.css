@@ -236,7 +236,7 @@
 .ws--money:not(.ws--cut) { border-color: var(--ink); }
 .ws--cut .ws__term--total .ws__v { color: var(--pen-ink); }
 
-/* The nearest hospitals' measure glyph (the table itself: web/styles/charts.css .gb--near). */
+/* The nearest hospitals' measure glyph (the table itself: web/styles/charts-map.css .gb--near). */
 .mg { display: inline-flex; gap: 2px; vertical-align: middle; }
 .mg > span { width: 9px; height: 9px; border: 1.5px solid var(--ink-2); }
 .mg .mg--worse { background: var(--pen); border-color: var(--pen); }

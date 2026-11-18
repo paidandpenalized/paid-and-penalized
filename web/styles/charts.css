@@ -1,15 +1,10 @@
 /* The chart kit (web/charts/): build-time SVG charts and the figure around them. Colors come only from tokens.css;
    marks may carry a meaning ink, text stays in text inks. Each chart's narrow viewBox (300 units) is narrower than a
    phone's column, so its 12-unit labels and 11-unit ticks read at about 11.5px and 10.6px at 320 and grow only a
-   little on wide screens (max-width). */
+   little on wide screens (max-width). The map kit (charts-map.css: the figure's frame, caption, key and tooltip, the
+   SVG's, the area map, the dots, a map's land, the nearest hospitals' table) is part of it, and comes first. */
 
 /* ---------- the figure ---------- */
-.fig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
-.fig > * { min-width: 0; }
-.fig__cap { font-weight: 600; }
-.fig__n { font-family: var(--font-type); font-weight: 700; }
-.fig__key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--ink-2); }
-.fig__key li { display: inline-flex; align-items: center; gap: 6px; }
 /* Each swatch is drawn like its mark in the chart (the rules below). */
 .fig__swatch { position: relative; display: inline-block; flex: none; }
 .fig__swatch--this { width: 12px; height: 11px; background: var(--ink); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
@@ -54,24 +49,8 @@
 /* Arrows, not triangles: the ▲ means "this hospital" in every chart. */
 th[aria-sort="ascending"] .fig__sort::after { content: " \2191" / ""; color: var(--ink-2); }
 th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: var(--ink-2); }
-.fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
-/* A mouse or pen can move onto the tooltip and read it there (web/client/figure.js keeps it); a tap goes through it to
-   the marks under it. */
-@media (hover: hover) and (pointer: fine) { .fig__tip { pointer-events: auto; } }
 
 /* ---------- the SVG ---------- */
-/* A viewBox shown wider scales its text, so a chart is never drawn much wider than its viewBox (--vb, from the kit's
-   frame): about 1.15x, so its labels never outgrow the body (about 22rem for the narrow 300, 40rem for the wide 560). */
-.chart { display: block; width: 100%; max-width: calc(var(--vb) * 1.12px + 0.8rem); height: auto; overflow: visible; font: 400 12px var(--font-body); }
-/* A focused chart's ring clears its edge labels. */
-.chart:focus-visible { outline-offset: 4px; }
-/* A figure with two variants shows the phone one under 560px and the wide one (its own viewBox) from 560px, where
-   the wide one already draws near its own size; the phone one shown wider would blow its text up. */
-.chart[data-fit="wide"] { display: none; }
-@media (min-width: 560px) {
-  .chart[data-fit="narrow"] { display: none; }
-  .chart[data-fit="wide"] { display: block; }
-}
 .chart-axis__line, .chart-axis__tick { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* Tick labels in --ink-2: --ink-3 clears 4.5:1 on the grained paper only narrowly, and the axe run cannot judge text in an SVG, so a chart's text keeps the stronger ink. */
 .chart-axis__label, .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -150,30 +129,12 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-rule { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-value--total { font-weight: 700; }
 .chart-baseline { stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-/* The area map: neighboring states as land on a plain ground, numbered pins by decision. */
-.chart--area-map { max-width: none; border: var(--rule) solid var(--ink); }
-.chart-sea { fill: var(--paper); }
-.chart-geo-land { fill: var(--paper-2); }
-.chart-geo-counties path { fill: none; stroke: var(--line); stroke-opacity: 0.45; stroke-width: 0.5px; vector-effect: non-scaling-stroke; }
-.chart--area-map .chart-geo-state { fill: none; stroke: var(--ink-2); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+/* The area map's distance rings, a pin where the program doesn't apply, and this hospital's mark without a ring (the
+   rest of the area map is charts-map.css's). */
 .chart-ring { fill: none; stroke: var(--ink-2); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
 .chart-ring__label { fill: var(--ink-2); font-family: var(--font-type); font-size: 10px; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; }
-.chart-pin { stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-pin--yes { fill: var(--pen); stroke: var(--paper); }
-.chart-pin--no { fill: var(--paper); stroke: var(--ink); }
 .chart-pin--na { fill: var(--paper); stroke: var(--ink); stroke-dasharray: 2 2; }
-.chart-pin__n { fill: var(--ink); font-family: var(--font-type); font-size: 10px; font-weight: 700; pointer-events: none; }
-.chart-pin--yes + .chart-pin__n { fill: var(--on-mark); }
 .chart-this--map { fill: var(--ink); stroke: var(--paper); stroke-width: 2px; vector-effect: non-scaling-stroke; }
-/* The area map's reading aids (geo.js areaMap's options; a map that asks for none draws none): a state's postal code in
-   the type face, haloed in the land's tone; a pin spread off its place, tied back to it by a hairline from a small dot. */
-.chart-geo-label { fill: var(--ink-2); font-family: var(--font-type); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
-.chart-pin__lead { fill: none; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-pin__at { fill: var(--ink); }
-/* A pin's town, beside it, haloed in the land's tone; this hospital as a dot in the pen ink inside a ring (self: 'ring'). */
-.chart-pin__town { fill: var(--ink); font-family: var(--font-type); font-size: 10px; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
-.chart-self__ring { fill: none; stroke: var(--pen); stroke-width: 2px; vector-effect: non-scaling-stroke; }
-.chart-self__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 /* ---------- maps (web/charts/geo.js) ---------- */
 /* A locator map: the state in the panel tone with an ink outline, the place an ink dot on a paper ring inside a soft
    ink halo, so it reads on any part of the state. */
@@ -215,22 +176,14 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-median, .chart-boundary, .chart-axis__line, .chart-axis__tick, .chart-zero { stroke: CanvasText; }
   .chart-line { stroke: Highlight; }
   .chart-zone { fill: none; stroke: GrayText; stroke-dasharray: 2 2; }
-  .chart-geo-state, .chart-geo-few { stroke: CanvasText; }
+  .chart-geo-few { stroke: CanvasText; }
   .chart--state-map .chart-geo-state { fill: Canvas; }
   .chart-geo-dot { fill: CanvasText; stroke: Canvas; }
   .chart-geo-halo { fill: none; stroke: CanvasText; }
-  .chart-track, .chart-step--down, .chart-pin--no, .chart-pin--na, .chart-sea, .chart-geo-land { fill: Canvas; stroke: CanvasText; }
-  .chart-ring, .chart-geo-counties path { stroke: GrayText; }
+  .chart-track, .chart-step--down, .chart-pin--na { fill: Canvas; stroke: CanvasText; }
+  .chart-ring { stroke: GrayText; }
   .chart-needle, .chart-connector, .chart-rule, .chart-baseline, .chart-step--na { stroke: CanvasText; }
-  .chart-dist, .chart-step, .chart-this--pen, .chart-step--pen, .chart-pin--yes, .chart-this--map { fill: CanvasText; }
-  .chart-pin__n, .chart-pin--yes + .chart-pin__n { fill: CanvasText; }
-  .chart-pin--yes + .chart-pin__n { fill: Canvas; }
-  .chart-geo-label { fill: CanvasText; stroke: Canvas; }
-  .chart-pin__lead { stroke: CanvasText; }
-  .chart-pin__at { fill: CanvasText; }
-  .chart-pin__town { fill: CanvasText; stroke: Canvas; }
-  .chart-self__ring { stroke: CanvasText; }
-  .chart-self__dot { fill: CanvasText; stroke: Canvas; }
+  .chart-dist, .chart-step, .chart-this--pen, .chart-step--pen, .chart-this--map { fill: CanvasText; }
 }
 
 /* ---------- the program and place pages' charts (web/charts: scoreRule, punchCard, dots, measureDots, slideRule,
@@ -251,8 +204,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-punch__bar { fill: var(--ink-3); }
 .chart-punch__yes { fill: var(--pen); }
 .chart-punch__n { font-size: 10px; text-anchor: middle; }
-.chart-dots { fill: none; stroke-linecap: round; }
-.chart-dots--ink { stroke: var(--ink-2); }
 .chart-dots--faint { stroke: var(--ink-3); stroke-opacity: 0.35; }
 .chart-dots--pen { stroke: var(--pen); }
 .chart-dots--hl { stroke: var(--ink); }
@@ -315,7 +266,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 /* Forced colors for those marks: the cut in CanvasText, everything else in GrayText, frames and rules in CanvasText,
    panels on Canvas. */
 @media (forced-colors: active) {
-  .chart-dots--pen, .chart-dots--hl, .chart-dots--ink, .chart-rule__hl, .chart-rule__hl--pen, .chart-slide__hair, .chart-loupe__gap, .chart-share__stem--pen { stroke: CanvasText; }
+  .chart-dots--pen, .chart-dots--hl, .chart-rule__hl, .chart-rule__hl--pen, .chart-slide__hair, .chart-loupe__gap, .chart-share__stem--pen { stroke: CanvasText; }
   .chart-dots--faint, .chart-dots--pen-faint, .chart-dots--ring, .chart-dots--scatter, .chart-pull__line, .chart-share__stem, .chart-share__track, .chart-loupe__beam, .chart-ref { stroke: GrayText; }
   .chart-punch__hole, .chart-punch__yes, .chart-rule__pen, .chart-rule__bar, .chart-share__dot--pen, .chart-card__m, .chart-agree__sq, .chart-place__dot--pen { fill: CanvasText; }
   .chart-punch__bar, .chart-rule__ink, .chart-sil, .chart-same, .chart-place__dot--faint { fill: GrayText; }
@@ -452,8 +403,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-pair__v { font-size: 11px; fill: var(--ink-2); }
 .chart-pair__v--b { fill: var(--pen-ink); font-weight: 700; }
 /* Proportional circles on the US map (geo.js usBubbles). */
-/* A map's land, faint behind its marks (the year map's states, the bubbles map's outline). */
-.chart-land, .chart-land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 .chart-bubble { fill: var(--pen); fill-opacity: 0.55; stroke: var(--pen-ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-mark:hover .chart-bubble, .chart-mark.is-active .chart-bubble { fill-opacity: 0.85; }
 /* A column chart's bonus columns (columns.js): money paid to a hospital. */
@@ -466,26 +415,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .chart-across__dot--faint { opacity: 0.4; }
   .chart-pair__a { fill: GrayText; }
   .chart-pair__b { fill: CanvasText; }
-  .chart-land, .chart-land path { fill: Canvas; stroke: GrayText; }
   .chart-bubble { fill: CanvasText; fill-opacity: 0.5; stroke: CanvasText; }
   .chart-col--rew { fill: Highlight; }
-}
-
-/* ---------- the nearest hospitals' table ----------
-   HACRP's hospital page (sites/hacrp/web/hospital-figures.js nearbyBlock) and the hub's page of a hospital outside the
-   programs (hub/hospital/outside-figures.js nearBlock): the number in a dot like the map's pin (filled in the pen ink
-   for a cut, .near--yes; dashed where the program doesn't apply, .near--na), the hospital and its city, the miles and
-   the dollars (in the pen ink for a cut). */
-.near__cut { white-space: nowrap; }
-.gb--near thead th.num { white-space: normal; }
-.near__cut--pen { color: var(--pen-ink); font-weight: 700; }
-.gb--near tbody th { font-weight: 600; }
-.gb--near tbody th a { display: block; }
-.near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
-.near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
-.near--yes .near__n { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
-.near--na .near__n { border-style: dashed; }
-@media (forced-colors: active) {
-  .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
-  .near--yes .near__n { background: CanvasText; color: Canvas; }
 }

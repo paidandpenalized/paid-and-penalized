@@ -1,5 +1,5 @@
 // A figure's caption and key, for a figure a page lays out itself (the hub's maps, beside their words): the markup and
-// classes figure.js figure() writes for its own (web/styles/charts.css styles both). figure() keeps its own copy inline:
+// classes figure.js figure() writes for its own (web/styles/charts-map.css styles both). figure() keeps its own copy inline:
 // HRRP's program page script bundles figure(), and leaving its code as it was keeps that script's bytes.
 import { COPY } from '../copy.js';
 import { html } from '../render/html.js';
