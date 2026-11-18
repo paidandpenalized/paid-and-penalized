@@ -396,6 +396,13 @@ describe('without JavaScript', { concurrency: CONCURRENCY }, () => {
     it(`${name}: the server's page is whole without scripts`, () => withPage(withoutJs, { path }, async (page) => {
       const shown = (selector) => page.evaluate((s) => [...document.querySelectorAll(s)].map((el) => el.checkVisibility()), selector);
       assert.deepEqual(await shown('main h1'), [true], 'the record\'s name');
+      // A hospital outside the penalty programs has no dollars, swarm or what-if: its stamp and its map of hospitals like it show.
+      if (type.startsWith('hub-hospital-outside-')) {
+        assert.deepEqual(await shown('#hh-status-h'), [true], 'the stamp');
+        assert.deepEqual(await shown('.hh__likei svg'), [true], 'the map of hospitals like it');
+        assert.deepEqual(await shown('[data-swarm], #whatif, [data-peers]'), [], 'no swarm, what-if or peer row');
+        return;
+      }
       if (type === 'hub-hospital-maryland') {
         assert.deepEqual(await shown('.hh__status'), [true], 'the status');
         assert.deepEqual(await shown('[data-swarm], #whatif, [data-peers]'), [], 'no swarm, what-if or peer row');

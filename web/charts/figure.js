@@ -140,5 +140,7 @@ ${printout(html`<table class="gb" aria-labelledby="figure-${n}-cap" data-sorted-
 
 // A figure's keyboard hint (the caller's words), placed right after figure n: web/client/figure.js names it as the
 // chart's description once it makes the chart focusable. Hidden, so it is never read in the page's flow, nor said
-// where the keys do nothing (without JavaScript).
-export const keysHint = (n, text) => html`<p id="figure-${n}-keys" hidden>${text}</p>`;
+// where the keys do nothing (without JavaScript). keysHintFor: the same for a figure whose element id is id (one
+// without a figure number).
+export const keysHintFor = (id, text) => html`<p id="${id}-keys" hidden>${text}</p>`;
+export const keysHint = (n, text) => keysHintFor(`figure-${n}`, text);

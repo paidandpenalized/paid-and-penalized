@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { cmsNamed } from '../../pipeline/master.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { tags, textOf } from '../../pipeline/site/html.js';
 import { ASSETS, headerOf, withTemp } from '../../pipeline/test/helpers.js';
@@ -9,9 +10,9 @@ import { COPY as SHARED } from '../../web/copy.js';
 import { copyText, fillCopy } from '../../web/render/components.js';
 import { escapeHtml, html, raw } from '../../web/render/html.js';
 import { externalLink, feedbackHref } from '../../web/render/layout.js';
-import { PLACEHOLDER_PROGRAMS, SITE } from '../../web/site.js';
+import { PLACEHOLDER_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { CLOUDFLARE_PRIVACY_URL, GOOGLE_PRIVACY_URL, WCAG_VERSION } from '../constants.js';
-import { loadHub } from '../data.js';
+import { hubModel, loadHub } from '../data.js';
 import { hacCounts, hrrpCounts, hubHospitals } from '../model.js';
 import { rangeShare } from '../../engine/js/dollars/ranges.js';
 import { endedBy } from '../../web/render/closed.js';
@@ -31,15 +32,17 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     ctx.emit({ path: '/hacrp/hospital/990002/', robots: 'noindex', text: 'c' });
     await generateHub(ctx, { released: true });
     // The three pages before, the home page, /methods/, the 404 page, the five policy pages, a placeholder per program
-    // still to come, and a page per hospital in the dollar file (the
-    // Readmissions site writes /hrrp/ and its pages). The hub released: its home page, Methods, policy pages and hospital
-    // pages with an estimate (one without has no figures) are indexable; the 404 page and the placeholders never are.
+    // still to come, and a page per hospital in the master (the Readmissions site writes /hrrp/ and its pages). The hub
+    // released: its home page, Methods, policy pages and every hospital page (an estimate's, Maryland's and an outside
+    // hospital's) are indexable, but one with no inputs and one for a hospital no CMS file names; the 404 page and the
+    // placeholders never are.
     const hub = loadHub();
-    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length);
+    const { outside } = hubModel();
+    assert.equal(ctx.pages, 3 + 3 + 5 + PLACEHOLDER_PROGRAMS.length + hub.dollars.hospitals.length + outside.length);
     // The program site's pages first (the sitemap's order), then the hub's.
     assert.deepEqual(ctx.indexable.slice(0, 2), ['/hacrp/', '/hacrp/hospital/990001/']);
     const hubIndexable = ctx.indexable.slice(2);
-    assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.est).length);
+    assert.equal(hubIndexable.filter((p) => p.startsWith('/hospital/')).length, hubHospitals(hub).filter((h) => h.status !== 'no-inputs').length + outside.filter((h) => cmsNamed(h.name, h.ccn)).length);
     assert.deepEqual(hubIndexable.filter((p) => !p.startsWith('/hospital/')).sort(), ['/', ...Object.values(SITE.pages)].sort());
     const read = (f) => readFileSync(join(dir, f), 'utf8');
 
@@ -103,10 +106,22 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.match(methods, /<section class="block" id="counts" aria-labelledby="counts-h">\n<h2 id="counts-h">How the counts differ<\/h2>/);
     assert.match(methods, /<section class="block" id="ccn" aria-labelledby="ccn-h">\n<h2 id="ccn-h">Hospitals as CMS listed them<\/h2>/);
 
+    // Methods counts the hospital pages from data: every master hospital, the dollar file's plus the outside ones.
+    const { outside: outsideHospitals } = hubModel();
+    const allPages = hubHospitals(hub).length + outsideHospitals.length;
+    const listedOutside = outsideHospitals.filter((h) => { const { hacrp, hrrp } = hub.master.get(h.ccn).programs; return hacrp.inProgram || hrrp.inProgram; }).length;
+    assert.equal(allPages, hub.master.size, 'a page for every master hospital');
+    assert.ok(text.includes(`Every hospital on Medicare’s hospital list has a page here: ${k(allPages)} in all, ${k(outsideHospitals.length - listedOutside)} of them outside Medicare’s penalty programs.`), 'the hospital pages count');
+    // Outside the penalty programs: no program's file lists it, recounted from the master's own program flags.
+    assert.ok(listedOutside > 0 && listedOutside < outsideHospitals.length, 'some outside pages are for hospitals a program file lists');
+
     const notFound = read('404.html');
     assert.match(notFound, /href="\/"/);
     assert.match(notFound, /href="\/hacrp\/"/);
     assert.ok(notFound.includes(escapeHtml(fillCopy(COPY, 'notFoundHospitals'))), 'the line on which hospitals have pages here');
+    assert.ok(!/have none|no page here/.test(textOf(notFound)), '404 no longer says these hospitals have no page');
+    assert.ok(!/Hospital pages here are for the hospitals in CMS.s program files/.test(textOf(notFound)), '404 no longer limits the pages to the program files\' hospitals');
+    assert.match(textOf(notFound), /Every hospital on Medicare.s hospital list has a page here/);
     assert.ok(!notFound.includes(escapeHtml(fillCopy(SHARED, 'notInHrrp'))), 'not the Readmissions-only line');
     // Served at every missing address, it has none of its own: no canonical link, no og:url, no page in the feedback link.
     assert.doesNotMatch(notFound, /rel="canonical"|og:url/);
@@ -125,6 +140,62 @@ test('the hub writes the home page, /methods/, the policy pages, the 404 page, r
     assert.equal(sitemap.match(/<url>/g).length, ctx.indexable.length);
   }));
 
+// The hub built whole from the real model, in the given env; fn gets the context and a reader of its files.
+const withRealHub = (env, fn) => withTemp('pp-hub-all-', async (dir) => {
+  const ctx = createContext({ outDir: dir, env, assets: ASSETS });
+  await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), released: true });
+  return fn(ctx, (path) => readFileSync(join(dir, path, 'index.html'), 'utf8'));
+});
+
+// An outside hospital no CMS file names (the master's stand-in name) stays out, as on the Readmissions site.
+test('generateHub: in production, Maryland and outside pages are indexable and in the sitemap; no-inputs pages and unnamed outside hospitals are not', () =>
+  withRealHub('production', (ctx) => {
+    const { hospitals, outside } = hubModel();
+    const listed = new Set(ctx.indexable);
+    const kinds = {
+      maryland: hospitals.filter((h) => h.status === 'maryland'), noInputs: hospitals.filter((h) => h.status === 'no-inputs'),
+      named: outside.filter((h) => cmsNamed(h.name, h.ccn)), unnamed: outside.filter((h) => !cmsNamed(h.name, h.ccn)),
+    };
+    for (const [kind, rows] of Object.entries(kinds)) assert.ok(rows.length > 0, `the data has ${kind} hospitals`);
+    const wrong = (rows, want) => rows.filter((h) => listed.has(hospitalPathOf('hub', h.ccn)) !== want).length;
+    assert.equal(wrong(kinds.maryland, true), 0, 'Maryland pages in the sitemap');
+    assert.equal(wrong(kinds.named, true), 0, 'outside pages in the sitemap');
+    assert.equal(wrong(kinds.noInputs, false), 0, 'no-inputs pages out of it');
+    assert.equal(wrong(kinds.unnamed, false), 0, 'unnamed outside hospitals out of it');
+    const text = (h) => readFileSync(join(ctx.outDir, hospitalPathOf('hub', h.ccn), 'index.html'), 'utf8');
+    assert.ok(!text(kinds.maryland[0]).includes(NOINDEX), 'a Maryland page carries no noindex');
+    assert.ok(!text(kinds.named[0]).includes(NOINDEX), 'an outside page carries no noindex');
+    assert.ok(text(kinds.noInputs[0]).includes(NOINDEX), 'a no-inputs page is noindex');
+    assert.ok(kinds.unnamed.every((h) => text(h).includes(NOINDEX)), 'an unnamed outside hospital\'s page is noindex');
+  }));
+
+// The rule is one for every hub hospital page: a dollar-file hospital with the master's stand-in name stays out too.
+test('generateHub: a hospital with an estimate whose name no CMS file gives (a synthetic stand-in) is noindex and out of the sitemap', () =>
+  withTemp('pp-hub-standin-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    const { hub, hospitals } = hubModel();
+    const real = hospitals.find((h) => h.est && cmsNamed(h.name, h.ccn));
+    assert.ok(real, 'the data has an estimated hospital');
+    const standIn = { ...real, name: `Hospital ${real.ccn} (name not in CMS files)` };
+    assert.equal(cmsNamed(standIn.name, standIn.ccn), false, 'the stand-in is the master\'s');
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [standIn], master: hub.master, released: true });
+    const path = hospitalPathOf('hub', standIn.ccn);
+    assert.ok(readFileSync(join(dir, path, 'index.html'), 'utf8').includes(NOINDEX), 'its page is noindex');
+    assert.ok(!ctx.indexable.includes(path), 'and not in the sitemap');
+  }));
+
+// One preview build for both checks: every master CCN has a page, and none is indexable outside production.
+test('generateHub, in a non-production build: every master CCN has /hospital/<ccn>/index.html, and every one is noindex', () =>
+  withRealHub('preview', (ctx) => {
+    const { hub } = hubModel();
+    const pathOf = (ccn) => join(ctx.outDir, hospitalPathOf('hub', ccn), 'index.html');
+    const missing = [...hub.master.keys()].filter((ccn) => !existsSync(pathOf(ccn)));
+    assert.equal(missing.length, 0, `${missing.length} master hospitals have no page`);
+    const open = [...hub.master.keys()].filter((ccn) => !readFileSync(pathOf(ccn), 'utf8').includes(NOINDEX));
+    assert.equal(open.length, 0, `${open.length} hospital pages are indexable`);
+    assert.equal(ctx.indexable.filter((p) => p.startsWith('/hospital/')).length, 0);
+  }));
+
 test('released: false: no hub page is indexable in production, and the sitemap lists none', () =>
   withTemp('pp-hub-unreleased-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
@@ -134,14 +205,14 @@ test('released: false: no hub page is indexable in production, and the sitemap l
     assert.doesNotMatch(readFileSync(join(dir, 'sitemap.xml'), 'utf8'), /<url>/);
   }));
 
-test('every hub page holds the family search in its bar, over the hub\'s asset, and loads its script', () =>
+test('every hub page holds the family search in its bar, over the search\'s own asset, and loads its script', () =>
   withTemp('pp-hub-search-', async (dir) => {
     const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
     await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [] });
     const paths = ['/', ...Object.values(SITE.pages), ...PLACEHOLDER_PROGRAMS.map((p) => p.path)];
     const files = [...paths.map((path) => [path, join(dir, path, 'index.html')]), ['not found', join(dir, '404.html')]];
-    const box = String(hubSearchForm(ASSETS.shell.hubUrl));
-    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-hospitals\.test\.json" data-hub hidden>/);
+    const box = String(hubSearchForm(ASSETS.shell.searchUrl));
+    assert.match(box, /^<form class="omni" id="omni" role="search" aria-label="Search hospitals and states" data-src="\/assets\/hub-search\.test\.json" data-hub hidden>/);
     for (const [path, file] of files) {
       const text = readFileSync(file, 'utf8');
       const header = headerOf(text);

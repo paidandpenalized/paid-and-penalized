@@ -37,3 +37,11 @@ test('as markup: the same words, the tail alone in its span, so a page can hide 
   }
   assert.equal(closedNoteMarkup({ ...at('2026-10-01'), dollars: -1000 }, 'x-tail'), '');
 });
+
+test('a hospital the site\'s totals don\'t count (kept: false): the same note without the sentence on the totals', () => {
+  for (const args of [{ ...at('2025-02-11'), dollars: -1000 }, { ...at('2026-03-30') }, { ...at(null) }]) {
+    const out = closedNote({ ...args, kept: false });
+    assert.equal(`${out} This site keeps it in its totals.`, closedNote(args));
+    assert.equal(String(closedNoteMarkup({ ...args, kept: false }, 'x-tail')), String(closedNoteMarkup(args, 'x-tail')).replace(' This site keeps it in its totals.', ''));
+  }
+});

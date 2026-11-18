@@ -10,7 +10,7 @@ import { medianAt } from '../../../engine/js/hacrp/params.js';
 import { whatIf } from '../../../engine/js/hacrp/whatif.js';
 import { bedBand } from '../../../engine/js/peers.js';
 import { median } from '../../../engine/js/stats.js';
-import { miles } from '../../../web/charts/geo.js';
+import { nearestTo } from '../../../web/charts/geo.js';
 import { lineScore } from '../../../web/whatif/marks.js';
 import { CLIFF_NEAR, FEW_IN_GROUP, NEAREST, RIDGE_BINS, STRIP_BINS } from './constants.js';
 import { cutDollars } from './money.js';
@@ -152,23 +152,11 @@ export function nationalContext({ hospitals, master, model, dollars }) {
         .filter((g) => g && g.decided >= FEW_IN_GROUP)
         .map((g) => ({ ...g, below: below(g.scores, row.total), above: above(g.scores, row.total) }));
     },
-    // The NEAREST other hospitals with a score and a place, nearest first: { ...row, miles }. One pass keeps the k
-    // nearest in a short sorted list, so a page never sorts every hospital.
+    // The NEAREST other hospitals with a score and a place, nearest first: { ...row, miles } (web/charts/geo.js
+    // nearestTo, ties by the lower CCN).
     nearest(ccn, point, k = NEAREST) {
       if (!point) return [];
-      const best = [];
-      for (const row of rows) {
-        if (row.ccn === ccn || !row.point) continue;
-        const d = miles(point, row.point);
-        // Nearer, or as near with the lower CCN (so ties break the same way on every build).
-        const closer = (e) => d < e.miles || (d === e.miles && row.ccn < e.row.ccn);
-        if (best.length === k && !closer(best[k - 1])) continue;
-        let i = best.length;
-        while (i > 0 && closer(best[i - 1])) i--;
-        best.splice(i, 0, { row, miles: d });
-        if (best.length > k) best.pop();
-      }
-      return best.map(({ row, miles: d }) => ({ ...row, miles: d }));
+      return nearestTo(rows, point, { k, skip: ccn });
     },
   };
 }

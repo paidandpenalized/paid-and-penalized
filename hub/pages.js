@@ -4,9 +4,12 @@
 // the two files crawlers read: robots.txt and sitemap.xml. It runs last, so the sitemap lists every indexable page the
 // sites before it emitted. The hub's own pages stay noindex until the hub is released.
 import { REPO_ROOT } from '../pipeline/files.js';
+import { cmsNamed } from '../pipeline/master.js';
 import { NOT_FOUND_PATH } from '../pipeline/site/address.js';
+import { MAP_KIT_STYLE } from '../pipeline/site/assets.js';
 import { robotsFor } from '../pipeline/site/context.js';
 import { COPY as SHARED } from '../web/copy.js';
+import { counter } from '../web/charts/figure.js';
 import { fillCopy, printout } from '../web/render/components.js';
 import { absLogPct, count, pct } from '../web/render/format.js';
 import { escapeHtml, html } from '../web/render/html.js';
@@ -20,7 +23,8 @@ import { correctionsContent, readCorrections } from './corrections.js';
 import { comingPage } from './coming.js';
 import { hubModel } from './data.js';
 import { homePage } from './home/page.js';
-import { hospitalPage } from './hospital/page.js';
+import { hospitalPage, outsidePage } from './hospital/page.js';
+import { likeBlock, nearBlock, outsideFigureContext } from './hospital/outside-figures.js';
 import { hacCounts, hrrpCounts, stateTotals, storyFacts } from './model.js';
 import { ROWS } from './hospital/peers.js';
 import { LINKS, feedbackLink, hubPage, para, section, sentence } from './parts.js';
@@ -90,7 +94,7 @@ ${para('closeNation', {}, { ratio: pct(bands.national.ratio, 1) })}${para('close
 // The family Methods page: what an estimate is, how close the dollar estimates are (closeSection, from the dollar file's
 // back-test), how the hospital-acquired conditions and Readmissions counts differ from page to page (model.js hacCounts and
 // hrrpCounts, over every hub hospital), and which hospital a figure belongs to.
-function methods({ hospitals, fy, bands, hrrp, master, assets, robots }) {
+function methods({ hospitals, fy, bands, hrrp, master, outside = [], assets, robots }) {
   const counts = hacCounts(hospitals);
   const readmissions = hrrpCounts(hospitals, { fy, hrrpFy: hrrp.fy, national: hrrp.national });
   const closed = hospitals.filter((h) => h.est && endedBy(master.get(h.ccn)?.inactive ?? null, fy)).length;
@@ -111,6 +115,7 @@ ${closeSection(bands)}
 <section class="block" id="counts" aria-labelledby="counts-h">
 <h2 id="counts-h">${COPY.countsHeading}</h2>
 ${para('countsCms', {}, { ...of('yes', 'decidedYes', 'decided'), fy: String(fy) })}${para('countsEstimated', {}, of('est', 'maryland', 'noInputs', 'priced', 'decidedYes'))}${para('countsTotals', {}, of('est', 'headline'))}<p>${fillCopy(COPY, 'countsHrrp', { fy: String(fy), listed: count(readmissions.file.n), cut: count(readmissions.file.cut), est: count(readmissions.est), estCut: count(readmissions.estCut), other: count(readmissions.file.n - readmissions.est) })}${readmissions.newer ? ` ${fillCopy(COPY, 'countsHrrpNewer', { fy: String(hrrp.fy), listed: count(readmissions.newer.n), cut: count(readmissions.newer.cut) })}` : ''}</p>
+${para('countsPages', {}, { all: count(hospitals.length + outside.length), outside: count(outside.filter((h) => !h.listed).length) })}
 ${closed > 1 ? para('countsClosed', {}, { n: count(closed), fy: String(fy) }) : closed === 1 ? para('countsClosedOne', {}, { fy: String(fy) }) : ''}</section>
 <section class="block" id="ccn" aria-labelledby="ccn-h">
 <h2 id="ccn-h">${COPY.ccnHeading}</h2>
@@ -209,15 +214,36 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
-// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate has the hub's
-// robots value; one without (Maryland's, or no inputs) is never indexed (never): its page holds no figures. facts: the
-// hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor); medicaid:
-// loadHub().medicaid (its Medicaid band).
+// A hospital page's robots value: the hub's (robots) where the page may be indexed (eligible) and a CMS file names the
+// hospital, else never. A hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed) stays out of
+// search engines until a file names it, as on the Readmissions site. One rule for every hub hospital page.
+const hospitalRobots = (h, { robots, never }, eligible = true) => (eligible && cmsNamed(h.name, h.ccn) ? robots : never);
+
+// Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate, or Maryland's (its
+// page has no figures but says why), has the hub's robots value (hospitalRobots); one with no inputs is never indexed.
+// facts: the hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor);
+// medicaid: loadHub().medicaid (its Medicaid band).
 function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
-    const r = h.est ? robots : never;
+    const r = hospitalRobots(h, { robots, never }, Boolean(h.est) || h.status === 'maryland');
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp, medicaid }) });
+  }
+}
+
+// The page of every other hospital in the master (hospital/outside.js): the hub's robots value on each where a CMS file
+// names the hospital (hospitalRobots). The figures' context (outside-figures.js) is worked out once here and shared by
+// every page; each page numbers its figures in order (a counter of its own, the nearest hospitals' map first). model: hubModel(), whose hub holds the master, the shapes and
+// the program years.
+function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots, never }) {
+  const figures = outsideFigureContext({ hospitals, outside, likeCounts, master: hub.master, shapes: hub.shapes, counties: hub.counties, programYears: hub.programYears, fy: hub.fy });
+  for (const h of outside) {
+    const next = counter();
+    const near = nearBlock(h, figures, next);
+    const like = likeBlock(h, figures, next);
+    const r = hospitalRobots(h, { robots, never });
+    const text = outsidePage({ h, assets: ctx.assets, robots: r, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text });
   }
 }
 
@@ -230,9 +256,11 @@ function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, 
 export async function generateHub(ctx, { updated = new Map(), correctionsDir = REPO_ROOT + 'corrections/', hospitals = null, master = null, released = SITE.hub.released } = {}) {
   const { assets } = ctx;
   const robots = robotsFor({ env: ctx.env, released });
-  const { hub, hospitals: all, facts } = hubModel();
+  const model = hubModel();
+  const { hub, hospitals: all, facts } = model;
   ctx.emit({ path: '/', robots, text: home({ hospitals: all, facts, shapes: hub.shapes, bands: hub.dollars.bands, hrrpFy: hub.hrrp.fy, assets, robots }) });
-  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, assets, robots }) });
+  ctx.emit({ path: SITE.pages.methods, robots, text: methods({ hospitals: all, fy: hub.fy, bands: hub.dollars.bands, hrrp: hub.hrrp, master: hub.master, // A test passing its own hospitals emits no outside pages, so it counts none.
+    outside: hospitals ? [] : model.outside, assets, robots }) });
   const deps = { entries: readCorrections(correctionsDir), updated };
   for (const [path, content] of POLICY_PAGES) {
     ctx.emit({ path, robots, text: policyPage({ path, ...content({ ...deps, feedback: feedbackLink(path) }), assets, robots }) });
@@ -241,6 +269,8 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
   hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, medicaid: hub.medicaid, robots, never });
+  // The outside pages only with the real model: a test that passes its own hospitals has no master to match them.
+  if (!hospitals) outsidePages(ctx, { model, robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });
   ctx.emit({ path: '/robots.txt', text: robotsTxt() });
   ctx.emit({ path: '/sitemap.xml', text: sitemapXml(ctx.indexable) });
@@ -249,6 +279,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
 // entries: the family search (hub/client/search.js), which a page lists in its scripts when it holds the search box
 // (hubPage does, for every hub page), the home page's story (hub/client/home.js), and a hospital page's swarm, peer
 // toggle, strips and peer table (hub/client/hospital.js; pages with an estimate only). styles: the hub's own pages'
-// styles (each page's rules under its root class), in a stylesheet of their own (/assets/hub.<hash>.css), which hubPage
-// links after the shared one; the program sites' pages never load it.
-export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: ['hub/styles.css'], generate: generateHub };
+// styles (each page's rules under its root class), led by the map kit's (web/styles/charts-map.css, the part of the chart
+// kit that the page of a hospital outside the programs draws: the area map and its figure), in a stylesheet of their own
+// (/assets/hub.<hash>.css), which hubPage links after the shared one; the program sites' pages never load it.
+export const HUB = { id: 'hub', entries: { 'hub-search': 'hub/client/search.js', 'hub-home': 'hub/client/home.js', 'hub-hospital': 'hub/client/hospital.js' }, styles: [MAP_KIT_STYLE, 'hub/styles.css'], generate: generateHub };

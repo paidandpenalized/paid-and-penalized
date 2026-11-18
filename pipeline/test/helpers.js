@@ -1,9 +1,9 @@
 // Shared test helpers for the page build.
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { repoFiles, writeFileMkdir } from '../files.js';
+import { REPO_ROOT, repoFiles, writeFileMkdir } from '../files.js';
 import { tags, textOf } from '../site/html.js';
 import { createSiteServer, listen, stop } from '../site/serve.js';
 
@@ -28,6 +28,7 @@ export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/
       'work-requirement': { scenario: { year: 2023, lost: { low: 4000000, middle: 6000000, high: 9000000 } } },
     },
     hubUrl: '/assets/hub-hospitals.test.json',
+    searchUrl: '/assets/hub-search.test.json',
     ...shell,
   },
 });
@@ -38,6 +39,13 @@ export const ASSETS = testAssets();
 export const headerOf = (page) => /<header class="topbar fam"[\s\S]*?<\/header>/.exec(page)[0];
 export const footerOf = (page) => /<footer class="foot">[\s\S]*?<\/footer>/.exec(page)[0];
 export const chipOf = (page) => /<p class="chip" data-chip>[\s\S]*?<\/p>/.exec(page)?.[0] ?? null;
+
+// Dots drawn as one path (web/charts/dots.js dotsD): how many a path's d draws (each dot begins with a move, absolute for
+// the first and relative after, whatever its run), and how many the paths of a class draw in some markup, summed over
+// its paths. A test counts dots through these, not by reading the path's encoding itself.
+export const dotsCount = (d) => (String(d).match(/[Mm]/g) ?? []).length;
+export const dotsIn = (markup, cls) => [...String(markup).matchAll(/<path class="chart-dots ([^"]*)"[^>]* d="([^"]*)"/g)]
+  .filter((m) => m[1].split(' ').includes(cls)).reduce((n, m) => n + dotsCount(m[2]), 0);
 
 // Runs fn(dir) in a fresh folder under the system temp directory and removes it afterwards, pass or fail.
 export function withTemp(prefix, fn) {
@@ -75,9 +83,16 @@ export function get(port, path) {
   });
 }
 
-// Every copy file (web/copy.js, hub/copy.js and each site's), tracked or not yet added, from one listing of the repo.
+// Every copy file (web/copy.js, hub/copy.js and each site's), tracked or not yet added, from one listing of the repo: each
+// copy.js under web/, hub/ or sites/, and each <name>-copy.js there that exports a COPY of its own (a page variant's
+// words, such as hub/hospital/outside-copy.js). A <name>-copy.js without one (group-copy.js, chip-copy.js) holds parts a
+// copy.js spreads in, which the guards read there.
 let copyList = null;
-export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter((p) => /^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)));
+const COPY_EXPORT = /^export (const|let|function) COPY\b/m;
+// A listed path deleted from the working tree but not yet from git is no copy file.
+export const isCopyFile = (p) => existsSync(REPO_ROOT + p) && (/^(web|hub|sites)\/(.+\/)?copy\.js$/.test(p)
+  || (/^(web|hub|sites)\/(.+\/)?[\w-]+-copy\.js$/.test(p) && COPY_EXPORT.test(readFileSync(REPO_ROOT + p, 'utf8'))));
+export const copyFiles = () => (copyList ??= repoFiles('', { untracked: true }).filter(isCopyFile));
 
 // Words that promise a program, a page or a date to come: "coming", "soon", "sooner", "launch", "launches", and the
 // words that call a page a stand-in for a later one ("interim", "temporary", "temporarily", "for now"). A program the site

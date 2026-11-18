@@ -34,8 +34,9 @@ function start(root) {
   const stageEl = root.querySelector('[data-stage]');
   const canvas = stageEl.querySelector('.stage__cv');
   const card = root.querySelector('[data-card]');
+  // The story draws from the hub's asset, which the header names; the step's search box names its own (the search's).
   const form = root.querySelector('form.omni[data-src]');
-  const src = form?.dataset.src ?? document.querySelector('[data-hub-src]')?.dataset.hubSrc;
+  const src = document.querySelector('[data-hub-src]')?.dataset.hubSrc;
   // Without a part it needs, the story stays as the server wrote it, marked so (the stylesheet's first-screen rules for a
   // phone stand down).
   if (!canvas || !card || !src || !canvas.getContext) {
@@ -50,7 +51,8 @@ function start(root) {
 
   // The last step's search (the family search mounts it): once the story is drawn, a hospital it finds is followed here
   // instead of opened, and the box then names it (not the words typed to find it); until then, or for a hospital without
-  // an estimate, the pick opens its page as the bar's does. The address follows it too (?h=, replacing the entry, so Back
+  // an estimate (one outside the penalty programs included: the story has no dot or card for it), the pick opens its page
+  // as the bar's does. The address follows it too (?h=, replacing the entry, so Back
   // still leaves the page), and the shell follows it at once (FOLLOW_EVENT: the chip, and the tabs pointed at it), as a
   // reload, or Back to the page after the browser dropped it, then does.
   let find = null;

@@ -306,7 +306,7 @@ test('the medians\' labels stay inside the strips for every group and every case
 
 // The script draws only the strips drawing on show, so it must agree with the stylesheet on which one that is.
 test('the script\'s wide width is the stylesheet\'s', () => {
-  const charts = readFileSync(REPO_ROOT + 'web/styles/charts.css', 'utf8');
+  const charts = readFileSync(REPO_ROOT + 'web/styles/charts-map.css', 'utf8');
   assert.match(charts, new RegExp(`@media ${WIDE_MEDIA.replace(/[()]/g, '\\$&')} \\{\\s*\\.chart\\[data-fit="narrow"\\] \\{ display: none; \\}`));
 });
 

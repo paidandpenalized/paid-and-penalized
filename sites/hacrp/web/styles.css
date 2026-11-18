@@ -236,16 +236,7 @@
 .ws--money:not(.ws--cut) { border-color: var(--ink); }
 .ws--cut .ws__term--total .ws__v { color: var(--pen-ink); }
 
-/* The nearest hospitals' table: the number in a dot like the map's, the measure glyph, the estimated cut. */
-.near__cut { white-space: nowrap; }
-.gb--near thead th.num { white-space: normal; }
-.near__cut--pen { color: var(--pen-ink); font-weight: 700; }
-.gb--near tbody th { font-weight: 600; }
-.gb--near tbody th a { display: block; }
-.near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
-.near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
-.near--yes .near__n { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
-.near--na .near__n { border-style: dashed; }
+/* The nearest hospitals' measure glyph (the table itself: web/styles/charts-map.css .gb--near). */
 .mg { display: inline-flex; gap: 2px; vertical-align: middle; }
 .mg > span { width: 9px; height: 9px; border: 1.5px solid var(--ink-2); }
 .mg .mg--worse { background: var(--pen); border-color: var(--pen); }
@@ -291,8 +282,8 @@
   .geo .chart-geo-halo { fill: none; }
   .stars__off { color: GrayText; }
   .ledger__row.is-top { border-left: 4px solid Highlight; }
-  .mg > span, .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
-  .mg .mg--worse, .near--yes .near__n { background: CanvasText; color: Canvas; }
+  .mg > span { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .mg .mg--worse { background: CanvasText; color: Canvas; }
 }
 
 /* ---------- the program page's top (pages/program.js programTop), after Thirty Day Readmissions' front page ----------

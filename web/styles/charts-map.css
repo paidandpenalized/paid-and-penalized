@@ -1,0 +1,97 @@
+/* The map kit: the part of the chart kit (charts.css) that the hub's page of a hospital outside the programs draws
+   (hub/hospital/outside-figures.js): a figure's caption, key and tooltip, the SVG's frame, the area map with its pins and
+   reading aids, the dots, a map's land and the nearest hospitals' table. The hub's sheet carries this file alone; a
+   program site's carries it ahead of the rest of the kit (pipeline/site/assets.js KIT_STYLES). Colors come only from
+   tokens.css. */
+
+/* ---------- the figure ---------- */
+.fig { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
+.fig > * { min-width: 0; }
+.fig__cap { font-weight: 600; }
+.fig__n { font-family: var(--font-type); font-weight: 700; }
+.fig__key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; padding: 0; list-style: none; font-size: var(--fs-sm); color: var(--ink-2); }
+.fig__key li { display: inline-flex; align-items: center; gap: 6px; }
+.fig__tip { position: absolute; z-index: 2; max-width: 18rem; padding: 4px 8px; border: 1px solid var(--ink); background: var(--paper); font: 400 var(--fs-xs)/1.35 var(--font-type); font-variant-numeric: tabular-nums; transform: translate(-50%, calc(-100% - 6px)); pointer-events: none; }
+/* A mouse or pen can move onto the tooltip and read it there (web/client/figure.js keeps it); a tap goes through it to
+   the marks under it. */
+@media (hover: hover) and (pointer: fine) { .fig__tip { pointer-events: auto; } }
+
+/* ---------- the SVG ---------- */
+/* A viewBox shown wider scales its text, so a chart is never drawn much wider than its viewBox (--vb, from the kit's
+   frame): about 1.15x, so its labels never outgrow the body (about 22rem for the narrow 300, 40rem for the wide 560). */
+.chart { display: block; width: 100%; max-width: calc(var(--vb) * 1.12px + 0.8rem); height: auto; overflow: visible; font: 400 12px var(--font-body); }
+/* A focused chart's ring clears its edge labels. */
+.chart:focus-visible { outline-offset: 4px; }
+/* A figure with two variants shows the phone one under 560px and the wide one (its own viewBox) from 560px, where
+   the wide one already draws near its own size; the phone one shown wider would blow its text up. */
+.chart[data-fit="wide"] { display: none; }
+@media (min-width: 560px) {
+  .chart[data-fit="narrow"] { display: none; }
+  .chart[data-fit="wide"] { display: block; }
+}
+
+/* ---------- the area map ---------- */
+/* The area map: neighboring states as land on a plain ground, numbered pins by decision. */
+.chart--area-map { max-width: none; border: var(--rule) solid var(--ink); }
+.chart-sea { fill: var(--paper); }
+.chart-geo-land { fill: var(--paper-2); }
+.chart-geo-counties path { fill: none; stroke: var(--line); stroke-opacity: 0.45; stroke-width: 0.5px; vector-effect: non-scaling-stroke; }
+.chart--area-map .chart-geo-state { fill: none; stroke: var(--ink-2); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-pin { stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-pin--yes { fill: var(--pen); stroke: var(--paper); }
+.chart-pin--no { fill: var(--paper); stroke: var(--ink); }
+.chart-pin__n { fill: var(--ink); font-family: var(--font-type); font-size: 10px; font-weight: 700; pointer-events: none; }
+.chart-pin--yes + .chart-pin__n { fill: var(--on-mark); }
+/* The area map's reading aids (geo.js areaMap's options; a map that asks for none draws none): a state's postal code in
+   the type face, haloed in the land's tone; a pin spread off its place, tied back to it by a hairline from a small dot. */
+.chart-geo-label { fill: var(--ink-2); font-family: var(--font-type); font-size: 12px; font-weight: 600; letter-spacing: 0.08em; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.chart-pin__lead { fill: none; stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-pin__at { fill: var(--ink); }
+/* A pin's town, beside it, haloed in the land's tone; this hospital as a dot in the pen ink inside a ring (self: 'ring'). */
+.chart-pin__town { fill: var(--ink); font-family: var(--font-type); font-size: 10px; paint-order: stroke; stroke: var(--paper-2); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.chart-self__ring { fill: none; stroke: var(--pen); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.chart-self__dot { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+
+/* Forced colors (Windows contrast themes): the map's marks in system colors. */
+@media (forced-colors: active) {
+  .chart-geo-state { stroke: CanvasText; }
+  .chart-pin--no, .chart-sea, .chart-geo-land { fill: Canvas; stroke: CanvasText; }
+  .chart-geo-counties path { stroke: GrayText; }
+  .chart-pin--yes { fill: CanvasText; }
+  .chart-pin__n, .chart-pin--yes + .chart-pin__n { fill: CanvasText; }
+  .chart-pin--yes + .chart-pin__n { fill: Canvas; }
+  .chart-geo-label { fill: CanvasText; stroke: Canvas; }
+  .chart-pin__lead { stroke: CanvasText; }
+  .chart-pin__at { fill: CanvasText; }
+  .chart-pin__town { fill: CanvasText; stroke: Canvas; }
+  .chart-self__ring { stroke: CanvasText; }
+  .chart-self__dot { fill: CanvasText; stroke: Canvas; }
+}
+
+/* ---------- dots and land ---------- */
+/* A dots path (dots.js): one round-capped stroke per dot. */
+.chart-dots { fill: none; stroke-linecap: round; }
+.chart-dots--ink { stroke: var(--ink-2); }
+@media (forced-colors: active) { .chart-dots--ink { stroke: CanvasText; } }
+/* A map's land, faint behind its marks (the year map's states, the bubbles map's outline). */
+.chart-land, .chart-land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) { .chart-land, .chart-land path { fill: Canvas; stroke: GrayText; } }
+
+/* ---------- the nearest hospitals' table ----------
+   HACRP's hospital page (sites/hacrp/web/hospital-figures.js nearbyBlock) and the hub's page of a hospital outside the
+   programs (hub/hospital/outside-figures.js nearBlock): the number in a dot like the map's pin (filled in the pen ink
+   for a cut, .near--yes; dashed where the program doesn't apply, .near--na), the hospital and its city, the miles and
+   the dollars (in the pen ink for a cut). */
+.near__cut { white-space: nowrap; }
+.gb--near thead th.num { white-space: normal; }
+.near__cut--pen { color: var(--pen-ink); font-weight: 700; }
+.gb--near tbody th { font-weight: 600; }
+.gb--near tbody th a { display: block; }
+.near__city { display: block; color: var(--ink-2); font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.near__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border: 1.5px solid var(--ink); border-radius: 50%; font-size: var(--fs-xs); }
+.near--yes .near__n { background: var(--pen); border-color: var(--pen); color: var(--on-mark); }
+.near--na .near__n { border-style: dashed; }
+@media (forced-colors: active) {
+  .near__n { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .near--yes .near__n { background: CanvasText; color: Canvas; }
+}

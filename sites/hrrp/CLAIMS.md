@@ -72,7 +72,7 @@ A claim marked `unverified` may not be used in copy.
 - **HRRP-11** quotes the CMS program page's account of the statute. A "subsection (d) hospital" is a hospital paid under
   section 1886(d) of the Social Security Act, the inpatient prospective payment system; the Methods page's line on who is
   not in the program (`web/copy.js` notInHrrp) says that a hospital paid another way is not in it, and names the kinds in
-  HRRP-12 and HRRP-13. The family's not-found page cites HRRP-12, HRRP-13 and HRRP-16 for the kinds with no page.
+  HRRP-12 and HRRP-13. The sentence adds that such a hospital has no Readmissions page but has a page across the programs (a statement about the site: `hub/CLAIMS.md`).
 - **HRRP-12** is the list of hospital classifications in 42 CFR 412.23 (the regulation's headings, in order: psychiatric,
   rehabilitation, children's, long-term care, cancer); each is excluded from the inpatient prospective payment system and
   paid under another system (the psychiatric, rehabilitation and long-term care paragraphs name theirs). The last fragment

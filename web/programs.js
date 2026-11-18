@@ -27,6 +27,13 @@ export const PI_REDUCTION_SHARE = 0.75;
 // The number of surgeries whose episodes the surgical episodes program measures.
 export const TEAM_SURGERIES = 5;
 
+// For the hospitals outside the penalty programs (hub/hospital/outside-copy.js): the percent of its reasonable costs
+// Medicare pays a critical access hospital (42 CFR 413.70(a)(1) and (b); less for one that is not a meaningful EHR user,
+// (a)(6)), and the percentage points taken off a psychiatric hospital's yearly update for not reporting quality data
+// (42 CFR 412.424(d)(1)(vi)).
+export const CAH_COST_PCT = 101;
+export const IPFQR_REDUCTION_PTS = 2;
+
 // A rule's percent as the pages write it: rulePercent(3) is "3%".
 export const rulePercent = (n) => pct(n / 100, 0);
 

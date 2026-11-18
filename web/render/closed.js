@@ -20,21 +20,23 @@ const WHEN = {
 export const endedBy = (inactive, fy) => Boolean(inactive) && (!inactive.date || inactive.date <= `${fy}-09-30`);
 
 // The note's copy key, the words for its placeholders and its tail's words apart ('' for none, null for a note with no
-// place for one), or null for a hospital whose agreement had not ended by the year's end. ccn: the hospital's; inactive:
-// the master's { date (YYYY-MM-DD or null), reason } or null; fy: the dollars' fiscal year (October 1 of the year before
-// to September 30); dollars: the page's estimated dollars it qualifies (negative a cut, positive a bonus, 0 or none for
-// neither).
-function noteOf({ ccn, inactive, fy, dollars = 0 }) {
+// place for one), and its closing sentence on the site's totals ('' for none), or null for a hospital whose agreement had
+// not ended by the year's end. ccn: the hospital's; inactive: the master's { date (YYYY-MM-DD or null), reason } or null;
+// fy: the dollars' fiscal year (October 1 of the year before to September 30); dollars: the page's estimated dollars it
+// qualifies (negative a cut, positive a bonus, 0 or none for neither); kept: whether the site's totals count the hospital
+// (false for one outside the penalty programs, whose note then leaves that sentence out).
+function noteOf({ ccn, inactive, fy, dollars = 0, kept = true }) {
   if (!endedBy(inactive, fy)) return null;
   const { date, reason } = inactive;
-  if (!date) return { key: 'closedUndated', values: { ccn, reason }, tail: null };
+  const end = kept ? ` ${fill('closedKept')}` : '';
+  if (!date) return { key: 'closedUndated', values: { ccn, reason }, tail: null, end };
   const when = WHEN[date < `${fy - 1}-10-01` ? 'before' : 'during'];
   const tail = dollars < 0 ? when.cut : dollars > 0 ? when.bonus : null;
-  return { key: when.key, values: { ccn, date: isoDate(date), reason, fy: String(fy) }, tail: tail ? fill(tail) : '' };
+  return { key: when.key, values: { ccn, date: isoDate(date), reason, fy: String(fy) }, tail: tail ? fill(tail) : '', end };
 }
 
 // A note's words, its tail filled in where the note has a place for one.
-const textOf = (note) => fill(note.key, note.tail === null ? note.values : { ...note.values, tail: note.tail });
+const textOf = (note) => fill(note.key, note.tail === null ? note.values : { ...note.values, tail: note.tail }) + note.end;
 
 // The note as text; '' for a hospital whose agreement had not ended by the year's end.
 export function closedNote(args) {
@@ -48,5 +50,5 @@ export function closedNoteMarkup(args, tailClass) {
   const note = noteOf(args);
   if (!note) return '';
   if (!note.tail) return html`${textOf(note)}`;
-  return fillAround((marks) => fill(note.key, { ...note.values, ...marks }), { tail: html`<span class="${tailClass}">${note.tail}</span>` });
+  return html`${fillAround((marks) => fill(note.key, { ...note.values, ...marks }), { tail: html`<span class="${tailClass}">${note.tail}</span>` })}${note.end}`;
 }

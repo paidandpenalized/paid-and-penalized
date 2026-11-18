@@ -68,7 +68,7 @@ export function checkId(id, who) {
   return id;
 }
 
-// --vb: the viewBox's width, from which charts.css caps the drawn width.
+// --vb: the viewBox's width, from which charts-map.css caps the drawn width.
 export const frame = ({ kind, width, height, body }) =>
   html`<svg class="chart chart--${kind}" viewBox="0 0 ${Math.round(width)} ${Math.round(height)}" width="100%" focusable="false" style="--vb: ${Math.round(width)}">${body}</svg>`;
 

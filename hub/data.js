@@ -5,10 +5,11 @@
 import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
 import { rowsByCcn } from '../engine/js/medicaid/hospital.js';
 import { existsSync } from 'node:fs';
-import { ATLAS_ID, stateShapes } from '../web/charts/geo.js';
+import { ATLAS_ID, countyShapes, stateShapes } from '../web/charts/geo.js';
 import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
 import { masterByCcn } from '../pipeline/master.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
+import { likeCounts, outsideHospitals } from './outside.js';
 
 // The inputs must agree before any page is built from them: the dollar estimates are for the year the master calls its
 // HACRP year (the common fiscal year the hub shows), every dollar CCN is in the master, and the Readmissions
@@ -51,6 +52,7 @@ let loaded = null;
 //   fy, builtAt   the dollar estimates' fiscal year and when the file was built
 //   dollars       the parsed dollar file (rows and national totals)
 //   master        the hospital master's records by CCN, as every site reads them (pipeline/master.js masterByCcn)
+//   programYears  the master's { hacrp, hrrp }: the fiscal year of each program file its reason codes come from
 //   decided       the CCNs of the hospitals CMS scored and gave a Yes or No in the dollar estimates' year (a Set), from
 //                 the HACRP site's emitted file: the HACRP pages count only these, so the hub's words can too
 //   hrrp          { fy, hospitals: Map<ccn, record>, national } from the Readmissions site's newest emitted file: a hospital
@@ -61,6 +63,7 @@ let loaded = null;
 //                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
 //                 a hospital page's Medicaid band reads (hospital/medicaid.js)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
+//   counties      every county's outline (countyShapes of the same atlas, parsed once)
 export function loadHub() {
   if (loaded) return loaded;
   const dollars = readJson(REPO_ROOT + dollarsPath(newestYear('data/emitted/dollars')));
@@ -73,15 +76,18 @@ export function loadHub() {
   const hacrp = readJson(REPO_ROOT + hacrpFile);
   // Read as the hub reads the other sites' emitted files, by path: the hub imports no site's code.
   const medicaid = readJson(REPO_ROOT + medicaidPath(newestYear('data/emitted/medicaid')));
+  const atlas = JSON.parse(readPinned(ATLAS_ID));
   loaded = {
     fy: dollars.fy,
     builtAt: dollars.built_at,
     dollars,
     master: masterByCcn(masterFile),
+    programYears: masterFile.programYears,
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
-    shapes: stateShapes(JSON.parse(readPinned(ATLAS_ID))),
+    shapes: stateShapes(atlas),
+    counties: countyShapes(atlas),
   };
   return loaded;
 }
@@ -90,11 +96,14 @@ let model = null;
 
 // The hub's hospitals (model.js hubHospitals) and their story facts (storyFacts), from loadHub's files, worked out once per
 // build: the build's context (the shell's facts and the hub's data asset, pipeline/site/build.js) and the hub's pages
-// (pages.js) share them. { hub: loadHub(), hospitals, facts }.
+// (pages.js) share them. { hub: loadHub(), hospitals, facts, outside, likeCounts }, outside being the master's hospitals the dollar
+// file does not have (outside.js) and likeCounts their counts by group, by state (outside.js likeCounts).
 export function hubModel() {
   if (model) return model;
   const hub = loadHub();
   const hospitals = hubHospitals(hub);
-  model = { hub, hospitals, facts: storyFacts(hospitals) };
+  const dollarCcns = new Set(hub.dollars.hospitals.map((r) => r.ccn));
+  const outside = outsideHospitals({ master: hub.master, dollarCcns, hrrp: hub.hrrp });
+  model = { hub, hospitals, facts: storyFacts(hospitals), outside, likeCounts: likeCounts(outside) };
   return model;
 }

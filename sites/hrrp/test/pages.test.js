@@ -11,7 +11,6 @@ import { SITE } from '../../../web/site.js';
 import { hospitalPage } from '../web/pages/hospital.js';
 import { shellOf } from '../web/pages/parts.js';
 import { hospitalPath } from '../web/links.js';
-import { loadHub } from '../../../hub/data.js';
 import { hospitalContext, hospitalView } from '../web/view.js';
 import { ASSETS, CUT, INACTIVE, NAME, NONE_BELOW, NONE_MEASURED, NONE_ROUNDED, ctxOf, hospital, loadHrrpOnce } from './fixtures.js';
 
@@ -137,17 +136,20 @@ test('on the data: no page\'s text has NaN, undefined, null or [object Object]',
   }
 });
 
-test('on the data: the header links no hub or HACRP page the build lacks', () => {
-  const dollars = new Set(loadHub().dollars.hospitals.map((r) => r.ccn));
-  assert.deepEqual(PAGES.filter(([h, , view]) => view.inHub !== dollars.has(h.id)).map(([h]) => h), [], 'the master\'s HACRP membership is the dollar file\'s');
-  const out = PAGES.find(([h]) => !dollars.has(h.id));
-  assert.ok(out, 'the data has a hospital the dollar file lacks');
-  assert.ok(!/href="\/(hacrp\/)?hospital\//.test(headerOf(out[1])), 'its header links neither the hub\'s nor HACRP\'s page for it');
-  assert.ok(/href="\/hrrp\/hospital\//.test(headerOf(out[1])));
+test('on the data: the header links the hub page of every hospital in the master and no HACRP page the build lacks', () => {
+  const { master, dollars } = DATA;
+  assert.deepEqual(PAGES.filter(([h, , view]) => view.inHub !== master.has(h.id) || view.inHacrp !== dollars.has(h.id)).length, 0, 'the hub follows the master, HACRP the dollar file');
+  const out = PAGES.find(([h]) => master.has(h.id) && !dollars.has(h.id));
+  assert.ok(out, 'the data has a hospital in the master the dollar file lacks');
+  const header = headerOf(out[1]);
+  assert.ok(/href="\/hospital\//.test(header), 'its header links its hub page');
+  assert.match(chipOf(header), /<a class="chip__n" href="\/hospital\//, 'its chip\'s name links it');
+  assert.ok(!/href="\/hacrp\/hospital\//.test(header), 'and no HACRP page for it');
+  assert.ok(/href="\/hrrp\/hospital\//.test(header));
 });
 
 test('on the data: the chip carries the net the dollar file estimates, and none for a hospital without an estimate', () => {
-  const rows = new Map(loadHub().dollars.hospitals.map((r) => [r.ccn, r]));
+  const rows = DATA.dollars;
   const estimated = PAGES.filter(([h]) => rows.get(h.id)?.status === 'estimated');
   const without = PAGES.filter(([h]) => rows.get(h.id)?.status !== 'estimated');
   assert.ok(estimated.length > 0 && without.length > 0, 'the data has both kinds');

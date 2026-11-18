@@ -1,11 +1,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { isDeepStrictEqual } from 'node:util';
+import { gzipSync } from 'node:zlib';
 import { SHOWN_STATUSES } from '../../engine/js/dollars/status.js';
 import { programDollars } from '../../engine/js/dollars/whatif.js';
 import { STATUS_CODES, decodeRows } from '../../web/client/hub-asset.js';
-import { loadHub } from '../data.js';
+import { hubModel, loadHub } from '../data.js';
 import { MAP_WIDTH, hubAsset } from '../asset.js';
-import { hubHospitals } from '../model.js';
+import { countedOnMap, hubHospitals } from '../model.js';
+import { US_STATES } from '../../engine/js/states.js';
+import { cmsNamed } from '../../pipeline/master.js';
+import { decodeSearchAsset } from '../client/search.js';
+import { shownName } from '../hospital/record.js';
+import { searchAsset } from '../search/asset.js';
 
 const hub = loadHub();
 const hospitals = hubHospitals(hub);
@@ -133,4 +140,100 @@ test('every hospital decodes to what the build holds, and a decoded hospital can
     }, h.ccn);
     assert.equal(programDollars(d.est).net, d.est.net, h.ccn);
   });
+});
+
+// ---------- the family search's own index (hub/search/asset.js) ----------
+// Every hospital on Medicare's list (the hospital master): the dollar file's (hubHospitals) and the ones outside the
+// penalty programs (hubModel's outside), each with the name its page shows, its place and the master's kind. The state
+// counts are the map's (countedOnMap over the dollar file's hospitals), as the search showed before it had an index of
+// its own. Failure messages name no hospital, CCN or figure.
+const searchModel = hubModel();
+const search = searchAsset({ hospitals: searchModel.hospitals, outside: searchModel.outside, master: hub.master });
+
+test('searchAsset: one row per master hospital; state counts equal today\'s hubEntries counts', () => {
+  assert.deepEqual(search.cols, ['ccn', 'name', 'city', 'state', 'kind']);
+  assert.equal(search.rows.length, hub.master.size, 'a row for every hospital in the master');
+  const ccns = search.rows.map((r) => r[0]);
+  assert.equal(new Set(ccns).size, ccns.length, 'no hospital twice');
+  assert.ok(ccns.every((ccn) => hub.master.has(ccn)), 'every row is a master hospital');
+  assert.ok(search.rows.every((r) => r.length === 5 && r.every((v) => v !== undefined)), 'every row has its five values');
+  assert.ok(search.rows.every((r) => r[4] === hub.master.get(r[0]).kind), 'the kind is the master\'s');
+  assert.ok(search.rows.some((r) => r[4] === 'acute'), 'acute hospitals keep their kind');
+  // Today's counts, as hubEntries made them from hubHospitals: each state's hospitals the map counts.
+  const today = {};
+  for (const h of hospitals) if (countedOnMap(h) && US_STATES.some(([code]) => code === h.state)) today[h.state] = (today[h.state] ?? 0) + 1;
+  assert.ok(isDeepStrictEqual(search.states, today), 'each state\'s count is the one the search showed before');
+});
+
+test('searchAsset: a hospital no CMS file names shows the name its page shows, not the master\'s stand-in', () => {
+  const unnamed = searchModel.outside.filter((x) => !cmsNamed(x.name, x.ccn));
+  assert.ok(unnamed.length > 0, 'the master has a hospital no CMS file names (if not, this test no longer covers one)');
+  const byCcn = new Map(search.rows.map((r) => [r[0], r]));
+  for (const x of unnamed) {
+    assert.ok(byCcn.get(x.ccn)[1] === shownName(x), 'the page\'s name');
+    assert.ok(byCcn.get(x.ccn)[1] !== x.name, 'not the stand-in');
+  }
+});
+
+test('searchAsset: the hub asset stays the dollar file\'s; no outside hospital enters it (the shell would link a program page it has not)', () => {
+  const inHub = new Set(asset.rows.map((r) => r[0]));
+  assert.ok(!searchModel.outside.some((x) => inHub.has(x.ccn)));
+});
+
+test('searchAsset: gzip size printed; under the old hub asset\'s', () => {
+  const text = JSON.stringify(search);
+  const old = JSON.stringify(asset);
+  const gz = gzipSync(text).length;
+  const oldGz = gzipSync(old).length;
+  console.log(`search asset: ${Buffer.byteLength(text)} bytes raw, ${gz} gzip; hub asset: ${Buffer.byteLength(old)} raw, ${oldGz} gzip`);
+  assert.ok(gz < oldGz, 'the search index is smaller than the hub asset, gzip');
+});
+
+test('searchAsset: the state counts are the map\'s: a Maryland hospital counts in Maryland, one with no inputs and one outside the programs count nowhere', () => {
+  const row = (ccn, state, status, est) => ({ ccn, name: 'Invented Hospital', city: 'Exampleton', state, status, est });
+  const hospitals = [row('990001', 'OH', 'estimated', { net: -1 }), row('990002', 'MD', 'maryland', null), row('990003', 'OH', 'no-inputs', null)];
+  const outside = [{ ccn: '990004', name: 'Invented Hospital', city: 'Exampleton', state: 'OH', kind: 'critical_access' }];
+  const master = new Map(['990001', '990002', '990003'].map((ccn) => [ccn, { kind: 'acute' }]));
+  const got = searchAsset({ hospitals, outside, master });
+  assert.deepEqual(got.states, { MD: 1, OH: 1 }, 'Ohio\'s estimated hospital and Maryland\'s, and no other');
+  assert.equal(got.rows.length, 4, 'every hospital is still a row the search finds');
+});
+
+test('searchAsset refuses a hospital twice, a kind the search has no word for, and a dollar-file hospital the master lacks', () => {
+  const row = { ccn: '990001', name: 'Invented Hospital', city: 'Exampleton', state: 'OH', status: 'estimated', est: { net: -1 } };
+  const master = new Map([['990001', { kind: 'acute' }]]);
+  assert.throws(() => searchAsset({ hospitals: [row], outside: [{ ...row, kind: 'acute' }], master }), RangeError);
+  assert.throws(() => searchAsset({ hospitals: [row], outside: [], master: new Map([['990001', { kind: 'spaceport' }]]) }), RangeError);
+  assert.throws(() => searchAsset({ hospitals: [row], outside: [], master: new Map() }), RangeError);
+});
+
+test('decodeSearchAsset reads back what searchAsset writes, and throws on anything else', () => {
+  const decoded = decodeSearchAsset(search);
+  assert.equal(decoded.rows.length, search.rows.length);
+  assert.deepEqual(decoded.rows[0], Object.fromEntries(search.cols.map((c, i) => [c, search.rows[0][i]])));
+  assert.deepEqual(decoded.states, search.states);
+  const good = { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [['990001', 'Invented Hospital', null, 'OH', 'critical_access']], states: { OH: 1 } };
+  assert.equal(decodeSearchAsset(good).rows[0].city, null, 'a hospital with no city');
+  const bad = {
+    'not an object': null,
+    'an array': [],
+    'no rows': { ...good, rows: undefined },
+    'other columns': { ...good, cols: ['ccn', 'name', 'city', 'kind', 'state'] },
+    'a short row': { ...good, rows: [['990001', 'Invented Hospital', null, 'OH']] },
+    'a row that is no list': { ...good, rows: [{ ccn: '990001' }] },
+    'a CCN that is no CCN': { ...good, rows: [['99001', 'Invented Hospital', null, 'OH', 'acute']] },
+    'a lowercase CCN': { ...good, rows: [['99000a', 'Invented Hospital', null, 'OH', 'acute']] },
+    'a CCN twice': { ...good, rows: [good.rows[0], good.rows[0]] },
+    'a name that is no text': { ...good, rows: [['990001', 7, null, 'OH', 'acute']] },
+    'an empty name': { ...good, rows: [['990001', '', null, 'OH', 'acute']] },
+    'a city that is no text': { ...good, rows: [['990001', 'Invented Hospital', 7, 'OH', 'acute']] },
+    'a state that is no code': { ...good, rows: [['990001', 'Invented Hospital', null, 'Ohio', 'acute']] },
+    'an unknown kind': { ...good, rows: [['990001', 'Invented Hospital', null, 'OH', 'spaceport']] },
+    'no states': { ...good, states: undefined },
+    'states as a list': { ...good, states: [] },
+    'a state that is not one': { ...good, states: { ZZ: 1 } },
+    'a count that is no count': { ...good, states: { OH: -1 } },
+    'a fractional count': { ...good, states: { OH: 1.5 } },
+  };
+  for (const [what, value] of Object.entries(bad)) assert.throws(() => decodeSearchAsset(value), Error, what);
 });

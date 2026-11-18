@@ -594,11 +594,6 @@ export const COPY = {
   figNearbyTakeaway: { text: 'CMS cut {yes} of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
   figNearbyNone: { text: 'CMS cut none of the {k} nearest hospitals; the closest is {distance} away.', claim: null },
   figNearbyAll: { text: 'CMS cut all {k} nearest hospitals; the closest is {distance} away.', claim: null },
-  // A distance in words (hospital-figures.js milesText): under a mile, a mile when rounded, else whole miles (a count and
-  // its noun); in the table, under a mile in its column of miles.
-  milesUnder: { text: 'less than a mile', claim: null },
-  milesAbout: { text: 'about a mile', claim: null },
-  nearbyUnderMile: { text: 'under {one}', claim: null },
   figPeersSame: { text: '{position}; the share cut is {share} in every group.', claim: null },
   figNearbyAlt: { text: 'Map of the area around this hospital, with its nearest scored hospitals numbered as in the table.', claim: null },
   nearbyCut: { text: 'cut', claim: null },

@@ -34,7 +34,7 @@ import { deckLead, hospitals, inactiveSentence, noEstimateNote, penalizedNote, r
 // What every hospital page of a build shares, built once: the fiscal year's phrases (with the data's condition names,
 // which the verdict sentence uses), what the rank line ranks against (the cuts, nationally, by state and by peer group) and
 // the hospital master (a Map of CCN to record; optional), which says whether the family's hub has a page for the hospital, and
-// the family's dollar estimates (a Map of CCN to row; optional), whose net the header chip shows.
+// the family's dollar estimates (a Map of CCN to row; optional), which says whether HACRP has one and whose net the header chip shows.
 export function hospitalContext({ hospitals, meta, history, conditions, master = null, dollars = null, shapes = null, counties = [] }) {
   const side = nationalSide({ hospitals, meta, history });
   return {
@@ -97,9 +97,11 @@ function crumbsOf(h, ctx) {
   return out;
 }
 
-// Whether the hub's dollar file holds the hospital, so the hub and the HACRP site have a page for it (web/site.js
-// hospitalPathOf): read from the file itself. True only where the context has no dollar file at all (a test's slice).
-const inHubOf = (h, ctx) => (ctx.dollars ? ctx.dollars.has(h.id) : true);
+// Whether the hub and the HACRP site have a page for the hospital (web/site.js hospitalPathOf): the hub writes one for
+// every hospital in the newest master, HACRP one for each in the dollar file. Each read from its file; true where the
+// context has no such file at all (a test's slice).
+const inHubOf = (h, ctx) => (ctx.master ? ctx.master.has(h.id) : true);
+const inHacrpOf = (h, ctx) => (ctx.dollars ? ctx.dollars.has(h.id) : true);
 
 // The hospital's estimated net from the dollar estimates, as HACRP's pages show it; null without an estimate.
 const netOf = (h, ctx) => {
@@ -125,6 +127,7 @@ export function hospitalView(h, ctx) {
     ccn: h.id,
     name: h.name,
     inHub: inHubOf(h, ctx),
+    inHacrp: inHacrpOf(h, ctx),
     net: netOf(h, ctx),
     edition: edition.label,
     heading: fill('pageTitle', where),

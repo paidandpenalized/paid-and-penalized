@@ -53,10 +53,12 @@ export const COPY = typesetCopy({
   yearSplitHrrp: { text: "These pages show CMS's FY{next} file. The family's estimates across the three programs, on the front page and in the footer, use FY{fy}, the latest year all three share.", claim: 'HACRP-12' },
   // A hub or HACRP hospital page's note on a hospital whose Medicare agreement CMS lists as ended by the end of the
   // dollars' fiscal year (render/closed.js): before the year began, or during it; its tail says what that means for the
-  // page's estimated dollars (none for $0); a date CMS doesn't list leaves the timing out.
-  closedBefore: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), before FY{fy} began. It was not paid under this ID in FY{fy}{tail}. This site keeps it in its totals.",
-  closedDuring: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), during FY{fy}. It was not paid under this ID after that{tail}. This site keeps it in its totals.",
-  closedUndated: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended ({reason}). This site keeps it in its totals.",
+  // page's estimated dollars (none for $0); a date CMS doesn't list leaves the timing out. closedKept follows each, on a
+  // page whose hospital is in the site's totals (every page but one of a hospital outside the penalty programs).
+  closedBefore: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), before FY{fy} began. It was not paid under this ID in FY{fy}{tail}.",
+  closedDuring: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended on {date} ({reason}), during FY{fy}. It was not paid under this ID after that{tail}.",
+  closedUndated: "CMS lists this hospital's Medicare agreement under CCN {ccn} as ended ({reason}).",
+  closedKept: 'This site keeps it in its totals.',
   closedTailBeforeCut: ', so its estimated cut is unlikely to have been collected',
   closedTailBeforeBonus: ', so its estimated bonus is unlikely to have been paid',
   closedTailDuringCut: ', so only part of its estimated cut is likely to have been collected',
@@ -84,6 +86,11 @@ export const COPY = typesetCopy({
   // web/client/figure.js, which fills in {column}.
   sortedUp: 'Sorted by {column}, ascending',
   sortedDown: 'Sorted by {column}, descending',
+  // A distance (render/miles.js): in words, under a mile and a mile when rounded (whole miles otherwise are a count and
+  // its noun); in a table's column of miles, under a mile.
+  milesUnder: 'less than a mile',
+  milesAbout: 'about a mile',
+  milesUnderCell: 'under {one}',
   // A figure's claim level, said under the chart when its values are not CMS's own (DES-25 words).
   claimRecomputed: 'This site recomputes',
   claimEstimate: 'Estimate',
@@ -104,9 +111,9 @@ export const COPY = typesetCopy({
   // adjustment), which is more than the yearly update a hospital ends up with.
   dekIqr: { text: "Hospitals that don't report required quality data have {share} of the market-basket increase taken off their yearly payment update.", claim: 'HUB-06' },
   dekPi: { text: 'Hospitals that miss electronic health record requirements have {share} of the market-basket increase taken off their yearly update.', claim: 'HUB-07' },
-  // Who is not in the Readmissions program: its Methods page and the hub's not-found page both say it (claim HRRP-11).
+  // Who is not in the Readmissions program, and that each such hospital still has a page across the programs: the Readmissions Methods page (claim HRRP-11).
   notInHrrp: {
-    text: "The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico's hospitals are not in it and have no page here.",
+    text: "The Readmissions program covers the hospitals in the fifty states and the District of Columbia that Medicare pays under its inpatient payment system, so critical access hospitals, the hospitals paid outside it (children's, cancer, psychiatric, rehabilitation and long-term care hospitals) and Puerto Rico's hospitals are not in it, so they have no Readmissions page here; each has a page across the programs.",
     claim: ['HRRP-11', 'HRRP-12', 'HRRP-13', 'HRRP-16'],
   },
   dekTeam: { text: 'In selected areas, hospitals earn or owe money against a spending target for {surgeries} surgeries.', claim: ['HUB-11', 'HUB-12'] },

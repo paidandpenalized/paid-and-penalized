@@ -101,11 +101,11 @@ export const sourceGroups = (sources, hospitals, penalties) => ({
 });
 
 // The CCNs with a hospital page across the programs (/hospital/<ccn>/): the hub writes one for every hospital in the newest
-// dollar estimates (hub/model.js hubHospitals), so the work requirement links a hospital there only when it is in that
-// file, as the Readmissions site does (sites/hrrp/web/view.js inHubOf).
+// hospital master (hub/model.js), so that master's CCNs are the ones the work requirement links, including the hospitals
+// the scenario file leaves out (loadAway gives their reason).
 let hub = null;
 export function loadHubCcns() {
-  hub ??= new Set(loadDollars().hospitals.map((r) => r.ccn));
+  hub ??= new Set(loadMaster().hospitals.map((h) => h.ccn));
   return hub;
 }
 
@@ -113,8 +113,9 @@ export function loadHubCcns() {
 const SCENARIO_KINDS = new Set(['acute', 'critical_access']);
 
 // The hospitals with a page across the programs that the scenario file leaves out (it holds every active acute-care and
-// critical access hospital in the master it was built from; the hub's pages, from the newest dollar file, may also cover
-// hospitals CMS has since listed as closed or changed, or listed after that master), so a ?h= that follows one of them
+// critical access hospital in the master it was built from; the hub's pages, one per hospital in the newest master, also
+// cover psychiatric, federal and other hospitals of other kinds, and those CMS has since listed as closed or changed, or
+// listed after that master), so a ?h= that follows one of them
 // names it on the program page with the reason: [ccn, name, city, state, why], in CCN order. why, read from the master
 // the file was built from (built): 'newer' (that master doesn't list it: a newer one does), 'inactive' (it gives an
 // inactive date) or 'kind' (neither acute care nor critical access). A hospital that master lists as active acute or

@@ -85,6 +85,8 @@ test('programById: each program by its id, the registry\'s own entry; null for a
 test('hospitalPathOf: the hub and HACRP always, Readmissions only for a hospital the Readmissions site lists, no other program', () => {
   assert.equal(hospitalPathOf('hub', '990001'), '/hospital/990001/');
   assert.equal(hospitalPathOf('hacrp', '990001'), '/hacrp/hospital/990001/');
+  assert.equal(hospitalPathOf('hacrp', '990001', { inHacrp: false }), null, 'a hospital outside the dollar file has no HACRP page');
+  assert.equal(hospitalPathOf('hub', '990001', { inHacrp: false }), '/hospital/990001/', 'but the hub has one for it');
   assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: true }), '/hrrp/hospital/990001/');
   assert.equal(hospitalPathOf('hrrp', '990001', { inHrrp: false }), null);
   assert.equal(hospitalPathOf('hrrp', '990001'), null, 'no flag is not in the Readmissions file');

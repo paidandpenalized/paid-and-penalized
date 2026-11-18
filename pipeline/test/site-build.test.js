@@ -17,7 +17,7 @@ import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../si
 import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
 import { loadHacrp } from '../../sites/hacrp/web/data.js';
-import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, mergeEntries } from '../site/build.js';
+import { CLASSIC_ENTRIES, SHARED_ENTRIES, SITES, build, buildContext, distStats, mergeEntries, summaryLine } from '../site/build.js';
 import { buildEnv, createContext, robotsFor, siteDates } from '../site/context.js';
 import { headersFile, headersFor, parseHeaders } from '../site/headers.js';
 import { addressOf, filesAt, lookup } from '../site/address.js';
@@ -203,6 +203,11 @@ test('build writes the hub\'s asset once and hands every site the shell\'s facts
     assert.equal(seen[0], seen[1]);
     const shell = seen[0];
     assert.equal(shell.hubUrl, `/assets/${files[0]}`);
+    // The family search's own index, beside it, named by its content too.
+    const search = readdirSync(join(out, 'assets')).filter((f) => f.startsWith('hub-search.'));
+    assert.equal(search.length, 1);
+    assert.equal(shell.searchUrl, `/assets/${search[0]}`);
+    assert.equal(search[0], `hub-search.${hash8(readFileSync(join(out, 'assets', search[0]), 'utf8'))}.json`);
     const asset = JSON.parse(text);
     assert.equal(shell.fy, asset.fy);
     assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
@@ -246,10 +251,25 @@ test('buildContext, the build\'s own path to a context, writes the hub\'s asset 
     assert.equal(ctx.assets.css, assets.css);
     assert.equal(ctx.assets.js, assets.js);
     assert.equal(ctx.env, 'preview');
-    const { hubUrl, ...facts } = ctx.assets.shell;
+    const { hubUrl, searchUrl, ...facts } = ctx.assets.shell;
     assert.match(hubUrl, /^\/assets\/hub-hospitals\.[0-9a-f]{8}\.json$/);
     assert.ok(existsSync(join(dir, hubUrl)), 'the asset the facts name is written');
+    assert.match(searchUrl, /^\/assets\/hub-search\.[0-9a-f]{8}\.json$/);
+    assert.ok(existsSync(join(dir, searchUrl)), 'the search\'s index is written');
     assert.deepEqual(Object.keys(facts), ['fy', 'hospitals', 'changed', 'programs']);
+  }));
+
+test('build: the summary line names the file count, the size and the pages', () =>
+  withTemp(async (dir) => {
+    const out = join(dir, 'dist');
+    await build({ outDir: out, env: 'preview', sites: [] });
+    const { files, bytes } = distStats(out);
+    assert.equal(files, readdirSync(out, { recursive: true, withFileTypes: true }).filter((e) => e.isFile()).length);
+    assert.ok(files > 0 && bytes > 0);
+    const line = summaryLine({ pages: 7, env: 'preview', files: 13123, bytes: 1288490188 });
+    assert.ok(line.includes('7 pages') && line.includes('13,123 files') && line.includes('1.2 GB') && line.includes('env preview'), 'pages, files, size and env');
+    assert.ok(summaryLine({ pages: 1, env: undefined, files: 2, bytes: 3 }).includes('env unset'));
+    assert.ok(summaryLine({ pages: 12415, env: 'preview', files: 13106, bytes: 3 }).startsWith('dist/: 12,415 pages, 13,106 files'), 'the pages counted as the files are');
   }));
 
 test('the hub runs last: its sitemap lists the indexable pages every other site emitted', () => {
@@ -391,11 +411,16 @@ test('each page links the shared stylesheet and then its own site\'s alone: a HA
     assert.ok(!css(site).includes(root) && !css(hub).includes(root) && !css(hrrp).includes(root), `only HACRP's stylesheet holds ${root}`);
   }
   for (const root of ['.hh__', '.story', '.rd__']) assert.ok(css(hub).includes(root), `the hub's stylesheet holds ${root}`);
-  // The chart and what-if kit (KIT_STYLES) rides in HACRP's sheet alone; the hub's keeps the scale bar's two dot rules.
-  for (const rule of ['.chart-tile', '.wi-cliff__pit', '.fig__key']) {
-    assert.ok(css(hacrp).includes(rule) && !css(site).includes(rule) && !css(hub).includes(rule), `only HACRP's stylesheet holds ${rule}`);
+  // The map kit (charts-map.css) rides in HACRP's sheet and the hub's (the area map on a page outside the programs), never
+  // the shared one; its dot rules draw the hub's scale bar too. The rest of the chart kit (charts.css) and the what-if kit
+  // ride in HACRP's alone: the hub's every page loads its sheet, and a hospital page's weight has a budget.
+  for (const rule of ['.fig__key', '.chart-dots--ink', '.chart--area-map', '.gb--near']) {
+    assert.ok(css(hacrp).includes(rule) && css(hub).includes(rule) && !css(site).includes(rule), `HACRP's and the hub's stylesheets hold ${rule}, the shared one doesn't`);
   }
-  assert.ok(css(hub).includes('.sbar .chart-dots--ink'), 'the hub\'s stylesheet holds the scale bar\'s dots');
+  for (const rule of ['.chart-tile', '.fig__claim', '.chart-step']) {
+    assert.ok(css(hacrp).includes(rule) && !css(hub).includes(rule) && !css(site).includes(rule), `only HACRP's stylesheet holds ${rule}`);
+  }
+  assert.ok(css(hacrp).includes('.wi-cliff__pit') && !css(site).includes('.wi-cliff__pit') && !css(hub).includes('.wi-cliff__pit'), 'only HACRP\'s stylesheet holds the what-if kit');
   // The theme is the tokens' (the shared bundle: the dark block, its copy for the toggle and the print block); the hub's
   // sheet reads the tokens and sets none of that, so the shared bundle's dark and print values reach its rules.
   assert.ok(/:root\[data-theme="?dark"?\]\{[^}]*--pen:/.test(css(site)), 'the shared stylesheet\'s copy of the dark tokens for the toggle');

@@ -302,15 +302,18 @@ test('the labels: the scenario\'s numbers carry SCENARIO · year $, the cost rep
 });
 
 test('review focus 2: a hospital\'s page across the programs is linked only where the hub has it; a critical access hospital without one gets no link', () => {
-  const cah = rows.find((r) => fileRow(r.ccn)[col.kind] === 'critical_access' && !hubCcns.has(r.ccn));
-  assert.ok(cah, 'a critical access hospital with no hub page');
+  // Every file hospital has a page now, so a hospital without one is made by leaving a critical access hospital out of the list.
+  const cah = rows.find((r) => fileRow(r.ccn)[col.kind] === 'critical_access');
+  assert.ok(cah, 'a critical access hospital');
+  const partial = new Set([...hubCcns].filter((ccn) => ccn !== cah.ccn));
+  const partialChunks = new Map([...hospChunks(data, rows, partial)].map(([code, chunk]) => [code, decodeChunk(JSON.parse(JSON.stringify(chunk)))]));
   const linkOf = (r) => hospitalPathOf('hub', r.ccn);
-  const card = cardHtml(subject(cah), { k: MIDDLE, use: 1 }).text;
+  const card = cardHtml(subjectOf(cah, partialChunks.get(cah.state)), { k: MIDDLE, use: 1 }).text;
   assert.ok(!card.includes(linkOf(cah)), 'no link to a page that does not exist');
   assert.doesNotMatch(card, /href="\/hospital\//);
   for (const r of rows) {
     const has = cardHtml(subject(r), { k: MIDDLE, use: 1 }).text.includes(`href="${linkOf(r)}"`);
-    assert.equal(has, hubCcns.has(r.ccn), r.ccn);
+    assert.equal(has, hubCcns.has(r.ccn), 'a card links a page the list does not have, or lacks one it has');
   }
   // A hub hospital the file leaves out has its hub page by definition.
   for (const r of away) assert.ok(cardHtml(subject(r), { k: MIDDLE, use: 1 }).text.includes(`href="${linkOf(r)}"`), r.ccn);

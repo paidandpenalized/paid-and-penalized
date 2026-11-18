@@ -118,10 +118,6 @@
 .sbar__sliver, .sbar__np { fill: var(--pen); }
 .sbar__bo { fill: var(--rew); }
 .sbar__mag { fill: none; stroke: var(--pen); stroke-width: 1px; stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
-/* The bar's dots (web/charts/dots.js): the chart kit's rules for them, which the hub's pages do not load (the kit rides
-   in a program site's sheet: pipeline/site/assets.js KIT_STYLES). */
-.sbar .chart-dots { fill: none; stroke-linecap: round; }
-.sbar .chart-dots--ink { stroke: var(--ink-2); }
 .sbar__x { position: absolute; top: calc(var(--my) * 100%); right: calc((1 - var(--mx)) * 100% + 8px); color: var(--ink-3); font: 400 0.75rem/1 var(--font-type); transform: translateY(-50%); }
 .sbar__split { display: flex; justify-content: space-between; gap: 4px 16px; margin: 6px 0 0 calc(var(--mx) * 100%); }
 .sbar__part { max-width: none; color: var(--ink-2); font: 400 0.8125rem/1.35 var(--font-body); }
@@ -383,7 +379,7 @@
    words), the frames and rules take the text color, the pressed peer button and the current step the highlight. */
 @media (forced-colors: active) {
   .story .st, .story .st--pen, .story .st--rew, .story .st--md, .smap__land, .sbar__sliver, .sbar__np, .sbar__bo, .story .sb { forced-color-adjust: none; }
-  .sbar__frame, .sbar__mag, .smap__hatch, .sbar .chart-dots--ink { stroke: CanvasText; }
+  .sbar__frame, .sbar__mag, .smap__hatch { stroke: CanvasText; }
   .dkey__hatch { forced-color-adjust: none; background: repeating-linear-gradient(45deg, CanvasText 0 1.5px, Canvas 1.5px 6px); box-shadow: inset 0 0 0 1px CanvasText; }
   .story .seg button[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
   .story .rail a[aria-current="step"]::before { background: Highlight; }
@@ -797,14 +793,120 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 /* A hospital without an estimate: the record card, its status as an ink stamp, why, and its program pages. */
 .hh__status { display: grid; justify-items: start; gap: 14px; }
 .hh .hh__sh { font-size: 1.5rem; padding: 6px 12px 3px; }
+/* A hospital outside the penalty programs: its stamp's box fits its words, which break before "penalty" on a wide screen
+   only (hub/hospital/outside.js). */
+.hh__sh--fit { width: fit-content; }
+@media (max-width: 719px) { .hh__br-wide { display: none; } }
 .hh__st { font-size: var(--fs-md); line-height: 1.5; }
 .hh__pages { margin-top: 26px; }
 .hh__plist { display: flex; flex-wrap: wrap; gap: 10px; margin: 4px 0 0; padding: 0; list-style: none; }
 .hh__plist .hh__deep { margin-top: 0; }
 
+/* The nearest hospitals in the programs (hub/hospital/outside-figures.js nearBlock), under a rule: the heading, caption
+   and compact area map left; the table right, which sticks beside the map as the reader scrolls down it and lets go at
+   the section's end (the grid's row ends there). A phone stacks them, map then table, with nothing sticky. */
+.hh__near { margin-top: 26px; }
+/* The two sections' shared grid (nearest, and hospitals like this one below): text left, figure right under a rule. */
+.hh__neari, .hh__likei { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 26px; border-top: 1px solid var(--line); }
+.hh__neart, .hh__liket { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; min-width: 0; }
+.hh__neart h2, .hh__liket h2 { font: 400 clamp(1.5rem, 3vw, var(--fs-xl))/1.05 var(--font-display); }
+.hh__nearcap { font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.hh__nearmap { margin-top: 4px; }
+/* The map's two drawings (outside-figures.js nearBlock), each held to the kit's cap for its width (the area map lifts the
+   cap, charts-map.css .chart--area-map, which would blow its pins and words up in a wide column), and each shown where its
+   column is about its own width: the phone drawing up to 480px and in the narrow two-column layout (720 to 859px), the
+   wider one otherwise. */
+.hh__nearmap .chart--area-map { max-width: calc(var(--vb) * 1.12px + 0.8rem); }
+@media (min-width: 480px) {
+  .hh__nearmap .chart[data-fit="narrow"] { display: none; }
+  .hh__nearmap .chart[data-fit="wide"] { display: block; }
+}
+@media (min-width: 720px) and (max-width: 859px) {
+  .hh__nearmap .chart[data-fit="narrow"] { display: block; }
+  .hh__nearmap .chart[data-fit="wide"] { display: none; }
+}
+.hh__neartab { min-width: 0; align-self: start; }
+/* The context dots: the same group's other hospitals in the map-dot ink (stronger in dark mode), and the other hospitals in
+   the programs in the text ink, both under the pins. */
+.hh__ctx { stroke: var(--dot); }
+.hh__ctxe { stroke: var(--ink-2); }
+/* The key's swatches, drawn like the map's marks: a pin (cut: the pen ink; not cut: on paper) and a context dot. */
+.hh__nsw { display: inline-block; flex: none; width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.hh__nsw--cut { border-color: var(--paper); background: var(--pen); box-shadow: 0 0 0 1px var(--pen); }
+.hh__nsw--ctx, .hh__nsw--est { width: 6px; height: 6px; border: 0; background: var(--dot); }
+.hh__nsw--est { background: var(--ink-2); }
+/* Both keys: a swatch sits on its label's first line, centered on it, when the label wraps. */
+.hh__nkey li, .hh__lkey li { align-items: flex-start; line-height: 1.4; }
+.hh__nkey li > span, .hh__lkey li > span { margin-top: calc((1.4em - 12px) / 2); }
+.hh__nkey .hh__nsw--ctx, .hh__nkey .hh__nsw--est, .hh__lkey .hh__nsw--ctx { margin-top: calc((1.4em - 6px) / 2); }
+.hh__lkey .hh__lsw, .hh__nkey .hh__lsw { margin-top: calc((1.4em - 8px) / 2); }
+/* The share of Medicare inpatient pay: a column of its own, or, on a phone, a line under the dollars (and under the
+   dollars' heading), so the table fits the screen. One of the two shows at a time, so a screen reader reads one. */
+.hh__nshare { display: none; }
+@media (max-width: 599px) {
+  .hh__ntab .hh__sharec { display: none; }
+  .hh__ntab .hh__nshare { display: block; color: var(--ink-2); font-size: var(--fs-xs); font-weight: 400; }
+}
+/* A figure's number and its sentence, as HACRP's hospital page sets them (sites/hacrp/web/styles.css .hsec .fig__n). */
+.hh--out .fig__n { display: block; margin-bottom: 4px; color: var(--pen-ink); font: 600 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.1em; text-transform: uppercase; }
+.hh--out .fig__cap { font-size: var(--fs-md); line-height: 1.4; text-wrap: pretty; }
+/* The table is the kit's (web/styles/charts-map.css .gb--near), as on HACRP's hospital page. */
+@media (min-width: 720px) {
+  .hh__neari, .hh__likei { column-gap: 36px; }
+  .hh__neari { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .hh__likei { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+  .hh__neartab { position: sticky; top: calc(var(--sticky-top, 0px) + 20px); }
+}
+@media (min-width: 1024px) {
+  .hh__neari, .hh__likei { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
+  /* The hospital's name gets the room the number columns don't need, so a name wraps to two lines at most. */
+  .hh__ntab tbody th { min-width: 15em; }
+}
+/* No map (a territory without an inset, or no coordinates): the words take the section's width, at a reading measure. */
+.hh__likei.hh__likei--solo { grid-template-columns: minmax(0, 1fr); }
+.hh__likei--solo .hh__liket { max-width: 44rem; }
+
+/* Hospitals like this one (outside-figures.js likeBlock), under a rule: the heading, the group's count large (the
+   sentence's first figure) and the own-program line left; the US map of the group right, its other hospitals faint and
+   this one in the pen ink inside a ring. A phone stacks them, text then map. */
+.hh__like { margin-top: 26px; }
+.hh__likes, .hh__likeown { font-size: var(--fs-md); line-height: 1.5; }
+.hh__likek { display: block; margin-bottom: 8px; font: 400 clamp(2.5rem, 4.2vw, 2.75rem)/1 var(--font-display); }
+.hh__likeown { color: var(--ink-2); }
+.hh__likemap { align-self: start; }
+/* Puerto Rico alone is a short map: beside the words it sits level with their middle, not at their top. */
+@media (min-width: 720px) { .hh__likemap--pr { align-self: center; } }
+/* The map's caption and key, closing the words' column. */
+.hh__likelegend { display: grid; gap: 10px; margin-top: 8px; }
+.hh__likedot { stroke: var(--dot); }
+/* Puerto Rico's inset: a hairline box, its code above it. */
+.hh__inset { fill: none; stroke: var(--line); stroke-width: 0.75px; vector-effect: non-scaling-stroke; }
+/* Its size is the drawing's own (in the map's units, as an attribute), so it scales with the map like the dots. */
+.hh__insetlab { fill: var(--ink-2); font-family: var(--font-type); font-weight: 600; letter-spacing: 0.08em; }
+.hh__likering { fill: none; stroke: var(--pen); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.hh__likeme { fill: var(--pen); stroke: var(--paper); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.hh__lsw { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--pen); box-shadow: 0 0 0 2px var(--paper), 0 0 0 3.5px var(--pen); margin: 0 3px; }
+/* Forced colors, for both sections (after the like section's rules, which these override). */
+@media (forced-colors: active) {
+  .hh__ctx { stroke: GrayText; }
+  .hh__nsw { forced-color-adjust: none; border-color: CanvasText; background: Canvas; }
+  .hh__nsw--cut { background: CanvasText; color: Canvas; }
+  .hh__nsw--ctx { background: GrayText; }
+  .hh__nsw--est { background: CanvasText; }
+  .hh__ctxe { stroke: CanvasText; }
+  .hh__likedot { stroke: GrayText; }
+  .hh__inset { stroke: GrayText; }
+  .hh__insetlab { fill: CanvasText; }
+  .hh__likering { stroke: CanvasText; }
+  .hh__likeme { fill: CanvasText; stroke: Canvas; }
+  .hh__lsw { forced-color-adjust: none; background: CanvasText; box-shadow: 0 0 0 2px Canvas, 0 0 0 3.5px CanvasText; }
+}
+
 @media (min-width: 1024px) {
   .hh__hero { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); padding-top: 30px; }
   .hh__none { padding-top: 34px; }
+  /* No stamp (a program file lists the hospital): the reason and links sit level with the card's middle, not at its top. */
+  .hh__none--plain { align-self: center; padding-top: 0; }
   .hh__sechead, .hh__row { grid-template-columns: var(--lc) minmax(0, 1fr); column-gap: var(--gap); }
 }
 @media (min-width: 1024px) and (max-width: 1100px) { .hh { --lc: 380px; --gap: 36px; } }
