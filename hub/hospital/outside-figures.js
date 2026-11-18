@@ -9,8 +9,8 @@
 // web/charts/figure.js captions one), numbered in page order by the page's counter. Both maps mark this hospital the same
 // way: a dot in the pen ink inside a ring.
 import { STATE_NAMES } from '../../engine/js/states.js';
-import { COPY as SHARED } from '../../web/copy.js';
 import { counter, keysHintFor } from '../../web/charts/figure.js';
+import { figCaption, keyList } from '../../web/charts/fig-parts.js';
 import { dotsPath } from '../../web/charts/dots.js';
 import { areaMap, EARTH_MILES, miles, nearestTo, NEAR_MAP_WIDTH, pointOf, prInset, prMap, US_MAP_CODES, usPaths, usProjected } from '../../web/charts/geo.js';
 import { WIDTH } from '../../web/charts/svg.js';
@@ -174,26 +174,20 @@ function caption(rows) {
   return fillOutside('nearCaption', { ...values, k: String(k) });
 }
 
-// A figure's caption, in the kit's words and look (web/charts/figure.js): "Figure N." and its sentence; as a <p> with an id
-// (as: 'p') where it stands beside its figure rather than in it.
-const figNumber = (n) => html`<span class="fig__n">${SHARED.figure} ${String(n)}.</span>`;
-const figCaption = (n, text) => html`<figcaption class="fig__cap">${figNumber(n)} ${text}</figcaption>`;
-
-// A map's key: a list of items, each a swatch class and its words.
-const keyItem = (swatch, label) => html`<li><span class="${swatch}" aria-hidden="true"></span>${label}</li>`;
-const keyList = (cls, items) => html`<ul class="fig__key ${cls}" role="list">${items.map(([swatch, label]) => keyItem(swatch, label))}</ul>`;
-// This hospital's swatch, as both maps draw it: a dot in the pen ink inside a ring.
-const THIS_KEY = ['hh__lsw hh__lsw--me', fillOutside('nearKeyThis')];
+// The maps' keys (web/charts/fig-parts.js keyList). This hospital's swatch, as both maps draw it: a dot in the pen ink inside
+// a ring; and the group's other hospitals'.
+const THIS_KEY = { swatch: 'hh__lsw hh__lsw--me', label: fillOutside('nearKeyThis') };
+const LIKE_KEY = { swatch: 'hh__nsw hh__nsw--ctx', label: fillOutside('keyLike') };
 // The nearest map's key: this hospital, a pin cut on net and one not, and each kind of context dot the map draws (drawn:
 // areaMap's contextDrawnBy).
 function key(drawn) {
-  return keyList('hh__nkey', [
+  return keyList([
     THIS_KEY,
-    ['hh__nsw hh__nsw--cut', fillOutside('nearKeyCut')],
-    ['hh__nsw', fillOutside('nearKeyNotCut')],
-    ...(drawn[PROGRAM_CLS] ? [['hh__nsw hh__nsw--est', fillOutside('nearKeyProgram')]] : []),
-    ...(drawn[CONTEXT_CLS] ? [['hh__nsw hh__nsw--ctx', fillOutside('keyLike')]] : []),
-  ]);
+    { swatch: 'hh__nsw hh__nsw--cut', label: fillOutside('nearKeyCut') },
+    { swatch: 'hh__nsw', label: fillOutside('nearKeyNotCut') },
+    ...(drawn[PROGRAM_CLS] ? [{ swatch: 'hh__nsw hh__nsw--est', label: fillOutside('nearKeyProgram') }] : []),
+    ...(drawn[CONTEXT_CLS] ? [LIKE_KEY] : []),
+  ], { cls: 'hh__nkey' });
 }
 
 // The context a nearest map can draw, cut cheaply to a box of longitude and latitude about the page's points: the map's
@@ -338,8 +332,8 @@ export function likeBlock(h, ctx, next = counter()) {
 <p class="hh__likes">${likeSentence(h, g.counts, g.kinds, ctx.years)}</p>
 ${hasOutside(own) ? html`<p class="hh__likeown">${fillOutside(own)}</p>` : ''}
 ${map ? html`<div class="hh__likelegend">
-<p class="fig__cap" id="${LIKE_CAP_ID}">${figNumber(next())} ${map.caption}</p>
-${keyList('hh__lkey', [THIS_KEY, ['hh__nsw hh__nsw--ctx', fillOutside('keyLike')]])}
+${figCaption(next(), map.caption, { id: LIKE_CAP_ID, tag: 'p' })}
+${keyList([THIS_KEY, LIKE_KEY], { cls: 'hh__lkey' })}
 </div>` : ''}
 </div>
 ${map ? html`<figure class="fig hh__likemap${map.own ? ' hh__likemap--pr' : ''}" aria-labelledby="${LIKE_CAP_ID}">
