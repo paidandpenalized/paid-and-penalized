@@ -9,7 +9,7 @@ import { fillCopy } from '../../web/render/components.js';
 import { endedBy } from '../../web/render/closed.js';
 import { html } from '../../web/render/html.js';
 import { COPY } from './copy.js';
-import { medicaidBand, wbLink } from './medicaid.js';
+import { medicaidBand } from './medicaid.js';
 import { fillOutside, hasOutside } from './outside-copy.js';
 import { closed, deepLink, recordCard } from './record.js';
 
@@ -83,9 +83,9 @@ export function outsideBody(h, { master, fy, programYears, medicaid, near = '', 
   // so a hospital a program file lists keeps the default.
   const band = medicaidBand(h, medicaid, { net: false, note: h.listed ? null : fillOutside('wbNoteOutside') });
   // Its program pages: Readmissions where that site has one (never a hospital-acquired conditions page: the HACRP site has
-  // pages only for the dollar file's hospitals), and the work-requirement page only where the band, which ends on the same
-  // link a little further down, doesn't show. No pages: no list.
-  const links = [h.inHrrp && deepLink(h, 'hrrp'), !band && medicaid.hospitals.has(h.ccn) && wbLink(h.ccn)].filter(Boolean);
+  // pages only for the dollar file's hospitals). The work-requirement page is linked by the band alone, which shows for
+  // every hospital the scenario file has a row for. No pages: no list.
+  const links = [h.inHrrp && deepLink(h, 'hrrp')].filter(Boolean);
   const stamped = !h.listed;
   // An inactive-group hospital has no reason line: the closed note is its explanation. Its wording holds only for an end
   // by the year's end (web/render/closed.js endedBy), so a later end stops the build rather than leave a bare stamp.

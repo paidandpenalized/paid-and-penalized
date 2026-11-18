@@ -93,9 +93,8 @@ function bar(shares, top) {
 </div>`;
 }
 
-// The link to the hospital on the work-requirement page (its ?h= opens on it): the band's last line, and one of the program
-// pages a page outside the penalty programs lists (outside.js).
-export const wbLink = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
+// The link to the hospital on the work-requirement page (its ?h= opens on it): the band's last line.
+const wbLink = (ccn) => html`<a class="hh__deep" href="${SITE.sites['work-requirement'].path}?h=${ccn}">${fill('wbLink')}${arrow}</a>`;
 
 // The band for a hospital (h: the hub's), ending its line, or '' with no row for it in the scenario file (the page is then
 // exactly as it was before the band). medicaid: loadHub().medicaid ({ fy, columns, hospitals, states }), required: loadHub
