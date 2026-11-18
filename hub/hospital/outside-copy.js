@@ -18,8 +18,8 @@ const IPPS = ['HUB-29', 'HACRP-18'];
 
 // Typeset once (straight apostrophes and quotes to curly), as every page shows them.
 export const COPY = typesetCopy({
-  // The stamp over the reason (stamp--ink). The page adds the desktop line break before "penalty".
-  stamp: "Not in Medicare's penalty programs",
+  // The stamp over the reason (stamp--ink). The page adds the desktop line break before "hospital".
+  stamp: "Not in Medicare's hospital penalty programs",
 
   // Why the programs don't adjust its pay, by group, then how Medicare pays it instead.
   'reason.critical_access': {

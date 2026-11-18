@@ -17,7 +17,7 @@ import { outsideHospitalSample } from './site.js';
 const shared = useBrowser();
 const CAH = outsideHospitalSample('hub-hospital-outside-cah');
 const FEDERAL = outsideHospitalSample('hub-hospital-outside-federal');
-const STAMP = 'Not in Medicare’s penalty programs';
+const STAMP = 'Not in Medicare’s hospital penalty programs';
 const WIDTHS = [['a desktop', 1280], ['a phone', 390]];
 const squash = (text) => text.replace(/\s+/g, ' ').trim();
 

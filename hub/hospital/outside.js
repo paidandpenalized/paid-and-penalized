@@ -16,14 +16,14 @@ import { closed, deepLink, recordCard } from './record.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
-// The stamp's markup, with a line break (hidden on a phone, styles.css .hh__br-wide) before "penalty", so the box fits two
+// The stamp's markup, with a line break (hidden on a phone, styles.css .hh__br-wide) before "hospital", so the box fits two
 // short lines on a wide screen. The same on every page, so drawn once, when first needed.
 let stampMarkup = null;
 function stampText() {
   if (!stampMarkup) {
     const text = fillOutside('stamp');
-    const at = text.indexOf(' penalty');
-    if (at < 0) throw new RangeError('outside: the stamp has no "penalty" to break before');
+    const at = text.indexOf(' hospital');
+    if (at < 0) throw new RangeError('outside: the stamp has no "hospital" to break before');
     stampMarkup = html`${text.slice(0, at)} <br class="hh__br-wide">${text.slice(at + 1)}`;
   }
   return stampMarkup;

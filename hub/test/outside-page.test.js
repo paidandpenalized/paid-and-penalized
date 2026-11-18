@@ -60,7 +60,7 @@ test('outside page: one per like group has the stamp, its reason and claim-backe
     const page = render(h);
     const main = words(page);
     assert.ok(occurrences(main, STAMP) === 1, `${group}: the stamp once`);
-    assert.ok(/Not in Medicare’s <br class="hh__br-wide">penalty programs/.test(mainOf(page)), `${group}: the stamp breaks before "penalty" on desktop`);
+    assert.ok(/Not in Medicare’s <br class="hh__br-wide">hospital penalty programs/.test(mainOf(page)), `${group}: the stamp breaks before "hospital" on desktop`);
     const reasons = reasonTexts(h);
     if (group !== 'inactive') assert.ok(reasons.length > 0, `${group}: a reason to show`);
     for (const text of reasons) assert.ok(main.includes(esc(text)), `${group}: its reason line`);

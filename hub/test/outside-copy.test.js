@@ -40,7 +40,7 @@ test('no digits in copy', () => {
 });
 
 test('the stamp reads exactly, with curly apostrophes', () => {
-  assert.equal(fillOutside('stamp'), 'Not in Medicare’s penalty programs');
+  assert.equal(fillOutside('stamp'), 'Not in Medicare’s hospital penalty programs');
   for (const [key, text] of texts()) assert.doesNotMatch(text, /'/, `${key}: a straight apostrophe`);
 });
 
