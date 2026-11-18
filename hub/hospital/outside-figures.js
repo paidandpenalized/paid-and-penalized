@@ -12,7 +12,7 @@ import { STATE_NAMES } from '../../engine/js/states.js';
 import { COPY as SHARED } from '../../web/copy.js';
 import { counter, keysHintFor } from '../../web/charts/figure.js';
 import { dotsPath } from '../../web/charts/dots.js';
-import { areaMap, nearestTo, NEAR_MAP_WIDTH, pointOf, prInset, prMap, US_MAP_CODES, usPaths, usProjected } from '../../web/charts/geo.js';
+import { areaMap, EARTH_MILES, miles, nearestTo, NEAR_MAP_WIDTH, pointOf, prInset, prMap, US_MAP_CODES, usPaths, usProjected } from '../../web/charts/geo.js';
 import { WIDTH } from '../../web/charts/svg.js';
 import { fillAround, printout } from '../../web/render/components.js';
 import { count, placeText } from '../../web/render/format.js';
@@ -83,21 +83,36 @@ const PR_MAP_PAD = 2 * RING_R;
 // year, the one thing true of all its hospitals. years: { hacrpFy, hrrpFy }, as text.
 const kindsOf = (group, years) => fillOutside(`likeCount.${group}`, group === 'not_listed' ? { hacrpFy: years.hacrpFy } : {});
 
-// Where a hospital goes on the "like this one" map: Albers USA's place, or, for a Puerto Rico hospital, its place in the
-// inset (web/charts/geo.js prInset); null where the map has none (another territory, or no coordinates).
-const likeAt = (shapes, inset, h) => {
+// Where hospital h goes on a "like this one" map, and how its group's dot is drawn there: { xy, size, layer }, or null
+// where the map has no place for it (another territory, or no coordinates). On the US map (alone false), a state's
+// hospital is at Albers USA's place, in layer 'us'; a Puerto Rico hospital is in the inset (web/charts/geo.js prInset),
+// in layer 'us' too unless its group crowds the inset, whose dots are then drawn smaller in a layer of their own
+// ('inset'). On the map of Puerto Rico alone (alone true; prMap), only a Puerto Rico hospital has a place, in layer 'pr'.
+// like: the build's { shapes, inset, pr }, with the group's dot size and the inset's ({ size, insetSize }).
+function placeOnLikeMap(h, like, alone = false) {
   const point = pointOf(h);
   if (!point) return null;
-  return h.state === 'PR' ? inset?.project(point) ?? null : usProjected(shapes, [point], MAP_WIDTH)[0];
+  const pr = h.state === 'PR';
+  const [xy, size, layer] = alone ? [pr ? like.pr?.project(point) : null, like.size, 'pr']
+    : pr ? [like.inset?.project(point), like.insetSize, like.insetSize === like.size ? 'us' : 'inset']
+      : [usProjected(like.shapes, [point], MAP_WIDTH)[0], like.size, 'us'];
+  return xy ? { xy, size, layer } : null;
+}
+// One path of a layer's dots ('' for none).
+const layerDots = (places, layer) => {
+  const mine = places.filter((p) => p.layer === layer);
+  return dotsPath(mine.map((p) => p.xy), LIKE_DOT, mine[0]?.size);
 };
 
 // Everything the two figures read that is the same for every page, worked out once per build:
 //   estimated  the hospitals the dollar file estimates, each with its place ({ ...h, point }), those without one left out
+//   programContext  the same hospitals as the nearest map's context dots ({ ccn, point, cls }), in the same order
 //   groups     each group's { counts (likeCounts' entry), kinds (its noun), context (its hospitals' places, for the
-//              nearest map's dots: { ccn, point, cls }), like ({ height, body }: the US map's land, Puerto Rico's inset
-//              and the group's dots, each page's own among them, under the ring the page draws) }
-//              and prLike (the same for the map of Puerto Rico alone, its dots the group's Puerto Rico hospitals, or null)
-//   inset      Puerto Rico's inset on the US map (prInset), or null; pr: the map of Puerto Rico alone (prMap), or null
+//              nearest map's dots: { ccn, point, cls }), place (placeOnLikeMap's like: Puerto Rico's inset on the US
+//              map, prInset, and the map of Puerto Rico alone, prMap, each or null, with the group's dot sizes),
+//              like ({ height, body }: the US map's land, Puerto Rico's inset and the group's dots, each page's own among
+//              them, under the ring the page draws) and prLike (the same for the map of Puerto Rico alone, its dots the
+//              group's Puerto Rico hospitals, or null) }
 //   shapes, counties, years ({ hacrpFy, hrrpFy }, text), fy (the dollar estimates' fiscal year, text)
 // hospitals: the hub's (hubHospitals); outside: hubModel().outside; likeCounts: hubModel().likeCounts, which must count
 // the same hospitals; master: loadHub().master (by CCN: no unlisted acute hospital may be in the HACRP file, which its
@@ -106,6 +121,7 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
   if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: the figures need the master\'s HACRP and HRRP years');
   const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
   const estimated = hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
+  const programContext = estimated.map((x) => ({ ccn: x.ccn, point: x.point, cls: PROGRAM_CLS }));
   const members = new Map();
   for (const h of outside) {
     if (h.group === 'not_listed' && master.get(h.ccn)?.programs.hacrp.inProgram) throw new RangeError('outside: an unlisted acute hospital is in the HACRP file');
@@ -124,24 +140,21 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
     const counts = likeCounts.get(group);
     if (counts?.n !== list.length) throw new RangeError(`outside: the counts of group ${group} are not its hospitals'`);
     const size = likeDotSize(list.length);
-    // The inset's dots in a path of their own where they are drawn smaller (insetDotSize), else with the states'.
-    const at = list.map((o) => [o, likeAt(shapes, inset, o)]).filter(([, xy]) => xy);
-    const prAt = at.filter(([o]) => o.state === 'PR').map(([, xy]) => xy);
-    const prSize = insetDotSize(prAt.length, size);
-    const dots = prSize === size
-      ? html`<g class="chart-us__points">${dotsPath(at.map(([, xy]) => xy), LIKE_DOT, size)}</g>`
-      : html`<g class="chart-us__points">${dotsPath(at.filter(([o]) => o.state !== 'PR').map(([, xy]) => xy), LIKE_DOT, size)}${dotsPath(prAt, LIKE_DOT, prSize)}</g>`;
-    const prDots = pr ? list.filter((o) => o.state === 'PR').map((o) => pr.project(pointOf(o))).filter(Boolean) : [];
+    const inInset = list.filter((o) => o.state === 'PR' && inset?.project(pointOf(o))).length;
+    const place = { shapes, inset, pr, size, insetSize: insetDotSize(inInset, size) };
+    const onUs = list.map((o) => placeOnLikeMap(o, place)).filter(Boolean);
+    const onPr = list.map((o) => placeOnLikeMap(o, place, true)).filter(Boolean);
     groups.set(group, {
       counts,
       kinds: kindsOf(group, years),
       context: list.map((o) => ({ ccn: o.ccn, point: pointOf(o), cls: CONTEXT_CLS })).filter((c) => c.point),
-      like: { height, body: html`${land}${dots}` },
-      prLike: prDots.length ? { height: pr.height, body: html`${prLand}<g class="chart-us__points">${dotsPath(prDots, LIKE_DOT, size)}</g>` } : null,
+      place,
+      like: { height, body: html`${land}<g class="chart-us__points">${layerDots(onUs, 'us')}${layerDots(onUs, 'inset')}</g>` },
+      prLike: onPr.length ? { height: pr.height, body: html`${prLand}<g class="chart-us__points">${layerDots(onPr, 'pr')}</g>` } : null,
     });
   }
   if (groups.size !== likeCounts.size) throw new RangeError('outside: the counts hold a group with no hospitals');
-  return Object.freeze({ estimated, groups, inset, pr, shapes, counties, years, fy: String(fy) });
+  return Object.freeze({ estimated, programContext, groups, shapes, counties, years, fy: String(fy) });
 }
 const groupOf = (ctx, h) => {
   const g = ctx.groups.get(h.group);
@@ -183,6 +196,23 @@ function key(drawn) {
   ]);
 }
 
+// The context a nearest map can draw, cut cheaply to a box of longitude and latitude about the page's points: the map's
+// frame is fitted around them (with room, at its aspect), so nothing outside a box several times their reach from this
+// hospital can fall inside it. The map still decides what is in its frame; the box only spares it projecting the rest
+// of the country twice per page. center: [lon, lat]; points: the pins' and the frame's fitted places ([lon, lat]).
+const NEAR_BOX_REACH = 6;
+const MILES_PER_DEGREE = (EARTH_MILES * Math.PI) / 180;
+function nearBox(center, points) {
+  const reach = NEAR_BOX_REACH * Math.max(...points.map((p) => miles(center, p)));
+  const dLat = reach / MILES_PER_DEGREE;
+  const [s, n] = [center[1] - dLat, center[1] + dLat];
+  const dLon = reach / (MILES_PER_DEGREE * Math.cos((Math.min(89, Math.max(Math.abs(s), Math.abs(n))) * Math.PI) / 180));
+  const [w, e] = [center[0] - dLon, center[0] + dLon];
+  // A box across the antimeridian (Alaska's Aleutians) keeps every longitude.
+  const anyLon = w < -180 || e > 180;
+  return ({ point: [lon, lat] }) => lat >= s && lat <= n && (anyLon || (lon >= w && lon <= e));
+}
+
 // The nearest hospitals in the programs, or '' for a hospital without a place, outside NEAR_GROUPS, or with no estimated
 // hospital within NEAR_MAX_MILES. The rows: up to NEAREST_K of the nearest, only those within NEAR_MAX_MILES. The map
 // needs two (web/charts/geo.js areaMap), so a table of one stands alone, its caption a paragraph; with the map, the
@@ -200,9 +230,11 @@ export function nearBlock(h, ctx, next = counter()) {
   // Context: the group's other hospitals, and the program hospitals not in the table; the program ones drawn first, so a
   // gray dot of the page's own kind sits on top.
   const listed = new Set(rows.map((r) => r.ccn));
+  const [lon, lat] = point;
+  const inBox = nearBox(point, [[lon - 0.25, lat - 0.25], [lon + 0.25, lat + 0.25], ...rows.map((r) => r.point)]);
   const context = [
-    ...ctx.estimated.filter((x) => !listed.has(x.ccn)).map((x) => ({ point: x.point, cls: PROGRAM_CLS })),
-    ...g.context.filter((x) => x.ccn !== h.ccn),
+    ...ctx.programContext.filter((x) => !listed.has(x.ccn) && inBox(x)),
+    ...g.context.filter((x) => x.ccn !== h.ccn && inBox(x)),
   ];
   // A town is named once, beside the nearest pin in it.
   const towns = new Set();
@@ -273,11 +305,11 @@ function likeSentence(h, c, kinds, years) {
 // map's inset is too small to read one hospital in), its caption giving the national count the map doesn't show; for any
 // other, the US map: every state's outline over the land (the home map's projection and shapes, at its width), Puerto Rico
 // in its inset. Each with the group's hospitals as dots and h ringed in the pen ink.
-function likeMap(h, g, ctx) {
-  const own = h.state === 'PR' && g.prLike && ctx.pr.project(pointOf(h) ?? []);
-  const at = own || likeAt(ctx.shapes, ctx.inset, h);
+function likeMap(h, g) {
+  const at = (g.prLike && placeOnLikeMap(h, g.place, true)) || placeOnLikeMap(h, g.place);
   if (!at) return null;
-  const [x, y] = at;
+  const own = at.layer === 'pr';
+  const [x, y] = at.xy;
   const { height, body } = own ? g.prLike : g.like;
   const label = own ? fillOutside('likeAltPr', { kinds: g.kinds }) : fillOutside('likeAlt', { kinds: g.kinds });
   const caption = own
@@ -285,7 +317,7 @@ function likeMap(h, g, ctx) {
     : fillOutside('likeCaption');
   return {
     caption,
-    own: Boolean(own),
+    own,
     svg: html`<svg class="chart chart--like-map${own ? ' chart--like-pr' : ''}" viewBox="0 0 ${MAP_WIDTH} ${height}" width="100%" role="img" aria-label="${label}" focusable="false" style="--vb: ${MAP_WIDTH}">${body}<circle class="hh__likering" cx="${x}" cy="${y}" r="${RING_R}"/><circle class="hh__likeme" cx="${x}" cy="${y}" r="${ME_R}"/></svg>`,
   };
 }
@@ -297,7 +329,7 @@ function likeMap(h, g, ctx) {
 const LIKE_CAP_ID = 'hh-like-cap';
 export function likeBlock(h, ctx, next = counter()) {
   const g = groupOf(ctx, h);
-  const map = likeMap(h, g, ctx);
+  const map = likeMap(h, g);
   const own = `own.${h.group}`;
   return html`<section class="hh__like" aria-labelledby="hh-like-h">
 <div class="wrap"><div class="hh__likei${map ? '' : ' hh__likei--solo'}">

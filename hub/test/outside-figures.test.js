@@ -263,7 +263,7 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
 
 // A Puerto Rico hospital's page draws Puerto Rico alone (the US map's inset is too small to read one hospital in); another
 // page whose group has Puerto Rico hospitals keeps the inset.
-const PR_MAP = CTX.pr;
+const PR_MAP = [...CTX.groups.values()][0].place.pr;
 test('likeBlock: a Puerto Rico hospital gets a map of Puerto Rico, ringed whole inside it; the US map keeps the inset; Guam, or no coordinates: no map, the words across the section', (t) => {
   for (const pr of OUTSIDE.filter((x) => x.state === 'PR' && placed(x))) {
     const block = like(pr);
