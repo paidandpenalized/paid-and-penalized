@@ -169,6 +169,21 @@ test('generateHub: in production, Maryland and outside pages are indexable and i
     assert.ok(kinds.unnamed.every((h) => text(h).includes(NOINDEX)), 'an unnamed outside hospital\'s page is noindex');
   }));
 
+// The rule is one for every hub hospital page: a dollar-file hospital with the master's stand-in name stays out too.
+test('generateHub: a hospital with an estimate whose name no CMS file gives (a synthetic stand-in) is noindex and out of the sitemap', () =>
+  withTemp('pp-hub-standin-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
+    const { hub, hospitals } = hubModel();
+    const real = hospitals.find((h) => h.est && cmsNamed(h.name, h.ccn));
+    assert.ok(real, 'the data has an estimated hospital');
+    const standIn = { ...real, name: `Hospital ${real.ccn} (name not in CMS files)` };
+    assert.equal(cmsNamed(standIn.name, standIn.ccn), false, 'the stand-in is the master\'s');
+    await generateHub(ctx, { correctionsDir: join(dir, 'no-corrections'), hospitals: [standIn], master: hub.master, released: true });
+    const path = hospitalPathOf('hub', standIn.ccn);
+    assert.ok(readFileSync(join(dir, path, 'index.html'), 'utf8').includes(NOINDEX), 'its page is noindex');
+    assert.ok(!ctx.indexable.includes(path), 'and not in the sitemap');
+  }));
+
 // One preview build for both checks: every master CCN has a page, and none is indexable outside production.
 test('generateHub, in a non-production build: every master CCN has /hospital/<ccn>/index.html, and every one is noindex', () =>
   withRealHub('preview', (ctx) => {

@@ -213,23 +213,26 @@ export function sitemapXml(paths) {
 
 export const robotsTxt = () => `User-agent: *\nAllow: /\n\nSitemap: ${SITE.origin}/sitemap.xml\n`;
 
+// A hospital page's robots value: the hub's (robots) where the page may be indexed (eligible) and a CMS file names the
+// hospital, else never. A hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed) stays out of
+// search engines until a file names it, as on the Readmissions site. One rule for every hub hospital page.
+const hospitalRobots = (h, { robots, never }, eligible = true) => (eligible && cmsNamed(h.name, h.ccn) ? robots : never);
+
 // Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate, or Maryland's (its
-// page has no figures but says why), has the hub's robots value; one with no inputs is never indexed (never). facts: the
-// hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor); medicaid:
-// loadHub().medicaid (its Medicaid band).
+// page has no figures but says why), has the hub's robots value (hospitalRobots); one with no inputs is never indexed.
+// facts: the hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor);
+// medicaid: loadHub().medicaid (its Medicaid band).
 function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
-    const r = h.est || h.status === 'maryland' ? robots : never;
+    const r = hospitalRobots(h, { robots, never }, Boolean(h.est) || h.status === 'maryland');
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp, medicaid }) });
   }
 }
 
-// The page of every other hospital in the master (hospital/outside.js): the hub's robots value on each, but never for a
-// hospital no CMS file names (the master's stand-in name, pipeline/master.js cmsNamed), which, as on the Readmissions
-// site, stays out of search engines until a file names it. The figures'
-// context (outside-figures.js) is worked out once here and shared by every page; each page numbers its figures in order
-// (a counter of its own, the nearest hospitals' map first). model: hubModel(), whose hub holds the master, the shapes and
+// The page of every other hospital in the master (hospital/outside.js): the hub's robots value on each where a CMS file
+// names the hospital (hospitalRobots). The figures' context (outside-figures.js) is worked out once here and shared by
+// every page; each page numbers its figures in order (a counter of its own, the nearest hospitals' map first). model: hubModel(), whose hub holds the master, the shapes and
 // the program years.
 function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, robots, never }) {
   const figures = outsideFigureContext({ hospitals, outside, likeCounts, master: hub.master, shapes: hub.shapes, counties: hub.counties, programYears: hub.programYears, fy: hub.fy });
@@ -237,7 +240,7 @@ function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, rob
     const next = counter();
     const near = nearBlock(h, figures, next);
     const like = likeBlock(h, figures, next);
-    const r = cmsNamed(h.name, h.ccn) ? robots : never;
+    const r = hospitalRobots(h, { robots, never });
     const text = outsidePage({ h, assets: ctx.assets, robots: r, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text });
   }
