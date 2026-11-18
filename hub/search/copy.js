@@ -21,7 +21,7 @@ export const COPY = {
   'hospitalKind.long_term': 'Long-term care hospital',
   'hospitalKind.rural_emergency': 'Rural emergency hospital',
   'hospitalKind.va': 'VA medical center',
-  'hospitalKind.dod': 'Military hospital',
+  'hospitalKind.dod': 'Department of Defense hospital',
   searchPlaceSub: '{kind} · {n} hospitals',
   searchPlaceSubOne: '{kind} · one hospital',
   searchEmpty: "No matches. Try a city, a state or the hospital's CCN.",
