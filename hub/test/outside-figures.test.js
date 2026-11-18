@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isDeepStrictEqual } from 'node:util';
+import { geoCentroid, geoConicEqualArea, geoPath } from 'd3-geo';
 import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import { STATE_NAMES } from '../../engine/js/states.js';
@@ -14,10 +15,11 @@ import { escapeHtml } from '../../web/render/html.js';
 import { milesText } from '../../web/render/miles.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { counter } from '../../web/charts/figure.js';
+import { WIDTH } from '../../web/charts/svg.js';
 import { MAP_WIDTH } from '../asset.js';
 import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
-import { NEAREST_K, NEAR_GROUPS, NEAR_MAX_MILES, insetDotSize, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
+import { NEAREST_K, NEAR_AIDS, NEAR_GROUPS, NEAR_MAX_MILES, insetDotSize, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
 import { likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
@@ -431,17 +433,37 @@ const outsideFull = (h) => String(outsidePage({
   near: nearBlock(h, CTX), like: likeBlock(h, CTX),
 }));
 
-// The heaviest outside page, found by scanning every one: the nearest map is the part whose size varies most from page to
-// page (its counties, context dots and pins in frame), and the US map is its group's, so the candidates are the pages with
-// the longest nearest block and, for each group, a page with none; each is rendered whole and gzipped.
+// The heaviest outside page. The nearest map is the part whose size varies most from page to page, and its county lines
+// are most of it, so the pages with one are ranked by a stand-in that needs no drawing: the length of the county outlines
+// whose centers fall in the narrow drawing's frame (fitted as the map fits it: around this hospital, a quarter degree
+// about it and its pins, with NEAR_AIDS' room and aspect), each scaled to the frame. The WEIGHT_TOP heaviest by it, and
+// for each group a page with no nearest map (the US map is its group's), are rendered whole and gzipped.
+const WEIGHT_TOP = 20;
+const COUNTY_CENTERS = HUB.counties.map((f) => [geoCentroid(f), geoPath().measure(f)]);
+const nearRows = (h) => (NEAR_GROUPS.has(h.group) && placed(h) ? nearestTo(CTX.estimated, pointOf(h), { k: NEAREST_K }).filter((r) => r.miles <= NEAR_MAX_MILES) : []);
+function countyLength(h, rows) {
+  const point = pointOf(h);
+  const [lon, lat] = point;
+  const { pad, aspect } = NEAR_AIDS;
+  const [w, ht] = [WIDTH, Math.round(WIDTH * aspect)];
+  const projection = geoConicEqualArea().rotate([-lon, 0]).parallels([lat - 2, lat + 2])
+    .fitExtent([[pad, pad], [w - pad, ht - pad]], { type: 'MultiPoint', coordinates: [point, [lon - 0.25, lat - 0.25], [lon + 0.25, lat + 0.25], ...rows.map((r) => r.point)] });
+  let length = 0;
+  for (const [center, outline] of COUNTY_CENTERS) {
+    const xy = projection(center);
+    if (xy && xy[0] >= 0 && xy[0] <= w && xy[1] >= 0 && xy[1] <= ht) length += outline * projection.scale();
+  }
+  return length;
+}
 test('outside page weight: the heaviest outside page is within the HACRP hospital page\'s gzip size', () => {
-  const nearLong = OUTSIDE.map((h) => [h, String(nearBlock(h, CTX)).length]).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([h]) => h);
-  assert.ok(nearLong.length > 0, 'some pages have the nearest hospitals');
-  const plain = [...LIKE_COUNTS.keys()].map((group) => OUTSIDE.find((x) => x.group === group && mapped(x) && near(x) === '')).filter(Boolean);
+  const ranked = OUTSIDE.map((h) => [h, nearRows(h)]).filter(([, rows]) => rows.length).map(([h, rows]) => [h, countyLength(h, rows)]);
+  const top = ranked.sort((a, b) => b[1] - a[1]).slice(0, WEIGHT_TOP).map(([h]) => h);
+  assert.ok(top.length > 0, 'some pages have the nearest hospitals');
+  const plain = [...LIKE_COUNTS.keys()].map((group) => OUTSIDE.find((x) => x.group === group && mapped(x) && !nearRows(x).length)).filter(Boolean);
   let heaviest = 0;
-  for (const h of [...nearLong, ...plain]) heaviest = Math.max(heaviest, gzipSync(outsideFull(h)).length);
+  for (const h of [...top, ...plain]) heaviest = Math.max(heaviest, gzipSync(outsideFull(h)).length);
   // The order of the sections, on a page with both figures.
-  const main = mainOf(outsideFull(nearLong[0]));
+  const main = mainOf(outsideFull(top[0]));
   assert.ok(main.indexOf('class="hh__like"') > main.indexOf('class="hh__near"') && main.indexOf('class="hh__like"') < main.indexOf('class="hh__notes"'), 'after the nearest hospitals, before the notes');
   assert.ok(heaviest <= HACRP_PAGE_GZIP, 'the heaviest outside page, gzip, within the HACRP hospital page\'s');
 });

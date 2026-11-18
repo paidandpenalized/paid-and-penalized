@@ -52,7 +52,7 @@ const PROGRAM_CLS = 'hh__ctxe';
 //   contextR    the context dots' radius, in viewBox units
 //   countyThin  the county lines thinned to a point every 2 units (the kit's default is 1): faint hairlines, and the map
 //               is drawn twice
-const NEAR_AIDS = Object.freeze({ gap: 14, clear: true, dense: true, towns: true, ring: true, labels: 4, pad: 30, aspect: 0.72, contextR: 3, countyThin: 2 });
+export const NEAR_AIDS = Object.freeze({ gap: 14, clear: true, dense: true, towns: true, ring: true, labels: 4, pad: 30, aspect: 0.72, contextR: 3, countyThin: 2 });
 // The nearest map's figure id (its keyboard hint is <id>-keys).
 const NEAR_FIG_ID = 'hh-near-map';
 
