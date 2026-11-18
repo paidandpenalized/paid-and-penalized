@@ -8,15 +8,13 @@
 import { fillCopy } from '../../web/render/components.js';
 import { endedBy } from '../../web/render/closed.js';
 import { html } from '../../web/render/html.js';
+import { FEDERAL_GROUPS, yearsOf } from '../outside.js';
 import { COPY } from './copy.js';
 import { medicaidBand } from './medicaid.js';
 import { fillOutside, hasOutside } from './outside-copy.js';
 import { closed, deepLink, recordCard } from './record.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-
-// The groups of federal hospitals, which Medicare doesn't pay: their reason says so and no "instead" follows.
-const FEDERAL = new Set(['va', 'dod']);
 
 // The stamp's markup, with a line break (hidden on a phone, styles.css .hh__br-wide) before "penalty", so the box fits two
 // short lines on a wide screen. The same on every page, so drawn once, when first needed.
@@ -67,7 +65,7 @@ const sourceNote = (years, dollars) => html`<div class="wrap"><div class="hh__no
 // shell's fiscal year (text). "Closed" exactly when the body shows the closed note (endedBy, as record.js closed tests).
 export function outsideDescription(h, place, fy) {
   if (endedBy(h.inactive, Number(fy))) return fillOutside('descriptionOutsideClosed', place);
-  if (FEDERAL.has(h.group)) return fillOutside('descriptionOutsideFederal', place);
+  if (FEDERAL_GROUPS.has(h.group)) return fillOutside('descriptionOutsideFederal', place);
   if (h.group === 'not_listed') return fillOutside('descriptionOutsideNotListed', place);
   if (!hasOutside(`reasonInstead.${h.group}`)) throw new RangeError(`outside: no description for group ${h.group}`);
   return fillOutside('descriptionOutside', place);
@@ -77,8 +75,7 @@ export function outsideDescription(h, place, fy) {
 // master's { hacrp, hrrp } (loadHub().programYears), the years its reason codes are for; medicaid: loadHub().medicaid;
 // near, like: the figure blocks of the nearest hospitals in the programs and of the hospitals like this one ('' for none).
 export function outsideBody(h, { master, fy, programYears, medicaid, near = '', like = '' }) {
-  if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: programYears needs the master\'s HACRP and HRRP years');
-  const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
+  const years = yearsOf(programYears);
   // The Medicaid band, where the scenario file has a row. Its dek says Medicare's penalty programs don't touch the hospital,
   // so a hospital a program file lists keeps the default.
   const band = medicaidBand(h, medicaid, { net: false, note: h.listed ? null : fillOutside('wbNoteOutside') });

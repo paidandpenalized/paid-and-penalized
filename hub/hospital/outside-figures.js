@@ -20,6 +20,7 @@ import { html } from '../../web/render/html.js';
 import { milesCell, milesText } from '../../web/render/miles.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { MAP_WIDTH } from '../asset.js';
+import { yearsOf } from '../outside.js';
 import { fillOutside, hasOutside } from './outside-copy.js';
 import { shownName } from './record.js';
 import { signedMoney, signedShareText } from './text.js';
@@ -104,8 +105,12 @@ const layerDots = (places, layer) => {
   return dotsPath(mine.map((p) => p.xy), LIKE_DOT, mine[0]?.size);
 };
 
+// The hospitals the dollar file estimates, each with its place ({ ...h, point }), those without one left out: the rows
+// the nearest hospitals are picked from. hospitals: the hub's (hubHospitals).
+export const estimatedPlaces = (hospitals) => hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
+
 // Everything the two figures read that is the same for every page, worked out once per build:
-//   estimated  the hospitals the dollar file estimates, each with its place ({ ...h, point }), those without one left out
+//   estimated  estimatedPlaces(hospitals)
 //   programContext  the same hospitals as the nearest map's context dots ({ ccn, point, cls }), in the same order
 //   groups     each group's { counts (likeCounts' entry), kinds (its noun), context (its hospitals' places, for the
 //              nearest map's dots: { ccn, point, cls }), place (placeOnLikeMap's like: Puerto Rico's inset on the US
@@ -118,9 +123,8 @@ const layerDots = (places, layer) => {
 // the same hospitals; master: loadHub().master (by CCN: no unlisted acute hospital may be in the HACRP file, which its
 // group's noun says); shapes, counties: loadHub()'s; programYears: the master's { hacrp, hrrp }; fy: the dollar file's year.
 export function outsideFigureContext({ hospitals, outside, likeCounts, master, shapes, counties, programYears, fy }) {
-  if (!Number.isInteger(programYears?.hacrp) || !Number.isInteger(programYears?.hrrp)) throw new TypeError('outside: the figures need the master\'s HACRP and HRRP years');
-  const years = { hacrpFy: String(programYears.hacrp), hrrpFy: String(programYears.hrrp) };
-  const estimated = hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
+  const years = yearsOf(programYears);
+  const estimated = estimatedPlaces(hospitals);
   const programContext = estimated.map((x) => ({ ccn: x.ccn, point: x.point, cls: PROGRAM_CLS }));
   const members = new Map();
   for (const h of outside) {

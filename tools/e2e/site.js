@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { isDecided } from '../../engine/js/hacrp/hospital.js';
 import { hubModel } from '../../hub/data.js';
-import { NEAR_MAX_MILES } from '../../hub/hospital/outside-figures.js';
+import { NEAR_MAX_MILES, estimatedPlaces } from '../../hub/hospital/outside-figures.js';
 import { DIST_DIR } from '../../pipeline/files.js';
 import { addressOf } from '../../pipeline/site/address.js';
 import { htmlPages } from '../../pipeline/site/html.js';
@@ -116,7 +116,7 @@ const OUTSIDE_HOSPITALS = [
 
 // The sample outside hospital's page of a type (OUTSIDE_HOSPITALS), { type, name, path, hospital: its outside record }.
 export function outsideHospitalSample(type, { hospitals, outside } = hubModel()) {
-  const estimated = hospitals.filter((h) => h.est).map((h) => ({ ...h, point: pointOf(h) })).filter((h) => h.point);
+  const estimated = estimatedPlaces(hospitals);
   return sampleOf('outsideHospitalSample', OUTSIDE_HOSPITALS, type, outside, (h) => hospitalPathOf('hub', h.ccn), () => estimated);
 }
 
