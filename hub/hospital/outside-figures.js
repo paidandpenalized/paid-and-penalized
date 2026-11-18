@@ -112,7 +112,7 @@ const layerDots = (places, layer) => {
 //              map, prInset, and the map of Puerto Rico alone, prMap, each or null, with the group's dot sizes),
 //              like ({ height, body }: the US map's land, Puerto Rico's inset and the group's dots, each page's own among
 //              them, under the ring the page draws) and prLike (the same for the map of Puerto Rico alone, its dots the
-//              group's Puerto Rico hospitals, or null) }
+//              group's Puerto Rico hospitals with a place, n of them, or null) }
 //   shapes, counties, years ({ hacrpFy, hrrpFy }, text), fy (the dollar estimates' fiscal year, text)
 // hospitals: the hub's (hubHospitals); outside: hubModel().outside; likeCounts: hubModel().likeCounts, which must count
 // the same hospitals; master: loadHub().master (by CCN: no unlisted acute hospital may be in the HACRP file, which its
@@ -150,7 +150,7 @@ export function outsideFigureContext({ hospitals, outside, likeCounts, master, s
       context: list.map((o) => ({ ccn: o.ccn, point: pointOf(o), cls: CONTEXT_CLS })).filter((c) => c.point),
       place,
       like: { height, body: html`${land}<g class="chart-us__points">${layerDots(onUs, 'us')}${layerDots(onUs, 'inset')}</g>` },
-      prLike: onPr.length ? { height: pr.height, body: html`${prLand}<g class="chart-us__points">${layerDots(onPr, 'pr')}</g>` } : null,
+      prLike: onPr.length ? { height: pr.height, body: html`${prLand}<g class="chart-us__points">${layerDots(onPr, 'pr')}</g>`, n: onPr.length } : null,
     });
   }
   if (groups.size !== likeCounts.size) throw new RangeError('outside: the counts hold a group with no hospitals');
@@ -290,7 +290,8 @@ function likeSentence(h, c, kinds, years) {
 
 // The map: { svg, caption, own (true for the map of Puerto Rico alone) }, or null where it has no place for h (another territory, or no coordinates; the page then
 // shows the text alone, across the section). For a hospital in Puerto Rico, a map of Puerto Rico alone (prMap: the US
-// map's inset is too small to read one hospital in), its caption giving the national count the map doesn't show; for any
+// map's inset is too small to read one hospital in), its caption counting the dots it draws (a hospital without
+// coordinates is in the sentence's count, not on the map) and giving the national count the map doesn't show; for any
 // other, the US map: every state's outline over the land (the home map's projection and shapes, at its width), Puerto Rico
 // in its inset. Each with the group's hospitals as dots and h ringed in the pen ink.
 function likeMap(h, g) {
@@ -301,7 +302,7 @@ function likeMap(h, g) {
   const { height, body } = own ? g.prLike : g.like;
   const label = own ? fillOutside('likeAltPr', { kinds: g.kinds }) : fillOutside('likeAlt', { kinds: g.kinds });
   const caption = own
-    ? fillOutside('likeCaptionPr', { ns: count(g.counts.byState.get('PR')), n: count(g.counts.n) })
+    ? fillOutside('likeCaptionPr', { ns: count(g.prLike.n), n: count(g.counts.n) })
     : fillOutside('likeCaption');
   return {
     caption,

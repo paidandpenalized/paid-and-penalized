@@ -21,7 +21,7 @@ import { hubModel } from '../data.js';
 import { hasOutside, fillOutside } from '../hospital/outside-copy.js';
 import { NEAREST_K, NEAR_AIDS, NEAR_GROUPS, NEAR_MAX_MILES, insetDotSize, likeBlock, likeDotSize, nearBlock, outsideFigureContext } from '../hospital/outside-figures.js';
 import { outsidePage } from '../hospital/page.js';
-import { likeGroupOf } from '../outside.js';
+import { likeCounts, likeGroupOf } from '../outside.js';
 import { mainOf } from './helpers.js';
 
 const { hub: HUB, hospitals: HOSPITALS, outside: OUTSIDE, likeCounts: LIKE_COUNTS } = hubModel();
@@ -266,6 +266,19 @@ test('likeBlock: the map marks this hospital, and the dot count equals the group
 // A Puerto Rico hospital's page draws Puerto Rico alone (the US map's inset is too small to read one hospital in); another
 // page whose group has Puerto Rico hospitals keeps the inset.
 const PR_MAP = [...CTX.groups.values()][0].place.pr;
+// A map's caption counts what it draws: a Puerto Rico hospital with no coordinates is in the group's count, which the
+// sentence gives, but not on the map. Synthetic rows, so the case is there whatever the data holds.
+test('likeBlock: the map of Puerto Rico\'s caption counts the hospitals it draws; the sentence keeps the full count', () => {
+  const row = (ccn, lat, lon) => ({ ccn, name: `Synthetic ${ccn}`, city: 'Synthetic', state: 'PR', lat, lon, group: 'psychiatric', listed: false, inHrrp: false });
+  const outside = [row('990601', 18.4, -66.1), row('990602', 18.2, -67.1), row('990603', null, null), { ...row('990604', 41.6, -93.6), state: 'IA' }];
+  const counts = likeCounts(outside);
+  const ctx = outsideFigureContext({ hospitals: [], outside, likeCounts: counts, master: new Map(), shapes: HUB.shapes, counties: HUB.counties, programYears: HUB.programYears, fy: HUB.fy });
+  const block = String(likeBlock(outside[0], ctx));
+  assert.equal(dotsIn(svgsOf(block)[0], 'hh__likedot'), 2, 'the two placed Puerto Rico hospitals drawn');
+  assert.ok(block.includes(esc(fillOutside('likeCaptionPr', { ns: count(2), n: count(4) }))), 'the caption counts the two drawn, of four nationally');
+  assert.ok(textOf(block).includes(esc(count(3))), 'the sentence keeps the three in Puerto Rico');
+});
+
 test('likeBlock: a Puerto Rico hospital gets a map of Puerto Rico, ringed whole inside it; the US map keeps the inset; Guam, or no coordinates: no map, the words across the section', (t) => {
   for (const pr of OUTSIDE.filter((x) => x.state === 'PR' && placed(x))) {
     const block = like(pr);
@@ -277,8 +290,9 @@ test('likeBlock: a Puerto Rico hospital gets a map of Puerto Rico, ringed whole 
     assert.deepEqual(ring.slice(0, 2), PR_MAP.project(pointOf(pr)), 'ringed at its place');
     assert.ok(ring[0] - ring[2] >= 0 && ring[0] + ring[2] <= w && ring[1] - ring[2] >= 0 && ring[1] + ring[2] <= ht, 'the ring whole inside the frame');
     const c = RECOUNT.get(pr.group);
-    assert.ok(block.includes(esc(fillOutside('likeCaptionPr', { ns: count(c.byState.get('PR')), n: count(c.n) }))), 'its caption gives the national count');
-    assert.equal(dotsIn(svg, 'hh__likedot'), sameGroup(pr).filter((o) => o.state === 'PR' && placed(o)).length, 'a dot for each Puerto Rico hospital of the group');
+    const drawn = sameGroup(pr).filter((o) => o.state === 'PR' && placed(o)).length;
+    assert.ok(block.includes(esc(fillOutside('likeCaptionPr', { ns: count(drawn), n: count(c.n) }))), 'its caption counts the dots it draws and gives the national count');
+    assert.equal(dotsIn(svg, 'hh__likedot'), drawn, 'a dot for each Puerto Rico hospital of the group');
     assert.match(block, /<figure class="fig hh__likemap hh__likemap--pr" /, 'the figure marked as the short map, which CSS sets level with the words');
   }
   // A mainland page in a group with Puerto Rico hospitals: the US map, its inset holding them.
