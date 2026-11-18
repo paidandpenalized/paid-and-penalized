@@ -58,10 +58,10 @@ ${recordSpecs(h, master).map((spec, i) => formField({ no: i + 1, ...spec }))}
 // ---------- the links and the closed note ----------
 
 // The hospital's page in a program, or null when it has none there. Every hospital in the dollar file has a
-// hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file), and one
-// the Readmissions file lists (inHrrp) has a Readmissions page (sites/hrrp/). Not for a hospital outside the dollar file
-// (outside.js), which has no hospital-acquired conditions page.
-export const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inHrrp: h.inHrrp });
+// hospital-acquired conditions page (the dollar file has a row for each hospital in that program's file; its rows carry
+// no inHacrp, so true), and one the Readmissions file lists (inHrrp) has a Readmissions page (sites/hrrp/). A hospital
+// outside the dollar file (outside.js, whose rows carry inHacrp false) has no hospital-acquired conditions page.
+export const pageOf = (h, id) => hospitalPathOf(id, h.ccn, { inHrrp: h.inHrrp, inHacrp: h.inHacrp ?? true });
 
 // A program row's link: to the hospital's page there; else to the program's folder, which holds its placeholder page (a
 // program with no page here: hub/coming.js) or is the program's own page (one with pages for other hospitals but not this

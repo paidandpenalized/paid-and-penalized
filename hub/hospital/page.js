@@ -288,9 +288,9 @@ function outsideParts({ h, assets, master = null, medicaid, programYears, near =
 }
 
 // The page shell around a body: the title, path, fonts and the header's hospital chip, shared by a hub hospital's page and
-// an outside hospital's. parts: { description, body, scripts }; inHacrp: whether the dollar file has the hospital (so the
-// HACRP tab opens a page; the hub has a page for every hospital).
-function shell({ h, assets, robots }, place, fy, { description, body, scripts }, inHacrp = true) {
+// an outside hospital's. parts: { description, body, scripts }. The HACRP tab opens a page unless h says it has none
+// (an outside hospital's row: inHacrp false); the hub has a page for every hospital.
+function shell({ h, assets, robots }, place, fy, { description, body, scripts }) {
   return hubPage({
     title: `${fill('title', { ...place, fy })} · ${SITE.name}`,
     description,
@@ -300,7 +300,7 @@ function shell({ h, assets, robots }, place, fy, { description, body, scripts },
     assets,
     scripts,
     preloadFonts: FONTS,
-    hospital: { ccn: h.ccn, name: place.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp, inHacrp },
+    hospital: { ccn: h.ccn, name: place.name, net: h.est ? h.est.net : null, inHrrp: h.inHrrp, inHacrp: h.inHacrp ?? true },
   });
 }
 
@@ -324,5 +324,5 @@ export function hospitalPage(args) {
 export function outsidePage(args) {
   const fy = String(args.assets.shell.fy);
   const place = { name: shownName(args.h), place: placeText(args.h) };
-  return shell(args, place, fy, outsideParts(args, fy, place), false);
+  return shell(args, place, fy, outsideParts(args, fy, place));
 }

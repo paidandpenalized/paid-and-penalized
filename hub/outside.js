@@ -19,9 +19,9 @@ export function likeGroupOf(record) {
 }
 
 // One row for each master record whose CCN is not in dollarCcns, in master order:
-//   { ccn, name, city, state, beds, teach, lat, lon, kind, group, reasons: { hacrp, hrrp }, inHrrp, listed, inactive }
-// inHrrp: the Readmissions site has a page for it. listed: some program lists the hospital, so it carries no
-// "not in the penalty programs" stamp.
+//   { ccn, name, city, state, beds, teach, lat, lon, kind, group, reasons: { hacrp, hrrp }, inHrrp, inHacrp, listed, inactive }
+// inHrrp: the Readmissions site has a page for it. inHacrp: always false (the HACRP site has pages only for the dollar
+// file's hospitals). listed: some program lists the hospital, so it carries no "not in the penalty programs" stamp.
 export function outsideHospitals({ master, dollarCcns, hrrp }) {
   const rows = [];
   for (const [ccn, r] of master) {
@@ -40,6 +40,7 @@ export function outsideHospitals({ master, dollarCcns, hrrp }) {
       group: likeGroupOf(r),
       reasons: { hacrp: a.reason, hrrp: b.reason },
       inHrrp: hrrp.hospitals.has(ccn),
+      inHacrp: false,
       listed: Boolean(a.inProgram || b.inProgram),
       inactive: r.inactive,
     });

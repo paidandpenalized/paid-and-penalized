@@ -4,6 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { hubModel, loadHub } from '../data.js';
 import { LIKE_GROUPS, likeCounts, likeGroupOf, outsideHospitals } from '../outside.js';
+import { deepLink, pageOf } from '../hospital/record.js';
+import { programById } from '../../web/site.js';
 
 const HUB = loadHub();
 const dollarCcns = new Set(HUB.dollars.hospitals.map((r) => r.ccn));
@@ -48,6 +50,19 @@ test('outsideHospitals: listed is true exactly when a program lists it', () => {
     assert.equal(h.listed, r.programs.hacrp.inProgram || r.programs.hrrp.inProgram, 'listed follows the master');
     assert.equal(h.inHrrp, HUB.hrrp.hospitals.has(h.ccn), 'inHrrp follows the Readmissions file');
   }
+});
+
+// An outside hospital has no HACRP page (the HACRP site writes one only for the dollar file's hospitals): its rows say
+// so, and its links follow them.
+test('outsideHospitals: every row carries inHacrp false, and deepLink to HACRP opens the program, not a hospital page', () => {
+  assert.ok(OUTSIDE.every((h) => h.inHacrp === false), 'inHacrp false on every row');
+  const h = OUTSIDE[0];
+  assert.equal(pageOf(h, 'hacrp'), null, 'no HACRP page');
+  const link = String(deepLink(h, 'hacrp'));
+  assert.ok(link.includes(`href="${programById('hacrp').path}"`), 'the program\'s folder');
+  assert.ok(!link.includes('/hacrp/hospital/'), 'not a HACRP hospital page');
+  // A dollar-file hospital (no inHacrp on its row) keeps its HACRP page.
+  assert.ok(pageOf({ ccn: '990001' }, 'hacrp')?.startsWith('/hacrp/hospital/'), 'the default: a HACRP page');
 });
 
 test('likeGroupOf: federal splits by kind; an unknown reason throws', () => {
