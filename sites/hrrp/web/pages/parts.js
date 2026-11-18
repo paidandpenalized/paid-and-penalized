@@ -40,9 +40,9 @@ export const shellOf = ({ edition, current = null, searchUrl = null, hospital = 
 
 // The hospital a Readmissions hospital page's header follows (render/shell.js familyHeader): its CCN, name and
 // estimated net across the programs (the hospital view's net, as HACRP's pages show it; null without an estimate). Every hospital with a page here is in
-// Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub and HACRP have no page for
-// it, so the tabs and the chip link none.
-export const followed = ({ ccn, name, net, inHub }) => ({ ccn, name, net, inHrrp: true, inHub });
+// Thirty Day Readmissions' file, so the Readmissions tab opens its page. inHub false: the hub has no page for it, so the
+// chip and All programs link none; inHacrp false: HACRP has none, so its tab opens the folder.
+export const followed = ({ ccn, name, net, inHub, inHacrp }) => ({ ccn, name, net, inHrrp: true, inHub, inHacrp });
 
 // A numbered record card of the program and place pages: the title bar, then each field (an estimated one carries the tag).
 // card: { left, right, fields: [{ label, value, note, estimated }] }.

@@ -135,13 +135,19 @@ test('a hospital with no city: the place is the state alone', () => {
   assert.ok(v.heading.startsWith(`${NAME}, ZZ: `) && v.description.startsWith(`${NAME}, ZZ: `));
 });
 
-test('a metro code with no metro name reads as outside the metro areas; a hospital the dollar file lacks is not in the hub', () => {
+test('a metro code with no metro name reads as outside the metro areas', () => {
   const v = view(hospital({ cbsa: '99901', cbsaName: undefined }));
   assert.equal(v.metro.value, 'Outside metro areas');
   assert.ok(!v.crumbs.some((c) => c.href.includes('/metro/')));
+});
+
+test('the hub has a page for every hospital in the master; HACRP only for one in the dollar file', () => {
+  const outside = hospital({ id: '990050' });
+  const master = new Map([[CUT.id, {}], [outside.id, {}]]);
   const dollars = new Map([[CUT.id, { ccn: CUT.id, status: 'estimated', net: -1000 }]]);
-  const withDollars = { ...ctxOf(), dollars };
-  assert.equal(hospitalView(CUT, withDollars).inHub, true);
-  assert.equal(hospitalView(hospital({ id: '990050' }), withDollars).inHub, false, 'missing from the dollar file');
-  assert.equal(hospitalView(CUT, { ...ctxOf(), dollars: undefined }).inHub, true, 'no dollar file in the context (a slice): in');
+  const both = { ...ctxOf(), master, dollars };
+  assert.deepEqual([hospitalView(CUT, both).inHub, hospitalView(CUT, both).inHacrp], [true, true]);
+  assert.deepEqual([hospitalView(outside, both).inHub, hospitalView(outside, both).inHacrp], [true, false], 'in the master, not the dollar file');
+  assert.equal(hospitalView(hospital({ id: '990051' }), both).inHub, false, 'in neither file');
+  assert.deepEqual([hospitalView(CUT, ctxOf()).inHub, hospitalView(CUT, ctxOf()).inHacrp], [true, true], 'no master or dollar file in the context (a slice): in');
 });
