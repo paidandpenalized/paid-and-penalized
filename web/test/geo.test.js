@@ -8,8 +8,9 @@ import { geoCentroid, geoConicEqualArea, geoContains, geoPath } from 'd3-geo';
 import { masterPath, newestYear, readJson, readPinned, REPO_ROOT } from '../../pipeline/files.js';
 import { Safe } from '../render/html.js';
 import { absoluteD } from '../charts/pathd.js';
+import { spreadPins } from '../charts/pin-layout.js';
 import { STATES, STATE_NAMES } from '../../engine/js/states.js';
-import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, prMap, spreadPins, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
+import { US_MAP_CODES, areaMap, countiesOf, countyShapes, placeMap, pointOf, prInset, prMap, stateMap, stateShapes, usMap, usMapHeight, usPaths, usPoints, usProjected } from '../charts/geo.js';
 
 const TOPO = JSON.parse(readPinned('us-atlas-counties-3.0.1'));
 const shapes = stateShapes(TOPO);
@@ -286,28 +287,28 @@ test('spreadPins: pins at one place, or over the ▲, are pushed apart, kept in 
   assert.deepEqual(spreadPins(apart, [300, 300], { width: 460, height: 368 }), apart, 'pins already apart stay put');
 });
 
-test('areaMap: without its options it draws what it always drew; spread and labels add only the aids', () => {
+test('areaMap: without its aids it draws what it always drew; given, they add only the aids', () => {
   const points = [{ point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a' }, { point: [-93.62, 42.03], n: 2, cls: 'chart-pin--yes', tip: 'b' }, { point: [-92.9, 41.7], n: 3, cls: 'chart-pin--no', tip: 'c' }];
   const plain = String(areaMap({ ...AREA, points }));
-  assert.equal(plain, String(areaMap({ ...AREA, points, spread: false, labels: 0 })), 'the defaults are off');
+  assert.equal(plain, String(areaMap({ ...AREA, points, aids: null })), 'the aids are off by default');
   assert.doesNotMatch(plain, /chart-geo-label|chart-pin__lead|chart-pin__at/, 'no aids by default');
   const closest = (list) => Math.min(...list.flatMap((p, i) => list.slice(i + 1).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1]))));
   assert.equal(closest(pins(plain)), 0, 'unspread, two pins at one place overlap');
-  const aided = String(areaMap({ ...AREA, points, spread: true, labels: 4, pad: 30 }));
+  const aided = String(areaMap({ ...AREA, points, aids: { labels: 4, pad: 30 } }));
   assert.ok(closest(pins(aided)) >= 18, 'spread apart');
   assert.match(aided, /<path class="chart-pin__lead" d="M[\d.-]+ [\d.-]+L[\d.-]+ [\d.-]+"\/><circle class="chart-pin__at"/, 'a moved pin is tied to its place');
   const labels = [...aided.matchAll(/<text class="chart-geo-label" x="([\d.-]+)" y="([\d.-]+)"[^>]*>([A-Z]{2})<\/text>/g)];
   assert.ok(labels.length >= 1 && labels.length <= 4, 'one to four state labels');
   assert.ok(labels.some((m) => m[3] === 'IA'), 'the state the map centers on is labeled');
   assert.ok(new Set(labels.map((m) => m[3])).size === labels.length, 'each state once');
-  assert.match(String(areaMap({ ...AREA, points: points.slice(1), labels: 4 })), /chart-geo-label/, 'labels without spreading too');
+  assert.match(String(areaMap({ ...AREA, points: points.slice(1), aids: { labels: 4 } })), /chart-geo-label/, 'labels at the default room too');
   assert.ok(aided.indexOf('chart-geo-label') < aided.indexOf('class="chart-pin '), 'under the pins');
-  assert.equal(String(areaMap({ ...AREA, points, context: [{ point: [-93.5, 42.1], cls: 'ctx' }], contextR: 3 })).match(/<circle class="ctx" [^>]*r="3"\/>/g)?.length, 1, 'the context dots\' radius');
+  assert.equal(String(areaMap({ ...AREA, points, context: [{ point: [-93.5, 42.1], cls: 'ctx' }], aids: { contextR: 3 } })).match(/<circle class="ctx" [^>]*r="3"\/>/g)?.length, 1, 'the context dots\' radius');
 });
 
 test('areaMap labels: each inside the state it names, clear of the pins and the frame', () => {
   const points = [{ point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a' }, { point: [-91.5, 41.6], n: 2, cls: 'chart-pin--yes', tip: 'b' }];
-  const svg = String(areaMap({ ...AREA, points, spread: true, labels: 4, pad: 30 }));
+  const svg = String(areaMap({ ...AREA, points, aids: { labels: 4, pad: 30 } }));
   const [w, h] = viewBox(svg);
   // The same projection the map fits (geo.js areaMap): around the center, a quarter degree about it, and the points.
   const [lon, lat] = AREA.center.point;
@@ -353,7 +354,7 @@ test('areaMap round two: towns beside pins inside the frame, a ringed place, the
     { point: [-92.9, 41.7], n: 3, cls: 'chart-pin--no', tip: 'c', town: 'A town with a name far too long for this frame on either side of its pin, above it or below it' },
   ];
   const context = [{ point: [-93.5, 42.1], cls: 'a' }, { point: [-93.4, 42.0], cls: 'b' }, { point: [-93.3, 41.9], cls: 'b' }];
-  const svg = areaMap({ ...AREA, points, context, spread: true, towns: true, aspect: 0.72, self: 'ring', variant: 'wide', pad: 30 });
+  const svg = areaMap({ ...AREA, points, context, variant: 'wide', aids: { towns: true, aspect: 0.72, ring: true, pad: 30 } });
   const text = String(svg);
   const [w, h] = viewBox(text);
   assert.equal(h, Math.round(w * 0.72), 'the aspect');
@@ -372,27 +373,26 @@ test('areaMap round two: towns beside pins inside the frame, a ringed place, the
   assert.equal(viewBox(plain)[1], Math.round(460 * 0.8));
 });
 
-test('areaMap: contextDrawn counts the dots drawn, dense or not; clear leaves out a dot under a pin or the place\'s mark; pinGap spreads pins farther', () => {
+test('areaMap: contextDrawnBy counts the dots drawn, dense or not; clear leaves out a dot under a pin or the place\'s mark; a gap spreads pins farther', () => {
   const points = [{ point: [-93.62, 42.03], n: 1, cls: 'chart-pin--no', tip: 'a' }, { point: [-93.62, 42.03], n: 2, cls: 'chart-pin--yes', tip: 'b' }, { point: [-92.9, 41.7], n: 3, cls: 'chart-pin--no', tip: 'c' }];
   // Three dots of two classes, away from every pin; then one at a pin's place and one at the center.
   const apart = [{ point: [-93.4, 42.2], cls: 'a' }, { point: [-93.1, 41.8], cls: 'b' }, { point: [-93.8, 41.8], cls: 'b' }];
   for (const dense of [false, true]) {
-    const svg = areaMap({ ...AREA, points, context: apart, dense, spread: true });
-    assert.equal(svg.contextDrawn, 3, `every dot counted, not its class (dense: ${dense})`);
-    assert.deepEqual(svg.contextDrawnBy, { a: 1, b: 2 });
+    const svg = areaMap({ ...AREA, points, context: apart, aids: { dense } });
+    assert.deepEqual(svg.contextDrawnBy, { a: 1, b: 2 }, `every dot counted, by class (dense: ${dense})`);
   }
   const under = [...apart, { point: [-92.9, 41.7], cls: 'b' }, { point: AREA.center.point, cls: 'a' }];
-  assert.equal(areaMap({ ...AREA, points, context: under, spread: true }).contextDrawn, 5, 'without clear, every dot in the frame');
-  const cleared = areaMap({ ...AREA, points, context: under, spread: true, clear: true, self: 'ring' });
-  assert.equal(cleared.contextDrawn, 3, 'clear: the dots under a pin and under the ring left out');
-  assert.deepEqual(cleared.contextDrawnBy, { a: 1, b: 2 });
+  assert.deepEqual(areaMap({ ...AREA, points, context: under, aids: {} }).contextDrawnBy, { a: 2, b: 3 }, 'without clear, every dot in the frame');
+  const cleared = areaMap({ ...AREA, points, context: under, aids: { clear: true, ring: true } });
+  assert.deepEqual(cleared.contextDrawnBy, { a: 1, b: 2 }, 'clear: the dots under a pin and under the ring left out');
   const ctx = [...String(cleared).matchAll(/<circle class="[ab]" cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.]+)"/g)].map((m) => m.slice(1).map(Number));
   for (const [x, y, r] of ctx) for (const [px, py, pr] of pins(cleared)) assert.ok(Math.hypot(x - px, y - py) >= r + pr, 'no drawn dot touches a pin');
   const closest = (list) => Math.min(...list.flatMap((p, i) => list.slice(i + 1).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1]))));
-  const near = closest(pins(areaMap({ ...AREA, points, spread: true })));
-  const far = closest(pins(areaMap({ ...AREA, points, spread: true, pinGap: 16 })));
+  const near = closest(pins(areaMap({ ...AREA, points, aids: {} })));
+  const far = closest(pins(areaMap({ ...AREA, points, aids: { gap: 16 } })));
   assert.ok(far >= 2 * 9 + 16 - 1e-6 && far > near, 'a wider gap between spread pins');
-  assert.equal(String(areaMap({ ...AREA, points, context: apart, spread: true })), String(areaMap({ ...AREA, points, context: apart, spread: true, clear: false, pinGap: 8 })), 'the defaults are the old drawing');
+  assert.equal(String(areaMap({ ...AREA, points, context: apart, aids: {} })), String(areaMap({ ...AREA, points, context: apart, aids: { clear: false, gap: 8 } })), 'the defaults are the old drawing');
+  assert.throws(() => areaMap({ ...AREA, points, aids: { spread: true } }), /unknown aid/, 'an aid the map has no such option for');
 });
 
 test('prMap: Puerto Rico across the frame, padded; points off the island have no place', () => {

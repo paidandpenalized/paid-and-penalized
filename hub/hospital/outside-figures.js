@@ -35,22 +35,24 @@ export const NEAR_MAX_MILES = 250;
 export const NEAR_GROUPS = new Set(['critical_access', 'rural_emergency', 'not_listed']);
 
 // The classes of the nearest map's context dots, the same group's other hospitals (gray) and the other hospitals in the
-// programs (in ink), and their radius in viewBox units.
+// programs (in ink).
 const CONTEXT_CLS = 'hh__ctx';
 const PROGRAM_CLS = 'hh__ctxe';
-const CONTEXT_R = 3;
-// The nearest map's reading aids (web/charts/geo.js areaMap): room between the pins and the frame's edge, so no pin is
-// cut off; at most this many states labeled by postal code; colliding pins spread apart; each pin's town beside it; this
-// hospital ringed; a frame wider than it is tall (about the table's height beside it on a desktop page). It is drawn
-// twice, on the kit's phone-wide viewBox and a wider one, so its pins and words keep their size (charts.css shows one).
-const NEAR_PAD = 30;
-const NEAR_LABELS = 4;
-const NEAR_ASPECT = 0.72;
-// Its county lines thinned to a point every 2 units (the kit's default is 1): faint hairlines, and the map is drawn twice.
-const NEAR_COUNTY_THIN = 2;
-// The room kept between two spread pins (the kit's default is 8), so a cluster of pins in one town reads as separate pins
-// on the phone's narrower drawing; the context dots a pin or the ring would cover are left out (areaMap's clear).
-const NEAR_PIN_GAP = 14;
+// The nearest map's reading aids (web/charts/geo.js areaMap's aids). It is drawn twice, on the kit's phone-wide viewBox
+// and a wider one, so its pins and words keep their size (charts.css shows one).
+//   gap         the room kept between two spread pins (the kit's default is 8), so a cluster of pins in one town reads as
+//               separate pins on the phone's narrower drawing
+//   clear       the context dots a pin or the ring would cover left out
+//   dense       the context dots one path per class
+//   towns       each pin's town beside it
+//   ring        this hospital ringed, as on the US map
+//   labels      at most this many states labeled by postal code
+//   pad         room between the pins and the frame's edge, so no pin is cut off
+//   aspect      a frame wider than it is tall (about the table's height beside it on a desktop page)
+//   contextR    the context dots' radius, in viewBox units
+//   countyThin  the county lines thinned to a point every 2 units (the kit's default is 1): faint hairlines, and the map
+//               is drawn twice
+const NEAR_AIDS = Object.freeze({ gap: 14, clear: true, dense: true, towns: true, ring: true, labels: 4, pad: 30, aspect: 0.72, contextR: 3, countyThin: 2 });
 // The nearest map's figure id (its keyboard hint is <id>-keys).
 const NEAR_FIG_ID = 'hh-near-map';
 
@@ -218,7 +220,7 @@ export function nearBlock(h, ctx, next = counter()) {
   }));
   const draw = (width, variant) => areaMap({
     shapes: ctx.shapes, counties: ctx.counties, context, width, variant,
-    label: fillOutside('nearAlt'), pad: NEAR_PAD, contextR: CONTEXT_R, spread: true, pinGap: NEAR_PIN_GAP, clear: true, labels: NEAR_LABELS, towns: true, aspect: NEAR_ASPECT, self: 'ring', dense: true, countyThin: NEAR_COUNTY_THIN,
+    label: fillOutside('nearAlt'), aids: NEAR_AIDS,
     center: { point, tip: fillOutside('nearThis', { name: shownName(h) }) },
     points: pins,
   });
