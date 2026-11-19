@@ -7,7 +7,7 @@ from collections import Counter
 
 from pp_engine.schema import validate
 from pp_engine.team import episodes, quality, status
-from pp_engine.team.build import MEASURES, default_ccn, division_of, participant_quality, quality_tables
+from pp_engine.team.build import MEASURES, default_ccn, division_of, other_ipps, participant_quality, quality_tables
 from pp_pipeline.files import load_schemas
 from pp_pipeline.tests.team.helpers import fresh, pins
 
@@ -169,6 +169,19 @@ class Status(unittest.TestCase):
         self.assertEqual(status.list_cbsa_mismatches(self.PARTICIPANTS, self.CBSA_OF, placed), ["990001"])
         voluntary_elsewhere = {"990003": "99007"}  # only mandatory participants are checked
         self.assertEqual(status.list_cbsa_mismatches(self.PARTICIPANTS, self.CBSA_OF, voluntary_elsewhere), [])
+
+
+class ProgramPage(unittest.TestCase):
+    def test_other_ipps_hospitals_are_open_acute_ipps_ones_outside_maryland_and_not_in_team(self):
+        hospitals = [hosp("990001"), hosp("990002"), hosp("990003", inactive="2025-01-01"), hosp("990004", state="MD"),
+                     hosp("990005", kind="critical_access", ipps=False), hosp("990006"), hosp("990007"),
+                     hosp("990008")]
+        codes = {"990001": ["in", "mandatory"], "990002": ["in27", "2027-01-01"], "990003": ["unlisted", None],
+                 "990004": ["maryland", None], "990005": ["outside", "critical_access"],
+                 "990006": ["ended", "2026-02-01"], "990007": ["cjrx", ["outside", "acute"]],
+                 "990008": ["outside", "acute"]}
+        # In TEAM (in, in27) is filled on the map, so not here; a leaver, a CJR-X hospital and one outside every area are.
+        self.assertEqual(other_ipps(hospitals, codes), ["990006", "990007", "990008"])
 
 
 class Divisions(unittest.TestCase):
@@ -341,6 +354,14 @@ class WholeBuild(unittest.TestCase):
                 self.assertEqual(q is None, r["ccn"] not in pins().quality[measure], "a missing value is null")
                 if q is not None:
                     self.assertTrue(0 <= q["pct"] <= 100)
+
+    def test_the_program_pages_counts_come_from_the_pins(self):
+        doc, p = fresh(), pins()
+        self.assertEqual(doc["counts"]["selectedAreas"],
+                         len({r["cbsa"] for r in p.participants if r["participation"] == "mandatory"}))
+        self.assertEqual(doc["counts"]["cjrxListed"], len(p.cjrx))
+        self.assertEqual(doc["otherIpps"], other_ipps(p.hospitals, doc["status"]))
+        self.assertTrue(set(doc["otherIpps"]) <= set(doc["status"]))
 
     def test_meta_comes_from_the_manifest(self):
         meta = fresh()["meta"]

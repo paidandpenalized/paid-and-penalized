@@ -1,5 +1,6 @@
 """The TEAM file's body from parsed inputs: prices, each participant's episode estimate, target amount and quality
-percentiles, the default hospital, a status for every master hospital, and the list CCNs the master lacks.
+percentiles, the default hospital, a status for every master hospital, the list CCNs the master lacks, and the counts
+the program page states (the selected areas on CMS's list, the CJR-X list's size, the other IPPS hospitals its map draws).
 
 `build` takes the pins already parsed (pp_pipeline.emit_team reads them) and returns (body, notes); `notes` holds
 counts for the build report, never written to the file.
@@ -7,6 +8,7 @@ counts for the build report, never written to the file.
 from collections import Counter
 
 from pp_engine import geo
+from pp_engine.parse import MARYLAND
 from pp_engine.team import episodes, quality, status
 
 # The price workbook's census divisions 1-9 follow the Census Bureau's numbering, which is geo.DIVISIONS' order.
@@ -49,6 +51,19 @@ def default_ccn(participants):
     if not pool:
         raise ValueError("no participant fits the default-hospital rule")
     return pool[(len(pool) - 1) // 2]["ccn"]
+
+
+# The status codes of a hospital in TEAM in performance year 2: on the list and not ended.
+IN_TEAM = ("in", "in27")
+
+
+def other_ipps(hospitals, codes):
+    """The CCNs, sorted, of the master's open acute hospitals paid under the IPPS, outside Maryland (whose hospitals the
+    IPPS does not pay), that are not in TEAM in performance year 2 (`codes`: each CCN's status). The program page's map
+    draws these hollow beside the participants."""
+    return sorted(h["ccn"] for h in hospitals
+                  if h["kind"] == "acute" and h["ipps"] and not h.get("inactive") and h["state"] != MARYLAND
+                  and codes[h["ccn"]][0] not in IN_TEAM)
 
 
 def quality_tables(quality_values, hospitals):
@@ -125,6 +140,9 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
         "defaultCcn": default_ccn(records),
         "a4": {"teamMissing": sorted(c for c in listed if c not in by_ccn),
                "cjrxMissing": len(set(cjrx) - set(by_ccn))},
+        "counts": {"selectedAreas": len({r["cbsa"] for r in participants if r["participation"] == "mandatory"}),
+                   "cjrxListed": len(cjrx)},
+        "otherIpps": other_ipps(hospitals, codes),
     }
     notes = {"routes": Counter(routes.values()), "unplaced": len(hospitals) - len(placed),
              "cbsa_mismatches": len(status.list_cbsa_mismatches(participants, cbsa_of, placed)),

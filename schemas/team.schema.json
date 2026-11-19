@@ -20,7 +20,9 @@
     "participants",
     "status",
     "defaultCcn",
-    "a4"
+    "a4",
+    "counts",
+    "otherIpps"
   ],
   "$defs": {
     "date": {
@@ -404,6 +406,32 @@
           "type": "integer",
           "minimum": 0
         }
+      }
+    },
+    "counts": {
+      "description": "What the program page states: `selectedAreas`, the CBSAs CMS's list gives its mandatory participants; `cjrxListed`, the hospitals on CMS's CJR-X list.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "selectedAreas",
+        "cjrxListed"
+      ],
+      "properties": {
+        "selectedAreas": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cjrxListed": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "otherIpps": {
+      "description": "The master's open acute IPPS hospitals outside Maryland that are not in TEAM in performance year 2 (status neither in nor in27), sorted: the program page's map draws them hollow.",
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/ccn"
       }
     }
   }
