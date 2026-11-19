@@ -10,7 +10,7 @@ import { sentenceOf } from '../../../../web/render/components.js';
 import { fractionWord, pct, spelled } from '../../../../web/render/format.js';
 import { html, jsonScript } from '../../../../web/render/html.js';
 import { searchForm } from '../../../../web/render/shell.js';
-import { calcMeta, calcRow, hospOf, whoOf } from '../calc-data.js';
+import { activeCcns, calcMeta, calcRow, hospOf, whoOf } from '../calc-data.js';
 import { t as tCalc } from '../calc-copy.js';
 import { calcMarkup, calcView, initialState } from '../calc-view.js';
 import { BAND_ANCHOR, CITES, CJR_BAND, DEFAULT_TRACK, PY2_START, yearOf } from '../constants.js';
@@ -63,7 +63,7 @@ ${searchForm({ id: 'tc-pick', src: files.searchUrl, label: t('calcPick'), find: 
 <p class="tc__nojs">${t('calcNoScript')}</p>
 <p class="vh" role="status" data-calc-say></p>
 <div class="tc__body" data-calc-body>${calcMarkup(view, { statics })}</div>
-${jsonScript('tc-data', { meta, row, who })}
+${jsonScript('tc-data', { meta, row, who, ccns: activeCcns(team) })}
 </section>`;
 }
 

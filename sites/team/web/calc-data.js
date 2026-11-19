@@ -31,6 +31,12 @@ export function calcRow(p) {
 // data years) and the categories whose regional average is this site's mean, not CMS's (team.categoryAvgDerived).
 export const calcMeta = (team) => ({ dataYear: team.meta.mupYears[team.meta.mupYears.length - 1], derived: [...team.categoryAvgDerived] });
 
+// The participants still in TEAM in performance year 2, as one string of their CCNs (six characters each, sorted), for
+// the page itself: it knows which hospitals the file has before fetching it, so a ?h= or a link naming any other
+// hospital fetches nothing. ccnSet reads it back.
+export const activeCcns = (team) => team.participants.filter((p) => p.active).map((p) => p.ccn).sort().join('');
+export const ccnSet = (text) => new Set(String(text ?? '').match(/[0-9A-Z]{6}/g) ?? []);
+
 // The file the page fetches: the columns, meta and one row per participant still in TEAM in performance year 2
 // (participants that left before it are not offered).
 export const calcAsset = (team) => ({ cols: CALC_COLS, meta: calcMeta(team), rows: team.participants.filter((p) => p.active).map(calcRow) });

@@ -20,10 +20,10 @@ import { once } from '../../../web/client/once.js';
 import { buildIndex } from '../../../web/client/search.js';
 import { count } from '../../../web/render/format.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
-import { CALC_COLS, hospOf, whoByCcn } from '../web/calc-data.js';
+import { CALC_COLS, ccnSet, hospOf, whoByCcn } from '../web/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView, initialState } from '../web/calc-view.js';
-import { BOXES, addressOf, applyLink, arrival, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
+import { BOXES, addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
 import { hospitalEntry, loadSearch } from './files.js';
 
 // How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
@@ -68,6 +68,14 @@ export function mountCalc(section) {
   let settle = 0;
   let frame = 0;
   let copiedTimer = 0;
+  // The participants the file has (the page carries their CCNs), so a hospital outside them fetches nothing.
+  const participants = ccnSet(first.ccns);
+  // The state when a text box took the focus: where an edit the box can't take goes back to.
+  let editStart = null;
+  // A change waiting for the next frame (dirty), and whether it must reach the box being typed in (force).
+  let dirty = false;
+  let forced = false;
+  let patches = 0;
 
   const files = once(() => Promise.all([fetchAsset(section.dataset.src, 'calculator'), loadSearch(section.dataset.search)]).then(([c, s]) => joinFiles(c, s)));
   // The files for a move the reader made, or null after saying they didn't load.
@@ -87,14 +95,10 @@ export function mountCalc(section) {
     return tpl.content;
   };
 
-  // The figure, at most once a frame: the costliest part to draw.
+  // The figure: the costliest part to draw.
   const drawFigure = () => {
-    if (frame) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
-      const box = body.querySelector('[data-v="fig"]');
-      if (box) box.replaceChildren(...parsed(view.fig()).childNodes);
-    });
+    const box = body.querySelector('[data-v="fig"]');
+    if (box) box.replaceChildren(...parsed(view.fig()).childNodes);
   };
 
   // Every keyed element takes its fresh twin's text and attributes; force: inputs too, even the one being typed in.
@@ -115,6 +119,8 @@ export function mountCalc(section) {
         now.replaceChildren(...el.childNodes);
       }
     }
+    // How many patches the page has made: a measure a test (and a CPU-throttled run) can read.
+    section.dataset.patches = String(++patches);
   };
 
   const say = () => {
@@ -138,14 +144,28 @@ export function mountCalc(section) {
     section.querySelector('[data-v="where"]').textContent = view.hosp.where;
   };
 
-  // The state changed: recompute now, follow by text and attributes, the figure next frame, the sentence and the
-  // address once the reader pauses.
-  const update = (next, { force = false } = {}) => {
-    state = next;
+  // A waiting change drawn now: the view recomputed and the page patched (the figure waits for the frame).
+  const flush = () => {
+    if (!dirty) return;
+    dirty = false;
     view = calcView({ hosp, state, team: meta });
-    patch(force);
-    drawFigure();
+    patch(forced);
+    forced = false;
     say();
+  };
+  // The state changed. A reader's stream of moves (a slider drag, typing) is drawn once a frame: the view, the patch and
+  // the figure together, so a burst of input events costs one patch. A move that ends something (a commit, a click: now)
+  // is drawn at once; its figure follows next frame. The sentence and the address wait for the reader to pause.
+  const update = (next, { force = false, now = false } = {}) => {
+    state = next;
+    dirty = true;
+    forced ||= force;
+    if (now) flush();
+    frame ||= requestAnimationFrame(() => {
+      frame = 0;
+      flush();
+      drawFigure();
+    });
   };
 
   // A new hospital: its whole calculator drawn afresh (the same markup the build draws for its default), the rest of the
@@ -153,7 +173,11 @@ export function mountCalc(section) {
   const show = (h, next, { quiet = false } = {}) => {
     hosp = h;
     state = next;
+    dirty = false;
     view = calcView({ hosp, state, team: meta });
+    // Another hospital: a link's banner and the keys it couldn't use were about the last one (an arrival sets its own).
+    banner.hidden = true;
+    section.querySelector('[data-calc-rejected]').textContent = '';
     // The parts the same for every hospital are the build's: kept, moved into the new markup's empty boxes.
     const statics = new Map([...body.querySelectorAll('[data-static]')].map((el) => [el.dataset.static, [...el.childNodes]]));
     body.replaceChildren(...parsed(calcMarkup(view)).childNodes);
@@ -168,12 +192,13 @@ export function mountCalc(section) {
   // Moves to the participant ccn from the file (a pick, a random draw, team:pick): its opening state, keeping the reader's
   // spending and band, as they were comparing. Says so, and writes the address.
   const load = async (ccn, { values = null, quiet = false } = {}) => {
+    if (!participants.has(ccn)) return false;
     const f = await filesOrSay();
     const row = f?.rows.get(ccn);
     if (!row) return false;
     meta = f.meta;
     const h = hospOf(row, f.who.get(ccn));
-    const next = values ? applyLink(initialState(h), values) : { ...initialState(h), s: state.s, band: state.band, moved: state.moved };
+    const next = values ? applyLink(initialState(h), values) : carryOver(state, h);
     show(h, next, { quiet });
     if (!values) writeAddress();
     return true;
@@ -181,14 +206,16 @@ export function mountCalc(section) {
 
   // ---------- the reader's moves ----------
 
-  // A box that can't take what was typed: it goes back to its last good value, and the line under it says so.
+  // A box that can't take what was typed: it goes back to its value before the edit, and the line under it says so.
   const kept = (input) => {
     const box = BOXES[input.dataset.in.split('.')[0]];
-    patch(true);
     msg.textContent = fill('kept', { lo: count(box.lo), hi: count(box.hi), value: input.value });
     input.closest('td, p, th')?.append(msg);
   };
 
+  body.addEventListener('focusin', (e) => {
+    if (e.target.dataset?.in && e.target.type === 'text') editStart = state;
+  });
   body.addEventListener('input', (e) => {
     const input = e.target;
     const key = input.dataset?.in;
@@ -205,12 +232,15 @@ export function mountCalc(section) {
     const input = e.target;
     const key = input.dataset?.in;
     if (!key) return;
-    if (input.type === 'radio') update(setTrack(state, Number(input.value)));
-    else if (input.type === 'checkbox') update(setLowVolume(state, key.split('.')[1], input.checked));
+    if (input.type === 'range') flush(); // the drag or the key press ended: its last value drawn now
+    else if (input.type === 'radio') update(setTrack(state, Number(input.value)), { now: true });
+    else if (input.type === 'checkbox') update(setLowVolume(state, hosp, key.split('.')[1], input.checked), { now: true });
     else if (input.type === 'text') {
-      const r = typeInto(state, hosp, key, input.value);
+      // From where the edit began, never from the last prefix the keystrokes applied.
+      const r = commitBox(editStart ?? state, hosp, key, input.value);
+      update(r.state, { force: true, now: true });
       if (!r.ok) kept(input);
-      else update(r.state, { force: true });
+      editStart = state;
     }
   });
   body.addEventListener('click', (e) => {
@@ -284,21 +314,22 @@ export function mountCalc(section) {
   // hospital the file doesn't have is dropped, said politely, and the page opens on the ?h= or the default). The file is
   // fetched only when a link or a ?h= names another hospital than the default. A scenario someone made shows the banner,
   // and the keys the link couldn't use are named in it (as text).
-  async function arrive() {
+  async function arrive({ current = null } = {}) {
     const { hash, search } = location;
     const link = isScenarioHash(hash, 'team') ? readLink(hash) : null;
     const query = followedCcn(search);
     const base = first.row[0];
     let f = null;
     let failed = false;
-    if ([link?.ccn, query].some((ccn) => ccn && ccn !== base)) {
+    // The file only for a participant other than the default: any other hospital is one the file doesn't have.
+    if ([link?.ccn, query].some((ccn) => ccn && ccn !== base && participants.has(ccn))) {
       try {
         f = await files();
       } catch {
         failed = true;
       }
     }
-    const to = arrival({ link, query, defaultCcn: base, known: (ccn) => Boolean(f?.rows.has(ccn)) });
+    const to = arrival({ link, query, defaultCcn: base, current, known: (ccn) => Boolean(f?.rows.has(ccn)) });
     if (to.ccn !== hosp.ccn || to.values) {
       const home = hospOf(first.row, first.who);
       if (to.ccn === base) show(home, to.values ? applyLink(initialState(home), to.values) : initialState(home), { quiet: true });
@@ -317,7 +348,7 @@ export function mountCalc(section) {
   // written; the page stays here.
   banner.querySelector('[data-calc-reset]')?.addEventListener('click', (e) => {
     e.preventDefault();
-    update(initialState(hosp), { force: true });
+    update(initialState(hosp), { force: true, now: true });
     banner.hidden = true;
     section.querySelector('[data-calc-rejected]').textContent = '';
     writeAddress();
@@ -332,7 +363,7 @@ export function mountCalc(section) {
   showControls();
   // A link pasted into this tab, or Back to one: the page reads it again. (The page's own writes fire no hashchange.)
   window.addEventListener('hashchange', () => {
-    if (isScenarioHash(location.hash, 'team') && location.hash !== fragmentOf(state)) arrive();
+    if (isScenarioHash(location.hash, 'team') && location.hash !== fragmentOf(state)) arrive({ current: hosp.ccn });
   });
   if (isScenarioHash(location.hash, 'team') || followedCcn(location.search)) arrive();
 }

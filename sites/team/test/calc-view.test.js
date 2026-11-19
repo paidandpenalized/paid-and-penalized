@@ -13,10 +13,10 @@ import { mulberry32 } from '../../../engine/js/test/prng.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
-import { applyLink, arrival, fragmentOf, isScenario, randomPick, readLink, setSlider, setTrack, typeInto } from '../client/calc-state.js';
+import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
-import { calcAsset, calcMeta, calcRow, hospOf } from '../web/calc-data.js';
+import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf } from '../web/calc-data.js';
 import { t } from '../web/calc-copy.js';
 import { calcMarkup, calcView, initialState, inputsOf } from '../web/calc-view.js';
 import { loadAtlas, loadMaster, loadTeam } from '../web/data.js';
@@ -296,4 +296,75 @@ test('every track draws, each limit as TRACKS gives it', () => {
     assert.equal(v.tracks.find((k) => k.checked).n, track);
     assert.ok(!/NaN|undefined/.test(calcMarkup(v).text), `Track ${track}: no hole in the markup`);
   }
+});
+
+// The review of Checkpoint M3: each fix's own check.
+test('a box the reader can\'t fill goes back to its value before the edit, not to the last prefix the keys applied', () => {
+  const start = initialState(deflt);
+  // The keystrokes of "250000" in a box that takes up to 100,000: each in-range prefix applies as it is typed.
+  let live = start;
+  for (const prefix of ['2', '25', '250', '2500', '25000']) live = type(live, deflt, 'n.LEJR', prefix);
+  assert.equal(live.ov.n.LEJR, 25000, 'the last prefix applied while typing');
+  const r = commitBox(start, deflt, 'n.LEJR', '250000');
+  assert.ok(!r.ok && r.state === start && !('LEJR' in r.state.ov.n), 'the commit goes back to the start of the edit');
+  // A percentile: "1000" leaves no 100 behind.
+  assert.ok(commitBox(start, deflt, 'q.falls', '1000').state === start);
+  // A good commit is typeInto's from the start.
+  assert.equal(commitBox(start, deflt, 'n.LEJR', '60').state.ov.n.LEJR, 60);
+});
+
+test('the public number typed back, or a low-volume box set back, is not the reader\'s', () => {
+  const missing = Object.keys(MEASURES).find((m) => !deflt.quality[m]);
+  let s = type(initialState(deflt), deflt, `q.${missing}`, '70');
+  assert.ok(s.mine.has(`q.${missing}`));
+  s = type(s, deflt, `q.${missing}`, '50');
+  assert.ok(!s.mine.size && !(missing in s.q), 'the displayed 50 typed back: CMS\'s missing-data score again');
+  const n = deflt.cats.LEJR.n;
+  s = type(type(initialState(deflt), deflt, 'n.LEJR', String(n + 5)), deflt, 'n.LEJR', String(n));
+  assert.ok(!s.mine.size && !('LEJR' in s.ov.n), 'the public count typed back');
+  const lv = deflt.cats.CABG.lowVolume;
+  const ticked = setLowVolume(initialState(deflt), deflt, 'CABG', !lv);
+  assert.ok(ticked.mine.has('lv.CABG'));
+  const back = setLowVolume(ticked, deflt, 'CABG', lv);
+  assert.ok(!back.mine.size && !('CABG' in back.lv), 'tick then untick: the hospital\'s own flag again');
+  // A row's spending typed equal to the slider follows the slider again.
+  const row = type(type(setSlider(initialState(deflt), 3), deflt, 'sk.BOWEL', '7'), deflt, 'sk.BOWEL', '3');
+  assert.ok(!('BOWEL' in row.sk));
+});
+
+test('another hospital carries the slider and the band, not the rows\' own spending; "set" follows what it carries', () => {
+  const other = hospWhere((p) => p.active && p.ccn !== deflt.ccn);
+  const rowsOnly = type(initialState(deflt), deflt, 'sk.CABG', '6');
+  assert.ok(rowsOnly.moved);
+  const next = carryOver(rowsOnly, other);
+  assert.ok(!next.moved && !Object.keys(next.sk).length, 'only the rows were set: nothing set carries over');
+  const slid = carryOver({ ...setSlider(initialState(deflt), -4), band: 8 }, other);
+  assert.ok(slid.moved && slid.s === -4 && slid.band === 8 && slid.ccn === other.ccn);
+  // The quality wording follows: the reference reading, not "in this scenario".
+  assert.ok(!/in this scenario/.test(viewOf(other, next).wwit.quality.text), 'the reference wording');
+});
+
+test('the calculator never writes the family\'s ?h=; its hospital is the fragment\'s', () => {
+  const state = setSlider(initialState(deflt), 2);
+  const address = addressOf({ pathname: '/team/', search: '?h=999999&x=1' }, state);
+  assert.ok(address.startsWith('/team/?h=999999&x=1#team&h='), 'the query exactly as it was');
+  assert.ok(addressOf({ pathname: '/team/', search: '' }, state).startsWith('/team/#team&h='));
+});
+
+test('the page carries the participants\' CCNs, so an arrival outside them knows without fetching', () => {
+  const text = activeCcns(team);
+  const set = ccnSet(text);
+  assert.equal(set.size, calcAsset(team).rows.length);
+  assert.ok(calcAsset(team).rows.every((r) => set.has(r[0])));
+  const outside = team.participants.find((p) => !p.active)?.ccn ?? 'ZZZZZZ';
+  const to = arrival({ query: outside, defaultCcn: deflt.ccn, known: (c) => set.has(c) });
+  assert.ok(to.ccn === deflt.ccn, 'a hospital outside them: the default');
+});
+
+test('a link with no hospital, arriving on a page already open, applies to the hospital showing', () => {
+  const other = hospWhere((p) => p.active && p.ccn !== deflt.ccn).ccn;
+  const to = arrival({ link: readLink('#team&s=5'), defaultCcn: deflt.ccn, known: () => true, current: other });
+  assert.ok(to.ccn === other && to.values.s === 5 && !to.dropped);
+  // On a fresh page (nothing showing yet) it goes to the ?h= or the default, as before.
+  assert.ok(arrival({ link: readLink('#team&s=5'), defaultCcn: deflt.ccn, known: () => true }).ccn === deflt.ccn);
 });

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { SHOWN } from '../../sites/team/client/lookup.js';
 import { PROGRAM_PATH } from '../../sites/team/web/links.js';
 import { audit } from './axe.js';
-import { CONCURRENCY, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, useBrowser, useContext, withPage } from './lib.js';
+import { CONCURRENCY, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, settle, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 // The narrowest a block of words may be when it wraps: about 18 characters of the body face at its smallest size.
@@ -372,6 +372,75 @@ describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
   }));
 });
 
+// The review of Checkpoint M3: an edit a box can't take goes back to its value before the edit; the family's ?h= is
+// never written; a ?h= outside TEAM fetches nothing; another hospital clears a link's banner; a link with no hospital
+// applies to the one showing; a burst of slider input in one frame makes one patch.
+describe('TEAM Part 5: reverts, the address, fetches, the banner, links, frames', () => {
+  const tabs = useContext(shared, { width: 1280, height: 900 });
+  const patches = (page) => page.evaluate(() => Number(document.getElementById('calc').dataset.patches));
+  const otherParticipant = async (page) => {
+    const src = (await calcFiles(page))[0];
+    return page.evaluate(async (url) => {
+      const shown = JSON.parse(document.getElementById('tc-data').textContent).row[0];
+      return (await (await fetch(url)).json()).rows.find((r) => r[0] !== shown && r[4] > 0)[0];
+    }, src);
+  };
+
+  it('typing past a box\'s range goes back to the value before the edit, never a prefix', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    await page.locator('#tc-q > summary').click();
+    for (const [id, typed] of [['#tc-n-LEJR', '250000'], ['#tc-q-falls', '1000']]) {
+      const box = page.locator(id);
+      const before = await box.inputValue();
+      await box.click();
+      await box.press('ControlOrMeta+a');
+      await box.pressSequentially(typed);
+      await box.press('Tab');
+      assert.equal(await box.inputValue(), before, `${id}: back to its value before the edit`);
+    }
+    assert.equal((await calcSays(page)).tag, 'Scenario · public data', 'nothing of the reader\'s left behind');
+    await assertQuiet(seen, 'TEAM Part 5 reverts');
+  }));
+
+  it('a ?h= outside TEAM fetches nothing; a slider move leaves the ?h= as it was', () => withPage(tabs, { path: `${PROGRAM_PATH}?h=999999`, watched: true }, async (page, { seen }) => {
+    await page.waitForTimeout(300);
+    const files = await calcFiles(page);
+    assert.deepEqual((await dataFiles(page)).filter((f) => files.includes(f)), [], 'neither of the calculator\'s files');
+    await page.locator('#tc-s').focus();
+    await page.keyboard.press('ArrowRight');
+    await eventually(async () => page.evaluate(() => location.hash.startsWith('#team&h=')), 'the state written');
+    assert.equal(await page.evaluate(() => location.search), '?h=999999', 'the family\'s ?h= untouched');
+    await assertQuiet(seen, 'TEAM Part 5 with a ?h= outside TEAM');
+  }));
+
+  it('another hospital clears a link\'s banner; a link with no hospital then applies to it', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&zz=1`, watched: true }, async (page, { seen }) => {
+    await eventually(async () => (await calcSays(page)).banner, 'the banner');
+    const ccn = await otherParticipant(page);
+    await page.evaluate((c) => document.dispatchEvent(new CustomEvent('team:pick', { detail: { ccn: c } })), ccn);
+    await eventually(async () => page.evaluate((c) => document.querySelector('#calc [data-v="where"]').textContent.includes(c), ccn), 'the new hospital');
+    const after = await page.evaluate(() => ({ banner: !document.querySelector('[data-calc-banner]').hidden, rejected: document.querySelector('[data-calc-rejected]').textContent }));
+    assert.deepEqual(after, { banner: false, rejected: '' }, 'the banner and the rejected keys go');
+    await page.evaluate(() => { location.hash = '#team&s=5'; });
+    await eventually(async () => (await page.locator('[data-v="l.s"]').textContent()) === '+5%', 'the link\'s spending applied');
+    assert.ok(await page.evaluate((c) => document.querySelector('#calc [data-v="where"]').textContent.includes(c), ccn), 'still the hospital showing');
+    await assertQuiet(seen, 'TEAM Part 5 banner and links');
+  }));
+
+  it('a burst of slider input in one frame makes one patch', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const before = await patches(page);
+    await page.evaluate(() => {
+      const slider = document.getElementById('tc-s');
+      for (let i = 1; i <= 10; i++) {
+        slider.value = String(i);
+        slider.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    await settle(page);
+    assert.equal(await patches(page), before + 1, 'ten input events, one patch');
+    assert.equal(await page.locator('[data-v="l.s"]').textContent(), '+10%', 'the last value drawn');
+    await assertQuiet(seen, 'TEAM Part 5 one patch a frame');
+  }));
+});
+
 // The browser's first drawing takes the build's markup through the same patch every change makes: it must change
 // nothing but show the controls only the script works (their hidden attributes). Every mutation inside the drawn
 // calculator is recorded from before the page's script runs (the parser's own additions aside).
@@ -406,7 +475,13 @@ describe('TEAM Part 5 when its file won\'t load', () => {
   const tabs = useContext(shared, { width: 1280, height: 900 });
   it('one sentence, the failure; the default hospital, its public numbers', async () => {
     await tabs.context.route(/\/assets\/team-calc\.[0-9a-f]{8}\.json$/, (route) => route.abort());
-    await withPage(tabs, { path: `${PROGRAM_PATH}#team&h=ZZZZZZ&t=2&n.LEJR=40` }, async (page) => {
+    await withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+      // A participant other than the default, from the CCNs the page carries (the file itself won't load).
+      const ccn = await page.evaluate(() => {
+        const { row, ccns } = JSON.parse(document.getElementById('tc-data').textContent);
+        return ccns.match(/.{6}/g).find((c) => c !== row[0]);
+      });
+      await page.evaluate((c) => { location.hash = `#team&h=${c}&t=2&n.LEJR=40`; }, ccn);
       await eventually(async () => (await page.locator('[data-calc-say]').textContent()) !== '', 'the polite line speaks');
       await page.waitForTimeout(200);
       assert.equal(await page.locator('[data-calc-say]').textContent(), 'The list of TEAM hospitals didn\u2019t load. Try again.');

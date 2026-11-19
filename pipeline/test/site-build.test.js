@@ -200,6 +200,12 @@ test('a bundle takes copy entries\' claims out, in every form a copy file writes
   const source = "a: { text: 'x', claim: null },\n  b: { text: 'y', claim: 'TEAM-01' },\n  c: {\n    text: 'z',\n    claim: ['TEAM-01', 'TEAM-02'],\n  },";
   assert.equal(withoutClaims(source), "a: { text: 'x' },\n  b: { text: 'y' },\n  c: {\n    text: 'z',\n  },");
   assert.throws(() => withoutClaims("a: { text: 'x', claim: CLAIM }"), RangeError);
+  // Only a property key is a claim: the word in a sentence stays; a claim that is the first key, or in double quotes, goes.
+  assert.equal(withoutClaims("a: { text: 'File a claim: within the month', claim: null },"), "a: { text: 'File a claim: within the month' },");
+  assert.equal(withoutClaims('a: "The claim: words",'), 'a: "The claim: words",');
+  assert.equal(withoutClaims("a: { claim: 'TEAM-01', text: 'x' },"), "a: { text: 'x' },");
+  assert.equal(withoutClaims('a: { claim: "TEAM-01", text: "x" }, b: { text: "y", claim: ["TEAM-01", "TEAM-02"] },'), 'a: { text: "x" }, b: { text: "y" },');
+  assert.throws(() => withoutClaims('a: { claim: TEAM, text: "x" }'), RangeError, 'a first-key claim it can\'t read');
 });
 
 test('build runs the sites in order with one context: assets, env, and what earlier sites emitted', () =>

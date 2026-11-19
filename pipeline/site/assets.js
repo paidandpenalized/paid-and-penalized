@@ -100,12 +100,17 @@ export function licenseNotice(metafile) {
 // a name in classic, a classic script, bundled as one self-contained function call (no import, export or global name).
 // The share cards (web/share-card.js), each committed PNG web/og/<id>.png, are /assets/og-<id>.<hash>.png (cards[id]).
 // A copy file's claim ids are for the copy gate (pipeline/test/copy-gate.test.js reads the source), not the browser: a
-// bundle takes each entry's `claim: …` out ({ text, claim: 'X-01' } becomes { text }), so a page script carries only
-// words. A claim in any other form than null, an id or a list of ids stops the build, so none is left in silently.
-export const CLAIM_KEY = /,\s*claim:\s*(?:null|'[^']*'|\[[^\]]*\])/g;
+// bundle takes each entry's `claim` property out ({ text, claim: 'X-01' } becomes { text }), so a page script carries
+// only words. Only a property key is a claim: `claim` after a brace or a comma, its value null, a quoted id (single or
+// double quotes) or a list of them; the word in a sentence ("File a claim: …") is words. A claim property in any other
+// form stops the build, so none is left in silently.
+const CLAIM_VALUE = String.raw`(?:null|'[^'\n]*'|"[^"\n]*"|\[[^\]]*\])`;
+const CLAIM_AFTER_COMMA = new RegExp(String.raw`,\s*claim\s*:\s*${CLAIM_VALUE}`, 'g');
+const CLAIM_FIRST = new RegExp(String.raw`(\{\s*)claim\s*:\s*${CLAIM_VALUE}\s*,?\s*`, 'g');
+const CLAIM_KEY_LEFT = /(^|[{,]\s*)claim\s*:/m;
 export const withoutClaims = (source, path = 'a copy file') => {
-  const out = source.replace(CLAIM_KEY, '');
-  if (/\bclaim:/.test(out)) throw new RangeError(`${path}: a claim the bundle can't take out`);
+  const out = source.replace(CLAIM_AFTER_COMMA, '').replace(CLAIM_FIRST, '$1');
+  if (CLAIM_KEY_LEFT.test(out)) throw new RangeError(`${path}: a claim the bundle can't take out`);
   return out;
 };
 // The copy files a bundle reads (a copy.js or a <name>-copy.js), outside node_modules. onLoaded(path, contents): told

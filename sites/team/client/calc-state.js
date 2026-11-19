@@ -3,7 +3,7 @@
 // one at random" draws. No DOM: client/calc.js runs these against the page, and the tests run them alone. The state's
 // shape is calc-view.js's.
 import { clamp } from '../../../engine/js/stats.js';
-import { BAND_DEFAULT } from '../../../engine/js/team/params.js';
+import { BAND_DEFAULT, MISSING_QUALITY } from '../../../engine/js/team/params.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { initialState } from '../web/calc-view.js';
@@ -16,10 +16,13 @@ import { MAX_EPISODES, MAX_PRICE, RANGES, decodeTeam, encodeTeam } from './share
 // it names: when that hospital is unknown (not a participant still in TEAM, a stale link, or a file that didn't load) its
 // values are dropped (dropped: true, for the page to say so) and the page opens on the ?h= or the default. A link that
 // names no hospital applies to whichever opens. Returns { ccn, values (or null), dropped }.
-export function arrival({ link = null, query = null, defaultCcn, known }) {
+// current: the hospital already showing, when a link arrives on a page already open (a hashchange): a link that names
+// no hospital then applies to it.
+export function arrival({ link = null, query = null, defaultCcn, known, current = null }) {
   const named = link?.ccn;
   const knows = (ccn) => Boolean(ccn) && (ccn === defaultCcn || known(ccn));
   if (named && knows(named)) return { ccn: named, values: link.values, dropped: false };
+  if (link && !named && current) return { ccn: current, values: link.values, dropped: false };
   const values = named ? null : link?.values ?? null;
   return { ccn: knows(query) ? query : defaultCcn, values, dropped: Boolean(named) && Object.keys(link.values).length > 0 };
 }
@@ -55,13 +58,24 @@ export function readBox(key, text) {
   return { value: round(x, box.decimals) };
 }
 
+// The value a box shows with nothing of the reader's in it: the hospital's public number (a measure with none shows
+// CMS's missing-data score), or, for a row's spending, the slider's.
+function publicValue(state, hosp, key) {
+  const [group, name] = key.split('.');
+  if (group === 'n') return hosp.cats[name].n;
+  if (group === 'p') return hosp.cats[name].price;
+  if (group === 'sk') return state.s;
+  if (group === 'q') return hosp.quality[name]?.pct ?? MISSING_QUALITY;
+  return null;
+}
+
 // The value a box shows now (its state's, else the hospital's), for comparing what was typed against it.
 function current(state, hosp, key) {
   const [group, name] = key.split('.');
   if (group === 'n') return state.ov.n[name] ?? hosp.cats[name].n;
   if (group === 'p') return state.ov.p[name] ?? hosp.cats[name].price;
   if (group === 'sk') return state.sk[name] ?? state.s;
-  if (group === 'q') return state.q[name] ?? hosp.quality[name]?.pct ?? null;
+  if (group === 'q') return state.q[name] ?? hosp.quality[name]?.pct ?? MISSING_QUALITY;
   return state[group];
 }
 
@@ -85,22 +99,49 @@ export function typeInto(state, hosp, key, text) {
   const read = readBox(key, text);
   if (!read) return { state, ok: false };
   if (read.value === round(current(state, hosp, key) ?? NaN, box.decimals)) return { state, ok: true };
-  if (box.path) box.path.reduce((at, k) => at[k], next)[name] = read.value;
-  else next[group] = read.value;
+  if (box.path) {
+    const at = box.path.reduce((o, k) => o[k], next);
+    // The public number typed back (or a displayed 50 retyped, or a row's spending equal to the slider) is not the
+    // reader's: the box goes back to following it.
+    if (read.value === round(publicValue(state, hosp, key), box.decimals)) {
+      delete at[name];
+      next.mine.delete(key);
+      return { state: next, ok: true };
+    }
+    at[name] = read.value;
+  } else next[group] = read.value;
   if (OWN.has(group)) next.mine.add(key);
   if (group === 'sk') next.moved = true;
   return { state: next, ok: true };
 }
 
+// A box's commit from where the reader's edit began (start: the state when the box took the focus): what typeInto makes
+// of the final text, or, when the box can't take it, start itself, so an out-of-range number never leaves behind the
+// last in-range prefix the keystrokes applied ("250000" in a box that takes up to 100,000 never leaves 25,000).
+export function commitBox(start, hosp, key, text) {
+  const r = typeInto(start, hosp, key, text);
+  return r.ok ? r : { state: start, ok: false };
+}
+
 // The "all five" slider, the track, a low-volume box.
 export const setSlider = (state, s) => ({ ...copyState(state), s: toSlider(s), moved: true });
 export const setTrack = (state, track) => ({ ...copyState(state), track });
-export function setLowVolume(state, cat, checked) {
+// A low-volume box set back to the hospital's own flag is not the reader's.
+export function setLowVolume(state, hosp, cat, checked) {
   const next = copyState(state);
-  next.lv[cat] = checked;
-  next.mine.add(`lv.${cat}`);
+  if (checked === hosp.cats[cat].lowVolume) {
+    delete next.lv[cat];
+    next.mine.delete(`lv.${cat}`);
+  } else {
+    next.lv[cat] = checked;
+    next.mine.add(`lv.${cat}`);
+  }
   return next;
 }
+
+// The state another hospital opens with when the reader moves to it: its own opening state, keeping the reader's "all
+// five" spending and band (they were comparing); its rows' spending is its own, so "set" is the slider's alone.
+export const carryOver = (state, hosp) => ({ ...initialState(hosp), s: state.s, band: state.band, moved: state.s !== 0 });
 
 // A shared link's values (decodeTeam's partial state) over a hospital's opening state: every own number it carries is the
 // reader's ("your number"), its spending counts as set, and its "all five" spending is held to the slider's reach.
@@ -137,14 +178,10 @@ function shareState(state) {
 // The fragment for the page's address or a shared link: public inputs only, unless includeMine.
 export const fragmentOf = (state, { includeMine = false } = {}) => encodeTeam(shareState(state), { includeMine });
 
-// The address to write for the calculator's state: this page's path, its query with any ?h= following the hospital, and
-// the state's fragment.
-export function addressOf({ pathname, search }, state) {
-  const params = new URLSearchParams(search);
-  if (params.has('h')) params.set('h', state.ccn);
-  const query = params.toString();
-  return `${pathname}${query ? `?${query}` : ''}${fragmentOf(state)}`;
-}
+// The address to write for the calculator's state: this page's path, its query exactly as it is (a ?h= is the family's
+// followed hospital: the calculator reads it, never writes it; its own hospital is the fragment's h), and the state's
+// fragment.
+export const addressOf = ({ pathname, search }, state) => `${pathname}${search}${fragmentOf(state)}`;
 
 // "Show one at random": a participant still in TEAM (pool: { ccn, state } from the calculator's file and the family
 // search's), never one in DEFAULT_SKIP_STATE, never the one showing (not). rng: () => [0, 1). null for an empty pool.
