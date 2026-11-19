@@ -1,8 +1,11 @@
 """The TEAM file's goldens: a fresh build from the pins equals the committed file, which was built from the current
 pins. Episode counts, prices and percentiles are estimates from public files, not CMS's own: a change here is a methods
 change (docs/METHODS-LOG.md), not a fix."""
+import io
 import unittest
+from unittest import mock
 
+from pp_engine.parse import SchemaError
 from pp_pipeline import emit_team
 from pp_pipeline.files import read_json, read_manifest, require_current
 from pp_pipeline.tests.team.helpers import fresh
@@ -28,6 +31,18 @@ class Golden(unittest.TestCase):
     def test_the_file_is_small(self):
         from pp_engine.contract import format_emitted
         self.assertLess(len(format_emitted(fresh()).encode("utf-8")), 1024 * 1024)
+
+
+class NamedFailures(unittest.TestCase):
+    def test_a_bad_crosswalk_prints_not_written_and_returns_1(self):
+        # parse.table raises SchemaError (an Exception, not a ValueError): main() reports it, writes nothing, and
+        # returns 1, so `run.py emit` goes on to the other emitters.
+        with mock.patch.object(emit_team, "read_crosswalk", side_effect=SchemaError("county-CBSA crosswalk: no header")), \
+                mock.patch.object(emit_team, "write_emitted") as write, \
+                mock.patch("sys.stderr", new_callable=io.StringIO) as err:
+            self.assertEqual(emit_team.main(), 1)
+        write.assert_not_called()
+        self.assertIn("team: not written: county-CBSA crosswalk: no header", err.getvalue())
 
 
 if __name__ == "__main__":

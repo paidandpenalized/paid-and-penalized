@@ -8,6 +8,7 @@ Six sources, seven pins; raw downloads stay out of git (a pin is a small CSV der
   team-quality        Provider Data Catalog Hybrid_HWR and ISCMR rows          -> quality.csv
 
     python3 -I pipeline/py/run.py derive-team <directory holding the raw files, found by name> --retrieved YYYY-MM-DD
+        [--repin]
 
 `--retrieved` is the day the raw files were downloaded. CMS's Last-Modified dates come from a sidecar beside the
 downloads, `source-dates.json` at the top of the raw directory (the way the HCRIS layer takes `--posted`), keyed by
@@ -21,7 +22,9 @@ Data Catalog dataset's release and modification dates (the quality pin's). SOURC
 change between downloads: each pin's title, path and URLs.
 
 The manifest entry for each pin (derivedFrom: URL, size, SHA-256, CMS's Last-Modified date; plus asOf, counts and a
-spot value recorded at derive time) is written here, then the CSV only when it is the bytes the entry names.
+spot value recorded at derive time) is written here, then the CSV only when it is the bytes the entry names. A pin
+whose derived bytes differ from the committed manifest entry's SHA-256 (a changed derivation or a new CMS file) is
+refused, by name, and nothing is written; `--repin` writes the new pins and entries (`write_pins`).
 """
 import argparse
 import csv
@@ -35,7 +38,8 @@ from pathlib import Path
 
 from pp_engine import xlsx
 from pp_engine.parse import rows, table
-from pp_pipeline.files import file_sha256, read_manifest, write_derived_pin, write_manifest
+from pp_engine.team.episodes import REMAPS
+from pp_pipeline.files import PINNED_DIR, file_sha256, read_manifest, write_derived_pin, write_manifest
 
 DERIVED_BY = "pipeline/py/pp_pipeline/team/derive.py"
 SIDECAR = "source-dates.json"
@@ -62,9 +66,6 @@ CATEGORY_CODES = {
     "IP-Coronary artery bypass graft": "CABG",
     "IP-Major bowel procedure": "BOWEL",
 }
-# Spinal fusion DRGs that CMS regrouped (FY2025 453-455 -> 426-428; 456-458 -> 523-525; 459-460 -> 447-448/450-451), kept
-# beside the episode DRGs because the Medicare files for data years 2023 and 2024 still count cases under them.
-PREDECESSOR_DRGS = tuple(str(d) for d in range(453, 461))
 # Provider Data Catalog measure ids -> the pin's measure names.
 QUALITY_MEASURES = {"Hybrid_HWR": "hybrid_hwr", "ISCMR": "iscmr"}
 
@@ -197,6 +198,13 @@ def cjrx(data):
     return _csv(CJRX_COLUMNS, [body[k] for k in sorted(body)]), {"rows": len(body)}, as_of
 
 
+def mup_drgs(price_rows):
+    """The DRGs the Medicare inpatient pins keep: every priced episode DRG (the price pin's rows, average rows aside)
+    and every retired DRG the build moves to a successor (pp_engine.team.episodes.REMAPS), since the data years still
+    count cases under those."""
+    return {r["drg"] for r in price_rows if r["average_row"] != "1"} | set(REMAPS)
+
+
 def _records(data, anchor, columns, label, encoding="utf-8-sig"):
     """Records from CSV bytes: parse.table on the header row starting `anchor`; `columns` maps key -> header text."""
     return table(rows(data.decode(encoding), ","), anchor, columns, label)
@@ -305,7 +313,7 @@ def build_all(raw_dir, retrieved):
           spotCheck={"category": cat, "drg": drg, "division": div, "price": spot[0]["price"]})
     text, counts, as_of = cjrx(read("cjrx-participants"))
     entry("cjrx-participants", text, source("cjrx-participants"), asOf=as_of, counts=counts)
-    wanted = {r["drg"] for r in price_rows if r["drg"] != ALL_ROWS} | set(PREDECESSOR_DRGS)
+    wanted = mup_drgs(price_rows)
     for pin_id in MUP_PINS:
         text, counts = mup(read(pin_id), wanted)
         entry(pin_id, text, source(pin_id), counts=counts)
@@ -320,12 +328,28 @@ def main(argv):
     parser = argparse.ArgumentParser(prog="run.py derive-team", description="Derive the TEAM source pins from CMS's raw files.")
     parser.add_argument("raw_dir", help=f"the directory holding the raw files and {SIDECAR}")
     parser.add_argument("--retrieved", required=True, help="the day the raw files were downloaded (YYYY-MM-DD)")
+    parser.add_argument("--repin", action="store_true",
+                        help="write pins whose derived bytes differ from the committed manifest entries")
     args = parser.parse_args(argv)
-    built = build_all(args.raw_dir, args.retrieved)
-    manifest = [e for e in read_manifest() if e["id"] not in built]
-    manifest.extend(entry for _, entry in built.values())
-    write_manifest(manifest)
+    return write_pins(build_all(args.raw_dir, args.retrieved), args.repin)
+
+
+def write_pins(built, repin=False, root=PINNED_DIR):
+    """Write `built` ({pin id: (CSV bytes, manifest entry)}) to the manifest and the pinned files under `root`. Each
+    pin's new bytes are checked against the committed manifest entry's SHA-256 first: a pin that differs, or that the
+    manifest lacks, is refused by name and nothing at all is written, unless `repin`. Entries are replaced in place
+    (a new pin is appended). Returns the exit code: 0 written, 1 refused."""
+    manifest = read_manifest(root)
+    committed = {e["id"]: e.get("sha256") for e in manifest}
+    changed = [pin_id for pin_id, (_, entry) in built.items() if committed.get(pin_id) != entry["sha256"]]
+    if changed and not repin:
+        print(f"derive-team: {', '.join(changed)}: the derived bytes differ from the committed manifest entry; nothing "
+              "written. Check the change, then run again with --repin to re-pin.")
+        return 1
+    entries = {pin_id: entry for pin_id, (_, entry) in built.items()}
+    manifest = [entries.pop(e["id"], e) for e in manifest] + list(entries.values())
+    write_manifest(manifest, root)
     codes = 0
     for data, entry in built.values():
-        codes |= write_derived_pin(entry, data)
+        codes |= write_derived_pin(entry, data, root=root)
     return codes

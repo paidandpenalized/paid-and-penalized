@@ -2,18 +2,22 @@
 and the derivation functions behave on small synthetic inputs (no hospital names; the raw files are never in git).
 
 To check the price pin against the raw workbook too, set PP_TEAM_PRICES_XLSX to the workbook's path."""
+import contextlib
 import csv
+import hashlib
 import io
 import os
+import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
+from unittest import mock
 
 from pp_engine import xlsx
 from pp_engine.parse import SchemaError
+from pp_engine.team import episodes
 from pp_engine.tests.test_xlsx import make_xlsx
-from pp_pipeline.emit_team import pin_rows
-from pp_pipeline.files import manifest_entry
+from pp_pipeline.files import manifest_entry, read_manifest, read_pinned_csv as pin_rows, write_manifest
 from pp_pipeline.refresh_sources import MAX_PIN
 from pp_pipeline.team import derive
 
@@ -86,7 +90,8 @@ class OtherPins(unittest.TestCase):
 
     def test_mup_pins_hold_only_the_episode_and_predecessor_drgs(self):
         team = {r["drg"] for r in pin_rows("team-prices") if r["drg"] != derive.ALL_ROWS}
-        allowed = team | set(derive.PREDECESSOR_DRGS)
+        allowed = derive.mup_drgs(pin_rows("team-prices"))
+        self.assertLessEqual(team, allowed)
         for pin_id in ("team-mup-dy2023", "team-mup-dy2024"):
             with self.subTest(pin_id):
                 rows = pin_rows(pin_id)
@@ -150,9 +155,70 @@ class Derivations(unittest.TestCase):
                                                  "990001,iscmr,50.1,2023-07-01,2025-06-30"])
         self.assertEqual(counts["byMeasure"], {"iscmr": 1, "hybrid_hwr": 1})
 
+    def test_the_kept_drgs_are_the_priced_ones_and_every_retired_one_the_build_remaps(self):
+        rows = [{"drg": "469", "average_row": "0"}, {"drg": derive.ALL_ROWS, "average_row": "1"}]
+        self.assertEqual(derive.mup_drgs(rows), {"469"} | set(episodes.REMAPS))
+        with mock.patch.dict(episodes.REMAPS, {"999": {"469": 1}}):  # a new remap is kept without a second list
+            self.assertIn("999", derive.mup_drgs(rows))
+
     def test_a_missing_column_is_refused(self):
         with self.assertRaises(SchemaError):
             derive.mup(b"Rndrng_Prvdr_CCN,x\n1,2\n", {"231"})
+
+
+class Repin(unittest.TestCase):
+    """derive-team writes a pin only when its new bytes are the committed manifest entry's, unless --repin."""
+    OLD, NEW = b"ccn\n990001\n", b"ccn\n990002\n"
+
+    def entry(self, data, **extra):
+        return {"id": "synthetic-team", "path": "team-py2/synthetic.csv", "bytes": len(data),
+                "sha256": hashlib.sha256(data).hexdigest(), **extra}
+
+    def run_write(self, root, data, repin, **extra):
+        printed = io.StringIO()
+        with contextlib.redirect_stdout(printed):
+            code = derive.write_pins({"synthetic-team": (data, self.entry(data, **extra))}, repin, root)
+        return code, printed.getvalue()
+
+    def committed(self, root):
+        write_manifest([{"id": "other", "path": "o.csv"}, self.entry(self.OLD, retrieved="2026-01-01")], root)
+        (Path(root) / "team-py2").mkdir()
+        (Path(root) / "team-py2" / "synthetic.csv").write_bytes(self.OLD)
+
+    def test_a_changed_derivation_is_refused_and_named(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.committed(root)
+            before = read_manifest(root)
+            code, printed = self.run_write(root, self.NEW, repin=False)
+            self.assertEqual(code, 1)
+            self.assertIn("synthetic-team", printed)
+            self.assertIn("--repin", printed)
+            self.assertEqual(read_manifest(root), before)
+            self.assertEqual((Path(root) / "team-py2" / "synthetic.csv").read_bytes(), self.OLD)
+
+    def test_repin_writes_the_new_bytes_and_entry_in_place(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.committed(root)
+            code, _ = self.run_write(root, self.NEW, repin=True)
+            self.assertEqual(code, 0)
+            manifest = read_manifest(root)
+            self.assertEqual([e["id"] for e in manifest], ["other", "synthetic-team"])
+            self.assertEqual(manifest[1]["sha256"], hashlib.sha256(self.NEW).hexdigest())
+            self.assertEqual((Path(root) / "team-py2" / "synthetic.csv").read_bytes(), self.NEW)
+
+    def test_the_same_bytes_need_no_flag(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.committed(root)
+            code, _ = self.run_write(root, self.OLD, repin=False, retrieved="2026-02-01")
+            self.assertEqual(code, 0)
+            self.assertEqual(read_manifest(root)[1]["retrieved"], "2026-02-01")
+
+    def test_a_pin_the_manifest_lacks_needs_the_flag(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_manifest([], root)
+            self.assertEqual(self.run_write(root, self.NEW, repin=False)[0], 1)
+            self.assertEqual(read_manifest(root), [])
+            self.assertEqual(self.run_write(root, self.NEW, repin=True)[0], 0)
 
 
 if __name__ == "__main__":

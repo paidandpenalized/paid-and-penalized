@@ -40,9 +40,9 @@ CATEGORY_PRICE_PLACES = 6  # a weighted mean, kept fine enough that n x price su
 
 
 def price_tables(rows):
-    """(prices {drg: {division: price}}, category averages {category: {division: price}}, {drg: category}) from the
-    price pin's rows. CMS's per-division category-average rows (average_row 1) are the averages; a category without
-    them gets the plain mean of its DRG prices in each division, flagged `derived: True`."""
+    """(prices {drg: {division: price}}, category averages {category: {division: price}}, {drg: category}, derived)
+    from the price pin's rows. CMS's per-division category-average rows (average_row 1) are the averages; a category
+    without them gets the plain mean of its DRG prices in each division and is listed in `derived` (sorted)."""
     prices, avg, drg_category = defaultdict(dict), defaultdict(dict), {}
     for r in rows:
         price = round(float(r["price"]), PRICE_PLACES)
@@ -52,15 +52,15 @@ def price_tables(rows):
         if drg_category.setdefault(r["drg"], r["category"]) != r["category"]:
             raise ValueError("price pin: a DRG sits in two categories")
         prices[r["drg"]][r["division"]] = price
-    for cat in sorted(set(drg_category.values()) - set(avg)):
+    derived = sorted(set(drg_category.values()) - set(avg))
+    for cat in derived:
         by_div = defaultdict(list)
         for drg, c in drg_category.items():
             if c == cat:
                 for div, p in prices[drg].items():
                     by_div[div].append(p)
         avg[cat] = {div: round(sum(ps) / len(ps), PRICE_PLACES) for div, ps in sorted(by_div.items())}
-        avg[cat]["derived"] = True
-    return dict(prices), dict(avg), drg_category
+    return dict(prices), dict(avg), drg_category, derived
 
 
 def source_drgs(drg_category):

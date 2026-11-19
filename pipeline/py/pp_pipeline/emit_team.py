@@ -11,16 +11,14 @@ percentiles, the default hospital, a status for every master hospital, and the l
 `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs (the repo's emitted files sit at
 <site>/fy<YYYY>/). A new pin or methods version in the hospital master makes this file stale (`require_current`).
 """
-import csv
-import io
 import sys
 from datetime import datetime, timezone
 
 from pp_engine.contract import envelope
-from pp_engine.parse import rows, table
+from pp_engine.parse import SchemaError, rows, table
 from pp_engine.team import build
 from pp_pipeline import emit_hospital
-from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, read_pinned_bytes,
+from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, read_pinned_csv,
                                read_zip_text_cp1252, require_current, write_emitted)
 
 SCHEMA_VERSION, METHODS_VERSION = 1, 1
@@ -38,11 +36,11 @@ class Inputs:
 
     def __init__(self, manifest):
         self.manifest = manifest
-        self.participants = pin_rows(PARTICIPANTS)
-        self.price_rows = pin_rows(PRICES)
-        self.cjrx = {r["ccn"] for r in pin_rows(CJRX)}
+        self.participants = read_pinned_csv(PARTICIPANTS)
+        self.price_rows = read_pinned_csv(PRICES)
+        self.cjrx = {r["ccn"] for r in read_pinned_csv(CJRX)}
         self.prior, self.latest = (_mup(pin) for pin in MUP)
-        self.quality = _quality(pin_rows(QUALITY))
+        self.quality = _quality(read_pinned_csv(QUALITY))
         self.master = read_json(emit_hospital.committed_path())
         require_current(self.master, manifest, "the hospital master")
         self.hospitals = self.master["hospitals"]
@@ -50,15 +48,10 @@ class Inputs:
         self.shapes = emit_hospital.counties()
 
 
-def pin_rows(pin_id):
-    """A CSV pin's rows as dicts."""
-    return list(csv.DictReader(io.StringIO(read_pinned_bytes(pin_id).decode("utf-8"))))
-
-
 def _mup(pin_id):
     """{ccn: {drg: discharges}} from a Medicare inpatient pin."""
     out = {}
-    for r in pin_rows(pin_id):
+    for r in read_pinned_csv(pin_id):
         out.setdefault(r["ccn"], {})[r["drg"]] = int(r["discharges"])
     return out
 
@@ -110,7 +103,7 @@ def main():
     try:
         fresh, notes = build_with_notes(now)
         out = write_emitted(path, fresh, SCHEMA)
-    except (ValueError, KeyError, OSError) as err:
+    except (ValueError, KeyError, OSError, SchemaError) as err:
         print(f"team: not written: {err}", file=sys.stderr)
         return 1
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['participants'])} participants, {len(out['status'])} "

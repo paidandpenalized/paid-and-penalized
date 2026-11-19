@@ -544,7 +544,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   master. Method: `pp_engine/team/`.
 - Prices: CMS's preliminary PY2 target prices, rounded to the cent, by MS-DRG and census division (the territories are
   priced with division 9, as CMS's workbook does). Category averages are CMS's own rows; spinal fusion has none, so its
-  average is the plain mean of its DRG prices in each division, flagged `derived`.
+  average is the plain mean of its DRG prices in each division, and `categoryAvgDerived` lists it.
 - Episodes: a participant's Medicare fee-for-service inpatient discharges under each category's DRGs in the latest
   data year (CMS's Medicare Inpatient Hospitals by Provider and Service file, data year 2024). Discharges under DRGs the
   FY2027 grouper no longer has move to their successors: 453-455 to 426-428 and 456-458 to the new 523-525, all of
@@ -559,8 +559,8 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Quality: Hybrid hospital-wide readmission and surgical-complication mortality (ISCMR) values from the Provider Data
   Catalog. A participant's percentile per measure is the share of the other hospitals in the cohort with a worse
   (higher) value or the same value, floored to a whole percent; ties take the higher percentile (§ 512.547(b)(1)(i)(A)).
-  The cohort, an approximation of CMS's, is every IPPS hospital in the master with a value. No value: null (the
-  calculator then uses 50, § 512.547(b)(1)(i)(D)).
+  The cohort, an approximation of CMS's, is every IPPS hospital in the master with a value. No value, or no other
+  hospital in the cohort to rank against: null (the calculator then uses 50, § 512.547(b)(1)(i)(D)).
 - Track 2 flags: SCH, MDH and EACH from the master's special statuses, and `rural` when the impact file does not class
   the hospital urban. Safety-net status is not public, so an empty list does not rule Track 2 out.
 - Default hospital: the lower median, by target then CCN, of mandatory participants active in PY2 with no Track 2 flag
@@ -572,14 +572,23 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   gives a large metro's metropolitan division in place of its CBSA and leaves micropolitan counties blank. (The master's
   own `cbsa` is not used; it follows newer delineations.) A hospital's county is the master's FIPS code, else its county
   name matched in the crosswalk, else the county shape holding its map point, else the county of the other hospitals in
-  its city. Off the list: `outside` (county in no selected area), `in_area_kind` (not an acute IPPS hospital),
+  its city. Off the list: `outside` (county in no selected area), `in_area_kind` (a kind the master marks not paid
+  under the IPPS), `in_area_other` (acute or of unknown kind, yet not IPPS-paid: closed, converted and the like),
   `ihs` (Indian Health Service or tribal), `unlisted` (acute, IPPS, in an area, yet not on the list), and
-  `area_unknown` (county not placed, in a state that has a selected area; a state with none makes it `outside`). A
-  hospital on the CJR-X list carries `cjrx` around its reason. Residual: a county of a selected micropolitan CBSA
-  where no mandatory participant sits, and a metropolitan division's county in a division with no participant, are
-  called `outside` though they may lie in a selected area (the crosswalk cannot place them); this changes only the
-  reason given for a hospital not on the list, never whether a hospital is in TEAM.
+  `area_unknown`. A hospital on the CJR-X list carries `cjrx` around its reason, or around `ended` for one that left
+  TEAM; a current participant on the CJR-X list fails the build. `area_unknown` is a county not placed, in a state that
+  has a selected area (a state with none makes it `outside`), or a placed county the crosswalk cannot settle: that
+  reaches only the divisions and micropolitan counties where a mandatory participant sits, so a selected CBSA the
+  crosswalk has no code for (divided, or micropolitan) may hold other counties it cannot name. A county outside the
+  reached area is `area_unknown`, not `outside`, when its code is a metropolitan division's (OMB division codes end in
+  4) and its state is one a selected divided CBSA's title names, or when its code is blank (micropolitan or rural:
+  the crosswalk does not say which) and its state is one a selected micropolitan CBSA's title names. No pinned file maps
+  a division to its CBSA or a blank county to a micropolitan one, so these stay unknown; the lookup sends the reader
+  to CMS's list. This changes only the reason given for a hospital not on the list, never whether a hospital is in
+  TEAM.
 - The list as of 2026-08-18 has 721 CCNs; the master has 720 of them (`a4.teamMissing`). Across the 5,482 master
-  hospitals: in 715, in27 2, ended 3, maryland 56, outside 2,147, in_area_kind 329, ihs 4, unlisted 7, area_unknown 6
-  (Connecticut hospitals under an old county name; the crosswalk has the state's planning regions), cjrx 2,213
-  (outside 2,204, in_area_kind 5, ihs 2, unlisted 2).
+  hospitals: in 715, in27 2, ended 3, maryland 56, outside 1,092, in_area_kind 326, in_area_other 3, ihs 4,
+  unlisted 7, area_unknown 1,061 (6 unplaced Connecticut hospitals under an old county name, the crosswalk having the
+  state's planning regions; the rest placed counties the crosswalk cannot settle), cjrx 2,213 (outside 1,659,
+  area_unknown 545, in_area_other 5, ihs 2, unlisted 2). Of the 1,600 placed-but-unsettled hospitals, 1,471 sit in
+  blank counties and 129 in division counties.

@@ -4,7 +4,7 @@ Isolated mode (-I) keeps the working directory and user site-packages off sys.pa
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
 the dollar estimates, the HCRIS layer, the Medicaid scenarios, then the TEAM file), `backtest` (prints the dollar estimates' back-test
 against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`,
-`derive-team <raw directory> --retrieved <date>` (the TEAM source pins; see pp_pipeline/team/derive.py), `extract-hai <zip or csv> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
+`derive-team <raw directory> --retrieved <date> [--repin]` (the TEAM source pins; see pp_pipeline/team/derive.py), `extract-hai <zip or csv> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
 pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid work-requirement scenarios; see
 pp_pipeline/emit_medicaid.py), `medicaid conformance` (the JS port's cases; see pp_pipeline/medicaid/conformance.py),
 `hcris <command> ...` (the HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see

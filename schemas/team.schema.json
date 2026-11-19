@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "team.schema.json",
   "title": "TEAM (Transforming Episode Accountability Model, 42 CFR 512 subpart E): performance year 2 prices, participants' episode estimates and a status for every hospital",
-  "description": "ESTIMATED from public files, not CMS's own attribution (method: docs/METHODS-LOG.md, `team`). `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs. Prices are CMS's preliminary PY2 target prices in standardized dollars, to the cent, by MS-DRG and census division (1-9; the territories are priced with division 9). A participant's episodes are Medicare fee-for-service inpatient discharges from the latest data year (`meta.mupYears`), so they are a floor; its `target` is the sum over categories of n x price, to the cent. `status` holds, for every hospital in the hospital master, [code, arg]: in [participation], in27 [start date], ended [end date], maryland, outside [master kind], in_area_kind [master kind], ihs, unlisted, area_unknown, or cjrx [[code, arg]] (on the CJR-X list; the inner pair is the reason the hospital is not in TEAM). The codes are `$defs/statusCode`.",
+  "description": "ESTIMATED from public files, not CMS's own attribution (method: docs/METHODS-LOG.md, `team`). `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs. Prices are CMS's preliminary PY2 target prices in standardized dollars, to the cent, by MS-DRG and census division (1-9; the territories are priced with division 9). A participant's episodes are Medicare fee-for-service inpatient discharges from the latest data year (`meta.mupYears`), so they are a floor; its `target` is the sum over categories of n x price, to the cent. `status` holds, for every hospital in the hospital master, [code, arg]: in [participation], in27 [start date], ended [end date], maryland, outside [master kind], in_area_kind [master kind: one not paid under the IPPS], in_area_other [master kind: acute or unknown, yet not IPPS-paid], ihs, unlisted, area_unknown (the county, or whether a selected area reaches it, could not be placed), or cjrx [[code, arg]] (on the CJR-X list; the inner pair is `ended` or the reason the hospital is not in TEAM). The codes are `$defs/statusCode`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,6 +15,7 @@
     "meta",
     "prices",
     "categoryAvg",
+    "categoryAvgDerived",
     "drgCategory",
     "participants",
     "status",
@@ -39,6 +40,7 @@
         "maryland",
         "outside",
         "in_area_kind",
+        "in_area_other",
         "ihs",
         "unlisted",
         "area_unknown",
@@ -46,7 +48,7 @@
       ]
     },
     "measure": {
-      "description": "The hospital's public value (lower is better) and its percentile (0-100, ties take the higher; 42 CFR 512.547(b)(1)(i)(A)) among IPPS hospitals with a value; null when the hospital has no public value (the calculator then uses 50, § 512.547(b)(1)(i)(D)).",
+      "description": "The hospital's public value (lower is better) and its percentile (0-100, ties take the higher; 42 CFR 512.547(b)(1)(i)(A)) among IPPS hospitals with a value; null when the hospital has no public value or no other hospital in the cohort to rank against (the calculator then uses 50, § 512.547(b)(1)(i)(D)).",
       "type": [
         "object",
         "null"
@@ -108,15 +110,37 @@
       ]
     },
     "categoryAverage": {
-      "description": "One category's {division: price}, plus `derived: true` when CMS gave no average row for it.",
+      "description": "One category's {division: price}, divisions 1-9.",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "derived": {
-          "const": true
+        "1": {
+          "$ref": "#/$defs/price"
+        },
+        "2": {
+          "$ref": "#/$defs/price"
+        },
+        "3": {
+          "$ref": "#/$defs/price"
+        },
+        "4": {
+          "$ref": "#/$defs/price"
+        },
+        "5": {
+          "$ref": "#/$defs/price"
+        },
+        "6": {
+          "$ref": "#/$defs/price"
+        },
+        "7": {
+          "$ref": "#/$defs/price"
+        },
+        "8": {
+          "$ref": "#/$defs/price"
+        },
+        "9": {
+          "$ref": "#/$defs/price"
         }
-      },
-      "additionalProperties": {
-        "$ref": "#/$defs/price"
       }
     }
   },
@@ -189,7 +213,7 @@
       }
     },
     "categoryAvg": {
-      "description": "{category: {division: price}}: CMS's category-average rows. A category CMS gives none for (spinal fusion) has the plain mean of its DRG prices in each division and `derived: true`.",
+      "description": "{category: {division: price}}: CMS's category-average rows; a category CMS gives none for has the plain mean of its DRG prices in each division and is listed in `categoryAvgDerived`.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -215,6 +239,13 @@
         "BOWEL": {
           "$ref": "#/$defs/categoryAverage"
         }
+      }
+    },
+    "categoryAvgDerived": {
+      "description": "The categories whose `categoryAvg` is computed here (the plain mean of their DRG prices), not CMS's own rows (spinal fusion).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/categoryCode"
       }
     },
     "drgCategory": {

@@ -3,9 +3,10 @@
 TEAM is mandatory for acute care hospitals paid under the IPPS in the core-based statistical areas (CBSAs) CMS selected
 (42 CFR 512.515), except Maryland's and Indian Health Service or tribal hospitals; others joined voluntarily. CMS
 publishes the list, not the reasons, so a hospital off the list is explained here from public data, rule by rule:
-Maryland; its county outside every selected area; in an area but not an acute IPPS hospital; IHS or tribal; and
-otherwise unlisted (CMS's list leaves out a hospital the rules would include; it may have opened, closed or converted
-since). A hospital on the CJR-X list (Medicare's comprehensive joint replacement expanded model) carries that too.
+Maryland; its county outside every selected area (or, where the crosswalk cannot say, unknown); in an area but not an
+acute IPPS hospital; IHS or tribal; and otherwise unlisted (CMS's list leaves out a hospital the rules would include; it
+may have opened, closed or converted since). A hospital on the CJR-X list (Medicare's comprehensive joint replacement
+expanded model) carries that too, around its reason or around `ended` for one that left TEAM.
 
 Status codes, each [code, arg]:
   in [participation]     on the list and active in performance year 2 ('mandatory' or 'voluntary')
@@ -13,15 +14,20 @@ Status codes, each [code, arg]:
   ended [end]            on the list, participation ended before performance year 2 (ISO date)
   maryland               Maryland hospital (paid under the state's all-payer model)
   outside [kind]         county in no selected area (the hospital master's kind)
-  in_area_kind [kind]    in a selected area, but not an acute care hospital paid under the IPPS
+  in_area_kind [kind]    in a selected area, of a kind the master marks not paid under the IPPS
+  in_area_other [kind]   in a selected area, acute or of unknown kind, yet not IPPS-paid (closed, converted and the like)
   ihs                    in a selected area, Indian Health Service or tribal
   unlisted               in a selected area, acute and IPPS, yet not on the list
-  area_unknown           its county could not be placed, in a state that has a selected area
-  cjrx [[code, arg]]     on the CJR-X list; the inner pair is the reason above
+  area_unknown           its county could not be placed, in a state that has a selected area; or it was placed, but
+                         the crosswalk cannot say whether a selected area reaches it (Area.doubtful)
+  cjrx [[code, arg]]     on the CJR-X list; the inner pair is `ended` or one of the reasons above (a current TEAM
+                         participant on the CJR-X list contradicts the rules: the build fails)
 """
+import re
 from collections import defaultdict, namedtuple
 
 from pp_engine import geo
+from pp_engine.master import NOT_IPPS
 from pp_engine.parse import MARYLAND
 
 # Performance year 2 is calendar 2027 (§ 512.505, "performance year"); the file describes it.
@@ -29,8 +35,12 @@ PY2_START = "2027-01-01"
 TRIBAL = "Tribal"  # Care Compare's ownership value for a tribally owned hospital (the master's ownDetail)
 STATE_FIPS_PREFIX = {abbr: fips for fips, abbr in geo.STATE_FIPS.items()}
 
-# The selected areas as counties: `counties`, FIPS codes in a selected CBSA; `states`, the states holding any of them.
-Area = namedtuple("Area", "counties states")
+# OMB codes a metropolitan division with a final 4 and a CBSA with a final 0 (every code on the TEAM list ends in 0; the
+# crosswalk's division codes all end in 4), so a crosswalk code ending in 4 is a division of some larger CBSA.
+DIVISION_FINAL_DIGIT = "4"
+# The selected areas as counties: `counties`, FIPS codes in a selected CBSA; `states`, the states holding any of them;
+# `doubtful`, counties outside `counties` that a selected CBSA may still reach (the crosswalk cannot place them).
+Area = namedtuple("Area", "counties states doubtful")
 
 
 def place_counties(hospitals, crosswalk, shapes):
@@ -84,13 +94,32 @@ def _point_county(h, shapes, in_crosswalk):
     return hits[0] if len(hits) == 1 else None
 
 
+def is_division(code):
+    return code.endswith(DIVISION_FINAL_DIGIT)
+
+
+def title_states(title):
+    """The states an OMB CBSA title names after its last comma ("City-City, ST-ST"); a title naming none raises."""
+    _, comma, tail = title.rpartition(", ")
+    states = set(tail.split("-"))
+    if not comma or not all(re.fullmatch("[A-Z]{2}", st) for st in states):
+        raise ValueError("participant list: a CBSA title names no states")
+    return states
+
+
 def selected_area(participants, crosswalk, placed, state_of):
     """The selected areas as counties. A selected CBSA is one that holds a mandatory participant (voluntary ones may
     sit anywhere). A county is in one when the crosswalk's CBSA code for it is a selected CBSA, when a mandatory
     participant sits in it, or when it shares its crosswalk code with a county where a mandatory participant sits:
     the crosswalk gives large metros' metropolitan divisions in place of their CBSA and leaves micropolitan counties
     blank. A code reached that way must belong to one selected CBSA only. `placed` is place_counties' map, `state_of`
-    {ccn: state}."""
+    {ccn: state}.
+
+    That reaches only the divisions and micropolitan counties where a participant sits. A selected CBSA the crosswalk
+    has no code for is divided (a participant's county carries a division code) or micropolitan (a participant's
+    county is blank), and its other counties cannot be placed: so a county outside the area is doubtful when its code
+    is a division's and it lies in a state a divided one's title names, or when its code is blank and it lies in a state
+    a micropolitan one's title names. (A selected CBSA none of whose participants is placed counts as both.)"""
     mandatory = [r for r in participants if r["participation"] == "mandatory"]
     selected = {r["cbsa"] for r in mandatory}
     code = {r["fips"]: r["cbsa"] for r in crosswalk}
@@ -110,7 +139,21 @@ def selected_area(participants, crosswalk, placed, state_of):
     state_by_fips = {r["fips"]: r["state"] for r in crosswalk}
     states = {state_by_fips[f] for f in counties if f in state_by_fips}
     states |= {state_of[r["ccn"]] for r in mandatory if r["ccn"] in state_of}
-    return Area(counties, states)
+    return Area(counties, states, _doubtful(mandatory, code, sites, parent, counties, state_by_fips))
+
+
+def _doubtful(mandatory, code, sites, parent, counties, state_by_fips):
+    """The counties outside `counties` a selected CBSA the crosswalk has no code for may reach (selected_area)."""
+    title = {r["cbsa"]: r["cbsa_name"] for r in mandatory}
+    open_ = set(title) - set(code.values())
+    divided = {c for cbsas in parent.values() for c in cbsas}
+    micro = {c for fips, cbsas in sites.items() if not code.get(fips) for c in cbsas} & open_
+
+    def named(cbsas):
+        return {st for c in cbsas for st in title_states(title[c])}
+    division_states, blank_states = named(open_ - micro), named(open_ - divided)
+    return {f for f, c in code.items() if f not in counties
+            and ((is_division(c) and state_by_fips[f] in division_states) or (not c and state_by_fips[f] in blank_states))}
 
 
 def listed_code(entry):
@@ -132,17 +175,20 @@ def reason_code(h, placed, area):
         # the Virgin Islands); elsewhere the rules cannot tell.
         return ["outside", h["kind"]] if h["state"] not in area.states else ["area_unknown", None]
     if fips not in area.counties:
-        return ["outside", h["kind"]]
+        return ["area_unknown", None] if fips in area.doubtful else ["outside", h["kind"]]
     if not (h["kind"] == "acute" and h["ipps"]):
-        return ["in_area_kind", h["kind"]]
+        return ["in_area_kind" if h["kind"] in NOT_IPPS else "in_area_other", h["kind"]]
     if "IHS" in h["types"] or h.get("ownDetail") == TRIBAL:
         return ["ihs", None]
     return ["unlisted", None]
 
 
 def status_of(h, listed, cjrx, placed, area):
-    """[code, arg] for master hospital `h`: `listed`, its TEAM list row or None; `cjrx`, the CJR-X CCNs."""
-    if listed is not None:
-        return listed_code(listed)
-    reason = reason_code(h, placed, area)
-    return ["cjrx", reason] if h["ccn"] in cjrx else reason
+    """[code, arg] for master hospital `h`: `listed`, its TEAM list row or None; `cjrx`, the CJR-X CCNs. A current
+    participant (`in`, `in27`) on the CJR-X list raises: the two lists contradict each other."""
+    code = listed_code(listed) if listed is not None else reason_code(h, placed, area)
+    if h["ccn"] not in cjrx:
+        return code
+    if code[0] in ("in", "in27"):
+        raise ValueError("a current TEAM participant is on the CJR-X list: the two lists contradict each other")
+    return ["cjrx", code]

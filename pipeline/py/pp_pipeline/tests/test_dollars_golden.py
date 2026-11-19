@@ -2,7 +2,6 @@
 pins, covers every hospital in the HACRP file once, passes its checks, and its headline counts agree with the HACRP
 site's own. Counts asserted here are facts of the pinned bytes (a re-pin moves them on purpose); no hospital is named."""
 import contextlib
-import csv
 import io
 import unittest
 from unittest import mock
@@ -15,7 +14,7 @@ from pp_pipeline import emit_dollars
 from pp_pipeline.emit_dollars import (HRRP_UNLISTED_MAX, SCHEMA, VBP_UNLISTED_MAX, build_from_pins, committed_path,
                                       enforce_caps, site_yes_count, unlisted_counts, yes_count)
 from pp_pipeline.emit_hospital import HACRP
-from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_bytes
+from pp_pipeline.files import EMITTED_DIR, load_schemas, read_json, read_pinned_csv
 from pp_pipeline import ipps_pins
 from pp_pipeline.ipps_pins import payment_inputs
 
@@ -36,7 +35,7 @@ def added_up(hospitals):
 
 def hacrp_file():
     """The HACRP pin's rows as CMS wrote them (read here with the csv module, apart from the emitter's reader)."""
-    return list(csv.DictReader(io.StringIO(read_pinned_bytes(HACRP).decode("utf-8"))))
+    return read_pinned_csv(HACRP)
 
 
 def scored(row):

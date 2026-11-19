@@ -63,14 +63,14 @@ def quality_tables(quality_values, hospitals):
 
 
 def participant_quality(ccn, quality_values, tables):
+    """{measure: {value, pct} or None}: None when the hospital has no public value, or when no other cohort hospital
+    leaves a percentile to compute (quality.percentile's None)."""
     out = {}
     for m in MEASURES:
         v = quality_values[m].get(ccn)
-        if v is None:
-            out[m] = None
-            continue
         cohort, pcts = tables[m]
-        out[m] = {"value": v, "pct": pcts[ccn] if ccn in pcts else quality.percentile(v, cohort, in_cohort=False)}
+        pct = None if v is None else pcts[ccn] if ccn in pcts else quality.percentile(v, cohort, in_cohort=False)
+        out[m] = None if pct is None else {"value": v, "pct": pct}
     return out
 
 
@@ -102,7 +102,7 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
     """(body, notes). `prior`, `latest`: the two data years' {ccn: {drg: discharges}}; `quality_values`:
     {measure: {ccn: value}}; `cjrx`: the CJR-X CCNs; `crosswalk`: [{fips, county, state, cbsa}]; `shapes`:
     geo.Counties or None."""
-    prices, avg, drg_category = episodes.price_tables(price_rows)
+    prices, avg, drg_category, derived = episodes.price_tables(price_rows)
     if set(avg) != set(episodes.CATEGORIES):
         raise ValueError("price pin: its categories are not the five TEAM categories")
     by_ccn = {h["ccn"]: h for h in hospitals}
@@ -117,6 +117,7 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
     body = {
         "prices": {d: dict(sorted(v.items())) for d, v in sorted(prices.items())},
         "categoryAvg": {c: avg[c] for c in episodes.CATEGORIES},
+        "categoryAvgDerived": [c for c in episodes.CATEGORIES if c in derived],
         "drgCategory": dict(sorted(drg_category.items())),
         "participants": records,
         "status": codes,

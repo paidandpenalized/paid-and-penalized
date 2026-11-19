@@ -61,6 +61,11 @@ def read_pinned_bytes(pin_id):
     return data
 
 
+def read_pinned_csv(pin_id):
+    """A UTF-8 CSV pin's rows as dicts keyed by its header (read_pinned_bytes checks it against the manifest first)."""
+    return list(csv.DictReader(io.StringIO(read_pinned_bytes(pin_id).decode("utf-8"))))
+
+
 def write_derived_pin(entry, data, note="", root=PINNED_DIR):
     """Write a derived extract (`data`, its bytes) to the pinned path its manifest `entry` names, only when its size
     and SHA-256 are the entry's. A mismatch writes nothing, so the committed pin stays as it was, and prints both, so
