@@ -155,15 +155,16 @@ for (const reduce of [false, true]) {
     await s.type('valley');
     const [row] = s.answer().rows;
     assert.equal(row.tag, FILE.words.yes);
-    assert.equal(row.href, `?h=${IN}#calc`, 'works without the script');
+    // CCNs are compared in place, so a failure prints none.
+    assert.ok(row.href === `?h=${IN}#calc`, 'the link works without the script');
     assert.equal(textOf(row.link), FILE.words.toCalc);
     let prevented = false;
     s.out.listeners.click({ target: row.link, button: 0, preventDefault: () => { prevented = true; } });
     assert.ok(prevented, 'the script takes the click');
-    assert.deepEqual(s.urls, [`?h=${IN}#calc`], 'the address carries ?h= and #calc');
+    assert.ok(s.urls.length === 1 && s.urls[0] === `?h=${IN}#calc`, 'the address carries ?h= and #calc');
     assert.equal(s.picks.length, 1);
     assert.equal(s.picks[0].type, 'team:pick');
-    assert.deepEqual(s.picks[0].detail, { ccn: IN }, 'team:pick carries the CCN');
+    assert.ok(Object.keys(s.picks[0].detail).join() === 'ccn' && s.picks[0].detail.ccn === IN, 'team:pick carries the CCN');
     assert.deepEqual(s.calc.scrolled, [{ behavior: reduce ? 'auto' : 'smooth', block: 'start' }], 'reduced motion honored');
     assert.equal(s.heading.tabIndex, -1);
     assert.deepEqual(s.heading.focused, { preventScroll: true }, 'the calculator\'s heading takes the focus');
@@ -187,7 +188,7 @@ test('no: the link is the hospital\'s page across the programs; a hospital with 
   await s.type('hills');
   const [row] = s.answer().rows;
   assert.equal(row.tag, FILE.words.no);
-  assert.equal(row.href, `${FILE.hub}${OUTSIDE.toLowerCase()}/`);
+  assert.ok(row.href === `${FILE.hub}${OUTSIDE.toLowerCase()}/`, 'the hospital\'s page across the programs');
   assert.equal(row.ccn, undefined, 'not a calculator link');
   assert.equal(textOf(row.link), FILE.words.toHub);
   assert.ok(row.line.startsWith('Example Hills Hospital, TN. '));
@@ -212,7 +213,8 @@ test('at most five rows, under a sentence that counts every match; one match and
   await s.type('twin hospital a');
   assert.equal(s.answer().sentence, FILE.words.countOne);
   await s.type('nothing like it');
-  assert.deepEqual(s.answer(), { sentence: FILE.words.empty, rows: [] });
+  assert.equal(s.answer().sentence, FILE.words.empty);
+  assert.equal(s.answer().rows.length, 0);
 });
 
 test('a few matches: the plain count', async (t) => {
@@ -229,10 +231,10 @@ test('Escape clears the box and the answer; an emptied box says nothing', async 
   s.input.listeners.keydown({ key: 'Escape', preventDefault: () => { prevented = true; } });
   assert.ok(prevented);
   assert.equal(s.input.value, '');
-  assert.deepEqual(s.out.children, []);
+  assert.equal(s.out.children.length, 0);
   await s.type('example');
   await s.type('   ');
-  assert.deepEqual(s.out.children, []);
+  assert.equal(s.out.children.length, 0);
 });
 
 test('names inserted as text, not HTML', async (t) => {
@@ -275,7 +277,8 @@ test('a codes file of another shape, or a status with no words, says the list di
     await t.test(JSON.stringify(Object.keys(codes)), async (st) => {
       const s = setUp(st, { files: { [SRC]: searchFile(ROWS), [CODES]: codes } });
       await s.type('valley');
-      assert.deepEqual(s.answer(), { sentence: FAILED, rows: [] });
+      assert.equal(s.answer().sentence, FAILED);
+      assert.equal(s.answer().rows.length, 0);
     });
   }
 });

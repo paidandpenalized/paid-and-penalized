@@ -197,9 +197,10 @@ for (const width of [1280, 390]) {
         assert.equal(await page.evaluate(() => document.activeElement.closest('.tm-res') !== null && document.activeElement.localName), 'a', 'the row\'s link is next in the tab order');
         await page.keyboard.press('Enter');
         const after = await page.evaluate(() => ({ search: location.search, hash: location.hash, focused: document.activeElement.id, picks: window.picks }));
-        assert.equal(after.search, `?h=${ccn}`, 'the address carries ?h=');
+        // Compared in place, so a failure prints no CCN.
+        assert.ok(after.search === `?h=${ccn}`, 'the address carries ?h= with the hospital');
         assert.equal(after.hash, '#calc');
-        assert.deepEqual(after.picks, [{ ccn }], 'team:pick heard with the CCN');
+        assert.ok(after.picks.length === 1 && after.picks[0].ccn === ccn, `team:pick heard once with the CCN (${after.picks.length} heard)`);
         assert.equal(after.focused, 'yours-h', 'the calculator\'s heading takes the focus');
         await assertQuiet(seen, 'TEAM Part 1\'s lookup');
       }));
