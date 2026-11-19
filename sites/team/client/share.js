@@ -47,7 +47,7 @@ function put(state, slot, name, value) {
   const path = name === null ? slot : [...slot, name];
   let at = state;
   for (const k of path.slice(0, -1)) at = at[k] ??= {};
-  at[path.at(-1)] = value;
+  at[path[path.length - 1]] = value;
 }
 
 // { state, rejected }: state holds only the keys that passed, as a partial state to merge over the page's defaults;

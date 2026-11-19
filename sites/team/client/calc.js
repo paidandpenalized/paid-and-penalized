@@ -1,0 +1,318 @@
+// Part 5 in the browser: the calculator the build drew (web/program/calc.js) comes alive. The default hospital's row is in
+// the page; every other participant's is in one hashed file (the section's data-src), fetched with the family search's
+// names (data-search) on the reader's first move toward another hospital: the picker's focus, "Show one at random", a
+// team:pick from Part 1's lookup, or a ?h= or shared link naming another hospital. Those are the only fetches, and nothing
+// the reader types leaves the browser: the state lives in the address's fragment (#team&…, client/share.js), written in
+// place (history.replaceState) once the reader pauses, and a copied link carries the reader's own numbers only when they
+// tick "include my numbers".
+//
+// Every change recomputes at once (calc-view.js calcView, the engine's arithmetic) and the page follows by text and
+// attributes: the view's markup is built from the kit's escaped template, and each element marked data-v (or input
+// marked data-in) takes its fresh twin's text and attributes; an input the reader is typing in keeps what they typed.
+// The payoff figure is redrawn once per frame, and the polite sentence for a screen reader once the reader pauses
+// (SETTLE_MS). A box that can't take what was typed goes back to its last good value and says so.
+import { fetchAsset } from '../../../web/client/fetch-asset.js';
+import { SETTLE_MS } from '../../../web/client/live-status.js';
+import { mountOmnibox } from '../../../web/client/omnibox.js';
+import { once } from '../../../web/client/once.js';
+import { buildIndex } from '../../../web/client/search.js';
+import { count, placeText } from '../../../web/render/format.js';
+import { isScenarioHash } from '../../../web/whatif/fragment.js';
+import { CALC_COLS, hospOf } from '../web/calc-data.js';
+import { fill, t } from '../web/calc-copy.js';
+import { calcMarkup, calcView, initialState } from '../web/calc-view.js';
+import { BOXES, addressOf, applyLink, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, startCcn, typeInto } from './calc-state.js';
+import { loadSearch } from './files.js';
+
+// How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
+const COPIED_MS = 2000;
+
+// The participants' file and the family search's, joined: { rows: Map ccn -> row, who: Map ccn -> { name, city, state },
+// meta }. Throws on a file of another shape.
+function joinFiles(calcFile, searchFile) {
+  if (String(calcFile?.cols) !== String(CALC_COLS) || !Array.isArray(calcFile.rows) || !calcFile.meta) throw new TypeError('calculator: not the participants\' file');
+  const at = (c) => searchFile.cols.indexOf(c);
+  const who = new Map(searchFile.rows.map((r) => [r[at('ccn')], { name: r[at('name')], city: r[at('city')], state: r[at('state')] }]));
+  return { rows: new Map(calcFile.rows.map((r) => [r[0], r])), who, meta: calcFile.meta };
+}
+
+// Each element's key in the drawn markup: its data-v or data-in.
+const keyOf = (el) => (el.dataset.v !== undefined ? `v:${el.dataset.v}` : `i:${el.dataset.in}`);
+const KEYED = '[data-v], [data-in]';
+const SKIP_ATTRS = new Set(['value', 'checked']);
+
+// old takes fresh's attributes (all but an input's value and checked state, which are its live state).
+function syncAttrs(old, fresh) {
+  for (const { name } of [...old.attributes]) if (!SKIP_ATTRS.has(name) && !fresh.hasAttribute(name)) old.removeAttribute(name);
+  for (const { name, value } of fresh.attributes) if (!SKIP_ATTRS.has(name) && old.getAttribute(name) !== value) old.setAttribute(name, value);
+}
+
+export function mountCalc(section) {
+  const body = section?.querySelector('[data-calc-body]');
+  const data = section?.querySelector('#tc-data');
+  if (!body || !data) return;
+  const first = JSON.parse(data.textContent);
+  const tpl = document.createElement('template');
+  const sayEl = section.querySelector('[data-calc-say]');
+  const banner = section.querySelector('[data-calc-banner]');
+  const msg = Object.assign(document.createElement('p'), { className: 'tc-msg' });
+  msg.setAttribute('role', 'status');
+
+  let meta = first.meta;
+  let hosp = hospOf(first.row, first.who);
+  let state = initialState(hosp);
+  let view = null;
+  let settle = 0;
+  let frame = 0;
+  let copiedTimer = 0;
+
+  const files = once(() => Promise.all([fetchAsset(section.dataset.src, 'calculator'), loadSearch(section.dataset.search)]).then(([c, s]) => joinFiles(c, s)));
+
+  // The parts only the script can work: shown once it runs (and again on each new hospital's markup).
+  const showControls = () => {
+    for (const el of body.querySelectorAll('[data-calc-copy], .tc-incl, [data-calc-open]')) el.hidden = false;
+  };
+
+  // The view's markup as nodes (the kit's escaped template, parsed).
+  const parsed = (markup) => {
+    tpl.innerHTML = markup.text;
+    return tpl.content;
+  };
+
+  // The figure, at most once a frame: the costliest part to draw.
+  const drawFigure = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      const box = body.querySelector('[data-v="fig"]');
+      if (box) box.replaceChildren(...parsed(view.fig()).childNodes);
+    });
+  };
+
+  // Every keyed element takes its fresh twin's text and attributes; force: inputs too, even the one being typed in.
+  const patch = (force = false) => {
+    const fresh = parsed(calcMarkup(view, { fig: false }));
+    const old = new Map([...body.querySelectorAll(KEYED)].map((el) => [keyOf(el), el]));
+    for (const el of fresh.querySelectorAll(KEYED)) {
+      const key = keyOf(el);
+      const now = old.get(key);
+      if (!now || key === 'v:fig') continue;
+      syncAttrs(now, el);
+      if (el.dataset.in !== undefined) {
+        if (now.type === 'checkbox' || now.type === 'radio') now.checked = el.hasAttribute('checked');
+        else if (force || now !== document.activeElement) now.value = el.getAttribute('value');
+      } else if (!el.firstElementChild) {
+        if (now.textContent !== el.textContent) now.textContent = el.textContent;
+      } else if (now.innerHTML !== el.innerHTML) {
+        now.replaceChildren(...el.childNodes);
+      }
+    }
+  };
+
+  const say = () => {
+    clearTimeout(settle);
+    settle = setTimeout(() => {
+      sayEl.textContent = view.result.say;
+      writeAddress();
+    }, SETTLE_MS);
+  };
+
+  const writeAddress = () => {
+    try {
+      history.replaceState(history.state, '', addressOf(location, state));
+    } catch {
+      // A browser that rate-limits replaceState drops this write; the next change writes again.
+    }
+  };
+
+  const nameIt = () => {
+    section.querySelector('[data-v="name"]').textContent = view.hosp.name;
+    section.querySelector('[data-v="where"]').textContent = view.hosp.where;
+  };
+
+  // The state changed: recompute now, follow by text and attributes, the figure next frame, the sentence and the
+  // address once the reader pauses.
+  const update = (next, { force = false } = {}) => {
+    state = next;
+    view = calcView({ hosp, state, team: meta });
+    patch(force);
+    drawFigure();
+    say();
+  };
+
+  // A new hospital: its whole calculator drawn afresh (the same markup the build draws for its default), the rest of the
+  // page told (Part 4's region follows), the address written.
+  const show = (h, next) => {
+    hosp = h;
+    state = next;
+    view = calcView({ hosp, state, team: meta });
+    body.replaceChildren(...parsed(calcMarkup(view)).childNodes);
+    showControls();
+    nameIt();
+    document.dispatchEvent(new CustomEvent('team:hospital', { detail: { ccn: hosp.ccn, division: hosp.division } }));
+  };
+
+  // Moves to the participant ccn from the file (a pick, a random draw, team:pick): its opening state, keeping the reader's
+  // spending and band, as they were comparing. Says so, and writes the address.
+  const load = async (ccn, { link = null } = {}) => {
+    let f;
+    try {
+      f = await files();
+    } catch {
+      sayEl.textContent = t('calcFailed');
+      return false;
+    }
+    const row = f.rows.get(ccn);
+    if (!row) return false;
+    meta = f.meta;
+    const h = hospOf(row, f.who.get(ccn));
+    const next = link ? applyLink(initialState(h), link) : { ...initialState(h), s: state.s, band: state.band, moved: state.moved };
+    show(h, next);
+    sayEl.textContent = fill('calcLoaded', { name: view.hosp.name });
+    if (!link) writeAddress();
+    return true;
+  };
+
+  // ---------- the reader's moves ----------
+
+  // A box that can't take what was typed: it goes back to its last good value, and the line under it says so.
+  const kept = (input) => {
+    const box = BOXES[input.dataset.in.split('.')[0]];
+    patch(true);
+    msg.textContent = fill('kept', { lo: count(box.lo), hi: count(box.hi), value: input.value });
+    input.closest('td, p, th')?.append(msg);
+  };
+
+  body.addEventListener('input', (e) => {
+    const input = e.target;
+    const key = input.dataset?.in;
+    if (!key) return;
+    msg.remove();
+    if (input.type === 'range') update(setSlider(state, Number(input.value)));
+    else if (input.type === 'text') {
+      // While typing, a number the box takes applies at once; anything else waits for the reader to finish (change).
+      const r = typeInto(state, hosp, key, input.value);
+      if (r.ok && r.state !== state && input.value.trim() !== '') update(r.state);
+    }
+  });
+  body.addEventListener('change', (e) => {
+    const input = e.target;
+    const key = input.dataset?.in;
+    if (!key) return;
+    if (input.type === 'radio') update(setTrack(state, Number(input.value)));
+    else if (input.type === 'checkbox') update(setLowVolume(state, key.split('.')[1], input.checked));
+    else if (input.type === 'text') {
+      const r = typeInto(state, hosp, key, input.value);
+      if (!r.ok) kept(input);
+      else update(r.state, { force: true });
+    }
+  });
+  body.addEventListener('click', (e) => {
+    const open = e.target.closest?.('[data-calc-open]');
+    if (open) {
+      const details = body.querySelector('#tc-q');
+      details.open = true;
+      details.querySelector('summary').focus();
+      return;
+    }
+    if (e.target.closest?.('[data-calc-copy]')) copyLink(e.target.closest('[data-calc-copy]'));
+  });
+
+  // "Copy a link": this page's address with the state's fragment, the reader's own numbers only when ticked. The clipboard
+  // is written, never read; where the browser refuses, the link shows, selected, to copy by hand.
+  async function copyLink(button) {
+    const includeMine = Boolean(body.querySelector('[data-calc-incl]')?.checked);
+    const url = `${location.origin}${location.pathname}${fragmentOf(state, { includeMine })}`;
+    const status = button.parentElement.querySelector('.tc-copied');
+    const shown = body.querySelector('[data-calc-link]');
+    clearTimeout(copiedTimer);
+    status.textContent = '';
+    try {
+      await navigator.clipboard.writeText(url);
+      status.textContent = t('copied');
+      copiedTimer = setTimeout(() => { status.textContent = ''; }, COPIED_MS);
+    } catch {
+      shown.textContent = url;
+      shown.hidden = false;
+      const range = document.createRange();
+      range.selectNodeContents(shown);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+      status.textContent = t('copyFailed');
+    }
+  }
+
+  // ---------- another hospital: the picker, "Show one at random", Part 1's lookup ----------
+
+  const form = section.querySelector('form.omni');
+  if (form) {
+    const entries = () => files().then((f) => [...f.rows.keys()].filter((ccn) => f.who.get(ccn)?.name).map((ccn) => {
+      const who = f.who.get(ccn);
+      return { type: 'hospital', key: ccn, label: who.name, sub: placeText(who), extra: [who.city, who.state].filter(Boolean).join(' '), href: ccn };
+    })).then(buildIndex);
+    const input = form.querySelector('input');
+    mountOmnibox(form, {
+      load: entries,
+      types: ['hospital'],
+      words: {
+        empty: t('calcPickEmpty'), kind: { hospital: t('calcPickKind') }, failed: t('calcFailed'), more: null,
+        count: (n) => (n === 1 ? t('calcPickCountOne') : fill('calcPickCount', { n: count(n) })),
+      },
+      open: (ccn) => {
+        input.value = '';
+        load(ccn);
+      },
+    });
+  }
+
+  const random = section.querySelector('[data-calc-random]');
+  random.hidden = false;
+  random.addEventListener('click', async () => {
+    let f;
+    try {
+      f = await files();
+    } catch {
+      sayEl.textContent = t('calcFailed');
+      return;
+    }
+    const pool = [...f.rows.keys()].map((ccn) => ({ ccn, state: f.who.get(ccn)?.state ?? null })).filter((r) => f.who.get(r.ccn)?.name);
+    const ccn = randomPick(pool, Math.random, hosp.ccn);
+    if (ccn) load(ccn);
+  });
+
+  // Part 1's lookup picked a hospital in TEAM (it scrolls here and focuses the Part's heading itself).
+  document.addEventListener('team:pick', (e) => {
+    const ccn = String(e.detail?.ccn ?? '');
+    if (ccn !== hosp.ccn) load(ccn);
+    else writeAddress();
+  });
+
+  // ---------- arrival: a ?h= or a shared link ----------
+
+  // The state a link (#team&…) carries, over the hospital it names (or the ?h=, or the default): a scenario someone made
+  // shows the banner, and the keys it couldn't use are named in it (as text).
+  async function arrive() {
+    const { hash, search } = location;
+    const linked = isScenarioHash(hash, 'team');
+    const link = linked ? readLink(hash) : null;
+    const wanted = startCcn({ search, hash, defaultCcn: hosp.ccn });
+    let moved = false;
+    if (wanted !== hosp.ccn) moved = await load(wanted, { link: link?.values ?? null });
+    if (!moved && link) update(applyLink(initialState(hosp), link.values), { force: true });
+    if (link) {
+      const rejected = section.querySelector('[data-calc-rejected]');
+      rejected.textContent = link.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
+      banner.hidden = !isScenario(state, hosp);
+      section.scrollIntoView({ block: 'start' });
+    }
+  }
+
+  view = calcView({ hosp, state, team: meta });
+  section.querySelector('.tc__nojs')?.remove();
+  showControls();
+  // A link pasted into this tab, or Back to one: the page reads it again. (The page's own writes fire no hashchange.)
+  window.addEventListener('hashchange', () => {
+    if (isScenarioHash(location.hash, 'team') && location.hash !== fragmentOf(state)) arrive();
+  });
+  if (isScenarioHash(location.hash, 'team') || startCcn({ search: location.search, hash: location.hash, defaultCcn: hosp.ccn }) !== hosp.ccn) arrive();
+}

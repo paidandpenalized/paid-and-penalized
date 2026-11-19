@@ -20,6 +20,7 @@ import { once } from '../../../web/client/once.js';
 import { buildIndex, search } from '../../../web/client/search.js';
 import { count, placeText } from '../../../web/render/format.js';
 import { LOOKUP_COLS } from '../web/lookup.js';
+import { loadSearch } from './files.js';
 
 // The rows listed at most (the design's: a short answer under the box, not a directory).
 export const SHOWN = 5;
@@ -98,7 +99,7 @@ export function mountLookup(mount, { wait = WAIT } = {}) {
   const status = mount?.querySelector('[aria-live]');
   const list = mount?.querySelector('.tm-look__list');
   if (!input || !status || !list) return;
-  const load = once(() => Promise.all([fetchAsset(mount.dataset.src, 'search'), fetchAsset(mount.dataset.codes, 'lookup')])
+  const load = once(() => Promise.all([loadSearch(mount.dataset.src), fetchAsset(mount.dataset.codes, 'lookup')])
     .then(([searchFile, codesFile]) => ({ ...lookupIndex(searchFile, codesFile), words: codesFile.words })));
   let timer = 0;
   const say = (sentence, rows = []) => {
