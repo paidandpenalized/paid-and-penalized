@@ -1674,7 +1674,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model",
     "retrieved": "2026-11-19",
-    "staged": true,
     "asOf": "2026-08-18",
     "counts": {
       "rows": 721,
@@ -1704,7 +1703,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model",
     "retrieved": "2026-11-19",
-    "staged": true,
     "asOf": "2026-11-04",
     "counts": {
       "rows": 324,
@@ -1733,7 +1731,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/cjr-x",
     "retrieved": "2026-11-19",
-    "staged": true,
     "asOf": "2026-09-30",
     "counts": {
       "rows": 2217
@@ -1755,7 +1752,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/medicare-inpatient-hospitals-by-provider-and-service",
     "retrieved": "2026-11-19",
-    "staged": true,
     "counts": {
       "rows": 13392
     }
@@ -1776,7 +1772,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/medicare-inpatient-hospitals-by-provider-and-service",
     "retrieved": "2026-11-19",
-    "staged": true,
     "counts": {
       "rows": 12923
     }
@@ -1804,7 +1799,6 @@
     "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
     "landingPage": "https://data.cms.gov/provider-data/dataset/632h-zaca",
     "retrieved": "2026-11-19",
-    "staged": true,
     "counts": {
       "byMeasure": {
         "hybrid_hwr": 4308,

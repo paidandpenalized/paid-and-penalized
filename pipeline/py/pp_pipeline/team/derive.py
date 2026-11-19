@@ -262,7 +262,6 @@ def build_all(raw_dir):
         src = SOURCES.get(pin_id, QUALITY_SOURCE)
         return {"id": pin_id, "title": src["title"], "path": PIN_PATHS[pin_id], "derivedFrom": derived_from,
                 "derivedBy": DERIVED_BY, "landingPage": src["landingPage"], "retrieved": RETRIEVED,
-                "staged": True,  # pinned ahead of the TEAM emitter and page that will read it; they drop this when they do
                 **extra}
 
     text, counts, as_of = participants(raw[PARTICIPANTS_FILE].read_bytes())
