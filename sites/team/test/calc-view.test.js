@@ -60,6 +60,20 @@ test('the default hospital\'s server render equals the client\'s first render', 
   assert.ok(section.includes('<a href="/team/methods/#band">how it was counted is in Methods</a>'), 'the "why?" links its method');
 });
 
+// A phone hides the table's head (styles.css), so each row's boxes and results carry their columns' names, from the
+// same words as the head, hidden from screen readers (each box's own label names it). Five per row: three boxes, the
+// low-volume box's words, and the results' line.
+test('each row carries its columns\' names for a phone, from the head\'s words, hidden from screen readers', () => {
+  const markup = calcMarkup(viewOf(deflt), { fig: false }).text;
+  const rows = [...markup.matchAll(/<tr><th scope="row">[\s\S]*?<\/tr>/g)].map((m) => m[0]).filter((r) => r.includes('data-in="n.'));
+  assert.equal(rows.length, CATEGORIES.length);
+  for (const row of rows) {
+    const labels = [...row.matchAll(/<span class="tc-cl[^"]*" aria-hidden="true">([^<]*)<\/span>/g)].map((m) => m[1].trim());
+    assert.deepEqual(labels, [word('colYear'), word('colPrice'), word('colSpend'), labels[3], word('colTarget'), `· ${word('colResultPhone')}`]);
+    assert.ok(/^Fewer than \d+ baseline episodes$/.test(labels[3]), 'the low-volume box\'s words');
+  }
+});
+
 test('typing a number marks it "your number" and the tag reads "includes your numbers"', () => {
   const before = viewOf(deflt);
   assert.ok(!before.tags.mine && before.tags.text === word('tagPublic'));

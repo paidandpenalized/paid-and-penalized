@@ -17,7 +17,11 @@ const signed = (x) => money(x, { sign: true });
 // A spending level's label: "on target", or the share over (+) or under (−) it.
 const spendLabel = (s) => (s === 0 ? t('payoffOn') : pct(s, 0, { sign: true }));
 
-// The ledger, line by line: { op, label, note, value } for each, the last one the result.
+// A signed line's tone, by its amount's sign: 'gain' (paid), 'loss' (repaid or taken off), null at zero.
+const toneOf = (x) => (x > 0 ? 'gain' : x < 0 ? 'loss' : null);
+
+// The ledger, line by line: { op, label, note, value, tone } for each, the last one the result. tone: a signed line's
+// (styles.css sets it in Figures 2 and 3's inks), null for the target, the spending and the limits.
 export function ledgerLines() {
   const r = reconcile(INPUT);
   const spend = EXAMPLE.target * (1 + EXAMPLE.spend);
@@ -27,16 +31,16 @@ export function ledgerLines() {
   return [
     { op: '', label: t('ledgerTarget'), note: t('ledgerTargetNote'), value: money(r.target) },
     { op: '−', label: t('ledgerSpend'), note: fill('ledgerSpendNote', { days: String(EPISODE_DAYS) }), value: money(spend) },
-    { op: '=', label: t('ledgerRaw'), note: null, value: signed(r.raw) },
-    { op: '±', label: t('ledgerQuality'), note: fill('ledgerQualityNote', { cqs: String(EXAMPLE.cqs), keep: pct(r.quality / r.raw, 0), track }), value: signed(r.qadj) },
+    { op: '=', label: t('ledgerRaw'), note: null, value: signed(r.raw), tone: toneOf(r.raw) },
+    { op: '±', label: t('ledgerQuality'), note: fill('ledgerQualityNote', { cqs: String(EXAMPLE.cqs), keep: pct(r.quality / r.raw, 0), track }), value: signed(r.qadj), tone: toneOf(r.qadj) },
     { op: '', label: fill('ledgerLimit', { track }), note: fill('ledgerLimitNote', { limit: `±${pct(limitShare, 0)}` }), value: limits },
-    { op: '=', label: t(r.result >= 0 ? 'ledgerPaid' : 'ledgerOwed'), note: null, value: signed(r.result), total: true },
+    { op: '=', label: t(r.result >= 0 ? 'ledgerPaid' : 'ledgerOwed'), note: null, value: signed(r.result), tone: toneOf(r.result), total: true },
   ];
 }
 
 const ledger = () => html`<section class="tm-ledger" aria-labelledby="ledger-h">
 <h3 class="vh" id="ledger-h">${t('ledgerLabel')}</h3>
-<ol class="tm-ledger__rows" role="list">${ledgerLines().map((l, i) => html`<li class="tm-ledger__row${l.total ? ' tm-ledger__row--total' : ''}"><span class="tm-ledger__no">${String(i + 1)}</span><span class="tm-ledger__k"><span class="tm-ledger__label">${l.op ? html`<span class="tm-ledger__op" aria-hidden="true">${l.op}</span> ` : ''}${l.label}</span>${l.note ? html`<span class="tm-ledger__note">${l.note}</span>` : ''}</span><span class="tm-ledger__v">${l.value}</span></li>`)}</ol>
+<ol class="tm-ledger__rows" role="list">${ledgerLines().map((l, i) => html`<li class="tm-ledger__row${l.total ? ' tm-ledger__row--total' : ''}"><span class="tm-ledger__no">${String(i + 1)}</span><span class="tm-ledger__k"><span class="tm-ledger__label">${l.op ? html`<span class="tm-ledger__op" aria-hidden="true">${l.op}</span> ` : ''}${l.label}</span>${l.note ? html`<span class="tm-ledger__note">${l.note}</span>` : ''}</span><span class="tm-ledger__v${l.tone ? ` tm-ledger__v--${l.tone}` : ''}">${l.value}</span></li>`)}</ol>
 <p class="tm-ledger__foot">${t('ledgerFoot')}</p>
 </section>`;
 
@@ -73,5 +77,6 @@ export function moneyPart({ n, figureN }) {
   const words = html`${cited(fill('moneyHow', { days: String(EPISODE_DAYS) }), CITES.money)}
 ${cited(t('moneyStandardized'), CITES.standardized)}
 ${ledger()}`;
-  return partOf({ id: 'money', n, heading: t('moneyHeading'), words, fig: payoffFigure(figureN()) });
+  // Figure 3 stays beside the ledger as the words scroll past it (sticky from 62em, as Parts 1 and 6).
+  return partOf({ id: 'money', n, heading: t('moneyHeading'), words, fig: html`<div class="tm-sticky">${payoffFigure(figureN())}</div>` });
 }

@@ -257,14 +257,18 @@ const textIn = ({ id, key, value, mode = 'decimal', cls = '' }) => html`<input c
 const box = ({ mine, label, cls = '', ...rest }) => html`${vh(rest.id, label)}${textIn({ ...rest, cls: `${cls}${mine ? ' is-mine' : ''}` })}`;
 const scenTag = (tags) => html`<span class="tc-tag${tags.mine ? ' tc-tag--mine' : ''}" data-v="tag">${tags.text}</span>`;
 
+// A column's name over its box, shown only where the table's head is hidden (a phone: styles.css), so each box keeps its
+// column's meaning there. Hidden from screen readers: each box's own label already names it.
+const colLabel = (text, cls = '') => html`<span class="tc-cl${cls}" aria-hidden="true">${text}</span>`;
+
 function rowMarkup(row) {
   const k = row.key;
   return html`<tr><th scope="row"><abbr title="${row.name}">${row.short}</abbr>${row.notes ? html`<small class="tc-note-row">${row.notes}</small>` : ''}</th>
-<td>${box({ id: `tc-n-${k}`, key: `n.${k}`, value: row.n.value, mine: row.n.mine, label: row.n.label, mode: 'numeric' })}${tag(`src.n.${k}`, row.n)}</td>
-<td>${box({ id: `tc-p-${k}`, key: `p.${k}`, value: row.p.value, mine: row.p.mine, label: row.p.label, cls: ' tc-in--p' })}${tag(`src.p.${k}`, row.p)}</td>
-<td>${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: false, label: row.s.label, cls: row.s.own ? ' is-own' : '' })}${tag(`src.s.${k}`, row.s)}</td>
-<td class="tc-lvc">${vh(`tc-lv-${k}`, row.lv.label)}<input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}></td>
-<td class="num"><span data-v="target.${k}">${row.target}</span><small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
+<td>${colLabel(t('colYear'))}${box({ id: `tc-n-${k}`, key: `n.${k}`, value: row.n.value, mine: row.n.mine, label: row.n.label, mode: 'numeric' })}${tag(`src.n.${k}`, row.n)}</td>
+<td>${colLabel(t('colPrice'))}${box({ id: `tc-p-${k}`, key: `p.${k}`, value: row.p.value, mine: row.p.mine, label: row.p.label, cls: ' tc-in--p' })}${tag(`src.p.${k}`, row.p)}</td>
+<td>${colLabel(t('colSpend'))}${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: false, label: row.s.label, cls: row.s.own ? ' is-own' : '' })}${tag(`src.s.${k}`, row.s)}</td>
+<td class="tc-lvc">${vh(`tc-lv-${k}`, row.lv.label)}<input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}>${colLabel(fill('colLvPhone', { lv: String(LOW_VOLUME) }), ' tc-cl--lv')}</td>
+<td class="num">${colLabel(`${t('colTarget')} `, ' tc-cl--in')}<span data-v="target.${k}">${row.target}</span>${colLabel(` · ${t('colResultPhone')} `, ' tc-cl--in')}<small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
 }
 
 const line = (no, label, value, { op = '', key, cls = '', extra = '' } = {}) => html`<li class="tc-line${cls}"><span class="tc-no">${String(no)}</span><span class="tc-k">${op ? html`<span class="tc-op" aria-hidden="true">${op}</span> ` : ''}${label}</span>${extra}<b class="tc-v" data-v="${key}">${value}</b></li>`;

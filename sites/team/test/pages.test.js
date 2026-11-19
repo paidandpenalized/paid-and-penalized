@@ -107,7 +107,7 @@ test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
   assert.match(part('yours'), /<section id="calc" class="tc" data-src="\/assets\/team-calc\.test\.json"/);
   // The figures shorter than their words (the map, the clock) stay beside them on a wide screen: sticky in a figure
   // column that runs the Part's height (styles.css, from 62em only).
-  for (const id of ['who', 'do']) assert.match(part(id), /<div class="tm-part__fig"><div class="tm-sticky">/, `${id}: sticky`);
+  for (const id of ['who', 'money', 'do']) assert.match(part(id), /<div class="tm-part__fig"><div class="tm-sticky">/, `${id}: sticky`);
   const css = readFileSync(REPO_ROOT + 'sites/team/web/styles.css', 'utf8');
   const wide = css.slice(css.indexOf('@media (min-width: 62em) {'), css.indexOf('\n}\n', css.indexOf('@media (min-width: 62em) {')));
   assert.match(wide, /\.tm-part__fig \{ align-self: stretch; \}/);
@@ -242,6 +242,17 @@ test('the worked example: every ledger line is the engine\'s, from the example\'
   assert.match(ledger, /\+\$470K/);
   assert.equal(r.result, 470000);
   assert.match(ledger, /A worked example with round numbers, not a hospital/);
+  // Its signed lines in Figures 2 and 3's inks: paid lines the paid ink, the quality's take the repaid ink; the target,
+  // the spending and the limits plain.
+  const tones = [.../<span class="tm-ledger__v( tm-ledger__v--(gain|loss))?">([^<]+)<\/span>/g[Symbol.matchAll](/<section class="tm-ledger"[\s\S]*?<\/section>/.exec(program)[0])].map((m) => [m[3], m[2] ?? null]);
+  assert.deepEqual(tones, [['$10.0M', null], ['$9.5M', null], ['+$500K', 'gain'], ['\u2212$30K', 'loss'], ['±$2.0M', null], ['+$470K', 'gain']]);
+});
+
+test('the end matter: the CJR-X note a callout under its heading, then Methods, then the data\'s dates under their kicker', () => {
+  const end = program.slice(program.indexOf('<div class="tm-coda">'), program.indexOf('</article>'));
+  assert.match(end, /<aside class="tm-patient tm-nextbox" aria-labelledby="next-h">\s*<h2 class="tm-patient__h" id="next-h">Next: CJR\u2011X<\/h2>\s*<p class="tm-next">From /);
+  assert.ok(end.indexOf('class="tm-methods"') > end.indexOf('tm-nextbox'));
+  assert.match(end, /<div class="tm-end">\s*<p class="cap kicker tm-asof__k" aria-hidden="true">Data as of<\/p>\s*<aside class="asof" aria-label="Data as of">/);
 });
 
 test('Part 2 qualifies Track 2 for Medicare-dependent hospitals, and says Track 3 is the default from the second year', () => {

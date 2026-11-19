@@ -31,13 +31,18 @@ export function reportsPart({ n }) {
   return partOf({ id: 'find', n, heading: t('findHeading'), words, fig: html`<figure class="tm-tablefig">${reportsTable()}</figure>` });
 }
 
-// The line on CJR-X after the Parts.
-export const cjrxLine = (team) => html`<div class="tm-coda"><p class="tm-next">${fill('cjrx', { date: isoDate(CJRX_START), days: String(CJRX_DAYS), n: count(team.counts.cjrxListed) })}</p></div>`;
+// The note on CJR-X after the Parts: a callout, as the patient note is.
+export const cjrxLine = (team) => html`<div class="tm-coda"><aside class="tm-patient tm-nextbox" aria-labelledby="next-h">
+<h2 class="tm-patient__h" id="next-h">${t('nextHeading')}</h2>
+<p class="tm-next">${fill('cjrx', { date: isoDate(CJRX_START), days: String(CJRX_DAYS), n: count(team.counts.cjrxListed) })}</p>
+</aside></div>`;
 
 // The close: the link to Methods, and the as-of line (each data source and its date).
 export function close(team) {
   const [from, to] = team.meta.mupYears.map(String);
   return html`<p class="tm-methods">${t('methodsLine')} <a href="${METHODS_PATH}">${t('methodsLink')}</a></p>
+<div class="tm-end">
+<p class="cap kicker tm-asof__k" aria-hidden="true">${t('asofHeading')}</p>
 ${asofBar({
     label: t('asofHeading'),
     items: [
@@ -47,5 +52,6 @@ ${asofBar({
       { label: t('asofEpisodes'), value: fill('asofEpisodesValue', { from, to }) },
       { label: t('asofQuality'), value: isoDate(team.meta.qualityReleased) },
     ],
-  })}`;
+  })}
+</div>`;
 }

@@ -21,6 +21,11 @@ import { WIDE } from './figure.js';
 import { stateShapes, usMesh, usPaths } from './geo.js';
 import { frame, isNarrow, mark, r2, text } from './svg.js';
 
+// A label's chip (the paper under its lines, so it reads on any step in either theme): this far past its words, and wide
+// enough for a price of CHIP_PRICE characters, so a page script that writes a longer price than the build's (another
+// episode type's) keeps it on the chip.
+const CHIP_PAD = 2;
+const CHIP_PRICE = 8;
 // The labels' type sizes, in viewBox units, set on each label (the site's sheet sets the face): the value in bold over the
 // name, a size smaller. The face is monospaced, so a line's width is its length times ADVANCE ems.
 const TYPE = Object.freeze({ narrow: { price: 11, name: 9, gap: 2 }, wide: { price: 12, name: 10, gap: 2 } });
@@ -29,11 +34,13 @@ const ADVANCE = 0.6;
 const NARROW_NAME = 12;
 // Labels moved off their division's middle, in viewBox units, where the middle is crowded: New England's set against the
 // frame's right edge (edge: its last character there) over Maine, and a few others nudged clear of their neighbors (dx, dy).
-// A division not listed sits on its middle, centered. A test holds the labels apart at the widest price.
+// A division not listed sits on its middle, centered. split: its name on two lines on the wide drawing too, so its label
+// keeps inside the division (East South Central's, which the reader's outline would cross). A test holds the labels
+// apart at the widest price.
 const EDGE = 2;
 const NUDGE = Object.freeze({
   narrow: { 1: { edge: true, dy: -27 }, 2: { dx: 6 }, 3: { dx: 2 }, 4: { dx: -12 }, 5: { dx: 20, dy: 18 }, 8: { dy: 8 }, 9: { dx: -4 } },
-  wide: { 1: { edge: true, dy: -30 }, 2: { dx: 8, dy: -6 }, 3: { dx: 3 }, 4: { dx: -24 }, 5: { dx: 6, dy: 40 }, 6: { dx: -6 } },
+  wide: { 1: { edge: true, dy: -30 }, 2: { dx: 8, dy: -6 }, 3: { dx: 3 }, 4: { dx: -24 }, 5: { dx: 6, dy: 40 }, 6: { dx: -2, dy: 4, split: true } },
 });
 // The legend under the map: its title, then the steps as one bar of swatches, the lowest and highest values under its two
 // ends.
@@ -48,7 +55,7 @@ const GEOMETRY = WIDE;
 const INSETS = new Set(['AK', 'HI']);
 
 const widthOf = (s, size) => s.length * size * ADVANCE;
-const nameLines = (name, narrow) => (narrow && name.length > NARROW_NAME ? [name.slice(0, name.lastIndexOf(' ')), name.slice(name.lastIndexOf(' ') + 1)] : [name]);
+const nameLines = (name, split) => (split && name.length > NARROW_NAME ? [name.slice(0, name.lastIndexOf(' ')), name.slice(name.lastIndexOf(' ') + 1)] : [name]);
 
 function checked(values, reader) {
   const keys = Object.keys(values).map(Number).sort((a, b) => a - b);
@@ -80,10 +87,10 @@ export function divisionLabels({ topo, width, name, priceText }) {
   return middles(topo).map(([gx, gy], i) => {
     const [mx, my] = [gx * k, gy * k];
     const div = i + 1;
-    const { dx = 0, dy = 0, edge = false } = nudge[div] ?? {};
+    const { dx = 0, dy = 0, edge = false, split = false } = nudge[div] ?? {};
     const anchor = edge ? 'end' : 'middle';
     const x = edge ? width - EDGE : mx + dx;
-    const names = nameLines(name(div), narrow);
+    const names = nameLines(name(div), narrow || split);
     const price = priceText(div);
     // The block's lines, centered on its middle: the price, then the name's one or two lines.
     const heights = [type.price, ...names.map(() => type.name)];
@@ -132,8 +139,13 @@ export function divisionMap({ topo, values, reader = null, words, width }) {
   });
   const borders = usMesh(topo, GEOMETRY, (a, b) => a !== b && divisionOf(a) !== divisionOf(b));
   const outline = reader === null ? '' : html`<path class="chart-div__reader" d="${outlineOf(topo, GEOMETRY, reader)}"/>`;
-  const labels = divisionLabels({ topo, width, name: words.name, priceText: (div) => words.price(values[div]) })
-    .map((l) => l.lines.map((line) => html`<text class="${line.cls}" data-div="${l.div}" x="${r2(l.x)}" y="${r2(line.y)}" font-size="${line.size}" text-anchor="${l.anchor}">${line.text}</text>`));
+  const type = TYPE[narrow ? 'narrow' : 'wide'];
+  const labels = divisionLabels({ topo, width, name: words.name, priceText: (div) => words.price(values[div]) }).map((l) => {
+    const wide = Math.max(l.x1 - l.x0, widthOf('0'.repeat(CHIP_PRICE), type.price));
+    const x0 = l.anchor === 'end' ? l.x1 - wide : (l.x0 + l.x1) / 2 - wide / 2;
+    const chip = html`<rect class="chart-div__chip" x="${r2(x0 - CHIP_PAD)}" y="${r2(l.y0 - CHIP_PAD)}" width="${r2(wide + 2 * CHIP_PAD)}" height="${r2(l.y1 - l.y0 + 2 * CHIP_PAD)}" rx="2"/>`;
+    return html`${chip}${l.lines.map((line) => html`<text class="${line.cls}" data-div="${l.div}" x="${r2(l.x)}" y="${r2(line.y)}" font-size="${line.size}" text-anchor="${l.anchor}">${line.text}</text>`)}`;
+  });
   const legend = legendOf({ steps, words, top: r2(height * k), narrow });
   return frame({
     kind: 'division-map', width, height: legend.bottom, body: html`<g${scaled}><g class="chart-div__shapes">${marks}</g>

@@ -40,7 +40,8 @@ export const PORTAL = Object.freeze({ primary: 2, custodians: 2 });
 
 // CMS's names with a digit in them, which copy can't hold (the copy gate): the waiver of Medicare's rule that a skilled
 // nursing stay follow an inpatient stay of three days (§ 512.580(b)). Copy writes {snfRule}.
-export const RULE_NAMES = Object.freeze({ snfRule: 'SNF 3-day rule' });
+// The hyphen is a non-breaking one (U+2011, the same glyph), so "3-day" never splits at a line's end.
+export const RULE_NAMES = Object.freeze({ snfRule: 'SNF 3\u2011day rule' });
 
 // The citation set after a sentence (a rule's section, or the CMS document and its question), by what it cites: each is
 // the row the sentence's claim id names in sites/team/CLAIMS.md. A citation is a reference, not a number, so it lives

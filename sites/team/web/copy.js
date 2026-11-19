@@ -255,7 +255,7 @@ export const COPY = {
   phaseBefore: { text: 'Before the year', claim: null },
   phaseDuring: { text: 'During the year', claim: null },
   phaseAfter: { text: 'After the year', claim: null },
-  doTrackTitle: { text: 'Ask for Track {ta} or {tb}, if it qualifies', claim: 'TEAM-41' },
+  doTrackTitle: { text: 'Ask for Track\u00a0{ta} or\u00a0{tb}, if it qualifies', claim: 'TEAM-41' },
   doTrackText: { text: 'Before each year, by the date CMS sets and sends to participants. A hospital that doesn\'t ask, or doesn\'t qualify, is in Track {tc}.', claim: ['TEAM-41', 'TEAM-42', 'TEAM-24'] },
   doDataTitle: { text: 'Request the data and sign the data sharing agreement, every year', claim: 'TEAM-43' },
   doDataText: { text: "Without them CMS shares no claims data on the hospital's patients. For {year}, both were due {date}.", claim: ['TEAM-43', 'TEAM-44'] },
@@ -277,17 +277,19 @@ export const COPY = {
   doReferText: { text: 'To the one recorded at admission, or to one if none is.', claim: 'TEAM-39' },
   doArrangeTitle: { text: 'File the financial arrangements and clinician engagement lists each quarter', claim: 'TEAM-40' },
   doArrangeText: { text: "Or attest that there's nothing to report.", claim: 'TEAM-40' },
+  // The headings hold a number to its unit, and a track to its number, with a no-break space (so neither ends a line
+  // alone); RULE_NAMES' "3-day" keeps its hyphen whole.
   doSnfTitle: { text: 'Use the {rule} waiver on its terms', claim: 'TEAM-38' },
   doSnfText: { text: "Only for stays within {days} days, at a nursing facility on CMS's qualified list for that quarter.", claim: 'TEAM-38' },
   doQualityTitle: { text: 'No separate TEAM quality report', claim: 'TEAM-46' },
   doQualityText: { text: 'The quality score comes from data hospitals already submit to CMS for other programs.', claim: 'TEAM-46' },
-  doReconTitle: { text: 'Reconciliation, {months} months after the year', claim: 'TEAM-29' },
+  doReconTitle: { text: 'Reconciliation, {months}\u00a0months after the year', claim: 'TEAM-29' },
   doReconText: { text: 'Spending against target, the quality score, the track\'s limits: for {year}, from about {month}.', claim: ['TEAM-29', 'TEAM-54'] },
-  doErrorTitle: { text: '{days} days to flag a calculation error', claim: 'TEAM-30' },
+  doErrorTitle: { text: '{days}\u00a0days to flag a calculation error', claim: 'TEAM-30' },
   doErrorText: { text: 'Without a notice of error, the report is final {days} days after CMS issues it.', claim: 'TEAM-30' },
   doPayTitle: { text: 'Paid in one sum, or repay', claim: 'TEAM-28' },
   doPayText: { text: 'CMS pays a reconciliation payment in one lump sum. A Track {ta} hospital never owes.', claim: 'TEAM-28' },
-  doRecordsTitle: { text: 'Keep records {years} years', claim: 'TEAM-31' },
+  doRecordsTitle: { text: 'Keep records {years}\u00a0years', claim: 'TEAM-31' },
   doRecordsText: { text: 'From the last payment determination or the end of any audit, whichever is later.', claim: 'TEAM-31' },
 
   // Figure 5, TEAM's clock.
@@ -296,7 +298,7 @@ export const COPY = {
   clockData: { text: 'Data request and agreement for {year} due', claim: 'TEAM-44' },
   clockPrices: { text: "{year}'s regional target prices posted", claim: 'TEAM-53' },
   clockTrack3: { text: 'Track {tc} unless approved for another, limits of {limit} either way', claim: ['TEAM-24', 'TEAM-14'] },
-  clockRecon: { text: 'Reconciliation of {year} starts, {months} months after the year', claim: 'TEAM-29' },
+  clockRecon: { text: 'Reconciliation of {year} starts, {months}\u00a0months after the year', claim: 'TEAM-29' },
   // CJR\u2011X: a non-breaking hyphen, so the name never breaks across lines (every TEAM copy says it so).
   clockCjrx: { text: 'CJR\u2011X starts nationwide', claim: 'TEAM-12' },
   clockEnd: { text: 'The model ends', claim: 'TEAM-20' },
@@ -337,9 +339,10 @@ export const COPY = {
 
   // After Part 7: CJR-X, and the close (Methods, the as-of line).
   cjrx: {
-    text: "Next, from {date}: CJR\u2011X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows them.",
+    text: "From {date}, CJR\u2011X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows them.",
     claim: ['TEAM-12', 'TEAM-55', 'TEAM-13'],
   },
+  nextHeading: { text: 'Next: CJR\u2011X', claim: null },
   methodsLine: { text: 'How this page is built, and every source:', claim: null },
   methodsLink: { text: 'Methods', claim: null },
   asofHeading: { text: 'Data as of', claim: null },

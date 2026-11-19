@@ -4,7 +4,7 @@
    figure column sticky where it is shorter than the words. Colors are tokens only; meaning inks (--rew, money paid to a
    hospital; --pen, money a hospital repays) mark the charts' and the ledger's marks, never text. */
 
-.tm { padding-block: 8px 56px; }
+.tm { padding-block: 8px 12px; }
 .tm-part { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 56px; align-items: start; padding-block: 36px; border-top: 1px dotted var(--line); }
 .tm-part:first-child { padding-top: 20px; border-top: 0; }
 .tm-part__text, .tm-part__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
@@ -28,6 +28,9 @@
 .tm-dek { color: var(--ink-2); font-size: var(--fs-md); }
 .tm-cite { color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); overflow-wrap: break-word; }
 .tm-aside { color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A figure's note and its source line share one measure (the figure's caption runs the column). */
+.tm .fig__note, .tm .fig__source { max-width: 40rem; }
 
 /* Part 1: the button to the calculator, the record card (two fields to a row), the lookup box, the map and its key,
    the note for patients. */
@@ -63,12 +66,14 @@
 .tm-patient__h { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* Part 2: the Track 3 stamp beside what its limit is a share of. A wrapping row, so the caption keeps a readable width
-   (20ch at the least) and drops under the stamp when the two don't fit side by side; the stamp never grows past the
+   (18ch at the least) and drops under the stamp when the two don't fit side by side; the stamp never grows past the
    column (its words wrap inside it first). */
 .tm-hook { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; margin-top: 8px; }
-.tm-hook .stamp { flex: 0 1 auto; max-width: calc(100% - 6px); font-size: clamp(1.3rem, 1rem + 1vw, 1.8rem); text-align: center; text-wrap: balance; }
-.tm-stamp__sub { display: block; margin-top: 2px; font: 700 0.6em/1.2 var(--font-type); letter-spacing: 0.04em; }
-.tm-hook p { flex: 1 1 20ch; min-width: min(20ch, 100%); font-size: var(--fs-sm); }
+/* The stamp at the family's stamp size, 15rem at the most (its second line wraps inside it first), with tight
+   padding, so on a laptop the caption sits beside it as in the mockup. */
+.tm-hook .stamp { flex: 0 1 auto; max-width: min(15rem, calc(100% - 6px)); padding: 4px 10px 3px; font-size: clamp(1.2rem, 1rem + 0.5vw, 1.45rem); text-align: center; text-wrap: balance; }
+.tm-stamp__sub { display: block; margin-top: 2px; font: 700 0.55em/1.25 var(--font-type); letter-spacing: 0.03em; }
+.tm-hook p:not(.stamp) { flex: 1 1 18ch; min-width: min(18ch, 100%); font-size: var(--fs-sm); }
 
 /* Figures 2 and 3 (web/charts/trackLimits.js, payoff.js): gains in the money-paid ink, repayments in the repaid ink. */
 .chart-tracks__gain { fill: var(--rew); }
@@ -101,6 +106,14 @@
 .tm-ledger__op { display: inline-block; min-width: 1ch; font-family: var(--font-type); }
 .tm-ledger__note { display: block; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.4; }
 .tm-ledger__v { font: 700 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+/* The worked example's signed lines in Figures 2 and 3's inks: what would be paid in the paid ink, what would be repaid
+   (or taken off) in the repaid ink. Round numbers, not a hospital (a named hospital's result stays neutral: the
+   calculator's); the sign says it too. */
+/* The paid ink, as text, drawn 30% toward the text ink (oklab), so it clears 4.5:1 on the paper and the panel tone in
+   both themes (the mark ink alone is about 4:1 on the panel in light); the repaid ink already does. */
+.tm-ledger__v--gain { color: color-mix(in oklab, var(--rew), var(--ink) 30%); }
+.tm-ledger__v--loss { color: var(--pen); }
+@media (forced-colors: active) { .tm-ledger__v--gain, .tm-ledger__v--loss { color: CanvasText; } }
 .tm-ledger__row--total { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
 .tm-ledger__foot { margin-top: 6px; color: var(--ink-2); font-size: var(--fs-sm); }
 
@@ -152,11 +165,11 @@
    the ramp runs light to strong in either theme; the states' borders faint, the divisions' in ink, the reader's division
    outlined in the pen. Labels keep a paper halo over the shading. */
 .chart-div { stroke: var(--paper); stroke-width: 0.6px; stroke-linejoin: round; vector-effect: non-scaling-stroke; fill: var(--ink); }
-.chart-div--s1 { fill-opacity: 0.1; }
-.chart-div--s2 { fill-opacity: 0.22; }
-.chart-div--s3 { fill-opacity: 0.36; }
-.chart-div--s4 { fill-opacity: 0.52; }
-.chart-div--s5 { fill-opacity: 0.7; }
+.chart-div--s1 { fill-opacity: 0.17; }
+.chart-div--s2 { fill-opacity: 0.29; }
+.chart-div--s3 { fill-opacity: 0.42; }
+.chart-div--s4 { fill-opacity: 0.56; }
+.chart-div--s5 { fill-opacity: 0.72; }
 .chart-div__legend .chart-div { stroke: none; }
 .chart-div__borders { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 .chart-div__reader { fill: none; stroke: var(--pen); stroke-width: 2.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
@@ -164,7 +177,10 @@
    so twice the width shows as the same line. */
 .chart-div__reader--moved { stroke-width: 5px; }
 .chart-mark.is-active .chart-div { stroke: var(--ink); stroke-width: 2.5px; }
-.chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; font-variant-numeric: tabular-nums; }
+/* Each label on a small chip of the paper, so it reads on any step of the ramp in either theme (in dark the strongest
+   step is near the ink's own light). */
+.chart-div__chip { fill: var(--paper); fill-opacity: 0.86; }
+.chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 .chart-div__price { font-weight: 700; }
 .chart-div__name { fill: var(--ink-2); }
 .tm-bar .chart--division-map { max-width: none; }
@@ -172,7 +188,8 @@
   .chart-div { fill: Canvas; stroke: CanvasText; }
   .chart-div__borders { stroke: CanvasText; }
   .chart-div__reader { stroke: Highlight; }
-  .chart-div__price, .chart-div__name { fill: CanvasText; stroke: Canvas; }
+  .chart-div__price, .chart-div__name { fill: CanvasText; }
+  .chart-div__chip { fill: Canvas; fill-opacity: 1; }
 }
 
 /* The scenario range against the track's limits (web/charts/limitRuler.js; the hub's hospital band draws it): the
@@ -254,8 +271,13 @@
 .tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
 .tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); }
 .tc-lvc { width: 2.4rem; text-align: center !important; }
-/* The checkboxes (a row's low-volume box, "include my numbers"). Focus rings are the family's (base.css :focus-visible). */
-.tc-lvc input, .tc-incl input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
+/* The checkboxes (a row's low-volume box, "include my numbers"), drawn: open, a 1.5px border in the text ink, so an
+   unticked box never reads as disabled in either theme; ticked, filled in the ink with the tick in the paper. Focus rings
+   are the family's (base.css :focus-visible). Forced colors draw the system's own box. */
+.tc-lvc input, .tc-incl input { flex: none; display: inline-grid; place-content: center; width: 18px; height: 18px; min-height: 0; margin: 0; border: 1.5px solid var(--ink-2); border-radius: 2px; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.tc-lvc input:checked, .tc-incl input:checked { border-color: var(--ink); background: var(--ink); }
+.tc-lvc input:checked::before, .tc-incl input:checked::before { content: ""; width: 10px; height: 10px; background: var(--paper); clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
+@media (forced-colors: active) { .tc-lvc input, .tc-incl input { -webkit-appearance: auto; appearance: auto; } }
 .tc-in { width: 5.2rem; min-height: 28px; height: 28px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; background: var(--paper-2); font: 400 var(--fs-sm)/1 var(--font-type); font-variant-numeric: tabular-nums; }
 .tc-in--p { width: 6.4rem; }
 .tc-in--q { width: 3.6rem; }
@@ -304,12 +326,15 @@
 .tc-why > summary { min-height: var(--target-min); display: inline-flex; align-items: center; color: var(--ink); text-decoration: underline dotted; cursor: pointer; }
 .tc-why[open] { flex-basis: 100%; }
 @media (max-width: 61.99em) {
-  /* The F3 stamp: the range set as the family's rubber stamp, the headline on a phone. */
+  /* The F3 stamp, the headline on a phone: the family's rubber-stamp frame (rotated, grain-masked, in the pen) drawn
+     behind the range, whose numerals stay straight, unmasked and at the desktop's weight and size, so they read; the
+     frame sits clear of the scenario tag above it. */
   .tc-out { justify-items: start; border: 0; padding: 4px 0; }
-  .tc-out__v { padding: 6px 12px 4px; border: 3px solid var(--pen); border-radius: 4px; color: var(--pen); font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; transform: rotate(-2deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+  .tc-out__v { position: relative; isolation: isolate; margin-top: 10px; padding: 8px 14px 6px; color: var(--pen-ink); }
+  .tc-out__v::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 3px solid var(--pen); border-radius: 4px; transform: rotate(-1.5deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
   .tc-out__yr { color: inherit; font-family: var(--font-type); }
 }
-@media (forced-colors: active) { .tc-out__v { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
+@media (forced-colors: active) { .tc-out__v::before { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
 
 /* The payoff, "What would it take?", the share line. */
 .tc-fig { margin: 0; }
@@ -327,14 +352,24 @@
 .tc-copied { font-size: var(--fs-xs); }
 .tc-link { flex-basis: 100%; overflow-wrap: anywhere; font: 400 var(--fs-xs)/1.4 var(--font-type); }
 .tc-private { flex-basis: 100%; color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-type); }
+/* The columns' names a phone sets on each box and result (calc-view.js colLabel); a wider screen has the table's head. */
+.tc-cl { display: none; }
 @media (max-width: 36em) {
-  /* A phone: each episode row a small card, its boxes two to a line; the ledger's slider under its name. */
+  /* A phone: each episode row a small card. Its three boxes side by side, each under its column's name in the head's
+     small capitals and over its source (which wraps rather than run into the next); then the low-volume box with its
+     words, and the row's two results on one labeled line. The ledger's slider under its name. */
   .tc-ep thead { display: none; }
-  .tc-ep tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 10px; padding: 8px 0; border-bottom: 1px dotted var(--line); }
+  .tc-ep tbody tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px 10px; padding: 10px 0; border-bottom: 1px dotted var(--line); }
   .tc-ep tbody th { grid-column: 1 / -1; }
-  .tc-ep tbody td { padding: 0; border: 0; }
+  .tc-ep tbody td { grid-column: span 2; min-width: 0; padding: 0; border: 0; }
   .tc-ep .tc-in { width: 100%; }
-  .tc-ep td.num { grid-column: 2 / -1; align-self: center; text-align: right; }
+  .tc-cl { display: block; margin-bottom: 2px; color: var(--ink-2); font: 700 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; }
+  .tc-ep .tc-src { white-space: normal; overflow-wrap: break-word; }
+  .tc-ep td.tc-lvc { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: auto; text-align: left !important; }
+  .tc-cl--lv { display: inline; margin: 0; font: 400 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0; text-transform: none; }
+  .tc-ep td.num { grid-column: 1 / -1; text-align: right; font-size: var(--fs-xs); }
+  .tc-ep td.num > [data-v] { display: inline; font: 700 var(--fs-xs)/1.3 var(--font-type); }
+  .tc-cl--in { display: inline; margin: 0; font-weight: 400; }
   .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
   .tc-line--s .tc-range { grid-column: 2 / -1; grid-row: 2; }
 }
@@ -348,7 +383,7 @@
 .tm-phase__list { display: grid; margin: 0; padding: 0; list-style: none; }
 .tm-duty { padding-bottom: 14px; }
 .tm-duty + .tm-duty { padding-top: 14px; border-top: 1px dotted var(--line); }
-.tm-duty__h { font: 700 var(--fs-base)/1.3 var(--font-body); text-wrap: balance; }
+.tm-duty__h { font: 700 var(--fs-base)/1.3 var(--font-body); text-wrap: pretty; }
 .tm-part__text .tm-duty__p { margin-top: 4px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.55; }
 .tm-clock { display: grid; margin: 0; padding: 0; list-style: none; }
 .tm-clock__item { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 4px 14px; padding: 10px 0 10px 16px; border-left: 3px solid var(--line); }
@@ -363,20 +398,34 @@
 .tm-table { container-type: inline-size; overflow-x: auto; }
 .tm-find { min-width: 0; font-family: var(--font-body); }
 .tm-find caption { padding-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-align: start; text-transform: uppercase; }
-.tm-find thead th { white-space: normal; }
+/* The head as the calculator's table sets it: small mono capitals over a 2px rule; the first column wide enough for its
+   names on two lines. */
+.tm-find thead th { white-space: normal; box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); color: var(--ink); font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; }
+.tm-find thead th:first-child { width: 28%; }
 .tm-find td, .tm-find tbody th { line-height: 1.45; }
 @container (width < 34em) {
-  .tm-find, .tm-find tbody, .tm-find tr, .tm-find th, .tm-find td { display: block; }
+  .tm-find, .tm-find caption, .tm-find tbody, .tm-find tr, .tm-find th, .tm-find td { display: block; }
   .tm-find thead { display: none; }
   .tm-find tr { padding: 10px 0; border-top: 1px solid var(--line); }
   .tm-find td { padding: 2px 10px; }
   .tm-find td::before { content: attr(data-label) ": "; color: var(--ink-2); font-weight: 600; }
 }
 
-/* After the Parts: the line on CJR-X, the link to Methods, the as-of line. */
-.tm-coda { padding-top: 24px; border-top: 1px dotted var(--line); }
-.tm-next { max-width: 62ch; color: var(--ink-2); line-height: 1.6; }
-.tm-methods { margin-block: 12px 20px; }
+/* After the Parts: the note on CJR-X (the patient note's callout, at body size), the link to Methods, then the data's
+   dates under their kicker, laid out as the work requirement's sources grid (its labels over their values, two then
+   three to a row). The page ends close to the footer. */
+.tm-coda { padding-top: 28px; border-top: 1px dotted var(--line); }
+.tm-nextbox { max-width: 62ch; font-size: var(--fs-base); }
+.tm-next { line-height: 1.6; }
+.tm-methods { margin-block: 16px 0; }
+.tm-end { display: grid; gap: 6px; }
+.tm-end .asof { margin: 0; padding-top: 8px; }
+.tm .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px var(--gutter); }
+.tm .asof__list > div { display: block; grid-column: auto; }
+.tm .asof__list dt { font-size: var(--fs-xs); line-height: 1.3; }
+.tm .asof__list dd { max-width: none; font-size: var(--fs-xs); line-height: 1.35; }
+@media (min-width: 560px) { .tm .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .tm .asof__list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* The Methods page. */
 .tm-methods-page > * + * { margin-top: 16px; }

@@ -77,6 +77,70 @@ for (const width of [1280, 390]) {
   });
 }
 
+// The layout the first critic round asked for, read in the page at each width: on a laptop the Track 3 stamp sits
+// beside its caption at about 15rem, and Figures 1, 3 and 5 stay in view beside their words as the words scroll; on a
+// phone nothing of that sticks, each calculator box carries its column's name and every row's two results their own,
+// the stamp-framed headline's numerals stand straight and unmasked clear of the scenario tag, and Part 7's caption runs
+// the table's width.
+const layout = (page) => page.evaluate(async () => {
+  const box = (el) => el.getBoundingClientRect();
+  const shown = (el) => el.checkVisibility();
+  const stamp = document.querySelector('.tm-hook .stamp');
+  const caption = document.querySelector('.tm-hook p:not(.stamp)');
+  // Each sticky figure, scrolled to the middle of its Part: its top under the header, not where the Part starts.
+  const held = [];
+  for (const id of ['who', 'money', 'do']) {
+    const part = document.getElementById(id);
+    scrollTo(0, part.offsetTop + part.offsetHeight / 2 - innerHeight / 2);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const fig = part.querySelector('.tm-sticky');
+    held.push(fig && getComputedStyle(fig).position === 'sticky' && box(fig).top >= 0 && box(fig).top < 200 ? id : null);
+  }
+  scrollTo(0, 0);
+  const labels = [...document.querySelectorAll('.tc-ep .tc-cl')];
+  const out = document.querySelector('.tc-out__v');
+  const tag = document.querySelector('.tc-out__lab .tc-tag');
+  const cap = document.querySelector('.tm-find caption');
+  return {
+    stampWidth: Math.round(box(stamp).width),
+    beside: box(caption).left > box(stamp).right,
+    held: held.filter(Boolean),
+    labels: labels.length,
+    labelsShown: labels.filter(shown).length,
+    outTransform: getComputedStyle(out).transform,
+    outMask: getComputedStyle(out).maskImage || getComputedStyle(out).webkitMaskImage,
+    clearOfTag: box(out).top - box(tag).bottom,
+    captionWidth: Math.round(box(cap).width),
+    tableWidth: Math.round(box(document.querySelector('.tm-find')).width),
+  };
+});
+
+describe('the TEAM program page\'s layout at 1280 px', () => {
+  const tabs = useContext(shared, { width: 1280, height: 900 });
+  it('the stamp beside its caption; Figures 1, 3 and 5 held beside their words; no phone labels', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+    const s = await layout(page);
+    assert.ok(s.stampWidth <= 260, `the stamp ${s.stampWidth} px wide`);
+    assert.equal(s.beside, true, 'the caption beside the stamp');
+    assert.deepEqual(s.held, ['who', 'money', 'do']);
+    assert.ok(s.labels > 0 && s.labelsShown === 0, 'the table\'s head names the columns; the boxes carry no labels of their own');
+  }));
+});
+
+describe('the TEAM program page\'s layout at 390 px', () => {
+  const tabs = useContext(shared, { width: 390, height: 844 });
+  for (const scheme of SCHEMES) {
+    it(`${scheme}: every box and result labeled, the headline straight and clear of its tag, Part 7's caption full width, nothing held`, () => withPage(tabs, { path: PROGRAM_PATH, scheme }, async (page) => {
+      const s = await layout(page);
+      assert.ok(s.labels >= 30 && s.labelsShown === s.labels, `${s.labelsShown} of ${s.labels} labels shown`);
+      assert.equal(s.outTransform, 'none', 'the numerals not rotated');
+      assert.ok(!s.outMask || s.outMask === 'none', 'the numerals not masked');
+      assert.ok(s.clearOfTag >= 8, `${s.clearOfTag} px between the tag and the stamp`);
+      assert.ok(s.captionWidth >= s.tableWidth - 1, `the caption ${s.captionWidth} px of the table's ${s.tableWidth}`);
+      assert.deepEqual(s.held, [], 'nothing sticky on a phone');
+    }));
+  }
+});
+
 // Part 4 (sites/team/web/program/bar.js, client/bar.js): the picker shows and is labeled, and a new pick redraws the map
 // (every region's mark and label, in the drawing on screen), the price beside the words and the figure's table, all from
 // the big table's own cells; opening the table never scrolls the page sideways; without JavaScript the picker stays
