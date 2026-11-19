@@ -24,7 +24,7 @@ Not covered by either license:
   TEAM participant list, its performance year 2 preliminary target prices and its CJR-X participant list (rows and
   columns read from each workbook), the two Medicare Inpatient Hospitals by Provider and Service years (the TEAM
   episodes' rows), and the hospital-wide readmission and surgical-death measures from Care Compare's Unplanned
-  Hospital Visits file. data/pinned/omb-delineation-2023/list1-counties.csv holds the county rows of the Census
+  Hospital Visits and Complications and Deaths files. data/pinned/omb-delineation-2023/list1-counties.csv holds the county rows of the Census
   Bureau's July 2023 CBSA delineation file (OMB's), a U.S. government work.
 - data/pinned/medicaid/urban-2026-table-a2-work-requirement.csv holds figures from Appendix Table A.2 of the Urban
   Institute and Robert Wood Johnson Foundation report "Projected Reductions in Medicaid Expansion Enrollment Under

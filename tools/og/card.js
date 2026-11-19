@@ -10,8 +10,10 @@
 // kicker, the program's title, its address; its dots red where CMS's HACRP file says it cut the hospital (payment
 // reduction "Yes", the newest emitted year), gray otherwise. The Readmissions (HRRP) card is HACRP's with three of the program
 // page's At-a-glance numbers under the title (penalized with its share of those measured, the average cut among the
-// penalized, the count at the maximum), its dots red where the hospital's payment adjustment factor is below 1. No
-// other card holds a number, and none a byline.
+// penalized, the count at the maximum), its dots red where the hospital's payment adjustment factor is below 1. TEAM's
+// card is HACRP's frame with two of the TEAM file's counts under the title (the hospitals on CMS's list, the areas CMS
+// drew), its dots dark for a hospital in TEAM in performance year 2 and a pale gray otherwise: membership, never a
+// result (a card with `ink` carries the dark dots' rule and the paler gray). No other card holds a number, and none a byline.
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
@@ -23,6 +25,9 @@ import { CAP_PCT } from '../../engine/js/hrrp/formula.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { fmtInt, fmtPct } from '../../sites/hrrp/web/numbers.js';
 import { fill as programFill } from '../../sites/hrrp/web/program/copy.js';
+import { t as teamT } from '../../sites/team/web/copy.js';
+import { loadTeam } from '../../sites/team/web/data.js';
+import { count } from '../../web/render/format.js';
 import { COPY } from '../../web/copy.js';
 import { html, raw } from '../../web/render/html.js';
 import { CARD_SIZE, SHARE_CARDS } from '../../web/share-card.js';
@@ -92,20 +97,37 @@ export const CARDS = {
       [fmtInt(S.nMax), programFill('cardMax', { cap: String(CAP_PCT) })],
     ],
   },
+  team: {
+    kicker: `${SITE.name} · ${SITE.sites.team.subtitle}`,
+    lines: titleLines(SITE.sites.team.title),
+    size: 96,
+    top: 92,
+    tagline: null,
+    address: host + SITE.sites.team.path.replace(/\/$/, ''),
+    // Membership, not a result (TEAM is a payment model; no hospital's scenario colors anything): dark for a hospital in
+    // TEAM in performance year 2, gray for the rest.
+    tone: ({ ccn }, { teamIn }) => (teamIn.has(ccn) ? 'ink' : null),
+    ink: true,
+    // The hospitals CMS's list names and the areas it drew, from the TEAM file's counts.
+    fields: ({ team }) => [
+      [count(team.counts.listed), teamT('ogListed')],
+      [count(team.counts.selectedAreas), teamT('ogAreas')],
+    ],
+  },
 };
 for (const id of Object.keys(SHARE_CARDS)) if (!Object.hasOwn(CARDS, id)) throw new Error(`tools/og/card.js: no card design for "${id}"`);
 
 // A card's dots from the hub asset (hub: { mapW, mapH, cols, rows }) and HACRP's cut hospitals (cut: a Set of CCNs):
 // [x, y, tone] on the map, the gray ones first so the colored ones sit on top; a hospital with no place on the map is
 // left out.
-export function cardDots(id, { hub: { cols, rows }, cut, hrrpCut }) {
+export function cardDots(id, { hub: { cols, rows }, cut, hrrpCut, teamIn }) {
   const at = (name) => {
     const i = cols.indexOf(name);
     if (i < 0) throw new RangeError(`share card: the hub asset has no "${name}" column`);
     return i;
   };
   const [ccn, x, y, net] = [at('ccn'), at('x'), at('y'), at('net')];
-  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut, hrrpCut })]);
+  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut, hrrpCut, teamIn })]);
   return [...dots.filter((d) => d[2] === null), ...dots.filter((d) => d[2] !== null)];
 }
 
@@ -137,9 +159,11 @@ function mapSvg(dots, { mapW, mapH }) {
 
 // A card's HTML. tokens: the light block's custom properties (a Map of name to value), of which the card carries only
 // those it reads, so an edit to another token leaves it current; fonts: each CARD_FONTS file as base64; hub: the hub's
-// data asset (hub/asset.js hubAsset); cut: HACRP's cut hospitals (a Set of CCNs). Everything is inline, so the HTML
-// alone decides the picture, with RENDER in a comment.
-export function cardHtml(id, { tokens, fonts, hub, cut, hrrpCut, hrrp }) {
+// data asset (hub/asset.js hubAsset); cut: HACRP's cut hospitals (a Set of CCNs); hrrpCut and hrrp: Readmissions'
+// penalized hospitals and summary; team and teamIn: the TEAM file and its performance year 2 participants (a Set of
+// CCNs). Everything is inline, so the HTML alone decides the picture, with RENDER in a comment.
+export function cardHtml(id, inputs) {
+  const { tokens, fonts, hub, cut, hrrpCut, teamIn } = inputs;
   if (!Object.hasOwn(CARDS, id)) throw new RangeError(`share card: no card "${id}"`);
   const card = CARDS[id];
   const faces = Object.entries(CARD_FONTS).map(([file, [family, weight]]) => {
@@ -169,7 +193,7 @@ body { position: relative; background: var(--grain) repeat, var(--paper); color:
 .kick + .addr { margin-top: 14px; }
 .mapbox { position: absolute; right: 70px; top: 96px; width: ${MAP_BOX.width}px; height: ${MAP_BOX.height}px; }
 .map circle { fill-opacity: .85; }
-.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }`;
+.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }${card.ink ? '\n.map .ink { fill: var(--ink); fill-opacity: .9; } .map .none { fill: var(--neutral); fill-opacity: .45; }' : ''}`;
   return html`<!doctype html>
 <!-- drawn with ${raw(JSON.stringify(RENDER))} -->
 <html lang="en"><head><meta charset="utf-8">
@@ -185,17 +209,19 @@ ${raw(css)}
 <div class="words">
 ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 ` : ''}<div class="big">${card.lines.map((line, i) => html`<span${i === last ? raw(' class="pen"') : ''} data-fit>${line}</span>`)}</div>
-${card.fields ? html`<div class="stats">${card.fields({ hrrp }).map(([value, label]) => html`<div class="stat"><span class="num">${value}</span><span class="lab" data-fit>${label}</span></div>`)}</div>
+${card.fields ? html`<div class="stats">${card.fields(inputs).map(([value, label]) => html`<div class="stat"><span class="num">${value}</span><span class="lab" data-fit>${label}</span></div>`)}</div>
 ` : ''}<div class="rule">${card.tagline ? html`<div class="kick" data-fit>${card.tagline}</div>` : ''}<div class="addr" data-fit>${card.address}</div></div>
 </div>
-<div class="mapbox">${mapSvg(cardDots(id, { hub, cut, hrrpCut }), hub)}</div>
+<div class="mapbox">${mapSvg(cardDots(id, { hub, cut, hrrpCut, teamIn }), hub)}</div>
 <div class="dbl dbl--bottom"></div>
 </body></html>
 `.toString();
 }
 
 // What the cards are drawn from, read from the repo: the light tokens, the fonts, the hub's data asset as the build
-// writes it (hub/data.js hubModel, hub/asset.js hubAsset), and the hospitals CMS's HACRP file for the hub's year cut.
+// writes it (hub/data.js hubModel, hub/asset.js hubAsset), the hospitals CMS's HACRP file for the hub's year cut,
+// Readmissions' penalized hospitals and summary, and the TEAM file with its participants still in TEAM in performance
+// year 2.
 export function cardInputs() {
   const block = LIGHT_BLOCK.exec(readFileSync(REPO_ROOT + 'web/styles/tokens.css', 'utf8'))?.[1];
   if (!block) throw new Error('web/styles/tokens.css: the light block not found');
@@ -206,5 +232,8 @@ export function cardInputs() {
   // Readmissions: the newest year's penalized hospitals (factor below 1) and the summary the program page's card shows.
   const rows = loadHrrp().hospitals;
   const hrrpCut = new Set(rows.filter((h) => h.paf < 1).map((h) => h.id));
-  return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut, hrrpCut, hrrp: summarize(rows) };
+  // TEAM: the hospitals in TEAM in performance year 2 (the TEAM file's active participants) and the file's counts.
+  const team = loadTeam();
+  const teamIn = new Set(team.participants.filter((p) => p.active).map((p) => p.ccn));
+  return { tokens: new Map(declarations(block)), fonts, hub: hubAsset(hospitals, hub), cut, hrrpCut, hrrp: summarize(rows), team, teamIn };
 }

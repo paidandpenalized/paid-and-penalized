@@ -8,8 +8,14 @@ from collections import Counter
 from pp_engine.schema import validate
 from pp_engine.team import episodes, quality, status
 from pp_engine.team.build import MEASURES, default_ccn, division_of, other_ipps, participant_quality, quality_tables
-from pp_pipeline.files import load_schemas
+from pp_pipeline.emit_team import QUALITY, quality_periods
+from pp_pipeline.files import load_schemas, read_pinned_csv
 from pp_pipeline.tests.team.helpers import fresh, pins
+
+
+def pins_quality_rows():
+    """The quality pin's rows as read (measure, start, end and the rest)."""
+    return read_pinned_csv(QUALITY)
 
 
 def price_rows(cells):
@@ -372,6 +378,37 @@ class WholeBuild(unittest.TestCase):
         self.assertEqual(doc["counts"]["cjrxListed"], len(p.cjrx))
         self.assertEqual(doc["otherIpps"], other_ipps(p.hospitals, doc["status"]))
         self.assertTrue(set(doc["otherIpps"]) <= set(doc["status"]))
+
+    def test_the_method_block_states_the_builds_own_choices_and_checks(self):
+        # What Methods prints from the file rather than typing: the DRG remaps and the low-volume scale (the engine's
+        # constants), each measure's cohort size and the public file's period, and the list-CBSA check's counts.
+        doc, p = fresh(), pins()
+        method = doc["method"]
+        self.assertEqual(method["remaps"], episodes.REMAPS)
+        self.assertEqual(method["baselineScale"], episodes.BASELINE_SCALE)
+        ipps = {h["ccn"] for h in p.hospitals if h["ipps"]}
+        for m in MEASURES:
+            self.assertEqual(method["cohort"][m], sum(c in ipps for c in p.quality[m]), m)
+            self.assertGreater(method["cohort"][m], 0, m)
+        rows = pins_quality_rows()
+        for m in MEASURES:
+            periods = {(r["start"], r["end"]) for r in rows if r["measure"] == m}
+            self.assertEqual(periods, {(method["qualityPeriods"][m]["start"], method["qualityPeriods"][m]["end"])}, m)
+        placed, _ = status.place_counties(p.hospitals, p.crosswalk, p.shapes)
+        cbsa_of = {x["fips"]: x["cbsa"] for x in p.delineation}
+        mandatory = [r for r in p.participants if r["participation"] == "mandatory"]
+        self.assertEqual(method["areaCheck"], {
+            "mandatory": len(mandatory),
+            "placed": sum(r["ccn"] in placed for r in mandatory),
+            "mismatched": len(status.list_cbsa_mismatches(p.participants, cbsa_of, placed)),
+        })
+
+    def test_one_period_per_measure_or_the_build_stops(self):
+        rows = [{"measure": "hybrid_hwr", "start": "2024-07-01", "end": "2025-06-30"},
+                {"measure": "hybrid_hwr", "start": "2023-07-01", "end": "2025-06-30"}]
+        with self.assertRaises(ValueError):
+            quality_periods(rows)
+        self.assertEqual(quality_periods(rows[:1]), {"hybrid_hwr": {"start": "2024-07-01", "end": "2025-06-30"}})
 
     def test_meta_comes_from_the_manifest(self):
         meta = fresh()["meta"]

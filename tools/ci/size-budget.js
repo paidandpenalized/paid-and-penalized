@@ -76,7 +76,9 @@ export const PROGRAM_BUDGETS = {
   // rounded up to 110 KB. The calculator's script is most of the rise (its view, words, engine and the family's search
   // box, about 19.5 KB); every participant's numbers stay in a hashed file fetched on the reader's first move (not
   // counted here: team-calc, 19.4 KB brotli). The hub's 70 KB budget is untouched.
-  team: { program: 110 * KB, methods: 30 * KB },
+  // Methods built in full (Task 11: its sections, the sources' two tables, the DRG remaps and the unknowns), 2026-11-19:
+  // 34.2 KB + 15% (39.3 KB), rounded up to 40 KB; it was 30 KB, set from the stub page.
+  team: { program: 110 * KB, methods: 40 * KB },
 };
 // The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
 // most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:

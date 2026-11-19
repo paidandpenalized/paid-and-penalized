@@ -8,7 +8,7 @@ import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { count } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
-import { loadAtlas, loadMaster, loadSources, loadTeam } from './data.js';
+import { loadAtlas, loadMaster, loadSharedSources, loadSources, loadTeam } from './data.js';
 import { calcAsset } from '../../../web/team/calc-data.js';
 import { lookupFile } from './lookup-copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
@@ -51,7 +51,7 @@ export function generateTeam(ctx, { team = loadTeam(), master = loadMaster(), at
   // (client/calc.js); the default hospital's row is in the page.
   const calcUrl = ctx.asset('team-calc', 'json', JSON.stringify(calcAsset(team)));
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ team, master, atlas, robots, assets, lookupUrl, calcUrl, search }) });
-  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ sources: loadSources(team), robots, assets }) });
+  ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ team, sources: loadSources(team), shared: loadSharedSources(), robots, assets }) });
   log(`TEAM: 2 pages under ${PROGRAM_PATH}, ${team.counts.listed} hospitals on CMS's list`);
   return { updated: { cmsReleased: newestCmsDate(team.meta), changed: builtOn(team.built_at) } };
 }

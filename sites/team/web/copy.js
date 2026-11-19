@@ -2,7 +2,8 @@
 // every number, date and rule citation arrives through a {placeholder}, formatted (constants.js holds the rules' numbers,
 // each with its claim). A sentence that states a fact about the model's rules carries the claim id (or ids) of its row in
 // sites/team/CLAIMS.md; sentences about this site's own arithmetic or framing carry none. Results say "would", never
-// "will". The lookup's words are lookup-copy.js's and the calculator's calc-copy.js's, copy files of their own.
+// "will". The lookup's words are lookup-copy.js's, the calculator's calc-copy.js's and the Methods page's methods/copy.js's,
+// copy files of their own.
 import { copyOf } from '../../../web/render/components.js';
 import { COPY as CALC } from './calc-copy.js';
 import { COPY as LOOKUP } from './lookup-copy.js';
@@ -353,28 +354,9 @@ export const COPY = {
   asofEpisodesValue: { text: '{from} and {to}', claim: null },
   asofQuality: { text: 'Quality measures', claim: null },
 
-  // The Methods page (pages/methods.js).
-  methodsTitle: { text: 'TEAM: methods and sources', claim: null },
-  methodsDescription: { text: 'How the TEAM page is built: its sources, their dates, and the rules it quotes.', claim: null },
-  methodsIntro: {
-    text: 'Every number on the TEAM page comes from a public CMS file, pinned and checked by its hash, or from the rules in {cite}. Each sentence that states a rule names its section, and the claims register in the repository quotes each one.',
-    claim: null,
-  },
-  methodsSources: { text: 'Sources', claim: null },
-  methodsMap: {
-    text: "The map's hollow dots are the open acute hospitals on Medicare's hospital list that its inpatient system pays, outside Maryland, that aren't in TEAM for {year}.",
-    claim: 'TEAM-03',
-  },
-  methodsExample: {
-    text: "Part three's worked example uses round numbers, not a hospital: a target amount of {target}, spending {spend} under it, a composite quality score of {cqs} and Track {track}. This site's code computes every line with the same arithmetic the calculator uses.",
-    claim: null,
-  },
-  methodsBandHeading: { text: "The calculator's band", claim: null },
-  methodsBand: {
-    text: "The calculator draws its result {band} of target either way by default, and the reader can set it from {lo} to {hi}. This site's own count: in CMS's CJR final reconciliation file, for CJR's full-risk performance years, each hospital's final reconciliation amount per episode against CJR's average target price for that year. In those years, {share} of hospitals ended a year within {within} of their target.",
-    claim: null,
-  },
-  methodsRepo: { text: 'The code, the pinned files and the claims register:', claim: null },
+  // The share card's two figures' labels (tools/og/card.js): the hospitals on CMS's list, and the areas CMS drew.
+  ogListed: { text: "Hospitals on CMS's TEAM list", claim: null },
+  ogAreas: { text: "Mandatory areas on CMS's list", claim: null },
 };
 
 export const { fill, fillKeep, t } = copyOf(COPY, LOOKUP, CALC);

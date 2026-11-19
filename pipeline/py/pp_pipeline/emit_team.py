@@ -7,7 +7,9 @@ repo's emitted hospital master.
 The method is pp_engine.team (episodes, quality, status, build); this module reads the pins and lays the result out.
 The file holds, for the lookup, the calculator and the hub band: CMS's preliminary performance year 2 target prices by
 DRG and census division, the category averages, each participant's episode estimate, target amount and quality
-percentiles, the default hospital, a status for every master hospital, and the list CCNs the master lacks (`a4`).
+percentiles, the default hospital, a status for every master hospital, the list CCNs the master lacks (`a4`), and the
+method's own numbers the Methods page states (`method`: the DRG remaps, the low-volume scale, each quality measure's
+cohort size and public period, the list-CBSA check).
 
 `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs (the repo's emitted files sit at
 <site>/fy<YYYY>/). A new pin or methods version in the hospital master makes this file stale (`require_current`).
@@ -42,7 +44,9 @@ class Inputs:
         self.price_rows = read_pinned_csv(PRICES)
         self.cjrx = {r["ccn"] for r in read_pinned_csv(CJRX)}
         self.prior, self.latest = (_mup(pin) for pin in MUP)
-        self.quality = _quality(read_pinned_csv(QUALITY))
+        quality_rows = read_pinned_csv(QUALITY)
+        self.quality = _quality(quality_rows)
+        self.quality_periods = quality_periods(quality_rows)
         self.master = read_json(emit_hospital.committed_path())
         require_current(self.master, manifest, "the hospital master")
         self.hospitals = self.master["hospitals"]
@@ -69,6 +73,17 @@ def _quality(rows_):
     return out
 
 
+def quality_periods(rows_):
+    """{measure: {start, end}}: the period of the public file each measure's values cover. Every row of a measure must
+    share one period, or the build stops (the Methods page states one per measure)."""
+    out = {}
+    for r in rows_:
+        period = {"start": r["start"], "end": r["end"]}
+        if out.setdefault(r["measure"], period) != period:
+            raise ValueError("quality pin: a measure's rows cover more than one period")
+    return out
+
+
 def read_crosswalk():
     """[{fips, county, state, cbsa}] from CMS's county-to-CBSA crosswalk; `cbsa` is its FY2025 CBSA column (blank for a
     rural county, a metropolitan division's code for a county in a divided metro)."""
@@ -90,6 +105,7 @@ def build_with_notes(built_at):
     p = Inputs(read_manifest())
     body, notes = build.build(p.participants, p.price_rows, p.cjrx, p.prior, p.latest, p.quality, p.hospitals,
                               p.crosswalk, p.delineation, p.shapes)
+    body["method"]["qualityPeriods"] = {m: p.quality_periods[m] for m in build.MEASURES}
     sources = list(dict.fromkeys([*PINS, *p.master["sources"]]))
     doc = {**envelope(SCHEMA_VERSION, METHODS_VERSION, sources, p.manifest, built_at, FY), "meta": meta(p.manifest),
            **body}

@@ -568,13 +568,16 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Status, in rule order: on the TEAM list (`in`; `in27` for a start on or after 2027-01-01; `ended` for an end before
   it), Maryland, then for everyone else the county's place. The selected areas are the CBSAs on the list that hold a
   mandatory participant. A county is in one when OMB's July 2023 delineation (OMB Bulletin 23-01, the Census Bureau's
-  List 1, pinned as `omb-delineation-2023`; the delineation the crosswalk's FY2025 CBSA column follows) puts it in a
-  selected CBSA. The delineation names every county of a CBSA, so a metro's every metropolitan division and a
+  List 1, pinned as `omb-delineation-2023`) puts it in a selected CBSA. The FY2027 crosswalk's FY2025 CBSA column follows
+  that delineation for every county but one: Stanly County, NC (37167), which the crosswalk puts in Charlotte (16740) and
+  the delineation in the Albemarle micropolitan area (10620); the delineation decides. The delineation names every county of a CBSA, so a metro's every metropolitan division and a
   micropolitan area's outlying counties are placed directly; the crosswalk, which gives divisions in place of their
   CBSA and leaves micropolitan counties blank, is used only for placing a hospital's county. A mandatory participant
-  is in TEAM by definition, so its own county counts as in its list CBSA even where the delineation disagrees; the
-  build counts those (none in this build: each of the 710 placed mandatory participants sits in a county the
-  delineation puts in its list CBSA; one is not placed). (The master's own `cbsa` is not used.) A hospital's county is
+  is in TEAM by definition, so its own county counts as in its list CBSA even where the delineation disagrees. The
+  build reports how many disagree and the file records it (`method.areaCheck`), but neither stops on one: the check is
+  a Python test (`test_every_mandatory_participants_county_is_in_its_list_cbsa`), which holds the count at none. In this
+  build each of the 710 placed mandatory participants sits in a county the delineation puts in its list CBSA; one is
+  not placed. (The master's own `cbsa` is not used.) A hospital's county is
   the master's FIPS code, else its county name matched in the crosswalk, else the county shape holding its map point,
   else the county of the other hospitals in its city. Off the list: `outside` (county in no selected area),
   `in_area_kind` (a kind the master marks not paid under the IPPS), `in_area_other` (acute or of unknown kind, yet not
@@ -586,3 +589,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   hospitals: in 715, in27 2, ended 3, maryland 56, outside 2,134, in_area_kind 338, in_area_other 3, ihs 4,
   unlisted 8, area_unknown 6 (Connecticut hospitals under an old county name; the crosswalk has the state's planning
   regions), cjrx 2,213 (outside 2,204, in_area_other 5, ihs 2, unlisted 2).
+- `method`: the numbers the Methods page states rather than types: the DRG remaps and the low-volume scale (the engine's
+  `REMAPS` and `BASELINE_SCALE`), each quality measure's cohort size (IPPS hospitals with a value: 2,977 for hybrid
+  hospital-wide readmission, 2,316 for ISCMR) and the period its public values cover (one per measure, or the build
+  stops), and the list-CBSA check above (711 mandatory participants, 710 placed, none outside their list CBSA).

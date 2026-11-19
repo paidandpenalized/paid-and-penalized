@@ -76,16 +76,41 @@ export const CITES = Object.freeze({
   cqs: `${CFR} 512.547(b)`,
 });
 
-// This site's own count, not a CMS rule (no claim): in CJR's full-risk performance years, about this share of hospitals
-// ended a year within `within` of their target, counted from CMS's CJR final reconciliation file (performance years 1 to
-// 7). The calculator's band "why?" says it; Methods (BAND_ANCHOR) gives how it was counted.
-export const CJR_BAND = Object.freeze({ share: 0.5, within: 0.05 });
+// This site's own count, not a CMS rule (no claim): in CJR's full-risk performance years, about `share` of hospitals ended
+// a year within `within` of their target, and about `wideShare` within `wideWithin`, counted from CMS's CJR final
+// reconciliation file (SOURCE_LINKS.cjrRecon). The calculator's band "why?" says the first; Methods (BAND_ANCHOR) gives
+// both and how they were counted.
+export const CJR_BAND = Object.freeze({ share: 0.5, within: 0.05, wideShare: 0.75, wideWithin: 0.10 });
 export const BAND_ANCHOR = 'band';
+
+// The rules' and CMS's other numbers the Methods page states (each with its claim below):
+//   BASELINE_YEARS     the years of the baseline period the low-volume threshold counts over (§ 512.550(c)(9))
+//   TARGET_CAPS        how far the reconciliation target's two after-the-year factors may move: the retrospective trend
+//                      within ±trend of the updated prospective trend, the final normalization within ±normalization of
+//                      the prospective one (§ 512.545(e)(1)(iii), (f)(2))
+//   OUTLIER_PERCENTILE the percentile of regional spending at which CMS caps an episode's spending (§ 512.505)
+//   PY2_PERIODS        performance year 2's measurement periods for the two measures the site prefills (§ 512.547(a)(2))
+//   FALLS_PRF_CFR_YEAR the calendar year the eCFR's text still gives as performance year 2's baseline for the falls and
+//                      respiratory failure measures (§ 512.547(a)(2)(ii)–(iii)); CMS's own table gives PY2_START's year
+//   SUPPRESSED_MAX     CMS's Medicare inpatient file leaves out any hospital-DRG row from this many discharges or fewer
+//   CQS_SCALE          the composite quality score's top (it runs from zero to this)
+export const BASELINE_YEARS = 3;
+export const TARGET_CAPS = Object.freeze({ trend: 0.03, normalization: 0.05 });
+export const OUTLIER_PERCENTILE = 99;
+export const PY2_PERIODS = Object.freeze({
+  hybrid_hwr: Object.freeze({ start: '2025-07-01', end: '2026-06-30' }),
+  iscmr: Object.freeze({ start: '2024-07-01', end: '2026-06-30' }),
+});
+export const FALLS_PRF_CFR_YEAR = '2026';
+export const SUPPRESSED_MAX = 10;
+export const CQS_SCALE = 100;
 
 export const CLAIMS = Object.freeze({
   MODEL_START: 'TEAM-07', MODEL_END: 'TEAM-20', PY2_START: 'TEAM-07', TRACK1_LAST: 'TEAM-25', PY2_DATA_DUE: 'TEAM-44', CJRX_START: 'TEAM-12',
   RECON_MONTHS: 'TEAM-29', ERROR_DAYS: 'TEAM-30', RECORD_YEARS: 'TEAM-31', CJRX_DAYS: 'TEAM-55', PORTAL: 'TEAM-48', DEFAULT_TRACK: 'TEAM-24',
   TRACKS: 'TEAM-14', CQS_CAPS: 'TEAM-15', LOW_VOLUME: 'TEAM-16', MISSING_QUALITY: 'TEAM-17', MEASURES: 'TEAM-18', EPISODE_DAYS: 'TEAM-19',
+  BASELINE_YEARS: 'TEAM-16', TARGET_CAPS: 'TEAM-64', OUTLIER_PERCENTILE: 'TEAM-65', PY2_PERIODS: 'TEAM-69', FALLS_PRF_CFR_YEAR: 'TEAM-70',
+  SUPPRESSED_MAX: 'TEAM-79', CQS_SCALE: 'TEAM-74',
 });
 
 // The program page's Parts, in order, by the id each section carries (the section menu links #<id>), then Methods.

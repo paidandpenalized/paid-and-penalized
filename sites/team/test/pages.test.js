@@ -19,7 +19,7 @@ import { COPY } from '../web/copy.js';
 import { COPY as LOOKUP, lookupFile } from '../web/lookup-copy.js';
 import { COPY as SEARCH } from '../../../hub/search/copy.js';
 import { escapeHtml } from '../../../web/render/html.js';
-import { loadAtlas, loadMaster, loadSources, loadTeam } from '../web/data.js';
+import { loadAtlas, loadMaster, loadSharedSources, loadSources, loadTeam } from '../web/data.js';
 import { TEAM, generateTeam, lookupMissing } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { programPage } from '../web/pages/program.js';
@@ -33,7 +33,7 @@ const assets = testAssets();
 const LOOKUP_URL = '/assets/team-lookup.test.json';
 const CALC_URL = '/assets/team-calc.test.json';
 const program = programPage({ team, master, atlas, robots: 'noindex', assets, lookupUrl: LOOKUP_URL, calcUrl: CALC_URL, search: { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [[team.defaultCcn, 'Example Hospital', null, 'KY', 'acute']], states: {} } });
-const methods = methodsPage({ team, sources: loadSources(team), robots: 'noindex', assets });
+const methods = methodsPage({ team, sources: loadSources(team), shared: loadSharedSources(), robots: 'noindex', assets });
 const words = (html) => textOf(html).replace(/\s+/g, ' ').trim();
 const main = (page) => /<main[\s\S]*?<\/main>/.exec(page)[0];
 // A Part by its id: the markup from its section's start to the next Part's (or the article's end).
@@ -285,5 +285,5 @@ test('no word repeats back to back anywhere in the rendered TEAM copy', () => {
   }
   // The calculator's "why?" and Methods' #band say "about half" once.
   assert.ok(words(program).includes("In this site\u2019s count from CMS\u2019s CJR reconciliation file, about half of hospitals"), 'the why');
-  assert.ok(words(methods).includes('In those years, about half of hospitals ended a year within 5% of their target.'), 'Methods #band');
+  assert.ok(words(methods).includes('In those years, about half of hospitals ended a year within 5% of their target, and about three-quarters'), 'Methods #band');
 });

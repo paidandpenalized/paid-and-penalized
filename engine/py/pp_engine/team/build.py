@@ -1,6 +1,7 @@
 """The TEAM file's body from parsed inputs: prices, each participant's episode estimate, target amount and quality
 percentiles, the default hospital, a status for every master hospital, the list CCNs the master lacks, and the counts
-the program page states (the hospitals on CMS's list, the selected areas on it, the CJR-X list's size, the other IPPS hospitals its map draws).
+the program page states (the hospitals on CMS's list, the selected areas on it, the CJR-X list's size, the other IPPS hospitals its map draws),
+and the method's own numbers the Methods page states (`method`).
 
 `build` takes the pins already parsed (pp_pipeline.emit_team reads them) and returns (body, notes); `notes` holds
 counts for the build report, never written to the file.
@@ -113,6 +114,18 @@ def participant(entry, h, ctx):
             "target": episodes.target_amount(latest, ctx["prices"], div)}
 
 
+def method(participants, tables, placed, mismatches):
+    """What the Methods page states about the build's own choices and checks, so it prints them rather than typing
+    them: the DRG remaps and the low-volume scale (episodes' constants), each measure's cohort size (the IPPS hospitals
+    with a value), and the list-CBSA check: the mandatory participants, how many are placed in a county, and how many of
+    those sit in a county the delineation puts outside their list CBSA (`mismatches`, status.list_cbsa_mismatches)."""
+    mandatory = [r for r in participants if r["participation"] == "mandatory"]
+    return {"remaps": episodes.REMAPS, "baselineScale": episodes.BASELINE_SCALE,
+            "cohort": {m: len(tables[m][0]) for m in MEASURES},
+            "areaCheck": {"mandatory": len(mandatory), "placed": sum(r["ccn"] in placed for r in mandatory),
+                          "mismatched": len(mismatches)}}
+
+
 def build(participants, price_rows, cjrx, prior, latest, quality_values, hospitals, crosswalk, delineation, shapes):
     """(body, notes). `prior`, `latest`: the two data years' {ccn: {drg: discharges}}; `quality_values`:
     {measure: {ccn: value}}; `cjrx`: the CJR-X CCNs; `crosswalk`: [{fips, county, state, cbsa}] (the counties placement
@@ -130,6 +143,7 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
     cbsa_of = {r["fips"]: r["cbsa"] for r in delineation}
     area = status.selected_area(participants, crosswalk, cbsa_of, placed, {h["ccn"]: h["state"] for h in hospitals})
     codes = {h["ccn"]: status.status_of(h, listed.get(h["ccn"]), cjrx, placed, area) for h in hospitals}
+    mismatches = status.list_cbsa_mismatches(participants, cbsa_of, placed)
     body = {
         "prices": {d: dict(sorted(v.items())) for d, v in sorted(prices.items())},
         "categoryAvg": {c: avg[c] for c in episodes.CATEGORIES},
@@ -144,9 +158,10 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
                    "selectedAreas": len({r["cbsa"] for r in participants if r["participation"] == "mandatory"}),
                    "cjrxListed": len(cjrx)},
         "otherIpps": other_ipps(hospitals, codes),
+        "method": method(participants, ctx["tables"], placed, mismatches),
     }
     notes = {"routes": Counter(routes.values()), "unplaced": len(hospitals) - len(placed),
-             "cbsa_mismatches": len(status.list_cbsa_mismatches(participants, cbsa_of, placed)),
+             "cbsa_mismatches": len(mismatches),
              "codes": Counter(c for c, _ in codes.values()),
              "cjrx_reasons": Counter(a[0] for c, a in codes.values() if c == "cjrx")}
     return body, notes

@@ -22,7 +22,8 @@
     "defaultCcn",
     "a4",
     "counts",
-    "otherIpps"
+    "otherIpps",
+    "method"
   ],
   "$defs": {
     "date": {
@@ -443,6 +444,118 @@
       "type": "array",
       "items": {
         "$ref": "common.schema.json#/$defs/ccn"
+      }
+    },
+    "method": {
+      "description": "The method's own numbers the Methods page states: `remaps`, {data-year MS-DRG the FY2027 grouper no longer has: {FY2027 MS-DRG: share of its cases}}; `baselineScale`, what the two data years' episodes are multiplied by to stand in for the three baseline years; `cohort`, per measure, how many IPPS hospitals have a public value (the percentile cohort); `qualityPeriods`, per measure, the period the public values cover; `areaCheck`, the mandatory participants on CMS's list, how many are placed in a county, and how many of those sit in a county OMB's delineation puts outside their list CBSA.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "remaps",
+        "baselineScale",
+        "cohort",
+        "qualityPeriods",
+        "areaCheck"
+      ],
+      "properties": {
+        "remaps": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "baselineScale": {
+          "type": "number",
+          "minimum": 0
+        },
+        "cohort": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hybrid_hwr",
+            "iscmr"
+          ],
+          "properties": {
+            "hybrid_hwr": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "iscmr": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "qualityPeriods": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "hybrid_hwr",
+            "iscmr"
+          ],
+          "properties": {
+            "hybrid_hwr": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start",
+                "end"
+              ],
+              "properties": {
+                "start": {
+                  "$ref": "#/$defs/date"
+                },
+                "end": {
+                  "$ref": "#/$defs/date"
+                }
+              }
+            },
+            "iscmr": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start",
+                "end"
+              ],
+              "properties": {
+                "start": {
+                  "$ref": "#/$defs/date"
+                },
+                "end": {
+                  "$ref": "#/$defs/date"
+                }
+              }
+            }
+          }
+        },
+        "areaCheck": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mandatory",
+            "placed",
+            "mismatched"
+          ],
+          "properties": {
+            "mandatory": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "placed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mismatched": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
       }
     }
   }

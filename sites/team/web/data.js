@@ -42,6 +42,14 @@ export function loadSources(team = loadTeam()) {
   });
 }
 
+// The ids of the TEAM file's pins that the hospital master reads too (its own `sources`): Methods lists them apart from
+// TEAM's own. Read once.
+let shared = null;
+export function loadSharedSources() {
+  shared ??= new Set(readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))).sources);
+  return shared;
+}
+
 // The pinned us-atlas topology the map is drawn from (web/charts/geo.js stateShapes reads its states). Read once.
 export function loadAtlas() {
   atlas ??= JSON.parse(readPinned(ATLAS_ID));
