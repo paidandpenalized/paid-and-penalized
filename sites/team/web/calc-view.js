@@ -7,22 +7,22 @@
 // The state: { ccn, track (1|2|3), s (the "all five" spending, percent: 5 is 5% over target), sk { CAT: percent } (a row's
 // own spending, overriding s for that row), band (percent either side of target), ov { n: { CAT }, p: { CAT } } (episodes
 // and average target prices the reader typed), lv { CAT: bool } (a low-volume box the reader set), q { measure: percentile }
-// (a quality percentile the reader typed), mine (a Set of the keys the reader typed or a link carried, each "your
-// number"), moved (whether the reader has set any spending: "What would it take?" then prices quality at the scenario),
+// (a quality percentile the reader typed), mine (a Set of the keys of the reader's own numbers, typed or carried by a
+// link, each "your number": n, p, q and lv; a row's spending is a scenario input like the slider, never one), moved (whether the reader has set any spending: "What would it take?" then prices quality at the scenario),
 // earn, owe (the amounts "What would it take?" solves for; null: the band's ends) }. s, sk and band are percents, as the
 // share link (client/share.js) carries them.
 //
 // The markup marks every part that changes: data-v="key" on an element whose text and attributes follow the state, and
 // data-in="key" on each input (the browser sets its value, unless the reader is typing in it). The figure (data-v="fig")
 // is the costly part, so the browser redraws it once per frame.
-import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLVE_SPAN, TRACKS } from '../../../engine/js/team/params.js';
+import { BAND_DEFAULT, CATEGORIES, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLVE_SPAN, TRACKS } from '../../../engine/js/team/params.js';
 import { compositeQuality } from '../../../engine/js/team/quality.js';
 import { bandOf, marginal, reconcile, resultAt, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, listText, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
-import { CALC, CITES, DEFAULT_TRACK, PAYOFF, PY2_START, TRACK1_LAST } from './constants.js';
+import { CALC, DEFAULT_TRACK, PAYOFF, PY2_START, TRACK1_LAST } from './constants.js';
 import { fill, t } from './calc-copy.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
@@ -128,8 +128,14 @@ function wwitOf({ input, inputs, state, r, band }) {
   } else {
     const reference = state.moved ? input : { ...input, cats: input.cats.map((c) => ({ ...c, spend: canLose ? BAND_DEFAULT : -BAND_DEFAULT })) };
     const ref = reconcile(reference);
+    // The amount before Track 1's floor, and whether any spending is over target: a $0 here is not "on target" when the
+    // spending is over it and either the track has no repayment or low-volume types hold the repayment at zero.
+    const before = reference.cats.reduce((sum, c) => sum + (c.lowVolume ? Math.max(0, -c.spend * c.target) : -c.spend * c.target), 0);
+    const over = reference.cats.some((c) => c.spend > 0 && c.target > 0);
     if (inputs.cqs >= 100) quality.text = fill('wwQTop', { amount });
     else if (ref.capped) quality.text = fill('wwQCapped', { amount, n });
+    else if (!canLose && snap(before) < 0) quality.text = fill('wwQNoRepay', { amount, n });
+    else if (over && snap(before) === 0) quality.text = fill('wwQLowVolume', { amount });
     else quality.text = fill('wwQOnTarget', { amount });
   }
   return {
@@ -191,7 +197,8 @@ export function calcView({ hosp, state, team }) {
       key: c.key, short: t(`row${c.key}`), name, notes: notes.join(' · '),
       n: { value: count(c.n), label: fill('lblEpisodes', { cat: name }), ...src(state.mine.has(`n.${c.key}`), fill('srcEpisodes', { year: String(team.dataYear) })) },
       p: { value: roundedDollars(c.price), label: fill('lblPrice', { cat: name }), ...src(state.mine.has(`p.${c.key}`), pub.n === 0 && derived.has(c.key) ? t('srcPriceMean') : fill('srcPrice', { year })) },
-      s: { value: pctOf(c.spend * 100), label: fill('lblSpend', { cat: name }), ...src(c.key in state.sk, t('srcAllFive')) },
+      // A row's own spending is a scenario input, as the slider is: said as "this row", never "your number".
+      s: { value: pctOf(c.spend * 100), label: fill('lblSpend', { cat: name }), own: c.key in state.sk, mine: false, text: t(c.key in state.sk ? 'srcThisRow' : 'srcAllFive') },
       lv: { checked: c.lowVolume, mine: state.mine.has(`lv.${c.key}`), label: fill('lblLv', { cat: name, lv: String(LOW_VOLUME) }) },
       target: money(c.target),
       result: signed(snap(c.lowVolume ? Math.max(0, raw) : raw)),
@@ -257,7 +264,7 @@ function rowMarkup(row) {
   return html`<tr><th scope="row"><abbr title="${row.name}">${row.short}</abbr>${row.notes ? html`<small class="tc-note-row">${row.notes}</small>` : ''}</th>
 <td>${box({ id: `tc-n-${k}`, key: `n.${k}`, value: row.n.value, mine: row.n.mine, label: row.n.label, mode: 'numeric' })}${tag(`src.n.${k}`, row.n)}</td>
 <td>${box({ id: `tc-p-${k}`, key: `p.${k}`, value: row.p.value, mine: row.p.mine, label: row.p.label, cls: ' tc-in--p' })}${tag(`src.p.${k}`, row.p)}</td>
-<td>${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: row.s.mine, label: row.s.label })}${tag(`src.s.${k}`, row.s)}</td>
+<td>${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: false, label: row.s.label, cls: row.s.own ? ' is-own' : '' })}${tag(`src.s.${k}`, row.s)}</td>
 <td class="tc-lvc">${vh(`tc-lv-${k}`, row.lv.label)}<input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}></td>
 <td class="num"><span data-v="target.${k}">${row.target}</span><small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
 }
@@ -281,7 +288,7 @@ ${line(8, html`${t('l8')} <span class="tc-src" data-v="l.capped"${l.capped ? '' 
 <p class="tc-foot">${t('ledgerCalcFoot')}</p>`;
 }
 
-function qualityMarkup(v) {
+function qualityMarkup(v, statics) {
   const q = v.quality;
   return html`<details class="tc-more tc-q" id="tc-q"><summary data-v="q.summary">${q.summary}</summary>
 <div class="tc-scroll"><table class="tc-qt">
@@ -289,20 +296,11 @@ function qualityMarkup(v) {
 <tbody>${q.rows.map((m) => html`<tr><th scope="row">${m.name}<small class="tc-note-row">${m.note}</small></th><td class="num">${m.value}</td>
 <td>${box({ id: `tc-q-${m.key}`, key: `q.${m.key}`, value: m.pct.value, mine: m.pct.mine, label: m.pct.label, cls: ' tc-in--q' })}${tag(`src.q.${m.key}`, m.pct)}</td><td class="num" data-v="w.${m.key}">${m.weight}</td></tr>`)}</tbody>
 </table></div>
-<p class="tc-foot">${fill('qFoot', { missing: String(MISSING_QUALITY) })} <span class="tm-cite">${CITES.cqs}</span></p>
+${staticBox('qFoot', statics)}
 </details>`;
 }
 
-function howMarkup(v) {
-  const { qGain, qLoss } = TRACKS[DEFAULT_TRACK];
-  return html`<details class="tc-more tc-how"><summary>${t('howSummary')}</summary>
-<p>${fill('howEpisodes', { year: String(v.dataYear) })} ${t('howPrice')}</p>
-<p>${fill('howLv', { lv: String(LOW_VOLUME) })} ${t('howSpend')}</p>
-<p>${fill('howQuality', { keep: pct(1 - qGain, 0), cut: pct(qLoss, 0), n: String(DEFAULT_TRACK) })} ${t('howLimits')} ${t('howPost')} <span class="tm-cite">${CITES.limitsAll}</span></p>
-</details>`;
-}
-
-function resultMarkup(v) {
+function resultMarkup(v, statics) {
   const r = v.result;
   return html`<div class="tc-out">
 <p class="tc-out__lab"><span data-v="out.label">${r.label}</span> ${scenTag(v.tags)}</p>
@@ -311,7 +309,7 @@ function resultMarkup(v) {
 <p class="tc-out__none" data-v="out.none"${r.none ? '' : html` hidden`}>${t('outNone')}</p>
 <div class="tc-out__hyp"><p>${t('outHyp')}</p>
 <p class="tc-band"><label for="tc-band">${t('bandLabel')}<span class="vh"> ${t('bandFull')}</span></label><input class="tc-in tc-in--band" id="tc-band" data-in="band" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="${v.band.value}"><span aria-hidden="true">%</span></p>
-<details class="tc-why"><summary>${t('whySummary')}</summary><p>${fill('whyText', { band: bandText(BAND_DEFAULT * 100), cite: CITES.cjrBand, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) })}</p></details></div>
+${staticBox('why', statics)}</div>
 </div>`;
 }
 
@@ -330,8 +328,16 @@ ${row(fill('wwPct', { one: pct(0.01, 0) }), 'ww.pct', w.perPct)}
 </tbody></table></section>`;
 }
 
-/** The calculator's changing part: the two columns, for the view's hospital and state. fig: false leaves the figure's box empty. */
-export function calcMarkup(v, { fig = true } = {}) {
+// A part that is the same for every hospital (the quality note, "How each line works", the band's "why?"): the build
+// writes its words (program/calc.js calcStatics) and the browser keeps them when it draws another hospital, so the page's
+// script carries none of them. statics: { name: markup }, or null for an empty box.
+const staticBox = (name, statics) => html`<div class="tc-static" data-static="${name}">${statics?.[name] ?? ''}</div>`;
+
+/**
+ * The calculator's changing part: the two columns, for the view's hospital and state. fig: false leaves the figure's box
+ * empty; statics: the hospital-independent parts' markup (the build's), or null for their empty boxes (the browser's).
+ */
+export function calcMarkup(v, { fig = true, statics = null } = {}) {
   return html`<div class="tc-grid">
 <div class="tc-left">
 <fieldset class="tc-track"><legend class="vh">${t('trackLegend')}</legend>${v.tracks.map((k) => html`<label class="tc-track__opt"><input type="radio" name="tc-track" value="${String(k.n)}" data-in="t.${String(k.n)}"${k.checked ? html` checked` : ''}><span>${k.name} <small>${k.sub}</small></span></label>`)}</fieldset>
@@ -341,11 +347,11 @@ export function calcMarkup(v, { fig = true } = {}) {
 <tbody>${v.rows.map(rowMarkup)}</tbody>
 </table></div>
 ${ledgerMarkup(v)}
-${qualityMarkup(v)}
-${howMarkup(v)}
+${qualityMarkup(v, statics)}
+${staticBox('how', statics)}
 </div>
 <div class="tc-right">
-${resultMarkup(v)}
+${resultMarkup(v, statics)}
 <figure class="tc-fig"><div data-v="fig">${fig ? v.fig() : ''}</div><figcaption class="tc-foot">${t('figNote')}</figcaption></figure>
 ${wwitMarkup(v)}
 <div class="tc-share"><button type="button" class="fig__btn" data-calc-copy hidden>${t('copyLink')}</button><label class="tc-incl" hidden><input type="checkbox" data-calc-incl> ${t('includeMine')}</label><span class="tc-copied" role="status"></span><p class="tc-link" data-calc-link hidden></p><p class="tc-private">${t('private')}</p></div>

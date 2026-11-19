@@ -33,9 +33,9 @@ export function spelled(n) {
   return n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
 }
 
-// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"), 0.75 is
-// "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
-const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.75, 'three-quarters']]);
+// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"; 'about' with 0.5:
+// "about half"), 0.75 is "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
+const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.5, 'half'], [0.75, 'three-quarters']]);
 export function fractionWord(share, determiner = 'a') {
   const word = FRACTION_WORDS.get(share);
   if (word === undefined) throw new RangeError(`fractionWord: no words for the share ${String(share)}`);

@@ -2,21 +2,10 @@
 // shell's script (shell.js) so that a page's own script can read the same ?h= without taking the shell's wiring with it
 // (a bundle that imports shell.js would run it twice). Strings in, strings out; nothing reads the page or stores
 // anything. A value that is not a CCN is nothing: no hospital is followed, and nothing is built from it.
-import { CCN } from '../../engine/js/ccn.js';
 import { SITE, hospitalPathOf, programById } from '../site.js';
 
-// Six ASCII digits or letters, in either case. Checked before the CCN is uppercased, because uppercasing turns a few
-// other characters (a dotless i, a long s) into ASCII letters, and those are not a lowercase CCN.
-const ASCII_CCN = /^[0-9A-Za-z]{6}$/;
-
-// The CCN a query string follows: the first h parameter, uppercased, when it is six digits or letters, else null. known:
-// asked about the CCN (uppercase) only once it is well formed, and a null answer makes it null too.
-export function followedCcn(search, known = () => true) {
-  const raw = new URLSearchParams(search ?? '').get('h');
-  if (raw === null || !ASCII_CCN.test(raw)) return null;
-  const ccn = raw.toUpperCase();
-  return CCN.test(ccn) && known(ccn) ? ccn : null;
-}
+// The CCN a query string follows (follow-ccn.js, a module of its own for page scripts that need only that).
+export { followedCcn } from './follow-ccn.js';
 
 // The link that keeps a hospital: a program's folder with the hospital in its query.
 export const withFollow = (path, ccn) => `${path}?h=${ccn}`;

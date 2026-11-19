@@ -12,6 +12,7 @@ import { RELEASE_MS } from '../../web/client/topbar.js';
 import { readNewestEmitted } from '../../sites/hacrp/pipeline/build.js';
 import { PROGRAM_PATH, hospitalPath } from '../ci/page-types.js';
 import { METHODS_PATH as WR_METHODS_PATH } from '../../sites/work-requirement/web/links.js';
+import { METHODS_PATH as TEAM_METHODS_PATH, PROGRAM_PATH as TEAM_PROGRAM_PATH } from '../../sites/team/web/links.js';
 import { openFolds } from './axe.js';
 import { CONCURRENCY, FEEDBACK_LINK, SEARCH_BOXES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, lowerAMeasure, searchIn, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { samplePages } from './site.js';
@@ -37,8 +38,10 @@ const SNAP = 1;
 // The most Tab presses a walk may take before it fails: the longest page needs about half as many each way.
 const MAX_PRESSES = 1000;
 // The pages whose bar has no search: the work requirement's Methods. That site's Find sets its program page's hospital
-// over the program page's own data (sites/work-requirement/client/find.js), so it is on that page only.
-const NO_BAR_SEARCH = new Set([WR_METHODS_PATH]);
+// over the program page's own data (sites/work-requirement/client/find.js), so it is on that page only. And TEAM's
+// pages: its finders are in the program page itself (Part 1's lookup and the calculator's picker), and there are no
+// per-hospital TEAM pages for a bar search to open.
+const NO_BAR_SEARCH = new Set([WR_METHODS_PATH, TEAM_PROGRAM_PATH, TEAM_METHODS_PATH]);
 
 const shared = useBrowser();
 

@@ -99,6 +99,22 @@ export function licenseNotice(metafile) {
 // entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]): an ES module, or, for
 // a name in classic, a classic script, bundled as one self-contained function call (no import, export or global name).
 // The share cards (web/share-card.js), each committed PNG web/og/<id>.png, are /assets/og-<id>.<hash>.png (cards[id]).
+// A copy file's claim ids are for the copy gate (pipeline/test/copy-gate.test.js reads the source), not the browser: a
+// bundle takes each entry's `claim: …` out ({ text, claim: 'X-01' } becomes { text }), so a page script carries only
+// words. A claim in any other form than null, an id or a list of ids stops the build, so none is left in silently.
+export const CLAIM_KEY = /,\s*claim:\s*(?:null|'[^']*'|\[[^\]]*\])/g;
+export const withoutClaims = (source, path = 'a copy file') => {
+  const out = source.replace(CLAIM_KEY, '');
+  if (/\bclaim:/.test(out)) throw new RangeError(`${path}: a claim the bundle can't take out`);
+  return out;
+};
+const stripClaims = {
+  name: 'strip-claims',
+  setup(build) {
+    build.onLoad({ filter: /(^|[/\\-])copy\.js$/ }, (args) => ({ contents: withoutClaims(readFileSync(args.path, 'utf8'), args.path), loader: 'js' }));
+  },
+};
+
 export async function buildAssets({ outDir, entries = {}, classic = [], siteStyles = {} }) {
   for (const name of classic) if (!Object.hasOwn(entries, name)) throw new RangeError(`no classic entry "${name}" in entries`);
   const dir = join(outDir, 'assets');
@@ -116,6 +132,7 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     const result = await esbuild({
       entryPoints: [repoPath(path)],
       bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
+      plugins: [stripClaims],
       absWorkingDir: REPO_ROOT, // the metafile's input paths (licenseNotice) are then the repository's
     });
     js[name] = writeHashed(dir, name, 'js', licenseNotice(result.metafile) + result.outputFiles[0].text);

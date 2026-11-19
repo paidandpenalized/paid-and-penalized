@@ -269,8 +269,8 @@ for (const width of [1280, 390]) {
         // What a box can't take goes back, said beside it.
         await page.locator('#tc-p-CABG').fill('abc');
         await page.locator('#tc-p-CABG').press('Tab');
-        assert.match(await page.locator('#tc-p-CABG').inputValue(), /^\$[\d,]+$/, 'back to its last good value');
-        assert.match((await calcSays(page)).msg ?? '', /isn.t a number from/);
+        assert.ok(/^\$[\d,]+$/.test(await page.locator('#tc-p-CABG').inputValue()), 'back to its last good value');
+        assert.ok(/isn.t a number from/.test((await calcSays(page)).msg ?? ''), 'the line under the box says so');
         // The address, once the reader pauses: the hospital and public inputs, never the typed count.
         await eventually(async () => page.evaluate(() => location.hash.startsWith('#team&h=')), 'the state in the fragment');
         assert.ok(!(await page.evaluate(() => location.hash)).includes('n.LEJR'), 'own numbers stay out of the address');
@@ -312,7 +312,7 @@ describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
     const s = await calcSays(page);
     assert.equal(s.track, '2');
     assert.equal(s.srcN, 'your number');
-    assert.match(await page.locator('[data-calc-rejected]').textContent(), /zz/);
+    assert.ok(/zz/.test(await page.locator('[data-calc-rejected]').textContent()), 'the key it couldn\'t use is named');
     const junk = `#team&${'%3Cb%3E=1&s=abc&'.repeat(200)}`.slice(0, 2000);
     await page.goto(`${tabs.base}${PROGRAM_PATH}${junk}`);
     await page.reload();
@@ -320,6 +320,20 @@ describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
     assert.ok(!after.banner, 'nothing valid applied: no banner');
     assert.equal(after.track, '3');
     await assertQuiet(seen, 'TEAM Part 5 by link');
+  }));
+
+  it('"Start from the public numbers" puts a linked scenario back to the hospital\'s public numbers, in place', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&s=5&n.LEJR=120&b=8`, watched: true }, async (page, { seen }) => {
+    await eventually(async () => (await calcSays(page)).banner, 'the banner');
+    await page.locator('[data-calc-reset]').click();
+    const s = await calcSays(page);
+    assert.ok(!s.banner, 'the banner goes');
+    assert.equal(s.track, '3');
+    assert.equal(s.tag, 'Scenario · public data');
+    assert.ok(s.srcN !== 'your number', 'the typed count is gone');
+    const after = await page.evaluate(() => ({ s: document.getElementById('tc-s').value, band: document.getElementById('tc-band').value, rejected: document.querySelector('[data-calc-rejected]').textContent, hash: location.hash, path: location.pathname }));
+    assert.deepEqual([after.s, after.band, after.rejected, after.path], ['0', '5', '', PROGRAM_PATH]);
+    assert.ok(/^#team&h=[0-9A-Z]{6}$/.test(after.hash), 'the address names the hospital alone');
+    await assertQuiet(seen, 'TEAM Part 5 reset');
   }));
 
   it('team:pick and "Show one at random" load another hospital; Part 4\'s region follows it', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
@@ -349,16 +363,44 @@ describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
     const before = (await calcSays(page)).where;
     await page.locator('[data-calc-random]').click();
     await eventually(async () => (await calcSays(page)).where !== before, 'another hospital at random');
-    assert.doesNotMatch((await calcSays(page)).where, /, VA$/, 'never the skipped state');
+    assert.ok(!/, VA$/.test((await calcSays(page)).where), 'never the skipped state');
     await assertQuiet(seen, 'TEAM Part 5 following a pick');
   }));
+});
+
+// The browser's first drawing takes the build's markup through the same patch every change makes: it must change
+// nothing but show the controls only the script works (their hidden attributes). Every mutation inside the drawn
+// calculator is recorded from before the page's script runs (the parser's own additions aside).
+describe('TEAM Part 5: the browser\'s first drawing is the build\'s', () => {
+  const tabs = useContext(shared, { width: 1280, height: 900 });
+  it('mounting changes nothing in the server-rendered calculator but the script\'s own controls', async () => {
+    await tabs.context.addInitScript(() => {
+      window.calcMutations = [];
+      new MutationObserver((list) => {
+        for (const m of list) {
+          const el = m.target.nodeType === 1 ? m.target : m.target.parentElement;
+          // The parser only adds nodes as it reads the page; a script's change removes or rewrites one.
+          if (!el?.closest?.('[data-calc-body]') || (m.type === 'childList' && !m.removedNodes.length)) continue;
+          window.calcMutations.push({ type: m.type, attr: m.attributeName, what: `${el.localName}.${[...el.classList].join('.')}${Object.keys(el.dataset).map((k) => `[${k}]`).join('')}` });
+        }
+      }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+    });
+    await withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+      await page.waitForTimeout(100);
+      const changes = await page.evaluate(() => window.calcMutations);
+      const unexpected = changes.filter((m) => !(m.type === 'attributes' && m.attr === 'hidden' && /\[calcCopy\]|\.tc-incl|\[calcOpen\]/.test(m.what)));
+      assert.deepEqual(unexpected, [], 'the first patch changes nothing');
+      assert.ok(changes.length >= 3, 'the script showed its controls');
+      await assertQuiet(seen, 'TEAM Part 5 on mount');
+    });
+  });
 });
 
 describe('TEAM Part 5 without JavaScript', () => {
   const tabs = useContext(shared, { javaScript: false });
   it('the default hospital\'s numbers show; the controls that need the script stay hidden', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
     assert.ok(await page.locator('.tc__nojs').isVisible());
-    assert.match(await page.locator('[data-v="out.range"]').textContent(), /\$/);
+    assert.ok(/\$/.test(await page.locator('[data-v="out.range"]').textContent()), 'the band in dollars');
     assert.equal(await page.locator('[data-calc-random]').isVisible(), false);
     assert.equal(await page.locator('#tc-pick').isVisible(), false);
   }));

@@ -3,31 +3,25 @@
 // one at random" draws. No DOM: client/calc.js runs these against the page, and the tests run them alone. The state's
 // shape is calc-view.js's.
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, SOLVE_SPAN } from '../../../engine/js/team/params.js';
-import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { initialState } from '../web/calc-view.js';
 import { CALC, DEFAULT_TRACK } from '../web/constants.js';
 import { MAX_EPISODES, MAX_PRICE, decodeTeam, encodeTeam } from './share.js';
 
-const TAG = 'team';
-const CCN = /^[0-9A-Z]{6}$/;
-const ASCII_CCN = /^[0-9A-Za-z]{6}$/;
 const PCT_SPAN = SOLVE_SPAN * 100;
 
-// The CCN a query string's first h names (uppercased), or null: the family's ?h= (web/client/follow.js followedCcn), read
-// here without the shell's site map.
-export function queryCcn(search) {
-  const raw = new URLSearchParams(search ?? '').get('h');
-  return raw !== null && ASCII_CCN.test(raw) ? raw.toUpperCase() : null;
-}
-
-// The hospital a page opens on: a shared link's h, else the address's ?h=, else the default; one the calculator doesn't
-// know (known(ccn) false: not a participant still in TEAM) is ignored, and the page stays on the default.
-export function startCcn({ search = '', hash = '', defaultCcn, known = () => true }) {
-  const linked = isScenarioHash(hash, TAG) ? decodeTeam(hash).state.ccn : undefined;
-  for (const ccn of [linked, queryCcn(search)]) if (ccn && CCN.test(ccn) && known(ccn)) return ccn;
-  return defaultCcn;
+// Where a page opens, once it knows which participants the calculator has (known(ccn)): the hospital a link names
+// (#team&h=…, readLink's), else the address's ?h= (query), else the default. A link's values apply only to the hospital
+// it names: when that hospital is unknown (not a participant still in TEAM, a stale link, or a file that didn't load) its
+// values are dropped (dropped: true, for the page to say so) and the page opens on the ?h= or the default. A link that
+// names no hospital applies to whichever opens. Returns { ccn, values (or null), dropped }.
+export function arrival({ link = null, query = null, defaultCcn, known }) {
+  const named = link?.ccn;
+  const knows = (ccn) => Boolean(ccn) && (ccn === defaultCcn || known(ccn));
+  if (named && knows(named)) return { ccn: named, values: link.values, dropped: false };
+  const values = named ? null : link?.values ?? null;
+  return { ccn: knows(query) ? query : defaultCcn, values, dropped: Boolean(named) && Object.keys(link.values).length > 0 };
 }
 
 // Each box the reader can type in: how its text is read, the range it takes, its decimals (the share link's), and where
@@ -42,8 +36,9 @@ export const BOXES = Object.freeze({
   earn: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
   owe: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
 });
-// The reader's own numbers: typed (or carried by a link), each shown as "your number" and named in state.mine.
-const OWN = new Set(['n', 'p', 'sk', 'q']);
+// The reader's own numbers: typed (or carried by a link), each shown as "your number" and named in state.mine. A row's
+// spending (sk) is a scenario input, as the slider is: never one.
+const OWN = new Set(['n', 'p', 'q']);
 
 const round = (x, decimals) => Math.round(x * 10 ** decimals) / 10 ** decimals + 0;
 const copyState = (s) => ({ ...s, sk: { ...s.sk }, ov: { n: { ...s.ov.n }, p: { ...s.ov.p } }, lv: { ...s.lv }, q: { ...s.q }, mine: new Set(s.mine) });
@@ -111,7 +106,7 @@ export function applyLink(state, link) {
   if (link.track !== undefined) next.track = link.track;
   if (link.s !== undefined) next.s = Math.max(-CALC.slider, Math.min(CALC.slider, link.s)) + 0;
   if (link.band !== undefined) next.band = link.band;
-  for (const [cat, v] of Object.entries(link.sk ?? {})) { next.sk[cat] = v; next.mine.add(`sk.${cat}`); }
+  for (const [cat, v] of Object.entries(link.sk ?? {})) next.sk[cat] = v;
   for (const g of ['n', 'p']) for (const [cat, v] of Object.entries(link.ov?.[g] ?? {})) { next.ov[g][cat] = v; next.mine.add(`${g}.${cat}`); }
   for (const [cat, v] of Object.entries(link.lv ?? {})) { next.lv[cat] = v; next.mine.add(`lv.${cat}`); }
   for (const [m, v] of Object.entries(link.q ?? {})) { next.q[m] = v; next.mine.add(`q.${m}`); }
@@ -119,11 +114,11 @@ export function applyLink(state, link) {
   return next;
 }
 
-// Whether a state is a scenario someone set, not the hospital's opening one: any track, spending, band or number of the
-// reader's. (A link that only names a hospital is not.)
+// Whether a state is a scenario someone set, not the hospital's opening one: any track, spending (the slider's or a
+// row's), band or number of the reader's. (A link that only names a hospital is not.)
 export function isScenario(state, hosp) {
   const base = initialState(hosp);
-  return state.track !== base.track || state.s !== base.s || state.band !== base.band || state.mine.size > 0;
+  return state.track !== base.track || state.s !== base.s || state.band !== base.band || Object.keys(state.sk).length > 0 || state.mine.size > 0;
 }
 
 // The link's state: the hospital, then only what differs from its opening state (the track, the slider and the band at

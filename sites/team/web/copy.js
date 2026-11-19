@@ -205,6 +205,50 @@ export const COPY = {
     claim: null,
   },
 
+  // The calculator's words only the build writes (web/program/calc.js): its frame, and the parts that are the same for
+  // every hospital (the quality note, "How each line works", the band's "why?"). The rest are calc-copy.js's.
+  calcTitle: { text: 'Reconciliation worksheet · {year} (PY{py})', claim: null },
+  calcPick: { text: 'Another TEAM hospital', claim: null },
+  calcPickRest: { text: 'in the calculator: type a name or CCN', claim: null },
+  calcPickHolder: { text: 'Type a name or CCN', claim: null },
+  calcRandom: { text: 'Show one at random', claim: null },
+  calcNoScript: {
+    text: 'These are the public numbers. Changing them needs JavaScript, which runs the calculator in your browser; nothing you type is sent anywhere.',
+    claim: null,
+  },
+  calcBanner: { text: 'Reader-made scenario from a link, not CMS data.', claim: null },
+  calcBannerLink: { text: 'Start from the public numbers', claim: null },
+  howSummary: { text: 'How each line works', claim: null },
+  howEpisodes: {
+    text: "Episodes: the hospital's Medicare inpatient discharges in {year} for each type, a floor. The public file hides an episode type with too few discharges at a hospital (a hidden cell), and it has no outpatient cases, which TEAM also counts for joint replacement and spinal fusion.",
+    claim: 'TEAM-57',
+  },
+  howPrice: {
+    text: "Average target: CMS's preliminary target price for each of those episode types in the hospital's region, averaged by its discharges, before the risk adjustment CMS makes in the hospital's own prices. With no discharges, the region's average for the category.",
+    claim: ['TEAM-57', 'TEAM-52'],
+  },
+  howLv: {
+    text: 'Fewer than {lv} episodes in the baseline years: the type can\'t add to a repayment. Ticked where the public counts suggest it.',
+    claim: 'TEAM-16',
+  },
+  howSpend: { text: 'Spending: type a percent on any row to set that row alone; the slider on line two moves the rest.', claim: null },
+  howQuality: { text: 'Line five: a gain keeps {keep} or more of itself, by quality score; a repayment shrinks by up to {cut} in Track {n}.', claim: 'TEAM-15' },
+  howLimits: { text: 'Line six: the track\'s limits, a share of line one.', claim: 'TEAM-14' },
+  howPost: {
+    text: "Line seven: only for a hospital whose spending after its episodes runs far above its region's, outside the limits. It needs CMS's own data, so it is zero here.",
+    claim: 'TEAM-62',
+  },
+  qFoot: {
+    text: "A percentile is where the hospital's Care Compare value falls among every hospital the inpatient system pays that has one, lower values better: this site's arithmetic, near CMS's. CMS weights each measure by the hospital's episodes it covers, and scores a measure with no value at {missing}.",
+    claim: ['TEAM-61', 'TEAM-17'],
+  },
+  whySummary: { text: 'why?', claim: null },
+  whyText: {
+    text: "In this site's count from CMS's CJR reconciliation file, about {share} of hospitals ended a full-risk year within {band} of target; {methods}. Set the band from {lo} to {hi}.",
+    claim: null,
+  },
+  whyMethods: { text: 'how it was counted is in Methods', claim: null },
+
   // Part 6, what a hospital has to do: the checklist by phase, beside Figure 5, TEAM's clock.
   doHeading: { text: 'Before, during and after the year', claim: null },
   doIntro: { text: 'What the rules ask of a hospital in TEAM, by when in the year it falls. Each item names its rule.', claim: null },
@@ -320,6 +364,11 @@ export const COPY = {
   },
   methodsExample: {
     text: "Part three's worked example uses round numbers, not a hospital: a target amount of {target}, spending {spend} under it, a composite quality score of {cqs} and Track {track}. This site's code computes every line with the same arithmetic the calculator uses.",
+    claim: null,
+  },
+  methodsBandHeading: { text: "The calculator's band", claim: null },
+  methodsBand: {
+    text: "The calculator draws its result {band} of target either way by default, and the reader can set it from {lo} to {hi}. This site's own count: in CMS's CJR final reconciliation file, for CJR's full-risk performance years, each hospital's final reconciliation amount per episode against CJR's average target price for that year. About {share} of hospitals ended a full-risk year within {within} of their target.",
     claim: null,
   },
   methodsRepo: { text: 'The code, the pinned files and the claims register:', claim: null },

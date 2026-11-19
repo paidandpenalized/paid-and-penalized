@@ -113,11 +113,18 @@ export function mountBar(root = document) {
       td.textContent = roundedDollars(v);
     }
   };
-  pick.addEventListener('change', show);
+  // The price and its sentence are a polite live region for a pick here. When the calculator's hospital moves them, the
+  // calculator says so itself, so the region is quiet for that change and speaks again at the next pick.
+  const now = part.querySelector('.tm-now');
+  pick.addEventListener('change', () => {
+    now?.setAttribute('aria-live', 'polite');
+    show();
+  });
   // The calculator's hospital moved to another region: the price, the region's name, the column and the outline follow.
   document.addEventListener('team:hospital', (e) => {
     const div = Number(e.detail?.division);
     if (!DIVISION_NUMBERS.includes(div) || div === reader) return;
+    now?.setAttribute('aria-live', 'off');
     reader = div;
     figure.dataset.barReader = String(div);
     say('division', divisionName(div));

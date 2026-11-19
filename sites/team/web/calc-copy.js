@@ -1,5 +1,7 @@
-// The calculator's words (Part 5), and the payoff figure's and the categories' words it shares with Part 3 and Part 4:
-// a copy file of its own, so the page's script carries these and no other page words. For hospital staff: plain; TEAM is
+// The calculator's words that the page's script draws (Part 5), and the payoff figure's and the categories' words it
+// shares with Part 3 and Part 4: a copy file of its own, so the page's script carries these and no other page words. The
+// calculator's words only the build writes (its frame, the quality note, "How each line works", the band's "why?") are
+// copy.js's. For hospital staff: plain; TEAM is
 // a payment model, never a penalty; results say "would" and "scenario", never "will". No digit characters: every number
 // arrives through a {placeholder}, formatted. A sentence that states a fact about the rules carries its claim id (or ids)
 // in sites/team/CLAIMS.md; sentences about this site's own arithmetic or framing carry none.
@@ -28,26 +30,16 @@ export const COPY = {
   payoffTip: { text: '{s}: {amount}', claim: null },
 
   // The frame: the worksheet's title bar, the hospital, the picker and the button beside it.
-  calcTitle: { text: 'Reconciliation worksheet · {year} (PY{py})', claim: null },
   calcWhere: { text: 'CCN {ccn} · {place}', claim: null },
   calcWhereNone: { text: 'CCN {ccn}', claim: null },
   calcNameNone: { text: 'Hospital {ccn}', claim: null },
-  calcPick: { text: 'Another TEAM hospital', claim: null },
-  calcPickRest: { text: 'in the calculator: type a name or CCN', claim: null },
-  calcPickHolder: { text: 'Type a name or CCN', claim: null },
   calcPickKind: { text: 'TEAM', claim: null },
   calcPickCount: { text: '{n} TEAM hospitals match.', claim: null },
   calcPickCountOne: { text: 'One TEAM hospital matches.', claim: null },
   calcPickEmpty: { text: 'No TEAM hospital matches.', claim: null },
   calcFailed: { text: "The list of TEAM hospitals didn't load. Try again.", claim: null },
-  calcRandom: { text: 'Show one at random', claim: null },
-  calcNoScript: {
-    text: 'These are the public numbers. Changing them needs JavaScript, which runs the calculator in your browser; nothing you type is sent anywhere.',
-    claim: null,
-  },
-  calcBanner: { text: 'Reader-made scenario from a link, not CMS data.', claim: null },
-  calcBannerLink: { text: 'Start from the public numbers', claim: null },
   calcRejected: { text: 'Parts of the link this page doesn\'t use were left out: {keys}.', claim: null },
+  calcDropped: { text: "The link names a hospital the calculator doesn't have, so its numbers were left out.", claim: null },
   calcLoaded: { text: 'The calculator now shows {name}.', claim: null },
 
   // The track control and the note under it.
@@ -89,6 +81,7 @@ export const COPY = {
   srcPrice: { text: 'CMS {year} regional', claim: null },
   srcPriceMean: { text: "This site's mean", claim: null },
   srcAllFive: { text: 'All five', claim: null },
+  srcThisRow: { text: 'This row', claim: null },
   srcMine: { text: 'your number', claim: null },
   srcCare: { text: 'Care Compare', claim: null },
   srcNotPublic: { text: 'Not public: {n}', claim: 'TEAM-17' },
@@ -133,32 +126,8 @@ export const COPY = {
   qInpatient: { text: 'every episode type', claim: 'TEAM-18' },
   qLejr: { text: 'joint replacement episodes only', claim: 'TEAM-18' },
   lblPct: { text: '{measure}: percentile, {lo} to {hi}', claim: null },
-  qFoot: {
-    text: "A percentile is where the hospital's Care Compare value falls among every hospital the inpatient system pays that has one, lower values better: this site's arithmetic, near CMS's. CMS weights each measure by the hospital's episodes it covers, and scores a measure with no value at {missing}.",
-    claim: ['TEAM-61', 'TEAM-17'],
-  },
 
   // How each line works (collapsed).
-  howSummary: { text: 'How each line works', claim: null },
-  howEpisodes: {
-    text: "Episodes: the hospital's Medicare inpatient discharges in {year} for each type, a floor. The public file hides an episode type with too few discharges at a hospital (a hidden cell), and it has no outpatient cases, which TEAM also counts for joint replacement and spinal fusion.",
-    claim: 'TEAM-57',
-  },
-  howPrice: {
-    text: "Average target: CMS's preliminary target price for each of those episode types in the hospital's region, averaged by its discharges, before the risk adjustment CMS makes in the hospital's own prices. With no discharges, the region's average for the category.",
-    claim: ['TEAM-57', 'TEAM-52'],
-  },
-  howLv: {
-    text: 'Fewer than {lv} episodes in the baseline years: the type can\'t add to a repayment. Ticked where the public counts suggest it.',
-    claim: 'TEAM-16',
-  },
-  howSpend: { text: 'Spending: type a percent on any row to set that row alone; the slider on line two moves the rest.', claim: null },
-  howQuality: { text: 'Line five: a gain keeps {keep} or more of itself, by quality score; a repayment shrinks by up to {cut} in Track {n}.', claim: 'TEAM-15' },
-  howLimits: { text: 'Line six: the track\'s limits, a share of line one.', claim: 'TEAM-14' },
-  howPost: {
-    text: "Line seven: only for a hospital whose spending after its episodes runs far above its region's, outside the limits. It needs CMS's own data, so it is zero here.",
-    claim: 'TEAM-62',
-  },
 
   // The result box (the stamp on a phone) and the band.
   outBand: { text: 'Within {band} of target', claim: null },
@@ -171,11 +140,6 @@ export const COPY = {
   outNone: { text: 'No public episodes for this hospital: enter its counts from its CMS reports and the result follows.', claim: null },
   bandLabel: { text: 'Band ±', claim: null },
   bandFull: { text: 'Band: how far spending lands from target either way, in percent', claim: null },
-  whySummary: { text: 'why?', claim: null },
-  whyText: {
-    text: "In CJR, the joint-replacement model before TEAM, about half of hospitals ended a full-risk year within {band} of their target: this site's count from {cite}. Set it from {lo} to {hi}.",
-    claim: null,
-  },
 
   // Figure: the hospital's year at any spending level.
   figAlt: {
@@ -210,6 +174,8 @@ export const COPY = {
   wwQOver: { text: '{amount} if spending lands {pct} over', claim: null },
   wwQUnder: { text: '{amount} if spending lands {pct} under', claim: null },
   wwQCapped: { text: '{amount}: the result is held at the Track {n} limit', claim: 'TEAM-14' },
+  wwQNoRepay: { text: '{amount}: Track {n} has no repayment for quality to shrink', claim: 'TEAM-28' },
+  wwQLowVolume: { text: "{amount}: its low-volume episode types can't add to a repayment, so there is none for quality to shrink", claim: 'TEAM-16' },
   wwQOnTarget: { text: '{amount}: on target there is no gain or repayment for quality to move', claim: null },
   wwQTop: { text: '{amount}: the score is already at the top', claim: null },
   wwNeed: { text: "Needs episodes: enter the hospital's counts", claim: null },

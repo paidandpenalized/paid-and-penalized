@@ -4,7 +4,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
-import { buildAssets, hash8, stylesheet } from '../site/assets.js';
+import { buildAssets, hash8, stylesheet, withoutClaims } from '../site/assets.js';
 import { HUB } from '../../hub/pages.js';
 import { loadHub } from '../../hub/data.js';
 import { EXAMPLE_CCN } from '../../hub/model.js';
@@ -161,8 +161,17 @@ test('no browser bundle calls a built-in newer than the ES2020 target', () =>
     for (const [name, path] of Object.entries(js)) {
       const text = readFileSync(join(out, path), 'utf8');
       for (const [builtIn, re] of NEWER_BUILT_INS) assert.doesNotMatch(text, re, `${name}: ${builtIn}`);
+      // The copy gate's claim ids stay in the source: a copy file reaches a bundle as words only (assets.js
+      // withoutClaims). TEAM's page script reads its words from copy files alone, so none of it carries a claim.
+      if (name === 'team-page') assert.ok(!/\bclaim:/.test(text), `${name}: a copy entry's claim`);
     }
   }));
+
+test('a bundle takes copy entries\' claims out, in every form a copy file writes them, and stops on any other', () => {
+  const source = "a: { text: 'x', claim: null },\n  b: { text: 'y', claim: 'TEAM-01' },\n  c: {\n    text: 'z',\n    claim: ['TEAM-01', 'TEAM-02'],\n  },";
+  assert.equal(withoutClaims(source), "a: { text: 'x' },\n  b: { text: 'y' },\n  c: {\n    text: 'z',\n  },");
+  assert.throws(() => withoutClaims("a: { text: 'x', claim: CLAIM }"), RangeError);
+});
 
 test('build runs the sites in order with one context: assets, env, and what earlier sites emitted', () =>
   withTemp(async (dir) => {

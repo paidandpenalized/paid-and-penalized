@@ -71,9 +71,13 @@ export const CITES = Object.freeze({
   portal: 'CMS TEAM FAQ, questions 54 and 55',
   reports: `${CFR} 512.540(b)(8), 512.562(b)(6); CMS TEAM FAQ, questions 54, 61 and 62`,
   cqs: `${CFR} 512.547(b)`,
-  // Not a rule: the file the calculator's band width rests on (this site's count, in its "why?").
-  cjrBand: "CMS's CJR final reconciliation payments, performance years 1 to 7",
 });
+
+// This site's own count, not a CMS rule (no claim): in CJR's full-risk performance years, about this share of hospitals
+// ended a year within `within` of their target, counted from CMS's CJR final reconciliation file (performance years 1 to
+// 7). The calculator's band "why?" says it; Methods (BAND_ANCHOR) gives how it was counted.
+export const CJR_BAND = Object.freeze({ share: 0.5, within: 0.05 });
+export const BAND_ANCHOR = 'band';
 
 export const CLAIMS = Object.freeze({
   MODEL_START: 'TEAM-07', MODEL_END: 'TEAM-20', PY2_START: 'TEAM-07', TRACK1_LAST: 'TEAM-25', PY2_DATA_DUE: 'TEAM-44', CJRX_START: 'TEAM-12',

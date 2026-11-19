@@ -13,7 +13,9 @@ import { mulberry32 } from '../../../engine/js/test/prng.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
-import { applyLink, fragmentOf, isScenario, randomPick, readLink, setSlider, setTrack, startCcn, typeInto } from '../client/calc-state.js';
+import { applyLink, arrival, fragmentOf, isScenario, randomPick, readLink, setSlider, setTrack, typeInto } from '../client/calc-state.js';
+import { followedCcn } from '../../../web/client/follow-ccn.js';
+import { CALC } from '../web/constants.js';
 import { calcAsset, calcMeta, calcRow, hospOf } from '../web/calc-data.js';
 import { t } from '../web/calc-copy.js';
 import { calcMarkup, calcView, initialState, inputsOf } from '../web/calc-view.js';
@@ -48,9 +50,14 @@ test('the default hospital\'s server render equals the client\'s first render', 
   const { meta: m, row, who } = JSON.parse(data[1]);
   const hosp = hospOf(row, who);
   const client = calcMarkup(calcView({ hosp, state: initialState(hosp), team: m })).text;
-  assert.ok(client === body[1], 'the same markup, byte for byte');
+  // The parts the same for every hospital are the build's alone (the browser keeps them): their boxes, emptied, aside.
+  const statics = /<div class="tc-static" data-static="(\w+)">[\s\S]*?<\/(details|p)><\/div>/g;
+  assert.equal([...body[1].matchAll(statics)].length, 3, 'the quality note, "How each line works" and the "why?"');
+  assert.ok(client === body[1].replace(statics, '<div class="tc-static" data-static="$1"></div>'), 'the same markup, byte for byte');
+  assert.ok(!/claim|How each line works/.test(client), 'the browser\'s markup holds none of the build-only words');
   assert.ok(section.includes(`data-src="${CALC_URL}"`), 'the participants\' file is named, not loaded');
-  assert.doesNotMatch(section, /NaN|undefined|\[object/, 'no hole in the markup');
+  assert.ok(!/NaN|undefined|\[object/.test(section), 'no hole in the markup');
+  assert.ok(section.includes('<a href="/team/methods/#band">how it was counted is in Methods</a>'), 'the "why?" links its method');
 });
 
 test('typing a number marks it "your number" and the tag reads "includes your numbers"', () => {
@@ -62,8 +69,8 @@ test('typing a number marks it "your number" and the tag reads "includes your nu
   assert.ok(v.rows[0].n.mine && !v.rows[0].p.mine && !v.rows[1].n.mine, 'only that box');
   assert.ok(v.tags.mine && v.tags.text === word('tagMine'), 'the scenario tag says so');
   const markup = calcMarkup(v, { fig: false }).text;
-  assert.match(markup, /<input class="tc-in is-mine" id="tc-n-LEJR"/);
-  assert.match(markup, /<span class="tc-tag tc-tag--mine" data-v="tag">includes your numbers<\/span>/);
+  assert.ok(markup.includes('<input class="tc-in is-mine" id="tc-n-LEJR"'), 'the box is drawn as the reader\'s');
+  assert.ok(markup.includes('<span class="tc-tag tc-tag--mine" data-v="tag">includes your numbers</span>'), 'the tag in red italic');
   // Clearing the box goes back to the public number.
   const back = type(state, deflt, 'n.LEJR', '');
   assert.ok(!back.mine.size && !('LEJR' in back.ov.n), 'cleared: the public number again');
@@ -77,7 +84,8 @@ test('a row\'s spending overrides the "all five" slider for that row only', () =
   for (const c of inputs.cats) assert.equal(c.spend, c.key === 'CABG' ? -0.06 : 0.05, c.key);
   const v = viewOf(deflt, state);
   const cabg = v.rows.find((r) => r.key === 'CABG');
-  assert.ok(cabg.s.mine && cabg.s.value === '−6%', 'the row\'s own, the reader\'s');
+  assert.ok(cabg.s.own && cabg.s.value === '−6%' && cabg.s.text === word('srcThisRow'), 'the row\'s own spending');
+  assert.ok(!cabg.s.mine && !v.tags.mine && !state.mine.size, 'a scenario input, as the slider is: never "your number"');
   assert.ok(v.rows.filter((r) => r.key !== 'CABG').every((r) => !r.s.mine && r.s.value === '+5%' && r.s.text === word('srcAllFive')), 'the rest follow the slider');
   const engine = reconcile({ cats: inputs.cats.map(({ key, target, spend, lowVolume }) => ({ key, target, spend, lowVolume })), cqs: inputs.cqs, track: 3 });
   same(v.ledger.result, (engine.result < 0 ? '−' : '+') + v.ledger.result.slice(1), 'line 8 is the engine\'s');
@@ -88,36 +96,52 @@ test('a row\'s spending overrides the "all five" slider for that row only', () =
 test('"What would it take?" says "Not possible" past the limit, and why on the repayment side', () => {
   const base = initialState(deflt);
   const v = viewOf(deflt, base);
-  assert.doesNotMatch(v.wwit.earn.text, /Not possible/, 'the default ask is within reach');
-  const far = viewOf(deflt, type(base, deflt, 'earn', '$999M'));
-  assert.match(far.wwit.earn.text, /^Not possible: Track 3 stops gains at \+\$/);
-  const owe = viewOf(deflt, type(base, deflt, 'owe', '$999M'));
-  assert.match(owe.wwit.owe.text, /^Any spending: the Track 3 stop-loss holds a repayment to −\$/);
+  const says = (text, re, words) => assert.ok(re.test(text), words);
+  says(v.wwit.earn.text, /^Spend /, 'the default ask is within reach');
+  says(viewOf(deflt, type(base, deflt, 'earn', '$999M')).wwit.earn.text, /^Not possible: Track 3 stops gains at \+\$/, 'past the stop-gain: not possible');
+  says(viewOf(deflt, type(base, deflt, 'owe', '$999M')).wwit.owe.text, /^Any spending: the Track 3 stop-loss holds a repayment to −\$/, 'past the stop-loss: any spending');
   // Every category low volume: no repayment at all, so the stop-loss can't be reached.
-  const low = { ...base, lv: Object.fromEntries(CATEGORIES.map((c) => [c, true])) };
-  const lv = viewOf(deflt, low);
-  assert.match(lv.wwit.loss, /^Not possible: its low-volume episode types can[’'']t add to a repayment/);
-  assert.match(lv.wwit.owe.text, /^Any spending: its low-volume episode types/);
+  const lv = viewOf(deflt, { ...base, lv: Object.fromEntries(CATEGORIES.map((c) => [c, true])) });
+  says(lv.wwit.loss, /^Not possible: its low-volume episode types can[’']t add to a repayment/, 'the stop-loss row names the low-volume cause');
+  says(lv.wwit.owe.text, /^Any spending: its low-volume episode types/, 'the owe row too');
   // Track 1 never owes.
   const t1 = viewOf(deflt, setTrack(base, 1));
-  assert.match(t1.wwit.owe.text, /^Track 1 never owes a repayment$/);
-  assert.match(t1.wwit.loss, /^Track 1 never owes a repayment$/);
-  assert.match(t1.wwit.quality.text, /if spending lands 5% under$/, 'Track 1 prices quality under target');
-  assert.match(v.wwit.quality.text, /if spending lands 5% over$/);
-  // At the top of the scale, the step stops at 100; held at a limit, quality moves nothing and says so.
+  assert.equal(t1.wwit.owe.text, 'Track 1 never owes a repayment');
+  assert.equal(t1.wwit.loss, 'Track 1 never owes a repayment');
+  says(t1.wwit.quality.text, /if spending lands 5% under$/, 'Track 1 prices quality under target');
+  says(v.wwit.quality.text, /if spending lands 5% over$/, 'the other tracks over it');
+  // At the top of the scale, the step stops at 100.
   let top = base;
   for (const m of Object.keys(MEASURES)) top = type(top, deflt, `q.${m}`, '95');
   assert.equal(viewOf(deflt, top).wwit.quality.label, 'Quality score to 100');
-  const capped = viewOf(deflt, type(setSlider(base, -25), deflt, 'q.falls', '10'));
-  assert.match(capped.wwit.quality.text, /held at the Track 3 limit|in this scenario/);
-  const held = viewOf(deflt, setSlider(base, -25));
-  if (held.ledger.capped) assert.match(held.wwit.quality.text, /^\$0: the result is held at the Track 3 limit$/);
+});
+
+test('ten more quality points at $0 say why: held at a limit, no repayment on Track 1, low-volume types, on target', () => {
+  const base = initialState(deflt);
+  const says = (text, re, words) => assert.ok(re.test(text), words);
+  // 25% under target on Track 3 is past the stop-gain at any score: capped by construction.
+  const held = viewOf(deflt, setSlider(base, -CALC.slider));
+  assert.ok(held.ledger.capped, 'at the stop-gain');
+  says(held.wwit.quality.text, /^\$0: the result is held at the Track 3 limit$/, 'held at the limit');
+  // Track 1 over target: nothing to repay, so nothing for quality to shrink.
+  const t1 = viewOf(deflt, setSlider(setTrack(base, 1), 5));
+  says(t1.wwit.quality.text, /^\$0: Track 1 has no repayment for quality to shrink$/, 'Track 1 over target');
+  // Every type low volume, at the engine's reference 5% over target: the low-volume types hold the repayment at zero.
+  const lowAll = { ...base, lv: Object.fromEntries(CATEGORIES.map((c) => [c, true])) };
+  for (const track of [2, 3]) says(viewOf(deflt, setTrack(lowAll, track)).wwit.quality.text, /^\$0: its low-volume episode types can[’']t add to a repayment/, `Track ${track}, all low volume`);
+  // The same case among the participants, as the page opens them.
+  const opens = team.participants.filter((p) => p.active && CATEGORIES.every((c) => p.cats[c].lowVolume) && CATEGORIES.some((c) => p.cats[c].n > 0));
+  assert.ok(opens.length > 0, 'the file has such participants');
+  for (const p of opens.slice(0, 5)) says(viewOf(hospOf(calcRow(p), WHO)).wwit.quality.text, /low-volume episode types/, 'an all-low-volume participant on opening');
+  // A scenario on target: there is nothing for quality to move.
+  const on = viewOf(deflt, { ...setSlider(base, 0), moved: true });
+  says(on.wwit.quality.text, /^\$0: on target there is no gain or repayment for quality to move$/, 'on target');
 });
 
 test('quality by measure is collapsed by default, and its score is compositeQuality\'s', () => {
   const v = viewOf(deflt);
   const markup = calcMarkup(v, { fig: false }).text;
-  assert.match(markup, /<details class="tc-more tc-q" id="tc-q">/, 'no open attribute');
+  assert.ok(markup.includes('<details class="tc-more tc-q" id="tc-q">'), 'no open attribute');
   const pcts = Object.fromEntries(Object.keys(MEASURES).map((m) => [m, deflt.quality[m]?.pct ?? null]));
   const n = CATEGORIES.reduce((s, c) => s + deflt.cats[c].n, 0);
   const { cqs, weights } = compositeQuality(pcts, { inpatient: n, lejr: deflt.cats.LEJR.n });
@@ -152,21 +176,49 @@ test('Show one at random picks a participant still in TEAM, outside the skipped 
   assert.ok(randomPick(pool, mulberry32(3)) === randomPick(pool, mulberry32(3)));
 });
 
-test('?h=<ccn> preselects; an unknown ccn is ignored; a link\'s h wins', () => {
+test('?h=<ccn> preselects; an unknown ccn is ignored; a link applies only to the hospital it names', () => {
   const ccns = calcAsset(team).rows.map((r) => r[0]);
   const known = (c) => ccns.includes(c);
   const [a, b] = ccns.filter((c) => c !== team.defaultCcn);
-  const start = (search, hash = '') => startCcn({ search, hash, defaultCcn: team.defaultCcn, known });
-  same(start(`?h=${a}`), a, 'a participant in the query');
-  same(start(`?h=${a.toLowerCase()}`), a, 'in either case');
-  same(start('?h=ZZZZZZ'), team.defaultCcn, 'unknown: the default');
-  same(start('?h=<b>x</b>'), team.defaultCcn, 'not a CCN');
-  same(start(''), team.defaultCcn, 'nothing: the default');
-  same(start(`?h=${a}`, `#team&h=${b}&t=2`), b, 'the link\'s hospital');
-  same(start(`?h=${a}`, '#team&h=ZZZZZZ'), a, 'an unknown link hospital falls back to the query');
-  same(start('', '#calc'), team.defaultCcn, 'a bare anchor names none');
+  // The client's path (client/calc.js arrive): the address's ?h= through the family's reader, the link through readLink.
+  const open = (search, hash = '', knows = known) => arrival({ link: hash.startsWith('#team') ? readLink(hash) : null, query: followedCcn(search), defaultCcn: team.defaultCcn, known: knows });
+  same(open(`?h=${a}`).ccn, a, 'a participant in the query');
+  same(open(`?h=${a.toLowerCase()}`).ccn, a, 'in either case');
+  same(open('?h=ZZZZZZ').ccn, team.defaultCcn, 'unknown: the default');
+  same(open('?h=<b>x</b>').ccn, team.defaultCcn, 'not a CCN');
+  same(open('').ccn, team.defaultCcn, 'nothing: the default');
+  same(open('', '#calc').ccn, team.defaultCcn, 'a bare anchor names none');
   const ended = team.participants.find((p) => !p.active);
-  if (ended) same(start(`?h=${ended.ccn}`), team.defaultCcn, 'a participant that left is not offered');
+  if (ended) same(open(`?h=${ended.ccn}`).ccn, team.defaultCcn, 'a participant that left is not offered');
+  // A link's hospital wins, and its values come with it.
+  const linked = open(`?h=${a}`, `#team&h=${b}&t=2`);
+  assert.ok(linked.ccn === b && linked.values.track === 2 && !linked.dropped, 'the link\'s hospital, with its values');
+  // A stale or unknown link hospital: the ?h=, then the default, and the link's values dropped, never applied elsewhere.
+  const stale = open(`?h=${a}`, '#team&h=ZZZZZZ&t=2&n.LEJR=40');
+  assert.ok(stale.ccn === a && stale.values === null && stale.dropped, 'the query\'s hospital; the link\'s values dropped');
+  const lone = open('', '#team&h=ZZZZZZ&t=2');
+  assert.ok(lone.ccn === team.defaultCcn && lone.values === null && lone.dropped, 'the default; dropped');
+  // The participants' file didn't load: nothing is known, so a link to another hospital is dropped.
+  const failed = open('', `#team&h=${b}&t=2`, () => false);
+  assert.ok(failed.ccn === team.defaultCcn && failed.values === null && failed.dropped, 'a file that didn\'t load: dropped');
+  // A link naming the default needs no file; one naming none applies to whichever opens.
+  assert.ok(open('', `#team&h=${team.defaultCcn}&t=1`, () => false).values.track === 1);
+  assert.ok(open(`?h=${a}`, '#team&t=1').ccn === a && open(`?h=${a}`, '#team&t=1').values.track === 1);
+  // A link that names a hospital and nothing else drops nothing worth saying.
+  assert.ok(!open('', '#team&h=ZZZZZZ').dropped);
+});
+
+test('a row of another shape is refused where it is read, quality percentiles included', () => {
+  const row = calcRow(team.participants.find((p) => p.ccn === team.defaultCcn));
+  assert.throws(() => hospOf(row.slice(1)), TypeError);
+  for (const bad of [101, -1, NaN, '50']) {
+    const r = [...row];
+    r[r.length - 4] = bad;
+    assert.throws(() => hospOf(r), TypeError, String(bad));
+  }
+  const none = [...row];
+  none[none.length - 4] = null;
+  assert.equal(hospOf(none).quality.hybrid_hwr, null);
 });
 
 test('a participant with no public episodes: $0 and no NaN, the region\'s prices, a sentence asking for its counts', () => {
@@ -183,8 +235,8 @@ test('a participant with no public episodes: $0 and no NaN, the region\'s prices
   assert.equal(v.rows.find((r) => r.key === 'SPINAL').p.text, word('srcPriceMean'), 'spinal\'s average is this site\'s mean, said so');
   assert.equal(v.wwit.earn.text, word('wwNeed'));
   const markup = calcMarkup(v).text;
-  assert.doesNotMatch(markup, /NaN|Infinity|undefined/);
-  assert.match(markup, /<p class="tc-out__none" data-v="out.none">/, 'the sentence shows');
+  assert.ok(!/NaN|Infinity|undefined/.test(markup), 'no hole in the markup');
+  assert.ok(markup.includes('<p class="tc-out__none" data-v="out.none">'), 'the sentence shows');
   // Typing its counts gives a result.
   const typed = viewOf(zero, type(initialState(zero), zero, 'n.CABG', '40'));
   assert.ok(!typed.result.none && typed.ledger.target !== '$0');
@@ -206,10 +258,13 @@ test('a junk link: bad keys ignored, valid ones applied, nothing thrown; a scena
   assert.ok(!isScenario(applyLink(initialState(deflt), refused.values), deflt));
   // A link that names only the hospital, or carries the defaults, is not a scenario.
   assert.ok(!isScenario(applyLink(initialState(deflt), readLink(`#team&h=${deflt.ccn}&t=3&s=0&b=5`).values), deflt));
-  // Linked own numbers are the reader's.
+  // Linked own numbers are the reader's; a linked row spending is a scenario input, as the slider is.
   const own = applyLink(initialState(deflt), readLink('#team&n.LEJR=7&p.CABG=50000&lv.BOWEL=1&sk.SHFFT=-3').values);
-  for (const k of ['n.LEJR', 'p.CABG', 'lv.BOWEL', 'sk.SHFFT']) assert.ok(own.mine.has(k), k);
+  for (const k of ['n.LEJR', 'p.CABG', 'lv.BOWEL']) assert.ok(own.mine.has(k), k);
+  assert.ok(!own.mine.has('sk.SHFFT') && own.sk.SHFFT === -3, 'the row\'s spending applied, not "your number"');
   assert.ok(own.moved, 'a linked spending counts as set');
+  const rowOnly = applyLink(initialState(deflt), readLink('#team&sk.SHFFT=-3').values);
+  assert.ok(isScenario(rowOnly, deflt) && !rowOnly.mine.size, 'a row\'s spending alone is a scenario');
 });
 
 test('the page\'s link: the hospital, then only what changed; own numbers only when asked', () => {
@@ -239,6 +294,6 @@ test('every track draws, each limit as TRACKS gives it', () => {
   for (const track of Object.keys(TRACKS).map(Number)) {
     const v = viewOf(deflt, setTrack(initialState(deflt), track));
     assert.equal(v.tracks.find((k) => k.checked).n, track);
-    assert.doesNotMatch(calcMarkup(v).text, /NaN|undefined/, `Track ${track}`);
+    assert.ok(!/NaN|undefined/.test(calcMarkup(v).text), `Track ${track}: no hole in the markup`);
   }
 });

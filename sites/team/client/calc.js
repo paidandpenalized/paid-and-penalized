@@ -12,6 +12,7 @@
 // The payoff figure is redrawn once per frame, and the polite sentence for a screen reader once the reader pauses
 // (SETTLE_MS). A box that can't take what was typed goes back to its last good value and says so.
 import { fetchAsset } from '../../../web/client/fetch-asset.js';
+import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { SETTLE_MS } from '../../../web/client/live-status.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
@@ -21,7 +22,7 @@ import { isScenarioHash } from '../../../web/whatif/fragment.js';
 import { CALC_COLS, hospOf } from '../web/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView, initialState } from '../web/calc-view.js';
-import { BOXES, addressOf, applyLink, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, startCcn, typeInto } from './calc-state.js';
+import { BOXES, addressOf, applyLink, arrival, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
 import { loadSearch } from './files.js';
 
 // How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
@@ -142,19 +143,24 @@ export function mountCalc(section) {
 
   // A new hospital: its whole calculator drawn afresh (the same markup the build draws for its default), the rest of the
   // page told (Part 4's region follows), the address written.
-  const show = (h, next) => {
+  const show = (h, next, { quiet = false } = {}) => {
     hosp = h;
     state = next;
     view = calcView({ hosp, state, team: meta });
+    // The parts the same for every hospital are the build's: kept, moved into the new markup's empty boxes.
+    const statics = new Map([...body.querySelectorAll('[data-static]')].map((el) => [el.dataset.static, [...el.childNodes]]));
     body.replaceChildren(...parsed(calcMarkup(view)).childNodes);
+    for (const box of body.querySelectorAll('[data-static]')) box.append(...(statics.get(box.dataset.static) ?? []));
     showControls();
     nameIt();
+    // One announcement for the move: this one (Part 4 follows quietly).
+    if (!quiet) sayEl.textContent = fill('calcLoaded', { name: view.hosp.name });
     document.dispatchEvent(new CustomEvent('team:hospital', { detail: { ccn: hosp.ccn, division: hosp.division } }));
   };
 
   // Moves to the participant ccn from the file (a pick, a random draw, team:pick): its opening state, keeping the reader's
   // spending and band, as they were comparing. Says so, and writes the address.
-  const load = async (ccn, { link = null } = {}) => {
+  const load = async (ccn, { values = null, quiet = false } = {}) => {
     let f;
     try {
       f = await files();
@@ -166,10 +172,9 @@ export function mountCalc(section) {
     if (!row) return false;
     meta = f.meta;
     const h = hospOf(row, f.who.get(ccn));
-    const next = link ? applyLink(initialState(h), link) : { ...initialState(h), s: state.s, band: state.band, moved: state.moved };
-    show(h, next);
-    sayEl.textContent = fill('calcLoaded', { name: view.hosp.name });
-    if (!link) writeAddress();
+    const next = values ? applyLink(initialState(h), values) : { ...initialState(h), s: state.s, band: state.band, moved: state.moved };
+    show(h, next, { quiet });
+    if (!values) writeAddress();
     return true;
   };
 
@@ -289,30 +294,56 @@ export function mountCalc(section) {
 
   // ---------- arrival: a ?h= or a shared link ----------
 
-  // The state a link (#team&…) carries, over the hospital it names (or the ?h=, or the default): a scenario someone made
-  // shows the banner, and the keys it couldn't use are named in it (as text).
+  // The state a link (#team&…) carries, applied only to the hospital it names (calc-state.js arrival: a link naming a
+  // hospital the file doesn't have is dropped, said politely, and the page opens on the ?h= or the default). The file is
+  // fetched only when a link or a ?h= names another hospital than the default. A scenario someone made shows the banner,
+  // and the keys the link couldn't use are named in it (as text).
   async function arrive() {
     const { hash, search } = location;
-    const linked = isScenarioHash(hash, 'team');
-    const link = linked ? readLink(hash) : null;
-    const wanted = startCcn({ search, hash, defaultCcn: hosp.ccn });
-    let moved = false;
-    if (wanted !== hosp.ccn) moved = await load(wanted, { link: link?.values ?? null });
-    if (!moved && link) update(applyLink(initialState(hosp), link.values), { force: true });
-    if (link) {
-      const rejected = section.querySelector('[data-calc-rejected]');
-      rejected.textContent = link.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
-      banner.hidden = !isScenario(state, hosp);
-      section.scrollIntoView({ block: 'start' });
+    const link = isScenarioHash(hash, 'team') ? readLink(hash) : null;
+    const query = followedCcn(search);
+    const base = first.row[0];
+    let f = null;
+    if ([link?.ccn, query].some((ccn) => ccn && ccn !== base)) {
+      try {
+        f = await files();
+      } catch {
+        sayEl.textContent = t('calcFailed');
+      }
     }
+    const to = arrival({ link, query, defaultCcn: base, known: (ccn) => Boolean(f?.rows.has(ccn)) });
+    if (to.ccn !== hosp.ccn || to.values) {
+      const home = hospOf(first.row, first.who);
+      if (to.ccn === base) show(home, to.values ? applyLink(initialState(home), to.values) : initialState(home), { quiet: true });
+      else await load(to.ccn, { values: to.values, quiet: true });
+    }
+    if (to.dropped) sayEl.textContent = t('calcDropped');
+    const rejected = section.querySelector('[data-calc-rejected]');
+    rejected.textContent = link?.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
+    banner.hidden = !isScenario(state, hosp);
+    if (link) section.scrollIntoView({ block: 'start' });
   }
 
+  // "Start from the public numbers" (the banner's link): this hospital's opening state, the banner gone, the address
+  // written; the page stays here.
+  banner.querySelector('[data-calc-reset]')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    update(initialState(hosp), { force: true });
+    banner.hidden = true;
+    section.querySelector('[data-calc-rejected]').textContent = '';
+    writeAddress();
+    section.scrollIntoView({ block: 'start' });
+  });
+
+  // The client's first drawing: the build's markup for the default hospital, taken through the same patch every change
+  // makes (it changes nothing: the build drew the same view), then the parts only the script works.
   view = calcView({ hosp, state, team: meta });
+  patch();
   section.querySelector('.tc__nojs')?.remove();
   showControls();
   // A link pasted into this tab, or Back to one: the page reads it again. (The page's own writes fire no hashchange.)
   window.addEventListener('hashchange', () => {
     if (isScenarioHash(location.hash, 'team') && location.hash !== fragmentOf(state)) arrive();
   });
-  if (isScenarioHash(location.hash, 'team') || startCcn({ search: location.search, hash: location.hash, defaultCcn: hosp.ccn }) !== hosp.ccn) arrive();
+  if (isScenarioHash(location.hash, 'team') || followedCcn(location.search)) arrive();
 }

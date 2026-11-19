@@ -49,7 +49,10 @@ export function hospOf(row, who = {}) {
   const q = row.slice(HEAD + CATEGORIES.length * PER_CAT);
   const quality = Object.fromEntries(PUBLIC_MEASURES.map((m, i) => {
     const [pct, value] = [q[2 * i], q[2 * i + 1]];
-    return [m, Number.isFinite(pct) ? { pct, value } : null];
+    if (pct === null) return [m, null];
+    // A percentile from 0 to 100, as the engine takes it (quality.js compositeQuality throws on any other).
+    if (!(Number.isFinite(pct) && pct >= 0 && pct <= 100)) throw new TypeError('calculator: a quality percentile of another shape');
+    return [m, { pct, value }];
   }));
   return { ccn, division, flags: flags ? flags.split(' ') : [], start, cats, quality, name: who.name ?? null, city: who.city ?? null, state: who.state ?? null };
 }
