@@ -22,12 +22,11 @@ import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, listText, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
-import { CALC, DEFAULT_TRACK, PAYOFF, PY2_START, TRACK1_LAST } from './constants.js';
+import { CALC, DEFAULT_TRACK, PAYOFF, PY2_START, TRACK1_LAST, yearOf } from './constants.js';
 import { fill, t } from './calc-copy.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
 const TRACK_NUMBERS = Object.keys(TRACKS).map(Number);
-const yearOf = (iso) => iso.slice(0, 4);
 const signed = (x) => money(x, { sign: true });
 // A percent the reader set (5 is 5%), at one decimal only when it has one: "0%", "+2.5%", "−3%".
 const pctOf = (p, { sign = true } = {}) => pct(p / 100, Number.isInteger(Math.round(p * 10) / 10) ? 0 : 1, { sign });

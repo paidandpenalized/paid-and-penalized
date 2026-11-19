@@ -21,6 +21,8 @@ export const PY2_START = '2027-01-01';
 export const TRACK1_LAST = '2028-12-31';
 export const PY2_DATA_DUE = '2026-09-01';
 export const CJRX_START = '2028-01-01';
+// An ISO date's year ("2027"), as copy names it.
+export const yearOf = (iso) => iso.slice(0, 4);
 
 // The track CMS assigns from performance year 2 unless a participant asks for another and qualifies (§ 512.520(b)).
 export const DEFAULT_TRACK = 3;

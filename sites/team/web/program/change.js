@@ -6,11 +6,10 @@ import { trackLimits, trackRows } from '../../../../web/charts/trackLimits.js';
 import { stamp } from '../../../../web/render/components.js';
 import { isoDate, pct, shortIsoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { CITES, DEFAULT_TRACK, MODEL_START, PY2_START, TRACK1_LAST, TRACKS } from '../constants.js';
+import { CITES, DEFAULT_TRACK, MODEL_START, PY2_START, TRACK1_LAST, TRACKS, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { cited, partOf } from '../pages/parts.js';
 
-const yearOf = (iso) => iso.slice(0, 4);
 // The tracks by their names' numbers: the first two of TRACKS (Track 1, Track 2) and the default one (Track 3).
 const [T1, T2] = Object.keys(TRACKS);
 export const TRACK_NUMBERS = Object.freeze({ ta: T1, tb: T2, tc: String(DEFAULT_TRACK) });

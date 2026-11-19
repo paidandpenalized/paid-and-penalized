@@ -13,15 +13,12 @@ import { searchForm } from '../../../../web/render/shell.js';
 import { calcMeta, calcRow, hospOf, whoOf } from '../calc-data.js';
 import { t as tCalc } from '../calc-copy.js';
 import { calcMarkup, calcView, initialState } from '../calc-view.js';
-import { BAND_ANCHOR, CITES, CJR_BAND, DEFAULT_TRACK, MODEL_START, PY2_START } from '../constants.js';
+import { BAND_ANCHOR, CITES, CJR_BAND, DEFAULT_TRACK, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
-import { partOf } from '../pages/parts.js';
+import { PY2_NUMBER, partOf } from '../pages/parts.js';
 
-const yearOf = (iso) => iso.slice(0, 4);
 const sentence = sentenceOf(fill);
-// The performance year PY2_START opens: years count from the model's first.
-const PY = String(Number(yearOf(PY2_START)) - Number(yearOf(MODEL_START)) + 1);
 
 // The default hospital as the browser will read it: its row (through hospOf, as every other hospital's) and its name.
 export function defaultHosp(team, search) {
@@ -58,7 +55,7 @@ export function calcSection({ team, search, files }) {
   const view = calcView({ hosp, state: initialState(hosp), team: meta });
   const statics = calcStatics(meta.dataYear);
   return html`<section id="calc" class="tc" data-src="${files.dataUrl}" data-search="${files.searchUrl}" data-failed="${tCalc('calcFailed')}">
-<p class="tc__title"><span>${fill('calcTitle', { year: yearOf(PY2_START), py: PY })}</span><span data-v="where">${view.hosp.where}</span></p>
+<p class="tc__title"><span>${fill('calcTitle', { year: yearOf(PY2_START), py: PY2_NUMBER })}</span><span data-v="where">${view.hosp.where}</span></p>
 <div class="tc__pick"><p class="tc__name" data-v="name">${view.hosp.name}</p>
 ${searchForm({ id: 'tc-pick', src: files.searchUrl, label: t('calcPick'), find: t('calcPick'), findRest: t('calcPickRest'), placeholder: t('calcPickHolder'), only: 'hospital' })}
 <button type="button" class="fig__btn tc__random" data-calc-random hidden>${t('calcRandom')}</button></div>

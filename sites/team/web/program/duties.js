@@ -6,13 +6,12 @@ import { count, isoDate, isoMonth, pct } from '../../../../web/render/format.js'
 import { html } from '../../../../web/render/html.js';
 import {
   CITES, CJRX_START, DEFAULT_TRACK, EPISODE_DAYS, ERROR_DAYS, MODEL_END, MODEL_START, PY2_DATA_DUE, PY2_START, RECON_MONTHS,
-  RECORD_YEARS, RULE_NAMES, TRACKS,
+  RECORD_YEARS, RULE_NAMES, TRACKS, yearOf,
 } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { cite, partOf } from '../pages/parts.js';
 import { TRACK_NUMBERS } from './change.js';
 
-const yearOf = (iso) => iso.slice(0, 4);
 // A date's month and year ("Jul 2027"), for the clock's left column.
 const monthYear = (iso) => {
   const { month, year } = isoMonth(iso);

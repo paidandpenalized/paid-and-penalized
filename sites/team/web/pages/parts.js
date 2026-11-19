@@ -4,9 +4,13 @@
 import { COPY as SHARED } from '../../../../web/copy.js';
 import { shortIsoDate } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { PY2_START, SECTIONS } from '../constants.js';
+import { MODEL_START, PY2_START, SECTIONS, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
+
+// The performance year PY2_START opens, counted from the model's first, as copy says it ("2"). Here, not in constants.js,
+// so the page's script (which reads constants.js) doesn't carry it.
+export const PY2_NUMBER = String(Number(yearOf(PY2_START)) - Number(yearOf(MODEL_START)) + 1);
 
 // A Part's label (its tag's words), by its id. Part 2's names the day it is about.
 export const labelOf = (id) => (id === 'change' ? fill('navChange', { date: shortIsoDate(PY2_START) }) : t(`nav${id[0].toUpperCase()}${id.slice(1)}`));

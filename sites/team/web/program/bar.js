@@ -12,12 +12,11 @@ import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { printout, sentenceOf } from '../../../../web/render/components.js';
 import { capitalize, count, isoDate, listText, roundedDollars, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { BAR_DRG, PY2_START } from '../constants.js';
+import { BAR_DRG, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { partOf } from '../pages/parts.js';
 import { DIVISION_NUMBERS, divisionName, extremes } from './bar-data.js';
 
-const yearOf = (iso) => iso.slice(0, 4);
 const sentence = sentenceOf(fill);
 // A part of a sentence the page's script rewrites: its text in a span it finds by data-bar.
 const live = (key, text) => html`<span data-bar="${key}">${text}</span>`;

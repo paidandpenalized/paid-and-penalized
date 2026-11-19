@@ -10,9 +10,9 @@ import { pointOf, stateShapes, usMap, usPaths, usPoints, US_MAP_CODES } from '..
 import { formField, formTitle } from '../../../../web/render/components.js';
 import { count, isoDate, listText, pct, shortIsoDate, spelled } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
-import { CITES, DEFAULT_TRACK, EPISODE_DAYS, MODEL_END, MODEL_START, PY2_START } from '../constants.js';
+import { CITES, DEFAULT_TRACK, EPISODE_DAYS, MODEL_END, MODEL_START, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
-import { cite, partOf } from '../pages/parts.js';
+import { PY2_NUMBER, cite, partOf } from '../pages/parts.js';
 
 // The map's drawn width (the figure column's, about, beside the words on a wide screen; it scales down on a phone), and
 // its dots' diameters: a hospital in TEAM, and the ring and hole of a hollow one (a thin, small ring in the context ink,
@@ -20,7 +20,6 @@ import { cite, partOf } from '../pages/parts.js';
 const MAP_WIDTH = 560;
 const DOTS = Object.freeze({ 'chart-dots--team': 5.2, 'chart-dots--other': 3.4, 'chart-dots--hole': 2.2 });
 const IN_TEAM = new Set(['in', 'in27']);
-const yearOf = (iso) => iso.slice(0, 4);
 
 // The counts the map and its words state, each from the emitted file: the hospitals on CMS's list (listed), in TEAM for
 // performance year 2 (in: the codes in and in27), the other hospitals the map draws hollow (other: the file's otherIpps),
@@ -114,9 +113,8 @@ function card(team, counts) {
     { label: t('cardKinds'), value: count(CATEGORIES.length), note: fill('cardKindsNote', { days: String(EPISODE_DAYS) }) },
     { label: fill('cardLimit', { track: String(DEFAULT_TRACK) }), value: `±${pct(TRACKS[DEFAULT_TRACK].gain, 0)}`, note: fill('cardLimitNote', { date: shortIsoDate(PY2_START) }) },
   ];
-  const py = Number(yearOf(PY2_START)) - Number(yearOf(MODEL_START)) + 1;
   return html`<div class="form tm-card">
-${formTitle(t('cardTitle'), fill('cardRight', { n: String(py), year: yearOf(PY2_START) }))}
+${formTitle(t('cardTitle'), fill('cardRight', { n: PY2_NUMBER, year: yearOf(PY2_START) }))}
 ${fields.map((f, i) => formField({ no: i + 1, label: f.label, value: f.value, note: f.note, size: 'big' }))}
 </div>`;
 }

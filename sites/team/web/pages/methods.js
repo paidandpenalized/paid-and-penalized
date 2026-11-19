@@ -6,7 +6,7 @@ import { fractionWord, isoDate, money, pct } from '../../../../web/render/format
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
-import { BAND_ANCHOR, CITES, CJR_BAND, EXAMPLE, PY2_START } from '../constants.js';
+import { BAND_ANCHOR, CITES, CJR_BAND, EXAMPLE, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { METHODS_PATH } from '../links.js';
 import { shellOf } from './parts.js';
@@ -35,7 +35,7 @@ export function methodsPage({ sources, robots, assets }) {
 <h2 id="sources-h">${t('methodsSources')}</h2>
 <ul class="tm-sources">${own.map(item)}</ul>
 </section>
-<p>${fill('methodsMap', { year: PY2_START.slice(0, 4) })}</p>
+<p>${fill('methodsMap', { year: yearOf(PY2_START) })}</p>
 <p>${fill('methodsExample', { target: money(EXAMPLE.target), spend: pct(-EXAMPLE.spend, 0), cqs: String(EXAMPLE.cqs), track: String(EXAMPLE.track) })} ${t('ledgerFoot')}</p>
 <section class="tm-msec" id="${BAND_ANCHOR}" aria-labelledby="band-h">
 <h2 id="band-h">${t('methodsBandHeading')}</h2>
