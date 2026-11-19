@@ -70,6 +70,9 @@ export const CITES = Object.freeze({
   records: `${CFR} 512.586(c)`,
   portal: 'CMS TEAM FAQ, questions 54 and 55',
   reports: `${CFR} 512.540(b)(8), 512.562(b)(6); CMS TEAM FAQ, questions 54, 61 and 62`,
+  cqs: `${CFR} 512.547(b)`,
+  // Not a rule: the file the calculator's band width rests on (this site's count, in its "why?").
+  cjrBand: "CMS's CJR final reconciliation payments, performance years 1 to 7",
 });
 
 export const CLAIMS = Object.freeze({
@@ -88,5 +91,11 @@ export const EXAMPLE = Object.freeze({ target: 10_000_000, spend: -0.05, cqs: 40
 // Part 4's map and its picker start on this episode type (an MS-DRG in the price file; 470 is the joint replacement
 // without major complications). A choice of this site's, not a rule, so no claim; a test holds it to the price file.
 export const BAR_DRG = '470';
-// Figure 3, the worked example's payoff: spending from SPAN under target to SPAN over, its table every STEP.
+// Figure 3, the worked example's payoff: spending from SPAN under target to SPAN over, its table every STEP. The
+// calculator draws its hospital's payoff on the same span.
 export const PAYOFF = Object.freeze({ span: 0.3, step: 0.05 });
+
+// The calculator's own choices, not rules, so no claim: the "all five" slider's reach either side of target and its step
+// (percent; a link's wider value is held to the reach), and the width its payoff is drawn at beside the worksheet (a
+// viewBox near the column's own width there, so its labels print at about their size).
+export const CALC = Object.freeze({ slider: 25, sliderStep: 0.5, figWide: 400 });

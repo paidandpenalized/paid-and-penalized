@@ -13,7 +13,7 @@
 // every category, low-volume ones included (§ 512.550(e), and § 512.505's aggregated target price). The adjustment
 // for high post-episode spending (§ 512.550(f)) needs CMS's own data, so it is not modelled: `postEpisode` is always 0.
 import { clamp } from '../stats.js';
-import { BAND_DEFAULT, SOLVE_SPAN, TRACKS } from './params.js';
+import { BAND_DEFAULT, QUALITY_STEP, SOLVE_SPAN, TRACKS } from './params.js';
 
 // Sums of products leave residue such as -1.35e-11 at a true break-even, which a formatter shows as "-$0". Any amount
 // under half a cent either way is that residue, so it becomes +0.
@@ -128,7 +128,7 @@ export function solveSpend(input) {
  * The marginal figures, in dollars, each >= 0:
  *   perPctUnder  what landing 1% under target everywhere adds, from break-even;
  *   perPctOver   what landing 1% over target everywhere costs, from break-even;
- *   per10Quality what 10 more CQS points (capped at 100) add, at the reader's scenario when any category's spend is
+ *   per10Quality what QUALITY_STEP more CQS points (capped at 100) add, at the reader's scenario when any category's spend is
  *                set. With none set it uses every category BAND_DEFAULT over target, except on Track 1: a track
  *                that can't lose ends at $0 whenever it is over target, where quality moves nothing, so it is read
  *                BAND_DEFAULT under target instead, where quality decides how much of the gain it keeps.
@@ -145,6 +145,6 @@ export function marginal(input, scenario) {
   return {
     perPctUnder: resultAt(input, -0.01),
     perPctOver: 0 - resultAt(input, 0.01), // `0 -`, so a zero result is +0 here, never -0
-    per10Quality: quality(Math.min(100, cqs + 10)) - quality(cqs),
+    per10Quality: quality(Math.min(100, cqs + QUALITY_STEP)) - quality(cqs),
   };
 }

@@ -7,8 +7,8 @@
 //   at       s -> dollars (positive: Medicare pays; negative: the hospital repays); falls as s rises
 //   limits   { gain, loss } positive dollars (loss 0: a track with no loss side, which draws no stop-loss)
 //   span     the spending range either side of target (0.3: 30%); step: the table's spacing, which must divide span
-//   band     the shaded band's half-width (a share), or 0 for none (named on the wide drawing; a phone's leaves the
-//            name to the figure's note, where the stop-gain's label would cross it)
+//   band     the shaded band's half-width (a share), or 0 for none (named on the wide drawing unless words.band is '';
+//            a phone's leaves the name to the figure's note, where the stop-gain's label would cross it)
 //   marker   null, or a spending level (a share) to ring on the line
 //   words    { under, over (the axis's two ends), stopGain, stopLoss, band (the lines' and the band's names),
 //              x(s) (a tick's label), y(v) (a gridline's label), tip(s, result) (a point's tooltip) }
@@ -78,7 +78,7 @@ export function payoff({ at, limits, span, step, band = 0, marker = null, words,
   const ticksY = [...new Set([limits.gain, limits.gain / 2, 0, -limits.loss / 2, -limits.loss])];
   const grid = html`${ticksY.map((v) => html`<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(v)}" y2="${y(v)}"/>${text({ x: left - 5, y: y(v) + 4, anchor: 'end', cls: 'chart-tick', body: words.y(v) })}`)}
 ${tickS.map((s) => html`<line class="chart-grid" x1="${x(s)}" x2="${x(s)}" y1="${top}" y2="${bottom}"/>${labeled(s) ? text({ x: x(s), y: bottom + 14, cls: 'chart-tick', body: words.x(s) }) : ''}`)}`;
-  const shade = band > 0 ? html`<rect class="chart-payoff__band" x="${x(-band)}" y="${top}" width="${r2(x(band) - x(-band))}" height="${plotH}"/>${narrow ? '' : text({ x: x(0), y: top + 12, cls: 'chart-payoff__band-label', body: words.band })}` : '';
+  const shade = band > 0 ? html`<rect class="chart-payoff__band" x="${x(-band)}" y="${top}" width="${r2(x(band) - x(-band))}" height="${plotH}"/>${narrow || !words.band ? '' : text({ x: x(0), y: top + 12, cls: 'chart-payoff__band-label', body: words.band })}` : '';
   const limitLine = (v, label, anchor) => html`<line class="chart-payoff__limit" x1="${left}" x2="${width - right}" y1="${y(v)}" y2="${y(v)}"/>${text({ x: anchor === 'end' ? width - right : left + 4, y: v > 0 ? y(v) - 4 : y(v) + 12, anchor, cls: 'chart-tick chart-label--halo', body: label })}`;
   const limitsDrawn = html`${limits.gain > 0 ? limitLine(limits.gain, words.stopGain, 'end') : ''}${limits.loss > 0 ? limitLine(-limits.loss, words.stopLoss, 'start') : ''}`;
   const lines = html`<path class="chart-payoff__gain" d="${path(corners(at, -span, 0))}"/><path class="chart-payoff__loss" d="${path(corners(at, 0, span))}"/>`;

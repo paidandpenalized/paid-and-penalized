@@ -25,8 +25,9 @@ export const BEDS = Object.freeze({ small: 50, large: 300 });
 // counts the group's hospitals at or past it). A reading aid, not a method constant.
 export const REF_SHARE = 0.01;
 
-// The state a page's random hospital is never drawn from (the site's rule for a default hospital: client/find.js).
-export const DEFAULT_SKIP_STATE = 'VA';
+// The state a page's random hospital is never drawn from (the site's rule for a default hospital: client/find.js); the
+// family's, in web/skip-state.js.
+export { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 
 // The use-rate what-if's stop (the slider moves in steps of this many hundredths; its ends and default are the file's
 // params.use_min, use_max and use_default). A control's step, not a method constant.

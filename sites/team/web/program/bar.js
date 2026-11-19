@@ -32,7 +32,8 @@ export function drgsByCategory(team) {
   }));
 }
 
-// The region of the hospital the calculator starts with (the emitter's rule-picked default): its division number.
+// The region of the hospital the calculator starts with (the emitter's rule-picked default): its division number. The
+// page's script moves the outline, the shaded column and the region's name when the calculator's hospital changes.
 export function readerDivision(team) {
   const row = team.participants.find((p) => p.ccn === team.defaultCcn);
   if (!row) throw new RangeError('TEAM: the default hospital is not among the participants');
@@ -49,7 +50,7 @@ const picker = (team) => html`<p class="tm-pick" data-bar-picker hidden><label f
 function now(team, reader) {
   const cat = team.drgCategory[BAR_DRG];
   return html`<p class="tm-now" aria-live="polite" aria-atomic="true"><span class="tm-now__price">${live('price', roundedDollars(team.prices[BAR_DRG][reader]))}</span>
-<span class="tm-now__says">${sentence('barSays', { drg: live('drg', BAR_DRG), cat: live('cat', catWords(cat)) }, { year: yearOf(PY2_START), division: divisionName(reader) })}</span></p>`;
+<span class="tm-now__says">${sentence('barSays', { drg: live('drg', BAR_DRG), cat: live('cat', catWords(cat)), division: live('division', divisionName(reader)) }, { year: yearOf(PY2_START) })}</span></p>`;
 }
 
 function mapFigure({ team, atlas, reader, n }) {
@@ -70,7 +71,7 @@ function mapFigure({ team, atlas, reader, n }) {
     n,
     takeaway,
     ...drawn((width) => divisionMap({ topo: atlas, values, reader, words, width })),
-    note: fill('barNote', { division: divisionName(reader) }),
+    note: sentence('barNote', { division: live('division', divisionName(reader)) }),
     source: fill('barSource', { year: yearOf(PY2_START), date: isoDate(team.meta.pricesDated) }),
     alt: t('barAlt'),
     csvName: 'team-regional-prices',
@@ -103,7 +104,7 @@ ${drgs.map((drg) => html`<tr data-drg="${drg}"><th scope="row">${fill('barOption
 `)}<tr class="tm-all__avg"${derived.has(cat) ? html` data-derived` : ''}><th scope="row">${t(derived.has(cat) ? 'allAvgOurs' : 'allAvgCms')}${derived.has(cat) ? html`<span aria-hidden="true">*</span>` : ''}</th>${cells(team.categoryAvg[cat])}</tr>
 </tbody>`)}
 </table>`)}</div>
-<p class="tm-all__note">${fill('allMine', { division: divisionName(reader) })}${derivedCats ? html` <span aria-hidden="true">*</span> ${fill('allDerived', { cats: derivedCats })}` : ''}</p>
+<p class="tm-all__note">${sentence('allMine', { division: live('division', divisionName(reader)) })}${derivedCats ? html` <span aria-hidden="true">*</span> ${fill('allDerived', { cats: derivedCats })}` : ''}</p>
 </details>
 `;
 }

@@ -31,7 +31,8 @@ const master = loadMaster();
 const atlas = loadAtlas();
 const assets = testAssets();
 const LOOKUP_URL = '/assets/team-lookup.test.json';
-const program = programPage({ team, master, atlas, robots: 'noindex', assets, lookupUrl: LOOKUP_URL });
+const CALC_URL = '/assets/team-calc.test.json';
+const program = programPage({ team, master, atlas, robots: 'noindex', assets, lookupUrl: LOOKUP_URL, calcUrl: CALC_URL, search: { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [[team.defaultCcn, 'Example Hospital', null, 'KY', 'acute']], states: {} } });
 const methods = methodsPage({ team, sources: loadSources(team), robots: 'noindex', assets });
 const words = (html) => textOf(html).replace(/\s+/g, ' ').trim();
 const main = (page) => /<main[\s\S]*?<\/main>/.exec(page)[0];
@@ -103,7 +104,7 @@ test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
     assert.ok(fig, `${id}: a figure column`);
     assert.match(fig[1], /<figure\b|<table\b/, `${id}: a figure or table in it`);
   }
-  assert.match(part('yours'), /<section id="calc" class="tm-calc">/);
+  assert.match(part('yours'), /<section id="calc" class="tc" data-src="\/assets\/team-calc\.test\.json"/);
   // The figures shorter than their words (the map, the clock) stay beside them on a wide screen: sticky in a figure
   // column that runs the Part's height (styles.css, from 62em only).
   for (const id of ['who', 'do']) assert.match(part(id), /<div class="tm-part__fig"><div class="tm-sticky">/, `${id}: sticky`);
@@ -183,6 +184,15 @@ test('no "penalty" anywhere in TEAM\'s copy or on its pages\' own content', () =
 test('standardized dollars are stated beside every dollar figure', () => {
   let rest = main(program);
   const blocks = [];
+  // The calculator: each column is one block (its result box, figure and ledger each say it; its table's and "What
+  // would it take?"'s amounts sit under them), and the three places say it themselves.
+  const left = rest.slice(rest.indexOf('<div class="tc-left">'), rest.indexOf('<div class="tc-right">'));
+  const right = rest.slice(rest.indexOf('<div class="tc-right">'), rest.indexOf('<script type="application/json" id="tc-data">'));
+  for (const [what, re] of [['the result box', /<div class="tc-out">[\s\S]*?<\/div>\n<\/div>/], ['the payoff', /<figure class="tc-fig">[\s\S]*?<\/figure>/], ['the ledger', /<ol class="tc-lines"[\s\S]*?<p class="tc-foot">[^<]*<\/p>/]]) {
+    assert.match(words((re.exec(left + right) ?? [''])[0]), /[Ss]tandardized dollars/, what);
+  }
+  blocks.push(left, right);
+  rest = rest.replace(left, '').replace(right, '');
   for (const re of [/<figure\b[\s\S]*?<\/figure>/g, /<section class="tm-ledger"[\s\S]*?<\/section>/g, /<details class="tm-all"[\s\S]*?<\/details>/g]) {
     rest = rest.replace(re, (m) => {
       blocks.push(m);

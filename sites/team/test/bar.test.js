@@ -1,5 +1,5 @@
 // The TEAM program page's Part 4 (web/program/bar.js): the picker server-rendered on BAR_DRG with its label, the price
-// beside the words and Figure 4 from the emitted file's prices in the region of the hospital the calculator starts with,
+// beside the words and Figure 4 from the emitted file's prices in the region of the hospital the calculator starts with (its region follows the calculator's hospital in the browser),
 // the map shading regions only, and the table of every episode type's price in every region (its All rows, the derived
 // one marked). Prices and counts come from the file; failures print counts and DRGs, never a hospital.
 import { test } from 'node:test';
@@ -16,7 +16,8 @@ import { drgsByCategory, readerDivision } from '../web/program/bar.js';
 import { extremes } from '../web/program/bar-data.js';
 
 const team = loadTeam();
-const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets(), lookupUrl: '/assets/team-lookup.test.json' });
+const search = { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [[team.defaultCcn, 'Example Hospital', null, 'KY', 'acute']], states: {} };
+const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets(), lookupUrl: '/assets/team-lookup.test.json', calcUrl: '/assets/team-calc.test.json', search });
 // The text as a reader sees it: inline spans (the parts the script rewrites) add no space.
 const words = (html) => textOf(html.replace(/<\/?span\b[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
 const at = program.indexOf('<section class="tm-part" id="bar"');
@@ -56,7 +57,7 @@ test('the picker: a labeled select, server-rendered on BAR_DRG, every episode ty
 test('the price beside the words: BAR_DRG in the reader\'s region, from the file, with its sentence', () => {
   const now = words(/<p class="tm-now"[\s\S]*?<\/p>/.exec(bar)[0]);
   assert.ok(now.startsWith(roundedDollars(prices[reader])), now.slice(0, 20));
-  assert.match(now, new RegExp(`for DRG ${BAR_DRG} \\(lower extremity joint replacement\\) in ${nameOf(reader)}, the region of the hospital the calculator below starts with\\. Standardized dollars\\.`));
+  assert.match(now, new RegExp(`for DRG ${BAR_DRG} \\(lower extremity joint replacement\\) in ${nameOf(reader)}, the region of the hospital in the calculator below\\. Standardized dollars\\.`));
   // One announcement per pick: the script rewrites the paragraph a span at a time, and the region is read whole.
   assert.match(bar, /<p class="tm-now" aria-live="polite" aria-atomic="true">/);
 });
@@ -84,7 +85,7 @@ test('Figure 4: the nine regions shaded by BAR_DRG\'s prices, each labeled, the 
   assert.deepEqual(rows.map((m) => [m[1], Number(m[2]), Number(m[3])]), DIVISIONS.map(([name], i) => [name, prices[i + 1], i + 1]));
   assert.match(words(figure), /Standardized dollars\./);
   assert.match(words(figure), /Target price, standardized dollars/);
-  assert.match(words(figure), new RegExp(`Outlined: ${nameOf(reader)}, the region of the hospital the calculator starts with\\. CMS prices Puerto Rico and the other territories with the Pacific region\\.`));
+  assert.match(words(figure), new RegExp(`Outlined: ${nameOf(reader)}, the region of the hospital in the calculator\\. CMS prices Puerto Rico and the other territories with the Pacific region\\.`));
 });
 
 test('the table of every price: every episode type × every region from the file, each category\'s All row, the derived one marked', () => {

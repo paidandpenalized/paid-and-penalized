@@ -2,8 +2,9 @@
 // every number, date and rule citation arrives through a {placeholder}, formatted (constants.js holds the rules' numbers,
 // each with its claim). A sentence that states a fact about the model's rules carries the claim id (or ids) of its row in
 // sites/team/CLAIMS.md; sentences about this site's own arithmetic or framing carry none. Results say "would", never
-// "will". The lookup's words are lookup-copy.js's, a copy file of its own.
+// "will". The lookup's words are lookup-copy.js's and the calculator's calc-copy.js's, copy files of their own.
 import { copyOf } from '../../../web/render/components.js';
+import { COPY as CALC } from './calc-copy.js';
 import { COPY as LOOKUP } from './lookup-copy.js';
 
 export const COPY = {
@@ -143,13 +144,6 @@ export const COPY = {
     text: 'The same worked example at any spending level: what the hospital would be paid or owe, flat where its track\'s limit holds it.',
     claim: 'TEAM-14',
   },
-  payoffUnder: { text: '← spending under target', claim: null },
-  payoffOver: { text: 'over target →', claim: null },
-  payoffOn: { text: 'on target', claim: null },
-  payoffStopGain: { text: 'stop-gain {pct} · {amount}', claim: 'TEAM-14' },
-  payoffStopLoss: { text: 'stop-loss {pct} · {amount}', claim: 'TEAM-14' },
-  payoffBand: { text: '{band} band', claim: null },
-  payoffTip: { text: '{s}: {amount}', claim: null },
   payoffNote: { text: "The ring is the worked example. Shaded: spending within {band} of target either way, the calculator's scenario band. Standardized dollars.", claim: null },
   payoffSource: { text: "{cite}; this site's arithmetic.", claim: null },
   payoffAlt: { text: "Line chart: the worked example's result at each spending level from {lo} under target to {hi} over, flat at the stop-gain and the stop-loss.", claim: null },
@@ -169,15 +163,10 @@ export const COPY = {
   // A picker option: the DRG and its category's words (the cat* keys below, each TEAM-21's).
   barPickOption: { text: '{drg} · {cat}', claim: null },
   barSays: {
-    text: "CMS's preliminary target price for {year} for DRG {drg} ({cat}) in {division}, the region of the hospital the calculator below starts with. Standardized dollars.",
+    text: "CMS's preliminary target price for {year} for DRG {drg} ({cat}) in {division}, the region of the hospital in the calculator below. Standardized dollars.",
     claim: ['TEAM-57', 'TEAM-59'],
   },
-  // The five episode categories (engine/js/team/params.js CATEGORIES), as a sentence names them.
-  catLEJR: { text: 'lower extremity joint replacement', claim: 'TEAM-21' },
-  catSHFFT: { text: 'surgical hip and femur fracture treatment', claim: 'TEAM-21' },
-  catSPINAL: { text: 'spinal fusion', claim: 'TEAM-21' },
-  catCABG: { text: 'coronary artery bypass graft surgery', claim: 'TEAM-21' },
-  catBOWEL: { text: 'major bowel procedure', claim: 'TEAM-21' },
+  // The five episode categories' words (cat*) and the payoff figure's are calc-copy.js's, which this file reads through.
 
   // Figure 4, the regions' prices for the picked episode type (web/charts/divisionMap.js).
   barTakeaway: {
@@ -188,7 +177,7 @@ export const COPY = {
   barLow: { text: 'lowest', claim: null },
   barHigh: { text: 'highest', claim: null },
   barNote: {
-    text: 'Outlined: {division}, the region of the hospital the calculator starts with. CMS prices Puerto Rico and the other territories with the Pacific region. Standardized dollars.',
+    text: 'Outlined: {division}, the region of the hospital in the calculator. CMS prices Puerto Rico and the other territories with the Pacific region. Standardized dollars.',
     claim: ['TEAM-58', 'TEAM-59'],
   },
   barSource: { text: 'CMS, TEAM preliminary target prices for {year}, dated {date}.', claim: null },
@@ -203,7 +192,7 @@ export const COPY = {
   allColType: { text: 'Episode type', claim: null },
   allAvgCms: { text: "All, CMS's row", claim: 'TEAM-60' },
   allAvgOurs: { text: "All, this site's mean", claim: null },
-  allMine: { text: 'Shaded: {division}, the region of the hospital the calculator starts with.', claim: null },
+  allMine: { text: 'Shaded: {division}, the region of the hospital in the calculator.', claim: null },
   allDerived: {
     text: "CMS's file has a row named All for each category but {cats}. For {cats}, the All row here is the plain mean of the category's episode types' prices: this site's arithmetic, not CMS's.",
     claim: 'TEAM-60',
@@ -215,7 +204,6 @@ export const COPY = {
     text: "Every TEAM hospital starts with its Medicare discharges for the {n} kinds of surgery and its region's prices. Replace any number with the one in your CMS reports and the result follows.",
     claim: null,
   },
-  calcNoScript: { text: 'The calculator runs in your browser and needs JavaScript. Nothing you type is sent anywhere.', claim: null },
 
   // Part 6, what a hospital has to do: the checklist by phase, beside Figure 5, TEAM's clock.
   doHeading: { text: 'Before, during and after the year', claim: null },
@@ -337,4 +325,4 @@ export const COPY = {
   methodsRepo: { text: 'The code, the pinned files and the claims register:', claim: null },
 };
 
-export const { fill, fillKeep, t } = copyOf(COPY, LOOKUP);
+export const { fill, fillKeep, t } = copyOf(COPY, LOOKUP, CALC);

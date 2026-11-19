@@ -68,6 +68,8 @@ in copy.
 | TEAM-58 | CMS's price regions are the Census Bureau's nine divisions, named and listed by state in its workbook, and it prices Puerto Rico and the other US territories with the Pacific division. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "East South Central (AL, KY, MS, TN)" … "Pacific (AK, CA, HI, OR, WA) + other US Territories (AS, GU, MP, PR, VI)" | 2026-11-19 |
 | TEAM-59 | Every dollar value in CMS's preliminary target price workbook is in standardized amounts. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "All dollar values are in standardized amounts." | 2026-11-19 |
 | TEAM-60 | CMS's workbook gives, for each episode category it summarizes, a row named "All" in each division beside the episode types' rows. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "MS-DRG/HCPCS Episode Type" … "All" | 2026-11-19 |
+| TEAM-61 | CMS weights each measure in the composite quality score by the hospital's attributed episodes that measure covers, over the total of those volumes across the measures. | https://www.ecfr.gov/current/title-42/part-512/section-512.547 | "dividing the TEAM participant's volume of attributed episodes for a given quality measure by the total volume of all the TEAM participant's attributed episodes" | 2026-11-19 |
+| TEAM-62 | CMS subtracts a hospital's post-episode spending above three standard deviations over its region's average from the reconciliation amount, outside the stop-loss and stop-gain limits. | https://www.ecfr.gov/current/title-42/part-512/section-512.550 | "greater than 3 standard deviations above the regional average post-episode spending amount" … "is not subject to the limitation on loss" | 2026-11-19 |
 
 ## Notes on the sources
 
@@ -85,6 +87,8 @@ in copy.
   serves the workbook itself.
 - **TEAM-12, TEAM-13.** CMS's CJR-X model page. The start date moved from the proposal's October 1, 2027 to January 1,
   2028 in the final rule (FR Doc 2026-15833, 91 FR 49570).
+- **TEAM-61 and TEAM-62** (the calculator). Sections 512.547(b)(2) and 512.550(e)(1)(iv) and (f), read from the eCFR's subpart E
+  text at its 2026-11-17 issue date; each quote was found in that text by script on 2026-11-19.
 - **TEAM-14 to TEAM-19.** Sections 512.550, 512.547 and 512.537 (TEAM-19, paragraph (a)(1)), read from the eCFR's text at its newest issue date (2026-11-17).
   TEAM-14 joins the gain limit of each track (paragraph (e)(2)(i) to (iii)), Track 3's loss limit ((e)(1)) and Track 2's
   loss limit ((e)(3)). TEAM-15 is paragraph (d)(1)(ii); Track 1's and Track 3's caps are in (d)(1)(i) and (iii). TEAM-16 is

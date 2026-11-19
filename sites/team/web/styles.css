@@ -161,6 +161,9 @@
 .chart-div__legend .chart-div { stroke: none; }
 .chart-div__borders { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
 .chart-div__reader { fill: none; stroke: var(--pen); stroke-width: 2.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* The outline the page's script moves to another region (client/bar.js): the region's own shape, clipped to its outside,
+   so twice the width shows as the same line. */
+.chart-div__reader--moved { stroke-width: 5px; }
 .chart-mark.is-active .chart-div { stroke: var(--ink); stroke-width: 2.5px; }
 .chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; font-variant-numeric: tabular-nums; }
 .chart-div__price { font-weight: 700; }
@@ -186,9 +189,147 @@
   .chart-ruler__limit, .chart-ruler__axis, .chart-ruler__zero { stroke: CanvasText; }
 }
 
-/* Part 5: the calculator's frame, the page's width under the Part's words. */
-.tm-calc { grid-column: 1 / -1; padding: 16px; border: var(--rule) solid var(--pen); background: var(--paper); }
-.tm-calc__nojs { color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
+/* Part 5: the calculator (program/calc.js, calc-view.js), the page's width under the Part's words. A worksheet in the
+   family's form: a red frame and title bar, the hospital and the picker, then two columns from 62em, the inputs at 1.3fr
+   and the result at 1fr, sticky beside them; on a phone one column, the result first (the stamp) and nothing sticky.
+   Public values carry their source in small capitals; anything the reader typed says "your number" in red italic. Meaning
+   inks mark the figure's line only, never a result's text. */
+.tc { grid-column: 1 / -1; border: var(--rule) solid var(--pen); background: var(--paper); }
+.tc p, .tc li, .tc figcaption { max-width: none; }
+.tc [hidden] { display: none !important; }
+.tc__title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 14px; border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+.tc__pick { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 14px; padding: 12px 14px; border-bottom: 1px solid var(--pen); }
+.tc__name { flex-basis: 100%; font: 400 var(--fs-lg)/1.1 var(--font-display); }
+.tc__pick .omni { flex: 1 1 18rem; min-width: 0; }
+.tc__random { margin-left: auto; }
+.tc__pick .omni__label { font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+@media (max-width: 36em) {
+  /* A phone: the picker's name over its box, so the box keeps the width to type in. */
+  .tc__pick .omni__field { flex-wrap: wrap; }
+  .tc__pick .omni__label { flex-basis: 100%; padding-block: 4px; border-right: 0; border-bottom: var(--rule) solid var(--ink); }
+  .tc__pick .omni__field input { flex: 1 1 100%; }
+  .tc-wwt th { white-space: normal; }
+}
+.tc__banner { margin: 10px 14px 0; }
+.tc__nojs { padding: 10px 14px 0; color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
+.tc-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.tc-left, .tc-right { display: grid; gap: 10px; align-content: start; min-width: 0; padding: 12px 14px; }
+.tc-left { border-top: 1px solid var(--pen); }
+.tc-right { order: -1; }
+@media (min-width: 62em) {
+  .tc-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); }
+  .tc-left { border-top: 0; border-right: 1px solid var(--pen); }
+  .tc-right { order: 0; position: sticky; top: calc(var(--sticky-top, 0px) + 8px); align-self: start; }
+}
+
+/* The track: a radio group drawn as one segmented control (arrow keys move it, as any radio group). */
+.tc-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; border: var(--rule) solid var(--ink); }
+.tc-track__opt { position: relative; display: grid; place-items: center; min-height: 36px; padding: 4px 6px; border-left: var(--rule) solid var(--ink); cursor: pointer; font: 700 var(--fs-sm)/1.15 var(--font-body); text-align: center; }
+.tc-track__opt:first-of-type { border-left: 0; }
+.tc-track__opt input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; opacity: 0; cursor: pointer; }
+.tc-track__opt small { color: var(--ink-2); font: 400 var(--fs-cap)/1.2 var(--font-type); }
+.tc-track__opt:has(input:checked) { background: var(--ink); color: var(--paper); }
+.tc-track__opt:has(input:checked) small { color: var(--paper); }
+.tc-track__opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; z-index: 1; }
+.tc-note { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
+
+/* The episode table and the boxes in it. */
+.tc-scroll { overflow-x: auto; }
+.tc-ep, .tc-qt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.tc-ep th, .tc-ep td, .tc-qt th, .tc-qt td { padding: 3px 4px; border-bottom: 1px dotted var(--line); text-align: left; vertical-align: middle; }
+.tc-ep thead th, .tc-qt thead th { border-bottom: 1.5px solid var(--ink); font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: bottom; }
+.tc-ep thead small { display: block; font-weight: 400; text-transform: none; }
+.tc-ep tbody th { font-weight: 600; white-space: nowrap; }
+.tc-ep abbr { text-decoration: none; }
+.tc-ep .num, .tc-qt .num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
+.tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); }
+.tc-lvc { width: 2.4rem; text-align: center !important; }
+.tc-lvc input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
+.tc-in { width: 5.2rem; min-height: 28px; height: 28px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; background: var(--paper-2); font: 400 var(--fs-sm)/1 var(--font-type); font-variant-numeric: tabular-nums; }
+.tc-in--p { width: 6.4rem; }
+.tc-in--q { width: 3.6rem; }
+.tc-in--m { width: 5.4rem; height: 26px; min-height: 26px; }
+.tc-in--band { width: 3.2rem; height: 26px; min-height: 26px; }
+.tc-in.is-mine { border: 1.5px solid var(--ink); background: var(--paper); font-weight: 700; }
+.tc-src { display: block; margin-top: 1px; color: var(--ink-3); font: 400 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.tc-src.tc-src--mine, .tc-tag.tc-tag--mine { color: var(--pen-ink); font-style: italic; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.tc-msg { margin-top: 2px; color: var(--pen-ink); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
+
+/* The ledger, lines one to eight: a number, the line's name, line two's slider, the amount. */
+.tc-lines { margin: 0; padding: 0; list-style: none; }
+.tc-line { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 2px; border-top: 1px solid var(--line); font: 600 var(--fs-sm)/1.25 var(--font-body); }
+.tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 1.1fr) auto; }
+.tc-line--res { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
+.tc-no { border: 1px solid var(--pen); color: var(--pen-ink); font: 700 var(--fs-cap)/16px var(--font-type); text-align: center; }
+.tc-op { font-family: var(--font-type); }
+.tc-line .tc-src:not([hidden]) { display: inline; }
+.tc-v { font: 700 var(--fs-sm)/1.2 var(--font-type); text-align: right; white-space: nowrap; }
+.tc-open { min-height: 0; padding: 0; border: 0; background: none; color: var(--pen-ink); font: 700 var(--fs-cap)/1.2 var(--font-type); text-decoration: underline; text-transform: uppercase; cursor: pointer; }
+.tc-range { --thumb: 20px; width: 100%; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.tc-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
+.tc-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -8px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); -webkit-appearance: none; appearance: none; }
+.tc-range::-moz-range-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
+.tc-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.tc-range:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tc-foot { color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-body); }
+
+/* Quality by measure and "How each line works": disclosures, closed by default. */
+.tc-more { font-size: var(--fs-xs); color: var(--ink-2); }
+.tc-more > summary { min-height: var(--target-min); padding: 3px 0; color: var(--ink); font: 700 var(--fs-sm)/1.3 var(--font-body); cursor: pointer; }
+.tc-q { padding-top: 2px; border-top: var(--rule) solid var(--ink); }
+.tc-more p { margin-top: 6px; line-height: 1.45; }
+.tc-qt { margin-top: 2px; color: var(--ink); }
+
+/* The result box: the band's range large, the scenario tag, this scenario, the band's own box. On a phone, the stamp. */
+.tc-out { display: grid; gap: 3px; padding: 10px 12px; border: var(--rule) solid var(--ink); }
+.tc-out__lab { font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.tc-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 0.1em; }
+.tc-tag--mine { border: 0; padding: 0; }
+.tc-out__v { font: 700 clamp(1.6rem, 1.1rem + 1.4vw, 2.1rem)/1.05 var(--font-type); font-variant-numeric: tabular-nums; }
+.tc-out__yr { color: var(--ink-2); font: 400 var(--fs-sm) var(--font-body); }
+.tc-out__at { font-size: var(--fs-sm); }
+.tc-out__none { color: var(--pen-ink); font-size: var(--fs-sm); }
+.tc-out__hyp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--ink-2); font-size: var(--fs-xs); }
+.tc-band { display: inline-flex; align-items: center; gap: 4px; font: 700 var(--fs-xs) var(--font-type); color: var(--ink); }
+.tc-why > summary { min-height: var(--target-min); display: inline-flex; align-items: center; color: var(--ink); text-decoration: underline dotted; cursor: pointer; }
+.tc-why[open] { flex-basis: 100%; }
+@media (max-width: 61.99em) {
+  /* The F3 stamp: the range set as the family's rubber stamp, the headline on a phone. */
+  .tc-out { justify-items: start; border: 0; padding: 4px 0; }
+  .tc-out__v { padding: 6px 12px 4px; border: 3px solid var(--pen); border-radius: 4px; color: var(--pen); font-family: var(--font-display); font-weight: 400; letter-spacing: 0.02em; transform: rotate(-2deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+  .tc-out__yr { color: inherit; font-family: var(--font-type); }
+}
+@media (forced-colors: active) { .tc-out__v { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
+
+/* The payoff, "What would it take?", the share line. */
+.tc-fig { margin: 0; }
+.tc-fig .chart { margin-inline: auto; }
+.tc-ww { padding: 8px 10px; border: 1.5px solid var(--ink); }
+.tc-ww__h { margin-bottom: 4px; font: 700 var(--fs-sm)/1.3 var(--font-body); }
+.tc-ww__h .tc-src { display: inline; }
+.tc-fig .chart[data-fit="wide"] { max-width: calc(var(--vb) * 1px); }
+.tc-wwt { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); line-height: 1.35; }
+.tc-wwt th { padding: 4px 8px 4px 0; border-top: 1px dotted var(--line); font-weight: 600; text-align: left; vertical-align: middle; white-space: nowrap; }
+.tc-wwt td { padding: 4px 0; border-top: 1px dotted var(--line); }
+.tc-wwt tr:first-child > * { border-top: 0; }
+.tc-share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.tc-incl { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
+.tc-incl input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
+.tc-copied { font-size: var(--fs-xs); }
+.tc-link { flex-basis: 100%; overflow-wrap: anywhere; font: 400 var(--fs-xs)/1.4 var(--font-type); }
+.tc-private { flex-basis: 100%; color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-type); }
+@media (max-width: 36em) {
+  /* A phone: each episode row a small card, its boxes two to a line; the ledger's slider under its name. */
+  .tc-ep thead { display: none; }
+  .tc-ep tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 10px; padding: 8px 0; border-bottom: 1px dotted var(--line); }
+  .tc-ep tbody th { grid-column: 1 / -1; }
+  .tc-ep tbody td { padding: 0; border: 0; }
+  .tc-ep .tc-in { width: 100%; }
+  .tc-ep td.num { grid-column: 2 / -1; align-self: center; text-align: right; }
+  .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
+  .tc-line--s .tc-range { grid-column: 2 / -1; grid-row: 2; }
+}
 
 /* Part 6: the duties by phase (the phase's name beside its list from 36em), and Figure 5, the clock: a dated line,
    darker from the day the page is about on. */
