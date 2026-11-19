@@ -68,6 +68,11 @@ export const PROGRAM_BUDGETS = {
   // Methods built (its sections, the sensitivities figure and every pin's SHA-256), 2026-11-10: 41.1 KB + 15% (47.3 KB),
   // rounded up to 50 KB.
   'work-requirement': { program: 150 * KB, methods: 50 * KB },
+  // TEAM (a program page and Methods only), set 2026-11-19 by the rule above from the pages as built then (Parts 1 to 3
+  // and 5 to 7, Part 4's figure and the calculator still to land): the program page 55.2 KB + 15% (63.5 KB), rounded up
+  // to 70 KB, and Methods 25.2 KB + 15% (29.0 KB), rounded up to 30 KB. The figure and the calculator each raise the
+  // program budget as they land, a decision recorded here.
+  team: { program: 70 * KB, methods: 30 * KB },
 };
 // The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
 // most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:

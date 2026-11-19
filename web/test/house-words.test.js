@@ -27,6 +27,8 @@ const FUTURE = [FUTURE_WORDS];
 const FUTURE_OK = [
   // The accessibility page's testing practice: "launch" is a site going public, the moment the cross-browser check runs.
   { file: 'hub/copy.js', key: 'a11yTested', phrase: 'Before each launch', expired: false },
+  // CMS's own name for a TEAM report a participant gets each quarter: "interim" is the report's, not a stand-in page.
+  { file: 'sites/team/web/copy.js', key: 'findTargetWhere', phrase: 'Interim reconciliation target price reports', expired: false },
 ];
 
 const texts = (COPY) => Object.entries(COPY).map(([key, v]) => [key, typeof v === 'string' ? v : v.text]);

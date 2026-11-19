@@ -222,12 +222,12 @@ test('exampleRule on invented hospitals: the share nearest the median among the 
 });
 
 test('shellFacts has a figure for exactly the programs the registry lists (the footer reads one per listed program)', () => {
-  const { programs } = shellFacts({ facts, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid });
+  const { programs } = shellFacts({ facts, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid, team: hub.team });
   assert.deepEqual(Object.keys(programs), LISTED_PROGRAMS.map((p) => p.id));
 });
 
 test('shellFacts: numbers for the footer and the tabs, and the day the estimates changed', () => {
-  const shell = shellFacts({ facts, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid });
+  const shell = shellFacts({ facts, builtAt: hub.builtAt, fy: hub.fy, medicaid: hub.medicaid, team: hub.team });
   assert.deepEqual(shell, {
     fy: hub.fy,
     hospitals: facts.n,
@@ -238,6 +238,8 @@ test('shellFacts: numbers for the footer and the tabs, and the day the estimates
       hvbp: { moved: facts.vbpBonus, net: facts.vbpNet },
       // The scenario's national Medicaid revenue lost, each case, in its base year's dollars (the file's fy).
       'work-requirement': { scenario: { year: hub.medicaid.fy, lost: { low: hub.medicaid.national.low.lost, middle: hub.medicaid.national.middle.lost, high: hub.medicaid.national.high.lost } } },
+      // TEAM: the hospitals on CMS's list, never a dollar figure.
+      team: { listed: hub.team.listed },
     },
   });
   const { lost } = shell.programs['work-requirement'].scenario;
@@ -245,7 +247,7 @@ test('shellFacts: numbers for the footer and the tabs, and the day the estimates
   assert.equal(shell.programs['work-requirement'].scenario.year, 2023);
   assert.match(shell.changed, /^\d{4}-\d{2}-\d{2}$/);
   for (const bad of ['2026-10-23', '2026-02-30T00:00:00Z', 'yesterday', null, undefined]) {
-    assert.throws(() => shellFacts({ facts, builtAt: bad, fy: 2026, medicaid: hub.medicaid }), RangeError, String(bad));
+    assert.throws(() => shellFacts({ facts, builtAt: bad, fy: 2026, medicaid: hub.medicaid, team: hub.team }), RangeError, String(bad));
   }
 });
 

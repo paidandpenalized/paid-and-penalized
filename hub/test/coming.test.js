@@ -29,8 +29,8 @@ const render = (program, facts = FACTS) => comingPage({ program, facts, assets: 
 const HVBP = PLACEHOLDER_PROGRAMS.find((p) => p.id === 'hvbp');
 const OTHERS = PLACEHOLDER_PROGRAMS.filter((p) => !p.inData);
 
-test('the registry holds HVBP, in the data, and six programs that are not; each has a placeholder page', () => {
-  assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.id), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+test('the registry holds HVBP, in the data, and five programs that are not; each has a placeholder page', () => {
+  assert.deepEqual(PLACEHOLDER_PROGRAMS.map((p) => p.id), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi']);
   assert.deepEqual(PLACEHOLDER_PROGRAMS.filter((p) => p.inData).map((p) => p.id), ['hvbp']);
 });
 

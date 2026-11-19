@@ -26,6 +26,8 @@ export const SITE = {
     hrrp: { path: '/hrrp/', released: true, title: 'Readmissions', subtitle: 'HRRP' },
     // A scenario, not a CMS payment program (the program's `scenario` below).
     'work-requirement': { path: '/work-requirement/', released: true, title: 'Medicaid work requirement', subtitle: 'Scenario' },
+    // A payment model, not a penalty program; unreleased (noindex, out of the sitemap) until its pages are whole.
+    team: { path: '/team/', released: false, title: 'Surgical episodes', subtitle: 'TEAM' },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.
@@ -49,7 +51,7 @@ export const SITE = {
     { id: 'ime', name: 'Teaching', ab: 'IME', long: 'Indirect Medical Education Adjustment', path: '/ime/', stage: 'soon', group: 'price', inData: false },
     { id: 'iqr', name: 'Quality reporting', ab: 'IQR', long: 'Hospital Inpatient Quality Reporting Program', path: '/iqr/', stage: 'soon', group: 'reporting', inData: false },
     { id: 'pi', name: 'Electronic health records', ab: 'PI', long: 'Medicare Promoting Interoperability Program', path: '/pi/', stage: 'soon', group: 'reporting', inData: false },
-    { id: 'team', name: 'Surgical episodes', ab: 'TEAM', long: 'Transforming Episode Accountability Model', path: '/team/', stage: 'soon', group: 'episode', inData: false },
+    { id: 'team', name: 'Surgical episodes', ab: 'TEAM', long: 'Transforming Episode Accountability Model', path: '/team/', stage: 'live', group: 'episode', inData: false },
     { id: 'work-requirement', name: 'Work requirement', ab: 'Medicaid', long: 'Community Engagement Requirement for Applicable Individuals', path: '/work-requirement/', stage: 'live', group: 'scenario', inData: false, scenario: true },
   ],
 };

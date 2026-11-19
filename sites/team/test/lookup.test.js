@@ -5,19 +5,18 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { gzipSync } from 'node:zlib';
-import { readFileSync } from 'node:fs';
 import { REPO_ROOT, masterPath, newestYear, pinnedEntry, readJson } from '../../../pipeline/files.js';
 import { loadTeam } from '../web/data.js';
 import { lookupAsset } from '../web/lookup.js';
-import { LOOKUP_COPY, reasonText } from '../web/lookup-copy.js';
+import { COPY, reasonText } from '../web/lookup-copy.js';
 import { copyOf } from '../../../web/render/components.js';
-import { CJRX_START, CLAIMS, CLAIM_PREFIX, PY2_START } from '../web/constants.js';
+import { CJRX_START, PY2_START } from '../web/constants.js';
 
 const team = loadTeam();
 const master = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
 const asset = lookupAsset(team);
 const first = (code) => asset.rows.find((r) => r[1] === code);
-const NEUTRAL = copyOf(LOOKUP_COPY).fill('inAreaListed'); // the in-area sentence that makes no claim about the kind
+const NEUTRAL = copyOf(COPY).fill('inAreaListed'); // the in-area sentence that makes no claim about the kind
 
 test('lookupAsset: one row per master hospital, codes only', () => {
   assert.deepEqual(asset.cols, ['ccn', 'code', 'arg']);
@@ -138,7 +137,7 @@ test('area_unknown reads true under its NO tag: off the list, county not placed'
   assert.match(r.text, /^Not on CMS.s list of TEAM participants\. /);
   assert.match(r.text, /couldn.t place its county in or out of a TEAM area/);
   assert.doesNotMatch(r.text, /can.t say/, 'says it cannot say under a NO tag');
-  assert.deepEqual([LOOKUP_COPY.areaUnknown.claim].flat(), ['TEAM-09']);
+  assert.deepEqual([COPY.areaUnknown.claim].flat(), ['TEAM-09']);
 });
 
 test('a CJR-X status whose inner code contradicts the rules is refused', () => {
@@ -153,29 +152,8 @@ test('reasonText refuses a code or kind it has no words for', () => {
   assert.throws(() => reasonText('in27', null), TypeError);
 });
 
-// Until the site is registered with the copy gate (a later task), this holds the lookup's words to its rules: no digit,
-// well-formed claim ids that resolve to rows of sites/team/CLAIMS.md, and no row left unused.
-test('lookup copy: digit-free, claims resolve to checked rows, every row used', () => {
-  const register = readFileSync(REPO_ROOT + 'sites/team/CLAIMS.md', 'utf8');
-  const rows = register.split('\n').filter((l) => l.startsWith(`| ${CLAIM_PREFIX}-`)).map((l) => l.split('|').slice(1, -1).map((c) => c.trim()));
-  const known = new Map(rows.map((r) => [r[0], r]));
-  const used = new Set(Object.values(CLAIMS));
-  for (const [key, entry] of Object.entries(LOOKUP_COPY)) {
-    assert.doesNotMatch(entry.text, /\d/, `${key}: a digit`);
-    assert.doesNotMatch(entry.text, /penalt/i, `${key}: calls TEAM a penalty`);
-    for (const id of entry.claim === null ? [] : [entry.claim].flat()) used.add(id);
-  }
-  for (const id of used) {
-    assert.match(id, new RegExp(`^${CLAIM_PREFIX}-\\d{2}$`));
-    assert.ok(known.has(id), `${id}: no row`);
-    assert.doesNotMatch(known.get(id)[4], /unverified/);
-    const checked = known.get(id)[4];
-    assert.match(checked, /^\d{4}-\d{2}-\d{2}$/, `${id}: checked date`);
-    assert.ok(checked <= new Date().toISOString().slice(0, 10), `${id}: checked in the future`);
-  }
-  assert.deepEqual([...known.keys()].filter((id) => !used.has(id)), [], 'a row nothing uses');
-  for (const [id, , source, quote] of rows) {
-    assert.match(source, /^https:\/\/\S+$/, id);
-    assert.ok(quote.replace(/^"|"$/g, '').split(/\s+/).length <= 25, `${id}: quote over 25 words`);
-  }
+// The copy gate (pipeline/test/copy-gate.test.js) reads these words with the site's copy.js: their claims resolve and
+// every register row is used. Here, the lookup's own rule: TEAM is never called a penalty.
+test('lookup copy: never calls TEAM a penalty', () => {
+  for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(entry.text, /penalt/i, `${key}: calls TEAM a penalty`);
 });

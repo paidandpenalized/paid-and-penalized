@@ -1,0 +1,142 @@
+/* The TEAM site's own rules, linked after the shared stylesheet (web/styles/) and the chart and what-if kit. The program
+   page (pages/program.js) is seven numbered Parts, each its words beside its figure: one column on a phone, the words at
+   5fr and the figure at 7fr from 62em (a breakpoint in em, so a reader's larger text gets the one column sooner), the
+   figure column sticky where it is shorter than the words. Colors are tokens only; meaning inks (--rew, money paid to a
+   hospital; --pen, money a hospital repays) mark the charts' and the ledger's marks, never text. */
+
+.tm { padding-block: 8px 56px; }
+.tm-part { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 56px; align-items: start; padding-block: 36px; border-top: 1px dotted var(--line); }
+.tm-part:first-child { padding-top: 20px; border-top: 0; }
+.tm-part__text, .tm-part__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
+.tm-part__fig:empty { display: none; }
+@media (min-width: 62em) {
+  .tm-part { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .tm-part__text--wide { grid-column: 1 / -1; }
+  .tm-sticky { position: sticky; top: calc(var(--sticky-top, 0px) + 16px); }
+}
+.tm-sticky { display: grid; gap: 18px; align-content: start; }
+
+/* A Part's head: its number and label in the red type face, Part 1's kicker, the heading in the display face. */
+.tm-part__tag { color: var(--pen-ink); font: 700 var(--fs-sm)/1.2 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+.tm-kicker { margin-top: -8px; color: var(--ink-2); }
+.tm-part__title { max-width: 18em; font: 400 clamp(1.6rem, 1.15rem + 1.5vw, 2.3rem)/1.08 var(--font-display); letter-spacing: 0.005em; text-wrap: balance; }
+.tm-part__title--h1 { font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem); line-height: 1; }
+.tm-part__text p { max-width: 62ch; line-height: 1.6; text-wrap: pretty; }
+.tm-dek { color: var(--ink-2); font-size: var(--fs-md); }
+.tm-cite { color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); overflow-wrap: anywhere; }
+.tm-aside { color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* Part 1: the button to the calculator, the record card (two fields to a row), the lookup box, the map and its key,
+   the note for patients. */
+.tm-go { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-h); padding: 6px 14px; background: var(--ink); color: var(--paper); font: 600 var(--fs-base)/1.2 var(--font-body); text-decoration: none; }
+.tm-go:hover { background: var(--ink-2); }
+.tm-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.tm-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tm-card .field__value--big { font-family: var(--font-type); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tm-look { display: grid; gap: 8px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
+.tm-look__h { font: 700 var(--fs-sm)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-look__nojs, .tm-look__note { color: var(--ink-2); font: 400 var(--fs-xs)/1.45 var(--font-type); }
+.tm-map .chart--us-map { max-width: none; }
+.tm-map .chart-tile-empty { fill: var(--paper-2); stroke: var(--line); }
+.tm-map .chart-mark.is-active .chart-tile-empty { stroke: var(--ink); stroke-width: 2px; }
+.chart-dots--team { stroke: var(--ink); }
+.chart-dots--other { stroke: var(--ink-3); }
+.chart-dots--hole { stroke: var(--paper-2); }
+.tm-key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 8px 0 0; padding: 0; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); list-style: none; }
+.tm-key li { display: inline-flex; align-items: center; gap: 6px; }
+.tm-key__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.tm-key__dot--team { background: var(--ink); }
+.tm-key__dot--other { border: 1.5px solid var(--ink-3); }
+.tm-patient { display: grid; gap: 4px; max-width: 62ch; padding: 10px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); font-size: var(--fs-sm); line-height: 1.55; }
+.tm-patient__h { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Part 2: the Track 3 stamp beside what its limit is a share of. */
+.tm-hook { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 20px; align-items: center; margin-top: 8px; }
+.tm-hook .stamp { font-size: clamp(1.3rem, 1rem + 1vw, 1.8rem); text-align: center; }
+.tm-stamp__sub { display: block; margin-top: 2px; font: 700 0.6em/1.2 var(--font-type); letter-spacing: 0.04em; }
+.tm-hook p { font-size: var(--fs-sm); }
+@media (max-width: 30em) { .tm-hook { grid-template-columns: minmax(0, 1fr); } }
+
+/* Figures 2 and 3 (web/charts/trackLimits.js, payoff.js): gains in the money-paid ink, repayments in the repaid ink. */
+.chart-tracks__gain { fill: var(--rew); }
+.chart-tracks__loss { fill: var(--pen); }
+.chart-payoff__gain, .chart-payoff__loss { fill: none; stroke-width: 2.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-payoff__gain { stroke: var(--rew); }
+.chart-payoff__loss { stroke: var(--pen); }
+.chart-payoff__limit { stroke: var(--ink-2); stroke-width: 1px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.chart-payoff__band { fill: var(--ink); fill-opacity: 0.07; }
+.chart-payoff__band-label { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.chart-payoff__pt { fill: var(--ink); opacity: 0; }
+.chart-mark.is-active .chart-payoff__pt, .chart-mark:hover .chart-payoff__pt { opacity: 1; }
+.chart-payoff__marker { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) {
+  .chart-dots--team, .chart-payoff__limit, .chart-payoff__marker { stroke: CanvasText; }
+  .chart-dots--other { stroke: GrayText; }
+  .chart-dots--hole { stroke: Canvas; }
+  .chart-tracks__gain, .chart-tracks__loss { fill: CanvasText; }
+  .chart-payoff__gain, .chart-payoff__loss { stroke: CanvasText; }
+  .tm-key__dot--team { background: CanvasText; forced-color-adjust: none; }
+}
+
+/* Part 3's ledger: each line numbered in a red box, its words, its amount at the right; the last line, what Medicare
+   would pay (or be repaid), between two rules on the panel tone. */
+.tm-ledger { margin-top: 6px; }
+.tm-ledger__rows { margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); list-style: none; }
+.tm-ledger__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 14px; align-items: baseline; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+.tm-ledger__no { padding: 1px 4px; border: 1px solid var(--pen); color: var(--pen-ink); font: 400 var(--fs-cap)/1 var(--font-type); }
+.tm-ledger__label { font-weight: 600; }
+.tm-ledger__op { display: inline-block; min-width: 1ch; font-family: var(--font-type); }
+.tm-ledger__note { display: block; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.4; }
+.tm-ledger__v { font: 700 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+.tm-ledger__row--total { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
+.tm-ledger__foot { margin-top: 6px; color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* Part 5: the calculator's frame, the page's width under the Part's words. */
+.tm-calc { grid-column: 1 / -1; padding: 16px; border: var(--rule) solid var(--pen); background: var(--paper); }
+.tm-calc__nojs { color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
+
+/* Part 6: the duties by phase (the phase's name beside its list from 36em), and Figure 5, the clock: a dated line,
+   darker from the day the page is about on. */
+.tm-check { display: grid; gap: 0; }
+.tm-phase { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+@media (min-width: 36em) { .tm-phase { grid-template-columns: 8.5rem minmax(0, 1fr); } }
+.tm-phase__h { color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-phase__list { display: grid; margin: 0; padding: 0; list-style: none; }
+.tm-duty { padding-bottom: 14px; }
+.tm-duty + .tm-duty { padding-top: 14px; border-top: 1px dotted var(--line); }
+.tm-duty__h { font: 700 var(--fs-base)/1.3 var(--font-body); text-wrap: balance; }
+.tm-part__text .tm-duty__p { margin-top: 4px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.55; }
+.tm-clock { display: grid; margin: 0; padding: 0; list-style: none; }
+.tm-clock__item { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 4px 14px; padding: 10px 0 10px 16px; border-left: 3px solid var(--line); }
+.tm-clock__item--now, .tm-clock__item--now ~ .tm-clock__item { border-left-color: var(--ink); }
+.tm-clock__item--now .tm-clock__what { font-weight: 700; }
+.tm-clock__when { font: 700 var(--fs-xs)/1.5 var(--font-type); }
+.tm-clock__what { font-size: var(--fs-base); line-height: 1.4; }
+
+/* Part 7's table: its columns on a wide box, scrolling sideways in its own box in between, and each row a card of
+   labeled cells where the box is narrower than 34em (the column heads then hidden, each cell naming its column). */
+.tm-tablefig { margin: 0; }
+.tm-table { container-type: inline-size; overflow-x: auto; }
+.tm-table:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tm-find { min-width: 0; font-family: var(--font-body); }
+.tm-find caption { padding-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-align: start; text-transform: uppercase; }
+.tm-find thead th { white-space: normal; }
+.tm-find td, .tm-find tbody th { line-height: 1.45; }
+@container (width < 34em) {
+  .tm-find, .tm-find tbody, .tm-find tr, .tm-find th, .tm-find td { display: block; }
+  .tm-find thead { display: none; }
+  .tm-find tr { padding: 10px 0; border-top: 1px solid var(--line); }
+  .tm-find td { padding: 2px 10px; }
+  .tm-find td::before { content: attr(data-label) ": "; color: var(--ink-2); font-weight: 600; }
+}
+
+/* After the Parts: the line on CJR-X, the link to Methods, the as-of line. */
+.tm-coda { padding-top: 24px; border-top: 1px dotted var(--line); }
+.tm-next { max-width: 62ch; color: var(--ink-2); line-height: 1.6; }
+.tm-methods { margin-block: 12px 20px; }
+
+/* The Methods page. */
+.tm-methods-page > * + * { margin-top: 16px; }
+.tm-methods-page p { max-width: 62ch; line-height: 1.6; }
+.tm-msec h2 { font: 400 var(--fs-lg)/1.2 var(--font-display); }
+.tm-sources { display: grid; gap: 6px; margin-top: 8px; padding-left: 1.2em; font-size: var(--fs-sm); }

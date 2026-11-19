@@ -184,11 +184,11 @@ test('shell: the program tabs are All programs and the programs with dollar esti
     ['/', 'All programs', 'page', 'tab'],
     ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
   ]);
-  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'team', 'work-requirement']);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
   assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
-  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, then the scenario');
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/team/"><span>Surgical episodes</span> <span class="tab__ab">TEAM</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, TEAM, then the scenario');
   assert.ok(header.includes('<a class="tab" href="/work-requirement/"><span>Work requirement</span> <span class="tab__ab">Medicaid</span></a></div></nav>'), 'the row ends at the scenario, the last listed program');
   // The programs under consideration have no tab, and the row no gap or label before where they were.
   for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
@@ -197,9 +197,11 @@ test('shell: the program tabs are All programs and the programs with dollar esti
   // is (nor All programs), and on one with estimates (HVBP) its tab is.
   const hacrp = tabsOf(page({ ...PAGE, program: 'hacrp' }));
   assert.deepEqual(hacrp.filter(([, , current]) => current).map(([href]) => href), ['/hacrp/']);
-  const team = page({ ...PAGE, path: '/team/', program: 'team' });
-  assert.deepEqual(tabsOf(team).filter(([, , current]) => current), []);
-  assert.doesNotMatch(headerOf(team), /aria-current="page"/);
+  const team = tabsOf(page({ ...PAGE, path: '/team/', program: 'team' }));
+  assert.deepEqual(team.filter(([, , current]) => current).map(([href]) => href), ['/team/']);
+  const pi = page({ ...PAGE, path: '/pi/', program: 'pi' });
+  assert.deepEqual(tabsOf(pi).filter(([, , current]) => current), []);
+  assert.doesNotMatch(headerOf(pi), /aria-current="page"/);
   const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
   assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
   const wr = tabsOf(page({ ...PAGE, path: '/work-requirement/', program: 'work-requirement' }));
@@ -304,9 +306,12 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   // Every program's row is the same shape: a plain item, the name and its code, then one figure; the only scenario
   // markup is that one row's title and hidden words.
   const items = /<ul class="ft__list" role="list">([\s\S]*?)<\/ul>/.exec(foot)[1].match(/<li[^>]*>[\s\S]*?<\/li>/g);
-  assert.equal(items.length, 4);
+  assert.equal(items.length, 5);
+  // TEAM's figure: the hospitals on CMS's list, never a dollar figure; what it is in full is its title and hidden words.
+  const teamFull = "Hospitals on CMS\u2019s TEAM list. Its dollar figures on this site are scenarios, never part of the family\u2019s estimates.";
+  assert.ok(foot.includes(`<li><a href="/team/">Surgical episodes\u00a0<span class="ft__ab">TEAM</span></a> <span class="ft__v" title="${teamFull}">3 hospitals<span class="vh">, ${teamFull}</span></span></li>`), 'TEAM\'s count and its full meaning');
   for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+\u00a0<span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
-  assert.equal(items.filter((item) => item.includes(' title=')).length, 1, 'one row with a title');
+  assert.equal(items.filter((item) => item.includes(' title=')).length, 2, 'two rows with a title: the scenario\'s and TEAM\'s');
   assert.doesNotMatch(foot, /ft__scen|scen-tag|could be lost/, 'no tag box and no old wording');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(considered.startsWith('Under consideration: '));

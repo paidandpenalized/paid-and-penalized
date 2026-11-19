@@ -18,6 +18,7 @@ import { DICTIONARY_PAGE as HRRP_DICTIONARY_PAGE, KINDS as HRRP_KINDS, METHODS_P
 import { buildPlaces } from '../../sites/hrrp/web/places.js';
 import { DEFAULT_SKIP_STATE } from '../../sites/work-requirement/web/constants.js';
 import { METHODS_PATH as WR_METHODS_PATH, PROGRAM_PATH as WR_PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
+import { METHODS_PATH as TEAM_METHODS_PATH, PROGRAM_PATH as TEAM_PROGRAM_PATH } from '../../sites/team/web/links.js';
 import { nearestTo, pointOf } from '../../web/charts/geo.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
@@ -195,6 +196,8 @@ export function samplePages() {
     page('hrrp-dictionary', HRRP_DICTIONARY_PAGE),
     page('wr-program', WR_PROGRAM_PATH),
     page('wr-methods', WR_METHODS_PATH),
+    page('team-program', TEAM_PROGRAM_PATH),
+    page('team-methods', TEAM_METHODS_PATH),
     page('not-found', '/no-page-has-this-address/'),
   ];
 }

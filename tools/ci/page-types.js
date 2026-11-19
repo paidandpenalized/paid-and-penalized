@@ -8,6 +8,7 @@ import { DICTIONARY_PAGE, METHODS_PATH, PROGRAM_PATH } from '../../sites/hacrp/w
 import { KINDS, placePath } from '../../sites/hacrp/web/place-paths.js';
 import { HOSPITALS_PATH } from '../../sites/hacrp/web/view.js';
 import * as hrrp from '../../sites/hrrp/web/links.js';
+import * as team from '../../sites/team/web/links.js';
 import * as wr from '../../sites/work-requirement/web/links.js';
 import { PLACEHOLDER_PROGRAMS, SITE, hospitalFolderOf, hospitalPathOf } from '../../web/site.js';
 
@@ -67,6 +68,8 @@ export const PROGRAM_SITES = [
   { id: 'hrrp', pages: programPages(hrrp) },
   // A scenario's site: a program page and Methods, no hospital, place or dictionary pages.
   { id: 'work-requirement', pages: { program: (path) => path === wr.PROGRAM_PATH, methods: (path) => path === wr.METHODS_PATH } },
+  // TEAM, a payment model: a program page and Methods (each hospital's TEAM numbers live on its hub page).
+  { id: 'team', pages: { program: (path) => path === team.PROGRAM_PATH, methods: (path) => path === team.METHODS_PATH } },
 ];
 // The program-keyed types: those of a program's own pages, budgeted per program.
 export const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];

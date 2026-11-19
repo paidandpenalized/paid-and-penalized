@@ -7,9 +7,8 @@ import { shortIsoDate } from '../../../web/render/format.js';
 import { COPY as SEARCH } from '../../../hub/search/copy.js';
 import { CJRX_START } from './constants.js';
 
-// Not named COPY until the site is registered with the copy gate (which would then read it as the site's copy): the
-// lookup test holds these words to the same rules meanwhile.
-export const LOOKUP_COPY = {
+// A copy file of its own (the copy gate, pipeline/test/copy-gate.test.js, reads it with the site's copy.js).
+export const COPY = {
   in: { text: 'In TEAM.', claim: 'TEAM-01' },
   inVoluntary: { text: 'In TEAM, as a voluntary participant: it chose to join.', claim: ['TEAM-01', 'TEAM-06'] },
   in27: { text: 'In TEAM from {date}.', claim: ['TEAM-01', 'TEAM-09'] },
@@ -34,7 +33,7 @@ export const LOOKUP_COPY = {
   'kind.unknown': { text: 'A hospital whose kind the hospital list doesn\'t give', claim: null },
 };
 
-const { fill } = copyOf(LOOKUP_COPY);
+const { fill } = copyOf(COPY);
 const KIND_KEY = 'hospitalKind.';
 // What may sit inside a CJR-X status: a hospital that left TEAM, or a reason a hospital is not in TEAM (a hospital in TEAM,
 // one starting, a Maryland one, or a nested CJR-X pair contradicts the rules).

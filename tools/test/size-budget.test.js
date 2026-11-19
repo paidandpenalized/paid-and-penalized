@@ -112,6 +112,8 @@ test('program budgets: HACRP\'s are unchanged, and every program site has budget
   // The work requirement has only a program page and Methods, set by the rule (heaviest + 15%, up to the next 10 KB)
   // from the pages of 2026-11-10; a raise is a recorded decision.
   assert.deepEqual(PROGRAM_BUDGETS['work-requirement'], { program: 150 * KB, methods: 50 * KB });
+  // TEAM likewise, from the pages of 2026-11-19 (7a: the static Parts).
+  assert.deepEqual(PROGRAM_BUDGETS.team, { program: 70 * KB, methods: 30 * KB });
   for (const budgets of Object.values(PROGRAM_BUDGETS)) for (const b of Object.values(budgets)) assert.ok(Number.isInteger(b) && b > 0);
 });
 
