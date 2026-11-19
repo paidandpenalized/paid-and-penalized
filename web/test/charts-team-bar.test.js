@@ -184,6 +184,12 @@ test('limitRuler: every plotted value is in its table (limitRulerValues)', () =>
   }));
 });
 
+test('limitRuler: its marks carry whole dollars, as limitRulerValues tables them', () => {
+  const odd = { ...RULER, low: -546000.376000000004, high: 551000.5, limits: { gain: 2300000.25, loss: 2300000.25 } };
+  assert.deepEqual(values(limitRuler({ ...odd, width: WIDTH })).sort((a, b) => a - b), [-2300000, -546000, 551001, 2300000]);
+  assert.deepEqual(limitRulerValues(odd).map((r) => r.value), [-546000, 551001, -2300000, 2300000]);
+});
+
 test('limitRuler: bad input throws', () => {
   assert.throws(() => limitRuler({ ...RULER, low: 10, high: 0, width: WIDTH }), RangeError, 'low above high');
   assert.throws(() => limitRuler({ ...RULER, limits: { gain: 0, loss: 0 }, width: WIDTH }), RangeError);

@@ -12,8 +12,9 @@
 //            dollars), noLoss (the label of a track with no loss side), tip(low, high) (the range's tooltip),
 //            wallTip(side, v) ('gain' or 'loss', the limit's tooltip) }
 //   width   the viewBox's width (the kit's WIDTH on a phone, a wider one beside the words)
-// The range is a mark carrying its two ends, each wall a mark carrying its limit (the loss side's as a negative amount):
-// limitRulerValues lists the four, for the figure's table.
+// The range is a mark carrying its two ends, each wall a mark carrying its limit (the loss side's as a negative amount),
+// in whole dollars (the words give each amount; the marks only pair with a table): limitRulerValues lists the four, for
+// the figure's table.
 import { html } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, r2, text } from './svg.js';
 
@@ -23,6 +24,8 @@ const SIDE = 4;
 // The tick type's advance (11-unit IBM Plex Mono: 0.6 em a character), to keep two labels on one row apart.
 const CHAR = 6.6;
 const EPS = 0.5;
+// A mark's value: whole dollars, never -0.
+const dollars = (v) => Math.round(v) + 0;
 
 function checked({ low, high, limits }) {
   if (!Number.isFinite(low) || !Number.isFinite(high) || low > high) throw new RangeError('limitRuler: low and high are dollars, low at most high');
@@ -30,9 +33,10 @@ function checked({ low, high, limits }) {
   if (low < -limits.loss - EPS || high > limits.gain + EPS) throw new RangeError('limitRuler: the range runs past a limit');
 }
 
-// The four values the ruler plots, as its figure tables them: the range's ends, then the limits (the loss side's negative).
+// The four values the ruler plots, as its figure tables them (whole dollars): the range's ends, then the limits (the loss
+// side's negative).
 export const limitRulerValues = ({ low, high, limits }) => [
-  { key: 'low', value: low }, { key: 'high', value: high }, { key: 'loss', value: -limits.loss + 0 }, { key: 'gain', value: limits.gain },
+  { key: 'low', value: dollars(low) }, { key: 'high', value: dollars(high) }, { key: 'loss', value: dollars(-limits.loss) }, { key: 'gain', value: dollars(limits.gain) },
 ];
 
 export function limitRuler({ id, low, high, limits, words, width }) {
@@ -47,7 +51,7 @@ export function limitRuler({ id, low, high, limits, words, width }) {
   const [xLoss, xGain, x0] = [x(-limits.loss), x(limits.gain), x(0)];
 
   const wall = (side, from, to, v) => mark({
-    tip: words.wallTip(side, v), value: v, hit: null,
+    tip: words.wallTip(side, v), value: dollars(v), hit: null,
     body: html`<rect class="chart-ruler__wall" fill="${hatchFill(id)}" x="${from}" y="${barTop - 2}" width="${r2(to - from)}" height="${axisY - barTop + 2}"/><line class="chart-ruler__limit" x1="${side === 'loss' ? to : from}" x2="${side === 'loss' ? to : from}" y1="${barTop - 2}" y2="${axisY}"/>`,
   });
   const walls = html`${wall('loss', SIDE, xLoss, -limits.loss + 0)}${wall('gain', xGain, width - SIDE, limits.gain)}`;
@@ -55,7 +59,7 @@ export function limitRuler({ id, low, high, limits, words, width }) {
   const lossPart = low < 0 ? html`<rect class="chart-ruler__loss" x="${x(low)}" y="${barTop}" width="${r2(x(Math.min(high, 0)) - x(low))}" height="${barH}"/>` : '';
   const gainPart = high > 0 ? html`<rect class="chart-ruler__gain" x="${x(Math.max(low, 0))}" y="${barTop}" width="${r2(x(high) - x(Math.max(low, 0)))}" height="${barH}"/>` : '';
   const band = mark({
-    tip: words.tip(low, high), value: [low, high], hit: { x: Math.min(x(low), x(high) - 4), y: barTop, width: Math.max(x(high) - x(low), 8), height: barH },
+    tip: words.tip(low, high), value: [dollars(low), dollars(high)], hit: { x: Math.min(x(low), x(high) - 4), y: barTop, width: Math.max(x(high) - x(low), 8), height: barH },
     body: html`${lossPart}${gainPart}`,
   });
 

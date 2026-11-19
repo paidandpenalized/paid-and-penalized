@@ -29,6 +29,8 @@ const pick = (pred, what) => {
 };
 const band = (p, net = true) => String(teamBand({ ccn: p.ccn }, TEAM, { net }));
 const episodes = (p) => CATEGORIES.reduce((n, c) => n + p.cats[c].n, 0);
+// The ruler's range mark: the two ends in whole dollars (web/charts/limitRuler.js).
+const plotted = (low, high) => `data-value="${Math.round(low) + 0} ${Math.round(high) + 0}"`;
 
 const DRAWN = ALL.filter((p) => p.active && p.target > 0 && p.start < PY2_START);
 // Five participants with a scenario to draw, spread through the file's order.
@@ -79,7 +81,7 @@ test('range equals bandOf at Track 3, BAND_DEFAULT, and the calculator\'s openin
     assert.ok(b.includes(`<p class="hh__wbv">${signed(low)} to ${signed(high)}</p>`), 'the range, low to high');
     const calc = calcView({ hosp, state: initialState(hosp), team: meta });
     assert.equal(textOf(b).includes(calc.result.range), true, 'the calculator\'s opening range');
-    assert.ok(b.includes(`data-value="${low} ${high}"`), 'the ruler\'s range is the same two numbers');
+    assert.ok(b.includes(plotted(low, high)), 'the ruler\'s range is the same two numbers');
     assert.ok(textOf(b).includes(`a year, Track 3 · at least ${count(episodes(p))} Medicare episodes a year · target amount ${money(r.target)}, in standardized dollars`), 'the line under it');
     assert.ok(textOf(b).includes(`Hatched: past Track 3’s limits, ${money(-r.limits.loss)} and ${signed(r.limits.gain)}`), 'the limits named');
     assert.ok(b.includes('SCENARIO · PUBLIC DATA'), 'the scenario tag');
@@ -143,7 +145,7 @@ test('every participant with public episodes: the section\'s range is the calcul
     const b = band(p);
     const { low, high, hosp } = ruleBand(p);
     const calc = calcView({ hosp, state: initialState(hosp), team: meta });
-    if (!b.includes(`<p class="hh__wbv">${calc.result.range}</p>`) || !b.includes(`data-value="${low} ${high}"`)) differ += 1;
+    if (!b.includes(`<p class="hh__wbv">${calc.result.range}</p>`) || !b.includes(plotted(low, high))) differ += 1;
   }
   assert.equal(differ, 0, 'participants whose section and calculator disagree');
   assert.ok(DRAWN.length > 0);
