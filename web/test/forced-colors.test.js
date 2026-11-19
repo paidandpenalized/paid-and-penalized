@@ -41,6 +41,8 @@ const MARKS = [
   '.chart-dots--years-clear', '.chart-dots--years-scar', '.chart-dots--years-hole', '.ymap__sw--now', '.ymap__sw--scar', '.ymap__sw--clear',
   // the hub's hospital page (hub/styles.css): the dollar rows' bars, median ticks and key, the hatched rows
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
+  // the hub's hospital page's TEAM section (hub/styles.css): the scenario range on its track's limits (limitRuler.js)
+  '.chart-ruler__loss', '.chart-ruler__gain', '.chart-ruler__limit', '.chart-ruler__zero',
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',

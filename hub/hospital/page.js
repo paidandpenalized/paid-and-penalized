@@ -5,7 +5,8 @@
 // program's dollars as rows adding to it, each beside its peers' median; the headline that compares the net with the
 // same-state peers' median, over the frame the page's script draws the peer swarm in; the what-if section's rows; the
 // peer table's fold; the source and fairness lines. After the what-if, apart from the net and never added to it, the
-// Medicaid work-requirement band (medicaid.js: a scenario, not a payment), for a hospital the scenario file has a row for.
+// Medicaid work-requirement band (medicaid.js: a scenario, not a payment), for a hospital the scenario file has a row for,
+// then the TEAM section (team.js: a scenario of a payment model's reconciliation), for a participant on CMS's TEAM list.
 // Without one (Maryland's all-payer model, or no inputs): the record card, the status and why, the program pages it has,
 // and the Medicaid band as above. Everything a reader needs is in the HTML; the script (entry hub-hospital,
 // hub/client/hospital.js) adds the swarm, the peer toggle, the strips and the peer table, on these hooks:
@@ -28,6 +29,7 @@ import { medicaidBand } from './medicaid.js';
 import { outsideBody, outsideDescription } from './outside.js';
 import { closed, deepLink, pageOf, recordCard, shownName } from './record.js';
 import { ROWS, barSpan, inProgram, peerGroup, rowDollars, sumScale, sumValues, trackAt } from './peers.js';
+import { teamBand } from './team.js';
 import { HAC_CUT_TEXT, addsAsPrinted, comparison, inkOf, outKey, rowWord, signOf, signedMoney, whyText } from './text.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
@@ -212,7 +214,7 @@ ${ROWS.map((r) => programRow(h, r.id, figures, ctx))}
 
 // ---------- the page ----------
 
-function estimatedBody(h, master, group, { fy, all, sets, hrrp, medicaid }) {
+function estimatedBody(h, master, group, { fy, all, sets, hrrp, medicaid, team }) {
   const { peers } = group;
   return html`<article class="hh" data-ccn="${h.ccn}">
 ${peerRow(h, group)}
@@ -224,7 +226,7 @@ ${netBlock(h, master, group.figures, fy, sets)}
 ${figure(h, group, { fy, all })}
 </div>
 ${whatifSection(h, group, { fy, hrrp })}
-${medicaidBand(h, medicaid, { net: true })}<div class="wrap"><div class="hh__tbl">
+${medicaidBand(h, medicaid, { net: true })}${teamBand(h, team, { net: true })}<div class="wrap"><div class="hh__tbl">
 <details class="hh__det" data-peer-table><summary>${fill('tableSummary')} <span>${fill('tableCount', { n: count(peers.length), group: group.group })}</span></summary></details>
 </div></div>
 ${notes(fy, true)}
@@ -232,7 +234,7 @@ ${notes(fy, true)}
 }
 
 // The page of a hospital with no estimate: the record card, its status and why, and the program pages it has.
-function variantBody(h, master, fy, medicaid) {
+function variantBody(h, master, fy, medicaid, team) {
   const maryland = h.status === 'maryland';
   const links = ROWS.map((r) => r.id).filter((id) => pageOf(h, id));
   return html`<article class="hh hh--none" data-ccn="${h.ccn}">
@@ -251,7 +253,7 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 </section>` : ''}
 </div>
 </div>
-${medicaidBand(h, medicaid, { net: false })}${notes(fy, false)}
+${medicaidBand(h, medicaid, { net: false })}${teamBand(h, team, { net: false })}${notes(fy, false)}
 </article>`;
 }
 
@@ -262,10 +264,10 @@ ${dollars ? html`<p>${fill('fairness')}</p>` : ''}</div></div>`;
 
 // A hub hospital's description, body and scripts: with an estimate, the net, its peers and the what-if (and the script
 // that draws them); without one (Maryland's, or no inputs), its status and why.
-function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, medicaid }, fy, place) {
+function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, medicaid, team = null }, fy, place) {
   if (!h.est) {
     const maryland = h.status === 'maryland';
-    return { description: fill(maryland ? 'descriptionMaryland' : 'descriptionNoInputs', maryland ? place : { ...place, fy }), body: variantBody(h, master, fy, medicaid), scripts: [] };
+    return { description: fill(maryland ? 'descriptionMaryland' : 'descriptionNoInputs', maryland ? place : { ...place, fy }), body: variantBody(h, master, fy, medicaid, team), scripts: [] };
   }
   // The page opens on the same-state peers; the dollar rows' scale holds every group's medians (the toggle's).
   const groups = PEER_MODES.map((mode) => groupOf(hospitals, h, mode));
@@ -274,15 +276,15 @@ function hubParts({ h, hospitals, facts, assets, master = null, hrrp = null, med
   const sets = groups.filter(Boolean).map((g) => g.figures);
   return {
     description: fill('description', { ...place, fy, n: count(group.peers.length), group: group.group }),
-    body: estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp, medicaid }),
+    body: estimatedBody(h, master, group, { fy, all: facts.n, sets, hrrp, medicaid, team }),
     scripts: [assets.js['hub-hospital']],
   };
 }
 
 // An outside hospital's (outside.js): no script until its figures have one.
-function outsideParts({ h, assets, master = null, medicaid, programYears, near = '', like = '' }, fy, place) {
+function outsideParts({ h, assets, master = null, medicaid, team = null, programYears, near = '', like = '' }, fy, place) {
   // The body first: it stops the build on a page with nothing to explain it, which outsideDescription would only misname.
-  const body = outsideBody(h, { master, fy, programYears, medicaid, near, like });
+  const body = outsideBody(h, { master, fy, programYears, medicaid, team, near, like });
   // The nearest hospitals' map has tooltips on its pins and its table a scroll box: the figure script serves both.
   return { description: outsideDescription(h, place, fy), body, scripts: near ? [assets.js.figure] : [] };
 }
@@ -309,7 +311,8 @@ function shell({ h, assets, robots }, place, fy, { description, body, scripts })
 // master record (the Type field's kind, ownership and urban or rural); assets: the build's (the fiscal year is the
 // shell's); robots: the page's robots value; hrrp: loadHub().hrrp, for the Readmissions row's note on its page's newer
 // factor (none: no note); medicaid: loadHub().medicaid, for the Medicaid band (required: loadHub always reads the scenario
-// file; a hospital with no row in it gets no band).
+// file; a hospital with no row in it gets no band); team: loadHub().team, for the TEAM section (team.js; a hospital CMS's
+// TEAM list doesn't name gets none; null, none on any page).
 export function hospitalPage(args) {
   const fy = String(args.assets.shell.fy);
   const place = { name: shownName(args.h), place: placeText(args.h) };

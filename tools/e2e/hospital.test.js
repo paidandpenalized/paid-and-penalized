@@ -16,7 +16,7 @@ import { loadHub } from '../../hub/data.js';
 import { EXAMPLE_CCN, hubHospitals } from '../../hub/model.js';
 import { hospitalPathOf } from '../../web/site.js';
 import { audit } from './axe.js';
-import { CONCURRENCY, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
+import { CONCURRENCY, SCHEMES, assertNoSideways, assertQuiet, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 import { samplePages } from './site.js';
 
 const shared = useBrowser();
@@ -1205,3 +1205,49 @@ describe('the hospital page\'s parts, at 1280 px', () => {
     await assertQuiet(seen, 'the drag hint');
   }));
 });
+
+
+// The TEAM section on a participant's page (hub/hospital/team.js): server-drawn, after the Medicaid band. A participant
+// with an estimate, public episodes and a public Track 2 flag (the longest status), picked by property. At a phone's and a
+// laptop's width, light and dark: the section shows its range and one ruler (the phone's under 560px, the wide one from
+// there), the ruler inside its column, the link into the calculator; nothing scrolls sideways; axe finds nothing.
+const TEAM_ONE = found(ESTIMATED.find((h) => {
+  const p = HUB.team.participants.get(h.ccn);
+  return p && p.active && p.target > 0 && p.track2Flags.length > 0;
+}), 'an estimated TEAM participant with public episodes and a Track 2 flag');
+for (const width of [390, 1280]) {
+  describe(`a TEAM participant's page at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width });
+    for (const scheme of SCHEMES) {
+      it(`${scheme}: the section, its range and one ruler inside its column, the calculator's link; no sideways scroll; axe clean`, () => withPage(tabs, { path: hospitalPathOf('hub', TEAM_ONE.ccn), scheme, watched: true }, async (page, { seen }) => {
+        await page.emulateMedia({ reducedMotion: 'reduce' });
+        await page.locator('[data-team]').scrollIntoViewIfNeeded();
+        await settle(page);
+        const s = await page.evaluate(() => {
+          const section = document.querySelector('[data-team]');
+          const col = section.querySelector('.hh__wbb').getBoundingClientRect();
+          const shown = [...section.querySelectorAll('svg.chart--ruler')].filter((svg) => svg.checkVisibility());
+          const r = shown[0]?.getBoundingClientRect();
+          const link = section.querySelector('a.hh__deep');
+          return {
+            range: section.querySelector('.hh__wbv')?.textContent ?? '',
+            rulers: shown.map((svg) => svg.dataset.fit),
+            inside: r ? r.left >= col.left - 0.5 && r.right <= col.right + 0.5 && r.width > 200 : false,
+            hit: shown[0] ? getComputedStyle(shown[0].querySelector('.chart-hit')).fill : null,
+            link: link ? new URL(link.href).pathname + new URL(link.href).search + new URL(link.href).hash : null,
+            afterMedicaid: Boolean(document.querySelector('[data-medicaid]')?.compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING),
+          };
+        });
+        assert.ok(/^(−\$[\d.]+[KM]?|\$0) to \+\$[\d.]+[KM]?$/.test(s.range), 'the range, low to high');
+        assert.deepEqual(s.rulers, [width < 560 ? 'narrow' : 'wide'], 'one ruler, the one for the width');
+        assert.ok(s.inside, 'the ruler inside its column, wide enough to read');
+        assert.ok(/rgba\(0, 0, 0, 0\)|transparent/.test(s.hit), 'its hit area invisible');
+        assert.ok(s.link === `/team/?h=${TEAM_ONE.ccn}#calc`, 'the link into the calculator');
+        assert.ok(s.afterMedicaid, 'after the Medicaid band');
+        await assertNoSideways(page, `a TEAM participant's page at ${width} px, ${scheme}`);
+        await audit(page, `a TEAM participant's page at ${width} px, ${scheme}`);
+        await assertQuiet(seen, 'a TEAM participant\'s page');
+      }));
+    }
+  });
+}

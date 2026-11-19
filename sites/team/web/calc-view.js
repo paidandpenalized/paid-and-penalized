@@ -56,14 +56,17 @@ export function inputsOf(hosp, state) {
   return { cats, pcts, cqs, weights, episodes, track: state.track };
 }
 
-const engineInput = ({ cats, cqs, track }) => ({ cats: cats.map(({ key, target, spend, lowVolume }) => ({ key, target, spend, lowVolume })), cqs, track });
+// The engine's input from inputsOf's: what reconcile and bandOf take. The hub's TEAM section on a participant's page
+// (hub/hospital/team.js) goes through it and inputsOf too, so its band is the calculator's opening one to the cent.
+export const engineInput = ({ cats, cqs, track }) => ({ cats: cats.map(({ key, target, spend, lowVolume }) => ({ key, target, spend, lowVolume })), cqs, track });
 
 // A source tag's words and whether it is the reader's own.
 const src = (mine, words) => ({ mine, text: mine ? t('srcMine') : words });
 
 // The note under the track control: Track 1's eligibility when it is chosen, and the hospital's public Track 2 flags (or,
-// on Track 2 with none, who Track 2 is open to). Track 1 and 2 stay selectable: the reader's scenario, not advice.
-function noteOf(hosp, track) {
+// on Track 2 with none, who Track 2 is open to). Track 1 and 2 stay selectable: the reader's scenario, not advice. The
+// hub's TEAM section shows the same note at the default track.
+export function noteOf(hosp, track) {
   const parts = [];
   const [ta, tb] = TRACK_NUMBERS.map(String);
   if (track === 1) parts.push(fill('noteTrack1', { ta, year: yearOf(TRACK1_LAST) }));

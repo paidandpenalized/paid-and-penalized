@@ -192,19 +192,6 @@
   .chart-div__chip { fill: Canvas; fill-opacity: 1; }
 }
 
-/* The scenario range against the track's limits (web/charts/limitRuler.js; the hub's hospital band draws it): the
-   repaid part in the pen, the paid part in the paid ink, the walls hatched past each limit. */
-.chart-ruler__loss { fill: var(--pen); }
-.chart-ruler__gain { fill: var(--rew); }
-.chart-ruler__wall { stroke: none; }
-.chart-ruler__limit, .chart-ruler__axis { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-ruler__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-ruler__end { font-size: 12px; font-weight: 700; }
-@media (forced-colors: active) {
-  .chart-ruler__loss, .chart-ruler__gain { fill: CanvasText; }
-  .chart-ruler__limit, .chart-ruler__axis, .chart-ruler__zero { stroke: CanvasText; }
-}
-
 /* Part 5: the calculator (program/calc.js, calc-view.js), the page's width under the Part's words. A worksheet in the
    family's form: a red frame and title bar, the hospital and the picker, then two columns from 62em, the inputs at 1.3fr
    and the result at 1fr, sticky beside them; on a phone one column, the result first (the stamp) and nothing sticky.

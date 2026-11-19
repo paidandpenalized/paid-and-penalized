@@ -224,6 +224,42 @@ export const COPY = typesetCopy({
   wbHow: { text: "The three cases follow the Urban Institute's three state mitigation scenarios for the drop in each state's Medicaid expansion enrollment, applied to this hospital's FY{fy} Medicare cost report.", claim: ['WR-05', 'WR-18'] },
   wbLink: 'This hospital on the work-requirement page',
 
+  // The TEAM section (team.js), the Medicaid band's twin: a scenario of a payment model's reconciliation, never a penalty,
+  // never part of the net. Its heading; the status line (its start, mandatory or voluntary, the area as CMS's list names
+  // it), the track it would be in, the note and the list's date. For a participant with public episodes: the label (the
+  // scenario tag follows), the range is the calculator's own words (sites/team/web/calc-copy.js outRange), the line under it, the
+  // ruler's words, the hatched walls' note, where the numbers come from and the link into the calculator. One with none: a
+  // sentence and the link. One that left: the stamp and its end date, no dollars.
+  tmKicker: 'Surgical episodes (a scenario)',
+  tmKickerEnded: 'Surgical episodes',
+  tmHeading: { text: "TEAM, Medicare's surgical episode model", claim: ['HUB-11', 'HUB-25'] },
+  tmSince: { text: 'In TEAM since {date} · {kind} · {area} area', claim: 'TEAM-09' },
+  tmFrom: { text: 'In TEAM from {date} · {kind} · {area} area', claim: 'TEAM-09' },
+  tmMandatory: 'mandatory',
+  tmVoluntary: { text: 'voluntary', claim: 'TEAM-06' },
+  tmTrack: { text: 'From {date}, CMS puts it in Track {n} unless it asks for another track and CMS approves.', claim: 'TEAM-24' },
+  tmNote: 'A scenario, not a payment, so it is never added to the Medicare net above.',
+  tmNoteAlone: 'A scenario, not a payment.',
+  tmAsOf: { text: "CMS's TEAM list as of {date}.", claim: 'TEAM-09' },
+  tmLabel: 'If its {year} episode spending lands in a {band} band around target',
+  tmTag: 'SCENARIO · PUBLIC DATA',
+  tmDollars: { text: 'a year, Track {n} · at least {episodes} Medicare episodes a year · target amount {target}, in standardized dollars', claim: 'TEAM-59' },
+  tmStopGain: 'stop-gain {amount}',
+  tmStopLoss: 'stop-loss {amount}',
+  tmNoLoss: 'no repayment',
+  tmTip: '{lo} to {hi}: spending in a {band} band around target',
+  tmWallGain: { text: "Track {n}'s stop-gain: {amount}", claim: 'TEAM-14' },
+  tmWallLoss: { text: "Track {n}'s stop-loss: {amount}", claim: 'TEAM-14' },
+  tmHatched: { text: "Hatched: past Track {n}'s limits, {loss} and {gain}", claim: 'TEAM-14' },
+  tmHow: {
+    text: "Episodes: its Medicare inpatient discharges in {year} for each episode type, a floor (the public file has no outpatient cases). Prices: CMS's preliminary target prices for {py} in its region.",
+    claim: ['TEAM-57', 'TEAM-52'],
+  },
+  tmLink: 'This hospital in the TEAM calculator',
+  tmNone: 'No public episode counts for this hospital: enter its own in the calculator and the scenario follows.',
+  tmEndedStamp: 'Left TEAM',
+  tmEnded: { text: "CMS's list gives {date} as the end of its participation, so this site has no scenario for it.", claim: 'TEAM-09' },
+
   // The peer table the page's script fills when it is opened.
   tableSummary: 'Every peer as a table',
   tableCount: '({n} {group}, alphabetical)',

@@ -222,12 +222,12 @@ const hospitalRobots = (h, { robots, never }, eligible = true) => (eligible && c
 // Every hospital's page (hospital/page.js), at hospitalPathOf('hub', ccn). A hospital with an estimate, or Maryland's (its
 // page has no figures but says why), has the hub's robots value (hospitalRobots); one with no inputs is never indexed.
 // facts: the hospitals' story facts (storyFacts); hrrp: loadHub().hrrp (a hospital's Readmissions page shows its factor);
-// medicaid: loadHub().medicaid (its Medicaid band).
-function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, robots, never }) {
+// medicaid: loadHub().medicaid (its Medicaid band); team: loadHub().team (a participant's TEAM section).
+function hospitalPages(ctx, { hospitals, facts, master, hrrp, medicaid, team, robots, never }) {
   if (!hospitals.length) return;
   for (const h of hospitals) {
     const r = hospitalRobots(h, { robots, never }, Boolean(h.est) || h.status === 'maryland');
-    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp, medicaid }) });
+    ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text: hospitalPage({ h, hospitals, facts, assets: ctx.assets, robots: r, master: master.get(h.ccn) ?? null, hrrp, medicaid, team }) });
   }
 }
 
@@ -242,7 +242,7 @@ function outsidePages(ctx, { model: { hub, hospitals, outside, likeCounts }, rob
     const near = nearBlock(h, figures, next);
     const like = likeBlock(h, figures, next);
     const r = hospitalRobots(h, { robots, never });
-    const text = outsidePage({ h, assets: ctx.assets, robots: r, master: hub.master.get(h.ccn), medicaid: hub.medicaid, programYears: hub.programYears, near, like });
+    const text = outsidePage({ h, assets: ctx.assets, robots: r, master: hub.master.get(h.ccn), medicaid: hub.medicaid, team: hub.team, programYears: hub.programYears, near, like });
     ctx.emit({ path: hospitalPathOf('hub', h.ccn), robots: r, text });
   }
 }
@@ -268,7 +268,7 @@ export async function generateHub(ctx, { updated = new Map(), correctionsDir = R
   // The not-found page and the programs' placeholders are never indexed, released or not.
   const never = robotsFor({ env: ctx.env, released, eligible: false });
   for (const program of PLACEHOLDER_PROGRAMS) ctx.emit({ path: program.path, robots: never, text: comingPage({ program, facts, assets, robots: never }) });
-  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, medicaid: hub.medicaid, robots, never });
+  hospitalPages(ctx, { hospitals: hospitals ?? all, facts: hospitals?.length ? storyFacts(hospitals) : facts, master: master ?? hub.master, hrrp: hub.hrrp, medicaid: hub.medicaid, team: hub.team, robots, never });
   // The outside pages only with the real model: a test that passes its own hospitals has no master to match them.
   if (!hospitals) outsidePages(ctx, { model, robots, never });
   ctx.emit({ path: NOT_FOUND_PATH, robots: never, text: notFound(assets, never) });

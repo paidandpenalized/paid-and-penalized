@@ -62,8 +62,11 @@ let loaded = null;
 //                 fy is its base year (the year of its dollars), national its low, middle and high roll-ups, columns and
 //                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
 //                 a hospital page's Medicaid band reads (hospital/medicaid.js)
-//   team          { listed } from the TEAM site's newest emitted file: how many hospitals CMS's TEAM list names (the
-//                 footer's and the directory's figure, the file's counts.listed)
+//   team          from the TEAM site's newest emitted file: listed, how many hospitals CMS's TEAM list names (the
+//                 footer's and the directory's figure, the file's counts.listed); meta and categoryAvgDerived as the file
+//                 gives them (the list's date, the episodes' data years); participants, its participant rows by CCN (one
+//                 per list CCN the hospital master has), which a participant's hospital page's TEAM section reads
+//                 (hospital/team.js)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 //   counties      every county's outline (countyShapes of the same atlas, parsed once)
 export function loadHub() {
@@ -89,7 +92,7 @@ export function loadHub() {
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
-    team: { listed: team.counts.listed },
+    team: { listed: team.counts.listed, meta: team.meta, categoryAvgDerived: team.categoryAvgDerived, participants: new Map(team.participants.map((p) => [p.ccn, p])) },
     shapes: stateShapes(atlas),
     counties: countyShapes(atlas),
   };

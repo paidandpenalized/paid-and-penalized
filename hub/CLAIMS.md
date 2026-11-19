@@ -83,6 +83,12 @@ already support hub sentences, so the hub cites them instead of repeating them:
   Medicaid band, WR-05 and WR-18 (Urban's mitigation scenarios and its table of each state's expansion-enrollment
   decline; `wbHow`), WR-03 (Urban projects the expansion group only; `web/medicaid/copy.js` why_not_expansion) and WR-10
   (Maryland's all-payer model; why_all_payer), the reasons the work-requirement pages give in the same words.
+- TEAM, on a participant's hospital page (`hub/hospital/copy.js` `tm*`, with HUB-11 and HUB-25 for its heading):
+  TEAM-09 (CMS's participant list gives each start and end date; the status line, the list's date and a participant
+  that left), TEAM-06 (voluntary participation), TEAM-24 (Track 3 from performance year 2 unless CMS approves another),
+  TEAM-14 (each track's limits; the ruler's walls and their note), TEAM-59 (the target prices are in standardized
+  dollars), and TEAM-57 with TEAM-52 (CMS's preliminary regional target prices; where the numbers come from). Its Track 2
+  note is the calculator's own sentence (`sites/team/web/calc-copy.js` noteFlags, TEAM-26), not a second one.
 
 ## Notes on the sources
 

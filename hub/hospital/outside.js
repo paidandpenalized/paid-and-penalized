@@ -3,6 +3,7 @@
 // dispatches to it). Server-drawn, in this order: the hero (the record card; the stamp, unless a program file lists the
 // hospital; why the programs don't adjust its pay, from the master's reason code for each program; the program pages it
 // has; the note on a hospital whose Medicare agreement has ended), the Medicaid band where the scenario file has a row,
+// the TEAM section for a participant on CMS's TEAM list (team.js),
 // the nearest hospitals in the programs and the hospitals like this one (each a figure block its own module draws, '' for
 // none), and the source line (the dollar model in it only beside the nearest hospitals' dollars).
 import { fillCopy } from '../../web/render/components.js';
@@ -13,6 +14,7 @@ import { COPY } from './copy.js';
 import { medicaidBand } from './medicaid.js';
 import { fillOutside, hasOutside } from './outside-copy.js';
 import { closed, deepLink, recordCard } from './record.js';
+import { teamBand } from './team.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 
@@ -73,8 +75,9 @@ export function outsideDescription(h, place, fy) {
 
 // The body. h: an OutsideHospital; master: its master record; fy: the shell's fiscal year (text); programYears: the
 // master's { hacrp, hrrp } (loadHub().programYears), the years its reason codes are for; medicaid: loadHub().medicaid;
+// team: loadHub().team, for the TEAM section after the Medicaid band (team.js; null: none);
 // near, like: the figure blocks of the nearest hospitals in the programs and of the hospitals like this one ('' for none).
-export function outsideBody(h, { master, fy, programYears, medicaid, near = '', like = '' }) {
+export function outsideBody(h, { master, fy, programYears, medicaid, team = null, near = '', like = '' }) {
   const years = yearsOf(programYears);
   // The Medicaid band, where the scenario file has a row. Its dek says Medicare's penalty programs don't touch the hospital,
   // so a hospital a program file lists keeps the default.
@@ -103,6 +106,6 @@ ${links.length ? html`<section class="hh__pages" aria-labelledby="hh-pages-h">
 ${note}
 </div>
 </div>
-${band}${near}${like}${sourceNote(years, near !== '')}
+${band}${teamBand(h, team, { net: false })}${near}${like}${sourceNote(years, near !== '')}
 </article>`;
 }
