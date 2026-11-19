@@ -16,7 +16,9 @@ import { CATEGORIES } from '../../../engine/js/team/params.js';
 import { SITE, programById } from '../../../web/site.js';
 import { CLAIM_PREFIX, EXAMPLE, SECTIONS, TRACKS } from '../web/constants.js';
 import { COPY } from '../web/copy.js';
-import { COPY as LOOKUP } from '../web/lookup-copy.js';
+import { COPY as LOOKUP, lookupFile } from '../web/lookup-copy.js';
+import { COPY as SEARCH } from '../../../hub/search/copy.js';
+import { escapeHtml } from '../../../web/render/html.js';
 import { loadAtlas, loadMaster, loadSources, loadTeam } from '../web/data.js';
 import { TEAM, generateTeam } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
@@ -28,7 +30,8 @@ const team = loadTeam();
 const master = loadMaster();
 const atlas = loadAtlas();
 const assets = testAssets();
-const program = programPage({ team, master, atlas, robots: 'noindex', assets });
+const LOOKUP_URL = '/assets/team-lookup.test.json';
+const program = programPage({ team, master, atlas, robots: 'noindex', assets, lookupUrl: LOOKUP_URL });
 const methods = methodsPage({ team, sources: loadSources(team), robots: 'noindex', assets });
 const words = (html) => textOf(html).replace(/\s+/g, ' ').trim();
 const main = (page) => /<main[\s\S]*?<\/main>/.exec(page)[0];
@@ -59,6 +62,10 @@ test('the site is registered unreleased: a live program, noindex and out of the 
     for (const path of [PROGRAM_PATH, METHODS_PATH]) {
       assert.ok(readFileSync(join(dir, path, 'index.html'), 'utf8').includes('<meta name="robots" content="noindex">'), path);
     }
+    // The lookup's codes: one hashed file, named on the program page, holding lookupFile's object.
+    const named = /data-codes="(\/assets\/team-lookup\.[0-9a-f]{8}\.json)"/.exec(readFileSync(join(dir, PROGRAM_PATH, 'index.html'), 'utf8'));
+    assert.ok(named, 'the program page names the lookup\'s file');
+    assert.deepEqual(JSON.parse(readFileSync(join(dir, named[1]), 'utf8')), JSON.parse(JSON.stringify(lookupFile(team))));
     // The newest date of CMS's among the inputs the page shows, and the day the file was built.
     const dates = [team.meta.listAsOf, team.meta.cjrxAsOf, team.meta.pricesDated, team.meta.qualityReleased].sort();
     assert.deepEqual(result, { updated: { cmsReleased: dates.at(-1), changed: team.built_at.slice(0, 10) } });
@@ -105,6 +112,25 @@ test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
   assert.doesNotMatch(css.replace(wide, ''), /\.tm-(sticky|part__fig)[^{]*\{[^}]*position: sticky/, 'a figure is sticky only from 62em');
   // The hero's button goes to the calculator.
   assert.match(part('who'), /<a class="tm-go" href="#calc">/);
+});
+
+// Part 1's lookup box (client/lookup.js runs it): its heading is the visible label of its box; the box, hidden until the
+// script shows it, and the polite region the answers go in; the two files the script fetches on the box's first focus
+// (the family search's and the lookup's codes), named, never loaded by the page; the no-JS sentence; the list's date.
+test('Part 1\'s lookup box: a labeled search box, both files named for the script, a polite region, the no-JS sentence', () => {
+  const box = /<section class="tm-look"[\s\S]*?<\/section>/.exec(part('who'))[0];
+  assert.ok(box.includes(`<h2 class="tm-look__h" id="look-h"><label for="look">${COPY.lookupHeading.text}</label></h2>`), 'the heading labels the box');
+  const mount = /<search [^>]*data-team-lookup[^>]*>/.exec(box)?.[0];
+  assert.ok(mount, 'a search landmark holds the box');
+  assert.ok(mount.includes(`data-src="${assets.shell.searchUrl}"`), 'the family search\'s file');
+  assert.ok(mount.includes(`data-codes="${LOOKUP_URL}"`), 'the lookup\'s codes');
+  assert.ok(mount.includes(`data-failed="${escapeHtml(SEARCH.searchFailed)}"`), 'the words for a failed load');
+  const input = /<input [^>]*>/.exec(box)[0];
+  for (const attr of ['id="look"', 'type="search"', 'autocomplete="off"', 'spellcheck="false"', ' hidden']) assert.ok(input.includes(attr), attr);
+  assert.ok(input.includes(`placeholder="${COPY.lookupPlaceholder.text}"`));
+  assert.match(box, /<div class="tm-look__out" aria-live="polite"><\/div>/);
+  assert.ok(box.includes(`<p class="tm-look__nojs">${COPY.lookupNoScript.text}</p>`));
+  assert.doesNotMatch(program, /<link[^>]*(team-lookup|hub-search)/, 'neither file is preloaded');
 });
 
 test('the copy holds no digit; every claim id is the site\'s and resolves to a checked row', () => {

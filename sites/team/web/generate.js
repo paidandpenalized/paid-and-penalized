@@ -6,6 +6,7 @@ import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { robotsFor } from '../../../pipeline/site/context.js';
 import { SITE } from '../../../web/site.js';
 import { loadAtlas, loadMaster, loadSources, loadTeam } from './data.js';
+import { lookupFile } from './lookup-copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';
 import { programPage } from './pages/program.js';
@@ -20,7 +21,9 @@ const newestCmsDate = (meta) => [meta.listAsOf, meta.cjrxAsOf, meta.pricesDated,
 export function generateTeam(ctx, { team = loadTeam(), master = loadMaster(), atlas = loadAtlas(), released = SITE.sites.team.released, log = console.log } = {}) {
   const robots = robotsFor({ env: ctx.env, released });
   const { assets } = ctx;
-  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ team, master, atlas, robots, assets }) });
+  // The lookup's codes and words: one hashed file, fetched on the box's first focus (client/lookup.js).
+  const lookupUrl = ctx.asset('team-lookup', 'json', JSON.stringify(lookupFile(team)));
+  ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ team, master, atlas, robots, assets, lookupUrl }) });
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ sources: loadSources(team), robots, assets }) });
   log(`TEAM: 2 pages under ${PROGRAM_PATH}, ${team.counts.listed} hospitals on CMS's list`);
   return { updated: { cmsReleased: newestCmsDate(team.meta), changed: builtOn(team.built_at) } };

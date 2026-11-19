@@ -4,6 +4,7 @@
 // result: DES-25), with the note for patients under it. Every count is the emitted file's.
 import { CATEGORIES, TRACKS } from '../../../../engine/js/team/params.js';
 import { STATE_NAMES } from '../../../../engine/js/states.js';
+import { COPY as SEARCH } from '../../../../hub/search/copy.js';
 import { figure, imageOf, num } from '../../../../web/charts/figure.js';
 import { pointOf, stateShapes, usMap, usPaths, usPoints, US_MAP_CODES } from '../../../../web/charts/geo.js';
 import { formField, formTitle } from '../../../../web/render/components.js';
@@ -120,23 +121,28 @@ ${fields.map((f, i) => formField({ no: i + 1, label: f.label, value: f.value, no
 </div>`;
 }
 
-// The lookup box: its heading, the mount client/lookup.js fills (it says the search needs JavaScript until then), and
-// the list's date.
-const lookupBox = (team) => html`<section class="tm-look" aria-labelledby="look-h">
-<h2 class="tm-look__h" id="look-h">${t('lookupHeading')}</h2>
-<div class="tm-look__mount" data-team-lookup><p class="tm-look__nojs">${t('lookupNoScript')}</p></div>
+// The lookup box: its heading, which labels the box; the mount client/lookup.js runs (it removes the no-JS sentence and
+// shows the box, hidden until then), naming the two files it fetches on the box's first focus (searchUrl, the family
+// search's names and places; lookupUrl, the lookup's codes and words) and the words for a failed load (the family
+// search's); the polite region the answers go in; and the list's date.
+const lookupBox = (team, { searchUrl, lookupUrl }) => html`<section class="tm-look" aria-labelledby="look-h">
+<h2 class="tm-look__h" id="look-h"><label for="look">${t('lookupHeading')}</label></h2>
+<search class="tm-look__mount" data-team-lookup data-src="${searchUrl}" data-codes="${lookupUrl}" data-failed="${SEARCH.searchFailed}"><p class="tm-look__nojs">${t('lookupNoScript')}</p>
+<input class="tm-look__in" id="look" type="search" placeholder="${t('lookupPlaceholder')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" hidden>
+<div class="tm-look__out" aria-live="polite"></div></search>
 <p class="tm-look__note">${fill('lookupNote', { date: shortIsoDate(team.meta.listAsOf) })}</p>
 </section>`;
 
-// Part 1. n: the Part's number; figureN: the page's figure counter. atlas: the pinned us-atlas topology.
-export function whoPart({ team, master, atlas, n, figureN }) {
+// Part 1. n: the Part's number; figureN: the page's figure counter. atlas: the pinned us-atlas topology. files: the
+// lookup's two files ({ searchUrl, lookupUrl }).
+export function whoPart({ team, master, atlas, n, figureN, files }) {
   const counts = mapCounts(team, master);
   const words = html`<p class="tm-dek">${fill('dek', {
     n: spelled(CATEGORIES.length), days: String(EPISODE_DAYS), date: isoDate(PY2_START), track: String(DEFAULT_TRACK), limit: pct(TRACKS[DEFAULT_TRACK].gain, 0),
   })}</p>
 <p><a class="tm-go" href="#calc">${t('toCalc')} <span aria-hidden="true">↓</span></a></p>
 ${card(team, counts)}
-${lookupBox(team)}`;
+${lookupBox(team, files)}`;
   const fig = html`<div class="tm-sticky">
 ${mapFigure({ team, master, atlas, n: figureN() })}
 ${patientNote()}

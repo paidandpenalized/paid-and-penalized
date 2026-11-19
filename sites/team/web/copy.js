@@ -54,6 +54,7 @@ export const COPY = {
   lookupHeading: { text: 'Is a hospital in TEAM?', claim: null },
   lookupNote: { text: "Every hospital on Medicare's hospital list. CMS's TEAM list as of {date}; CMS updates it each quarter.", claim: 'TEAM-09' },
   lookupNoScript: { text: 'The search runs in your browser and needs JavaScript.', claim: null },
+  lookupPlaceholder: { text: 'Name, city or CCN', claim: null },
 
   // Figure 1, the map of participants: filled dots in TEAM, hollow ones for the other hospitals the inpatient system pays.
   mapTakeaway: {

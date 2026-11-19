@@ -16,7 +16,7 @@ import { drgsByCategory, readerDivision } from '../web/program/bar.js';
 import { extremes } from '../web/program/bar-data.js';
 
 const team = loadTeam();
-const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets() });
+const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets(), lookupUrl: '/assets/team-lookup.test.json' });
 // The text as a reader sees it: inline spans (the parts the script rewrites) add no space.
 const words = (html) => textOf(html.replace(/<\/?span\b[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
 const at = program.indexOf('<section class="tm-part" id="bar"');

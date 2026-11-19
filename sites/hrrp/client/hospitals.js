@@ -3,8 +3,8 @@
 // placeRowsAsset) on the program and place pages, where the search, Worksheet R's box and the hospitals table all read the one
 // file. Rows with a bad CCN are dropped; an asset whose hospitalPath or place paths are not the site's own is refused.
 import { CCN } from '../../../engine/js/ccn.js';
+import { fetchAsset } from '../../../web/client/fetch-asset.js';
 import { once } from '../../../web/client/once.js';
-import { fetchAsset } from './fetch-asset.js';
 import { KINDS, PROGRAM_PATH } from '../web/links.js';
 import { byId } from '../web/numbers.js';
 

@@ -5,7 +5,9 @@
 import { copyOf } from '../../../web/render/components.js';
 import { shortIsoDate } from '../../../web/render/format.js';
 import { COPY as SEARCH } from '../../../hub/search/copy.js';
+import { hospitalFolderOf } from '../../../web/site.js';
 import { CJRX_START } from './constants.js';
+import { lookupAsset } from './lookup.js';
 
 // A copy file of its own (the copy gate, pipeline/test/copy-gate.test.js, reads it with the site's copy.js).
 export const COPY = {
@@ -31,6 +33,16 @@ export const COPY = {
   areaUnknown: { text: 'Not on CMS\'s list of TEAM participants. We couldn\'t place its county in or out of a TEAM area.', claim: 'TEAM-09' },
   cjrx: { text: '{reason} In CJR-X from {date}.', claim: ['TEAM-12', 'TEAM-13'] },
   'kind.unknown': { text: 'A hospital whose kind the hospital list doesn\'t give', claim: null },
+  // The box's own words (lookupFile hands them to the browser): each row's tag and its link, and the sentence over the
+  // rows, {n} the matches and {shown} the rows listed.
+  lookYes: { text: 'Yes', claim: null },
+  lookNo: { text: 'No', claim: null },
+  lookToCalc: { text: 'Open it in the calculator', claim: null },
+  lookToHub: { text: 'Its page across the programs', claim: null },
+  lookCount: { text: '{n} hospitals match.', claim: null },
+  lookCountOne: { text: 'One hospital matches.', claim: null },
+  lookCountMore: { text: '{n} hospitals match. The closest {shown} are below; type more of the name to narrow it.', claim: null },
+  lookEmpty: { text: 'No hospital matches. Try its city or its CCN.', claim: null },
 };
 
 const { fill } = copyOf(COPY);
@@ -78,4 +90,25 @@ export function reasonText(code, arg) {
     }
     default: throw new RangeError(`lookup: no words for status ${JSON.stringify(code)}`);
   }
+}
+
+// The file the program page's lookup fetches on the box's first focus (generate.js writes it hashed; client/lookup.js
+// reads it): lookupAsset's codes, each distinct status's words once ([tag, text, link], keyed by its [code, arg] as JSON),
+// the folder of a hospital's page across the programs, and the box's words, so the page's script carries no copy. Names
+// and places stay in the family search's file. The sentences over the rows keep their placeholders for the browser.
+export function lookupFile(team) {
+  const asset = lookupAsset(team);
+  const reasons = {};
+  for (const [, code, arg] of asset.rows) {
+    const key = JSON.stringify([code, arg]);
+    if (!Object.hasOwn(reasons, key)) {
+      const { tag, text, link } = reasonText(code, arg);
+      reasons[key] = [tag, text, link];
+    }
+  }
+  const words = {
+    yes: fill('lookYes'), no: fill('lookNo'), toCalc: fill('lookToCalc'), toHub: fill('lookToHub'),
+    count: COPY.lookCount.text, countOne: fill('lookCountOne'), countMore: COPY.lookCountMore.text, empty: fill('lookEmpty'),
+  };
+  return { ...asset, hub: hospitalFolderOf('hub'), reasons, words };
 }

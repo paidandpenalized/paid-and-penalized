@@ -2,11 +2,13 @@
 // figure, a stamp or a table (each paragraph, heading, list item and caption is at least MIN_TEXT px wide, or short
 // enough to sit on one line), no stamp runs past its column, no citation breaks inside a word, and the
 // page never scrolls sideways; and Part 4's picker redraws its map (below). Runs against dist/ (make build) or any URL;
-// see site.js. (Task 8 adds the lookup's checks.)
+// see site.js. Part 1's lookup has its own checks (below).
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { SHOWN } from '../../sites/team/client/lookup.js';
 import { PROGRAM_PATH } from '../../sites/team/web/links.js';
-import { CONCURRENCY, SCHEMES, assertNoSideways, assertQuiet, useBrowser, useContext, withPage } from './lib.js';
+import { audit } from './axe.js';
+import { CONCURRENCY, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, useBrowser, useContext, withPage } from './lib.js';
 
 const shared = useBrowser();
 // The narrowest a block of words may be when it wraps: about 18 characters of the body face at its smallest size.
@@ -144,5 +146,71 @@ describe('TEAM Part 4 without JavaScript', () => {
     assert.equal(s.marks.length, 9);
     const rows = await page.locator('#all-prices tr[data-drg]').count();
     assert.ok(rows > 30, `${rows} episode types in the table`);
+  }));
+});
+
+// Part 1's lookup (sites/team/web/program/who.js, client/lookup.js): the page fetches no data file until the reader
+// focuses the box, then exactly the box's two (the family search's and the lookup's codes); a query lists at most SHOWN
+// hospitals under a sentence; from the keyboard alone a "yes" opens the calculator (?h= and #calc in the address,
+// team:pick heard, the calculator's heading focused) and Escape clears the box; axe finds nothing on the page with an
+// answer showing; the page never scrolls sideways. A hospital in TEAM is picked from the codes file by its status, and its
+// CCN is typed, never printed.
+const dataFiles = (page) => page.evaluate(() => performance.getEntriesByType('resource').map((e) => new URL(e.name).pathname).filter((p) => p.endsWith('.json')));
+const answer = (page) => page.evaluate(() => {
+  const out = document.querySelector('.tm-look__out');
+  return { sentence: out.querySelector('.tm-look__count')?.textContent ?? null, rows: out.querySelectorAll('li').length, text: out.textContent };
+});
+
+for (const width of [1280, 390]) {
+  describe(`TEAM Part 1's lookup at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width, height: width < 600 ? 844 : 900 });
+    for (const scheme of SCHEMES) {
+      it(`${scheme}: no fetch before focus, then the two files; at most ${SHOWN} rows; keyboard only; axe clean; no sideways scroll`, () => withPage(tabs, { path: PROGRAM_PATH, scheme, watched: true }, async (page, { seen }) => {
+        const box = page.locator('#look');
+        assert.ok(await box.isVisible(), 'the box shows once the script runs');
+        assert.equal(await page.locator('.tm-look__nojs').count(), 0, 'the no-JS sentence goes');
+        assert.equal(await page.locator('label[for="look"]').textContent(), 'Is a hospital in TEAM?');
+        assert.deepEqual(await dataFiles(page), [], 'no data file before focus');
+        await box.focus();
+        const codes = await page.locator('[data-team-lookup]').getAttribute('data-codes');
+        const src = await page.locator('[data-team-lookup]').getAttribute('data-src');
+        await eventually(async () => (await dataFiles(page)).length === 2, 'both files fetched on focus');
+        assert.deepEqual((await dataFiles(page)).sort(), [codes, src].sort(), 'exactly the box\'s two files');
+
+        await page.keyboard.type('medical center');
+        const many = await eventually(async () => { const a = await answer(page); return a.rows ? a : null; }, 'rows listed');
+        assert.equal(many.rows, SHOWN, `at most ${SHOWN} rows`);
+        assert.match(many.sentence, /hospitals match/);
+        await assertNoSideways(page, 'the lookup with rows listed');
+        await audit(page, `${PROGRAM_PATH} with the lookup's rows listed`);
+
+        await page.keyboard.press('Escape');
+        assert.equal(await box.inputValue(), '');
+        assert.deepEqual(await answer(page), { sentence: null, rows: 0, text: '' }, 'Escape clears the answer');
+
+        // A hospital in TEAM, by its status in the codes file; its CCN typed, then the keyboard to its link.
+        const ccn = await page.evaluate(async (url) => (await (await fetch(url)).json()).rows.find((r) => r[1] === 'in')[0], codes);
+        await page.evaluate(() => { window.picks = []; document.addEventListener('team:pick', (e) => window.picks.push(e.detail)); });
+        await page.keyboard.type(ccn);
+        await eventually(async () => (await answer(page)).rows === 1, 'one row for a CCN');
+        await page.keyboard.press(TAB_KEYS.next);
+        assert.equal(await page.evaluate(() => document.activeElement.closest('.tm-res') !== null && document.activeElement.localName), 'a', 'the row\'s link is next in the tab order');
+        await page.keyboard.press('Enter');
+        const after = await page.evaluate(() => ({ search: location.search, hash: location.hash, focused: document.activeElement.id, picks: window.picks }));
+        assert.equal(after.search, `?h=${ccn}`, 'the address carries ?h=');
+        assert.equal(after.hash, '#calc');
+        assert.deepEqual(after.picks, [{ ccn }], 'team:pick heard with the CCN');
+        assert.equal(after.focused, 'yours-h', 'the calculator\'s heading takes the focus');
+        await assertQuiet(seen, 'TEAM Part 1\'s lookup');
+      }));
+    }
+  });
+}
+
+describe('TEAM Part 1\'s lookup without JavaScript', () => {
+  const tabs = useContext(shared, { javaScript: false });
+  it('the box stays hidden and says the search needs JavaScript', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+    assert.equal(await page.locator('#look').isVisible(), false);
+    assert.ok(await page.locator('.tm-look__nojs').isVisible());
   }));
 });

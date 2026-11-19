@@ -1,7 +1,8 @@
 // The TEAM program page: seven numbered Parts, each its words beside its figure (Part 1, who's in, program/who.js; Part 2,
 // what changes, change.js; Part 3, how the money works, money.js; Part 4, the bar to beat, bar.js; Part 5, the
 // calculator's mount; Part 6, what a hospital has to do, duties.js; Part 7, where the numbers are, reports.js), then the
-// line on CJR-X and the close. Its scripts: the figures' (assets.js.figure) and its own (client/page.js: Part 4's picker).
+// line on CJR-X and the close. Its scripts: the figures' (assets.js.figure) and its own (client/page.js: Part 1's lookup, Part 4's
+// picker).
 import { CATEGORIES } from '../../../../engine/js/team/params.js';
 import { counter } from '../../../../web/charts/figure.js';
 import { isoDate, spelled } from '../../../../web/render/format.js';
@@ -27,12 +28,12 @@ const yoursPart = (n) => partOf({
 });
 
 // team: data.js loadTeam()'s file; master: loadMaster()'s places; atlas: the pinned us-atlas topology; robots: null for an
-// indexable page, else the meta robots value; assets: the build's paths.
-export function programPage({ team, master, atlas, robots, assets }) {
+// indexable page, else the meta robots value; assets: the build's paths; lookupUrl: the lookup's codes file (generate.js).
+export function programPage({ team, master, atlas, robots, assets, lookupUrl }) {
   const figureN = counter();
   const partN = counter();
   const body = html`<article class="wrap page tm">
-${whoPart({ team, master, atlas, n: partN(), figureN })}
+${whoPart({ team, master, atlas, n: partN(), figureN, files: { searchUrl: assets.shell.searchUrl, lookupUrl } })}
 ${changePart({ n: partN(), figureN })}
 ${moneyPart({ n: partN(), figureN })}
 ${barPart({ team, atlas, n: partN(), figureN })}

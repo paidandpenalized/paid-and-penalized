@@ -8,7 +8,8 @@ import { gzipSync } from 'node:zlib';
 import { REPO_ROOT, masterPath, newestYear, pinnedEntry, readJson } from '../../../pipeline/files.js';
 import { loadTeam } from '../web/data.js';
 import { lookupAsset } from '../web/lookup.js';
-import { COPY, reasonText } from '../web/lookup-copy.js';
+import { COPY, lookupFile, reasonText } from '../web/lookup-copy.js';
+import { hospitalPathOf } from '../../../web/site.js';
 import { copyOf } from '../../../web/render/components.js';
 import { CJRX_START, PY2_START } from '../web/constants.js';
 
@@ -156,4 +157,29 @@ test('reasonText refuses a code or kind it has no words for', () => {
 // every register row is used. Here, the lookup's own rule: TEAM is never called a penalty.
 test('lookup copy: never calls TEAM a penalty', () => {
   for (const [key, entry] of Object.entries(COPY)) assert.doesNotMatch(entry.text, /penalt/i, `${key}: calls TEAM a penalty`);
+});
+
+// The file the browser fetches (generate.js emits it hashed; client/lookup.js reads it): the codes as lookupAsset gives
+// them, each distinct status's words once ([tag, text, link], keyed by its [code, arg] as JSON), the hub's folder for a
+// hospital's page, and the box's own words. Its words are the copy's, so the page's script carries none of them.
+test('lookupFile: the codes, each status\'s words once, the hub folder and the box\'s words', () => {
+  const file = lookupFile(team);
+  assert.deepEqual(file.cols, asset.cols);
+  assert.deepEqual(file.rows, asset.rows);
+  assert.equal(file.hub, hospitalPathOf('hub', 'x').slice(0, -'x/'.length));
+  const keys = new Set(asset.rows.map(([, code, arg]) => JSON.stringify([code, arg])));
+  assert.deepEqual(new Set(Object.keys(file.reasons)), keys, 'one entry per distinct status, and no other');
+  for (const key of keys) {
+    const { tag, text, link } = reasonText(...JSON.parse(key));
+    assert.deepEqual(file.reasons[key], [tag, text, link]);
+  }
+  const words = Object.entries(file.words);
+  assert.deepEqual(Object.keys(file.words).sort(), ['count', 'countMore', 'countOne', 'empty', 'no', 'toCalc', 'toHub', 'yes']);
+  for (const [key, text] of words) {
+    assert.ok(typeof text === 'string' && text.trim(), key);
+    assert.doesNotMatch(text, /\d|penalt/i, key);
+  }
+  assert.match(file.words.count, /\{n\}/);
+  assert.match(file.words.countMore, /\{n\}.*\{shown\}/);
+  assert.ok(!/"name"/.test(JSON.stringify(file)), 'a name in the file');
 });
