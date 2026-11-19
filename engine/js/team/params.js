@@ -16,6 +16,10 @@ export const CQS_CAPS = Object.freeze(Object.fromEntries(
   Object.entries(TRACKS).map(([track, t]) => [track, Object.freeze({ gain: t.qGain, loss: t.qLoss })]),
 ));
 
+// TEAM-19. The episode runs through the 30th day after the anchor discharge (or the anchor procedure), the discharge
+// day counting as day 1 (§ 512.537(a)(1)).
+export const EPISODE_DAYS = 30;
+
 // TEAM-16. An episode category with fewer baseline episodes than this (over the three baseline years) has its
 // performance-year spending capped at target, so it can add to a gain but not to a loss (§ 512.550(c)(9)).
 export const LOW_VOLUME = 31;

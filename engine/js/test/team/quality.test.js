@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { compositeQuality } from '../../team/quality.js';
-import { BAND_DEFAULT, BAND_MAX, BAND_MIN, LOW_VOLUME, MEASURES, MISSING_QUALITY, TRACKS } from '../../team/params.js';
+import { BAND_DEFAULT, BAND_MAX, BAND_MIN, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, TRACKS } from '../../team/params.js';
 
 const KEYS = ['hybrid_hwr', 'iscmr', 'falls', 'prf', 'thatka_prom'];
 const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol, `${a} is not within ${tol} of ${b}`);
@@ -21,6 +21,7 @@ test('params: tracks, thresholds and the band are the rule values, frozen', () =
   assert.deepEqual(TRACKS[2], { gain: 0.05, loss: 0.05, qGain: 0.10, qLoss: 0.15 });
   assert.deepEqual(TRACKS[3], { gain: 0.20, loss: 0.20, qGain: 0.10, qLoss: 0.10 });
   assert.equal(LOW_VOLUME, 31);
+  assert.equal(EPISODE_DAYS, 30);
   assert.equal(MISSING_QUALITY, 50);
   assert.deepEqual([BAND_MIN, BAND_DEFAULT, BAND_MAX], [0.01, 0.05, 0.20]);
   assert.ok(Object.isFrozen(TRACKS) && Object.isFrozen(TRACKS[1]) && Object.isFrozen(MEASURES) && Object.isFrozen(MEASURES.falls));
