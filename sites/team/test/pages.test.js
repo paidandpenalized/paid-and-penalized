@@ -40,10 +40,11 @@ const part = (id) => {
   return program.slice(at, next < 0 ? program.indexOf('</article>', at) : next);
 };
 
-test('the manifest: id, the kit\'s styles then the site\'s own, no script of its own yet', () => {
+test('the manifest: id, the kit\'s styles then the site\'s own, the program page\'s script', () => {
   assert.equal(TEAM.id, 'team');
   assert.deepEqual(TEAM.styles, [...KIT_STYLES, 'sites/team/web/styles.css']);
-  assert.deepEqual(TEAM.entries, {});
+  assert.deepEqual(TEAM.entries, { 'team-page': 'sites/team/client/page.js' });
+  assert.ok(program.includes(`<script type="module" src="${assets.js['team-page']}"></script>`), 'the program page loads it');
 });
 
 test('the site is registered unreleased: a live program, noindex and out of the sitemap even in production', () =>
@@ -84,17 +85,15 @@ test('every Part is an anchored section, in order, numbered, with its heading', 
   });
 });
 
-// The family's layout: each Part's words beside its figure. Part 4's figure is drawn by a later task (its slot is
-// there, empty); Part 5's is the calculator.
-test('Parts 1, 2, 3, 6 and 7 each set a figure beside their words', () => {
-  for (const id of ['who', 'change', 'money', 'do', 'find']) {
+// The family's layout: each Part's words beside its figure; Part 5's is the calculator.
+test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
+  for (const id of ['who', 'change', 'money', 'bar', 'do', 'find']) {
     const p = part(id);
     assert.match(p, /<div class="tm-part__text[^"]*">/, `${id}: words`);
     const fig = /<div class="tm-part__fig[^"]*">([\s\S]*)/.exec(p);
     assert.ok(fig, `${id}: a figure column`);
     assert.match(fig[1], /<figure\b|<table\b/, `${id}: a figure or table in it`);
   }
-  assert.match(part('bar'), /<div class="tm-part__fig" data-slot="bar"><\/div>/);
   assert.match(part('yours'), /<section id="calc" class="tm-calc">/);
   // The figures shorter than their words (the map, the clock) stay beside them on a wide screen: sticky in a figure
   // column that runs the Part's height (styles.css, from 62em only).
@@ -103,7 +102,7 @@ test('Parts 1, 2, 3, 6 and 7 each set a figure beside their words', () => {
   const wide = css.slice(css.indexOf('@media (min-width: 62em) {'), css.indexOf('\n}\n', css.indexOf('@media (min-width: 62em) {')));
   assert.match(wide, /\.tm-part__fig \{ align-self: stretch; \}/);
   assert.match(wide, /\.tm-sticky \{ position: sticky;/);
-  assert.doesNotMatch(css.replace(wide, ''), /position: sticky/, 'sticky only from 62em');
+  assert.doesNotMatch(css.replace(wide, ''), /\.tm-(sticky|part__fig)[^{]*\{[^}]*position: sticky/, 'a figure is sticky only from 62em');
   // The hero's button goes to the calculator.
   assert.match(part('who'), /<a class="tm-go" href="#calc">/);
 });
@@ -129,12 +128,12 @@ test('no "penalty" anywhere in TEAM\'s copy or on its pages\' own content', () =
   assert.doesNotMatch(words(main(methods)), /penalt/i);
 });
 
-// Every dollar figure says it is in standardized dollars: each block that shows one (a figure, the ledger, a
-// paragraph or list item) says "standardized" in the same block.
+// Every dollar figure says it is in standardized dollars: each block that shows one (a figure, the ledger, Part 4's table
+// of every price, a paragraph or list item) says "standardized" in the same block.
 test('standardized dollars are stated beside every dollar figure', () => {
   let rest = main(program);
   const blocks = [];
-  for (const re of [/<figure\b[\s\S]*?<\/figure>/g, /<section class="tm-ledger"[\s\S]*?<\/section>/g]) {
+  for (const re of [/<figure\b[\s\S]*?<\/figure>/g, /<section class="tm-ledger"[\s\S]*?<\/section>/g, /<details class="tm-all"[\s\S]*?<\/details>/g]) {
     rest = rest.replace(re, (m) => {
       blocks.push(m);
       return '';

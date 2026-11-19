@@ -161,6 +161,50 @@ export const COPY = {
     text: "CMS publishes a preliminary target price for each kind of episode in each region of the country. A hospital's own prices, adjusted for its patients, go to that hospital alone, before the year.",
     claim: ['TEAM-53', 'TEAM-52'],
   },
+  // The picker (its label; each episode type's option, grouped by category) and the price beside the words, the hospital
+  // the calculator starts with's region's (client/bar.js rewrites the parts in data-bar spans when the pick changes).
+  barPick: { text: 'Episode type', claim: null },
+  barOption: { text: 'DRG {drg}', claim: null },
+  barSays: {
+    text: "CMS's preliminary target price for {year} for DRG {drg} ({cat}) in {division}, the region of the hospital the calculator below starts with. Standardized dollars.",
+    claim: ['TEAM-57', 'TEAM-59'],
+  },
+  // The five episode categories (engine/js/team/params.js CATEGORIES), as a sentence names them.
+  catLEJR: { text: 'lower extremity joint replacement', claim: 'TEAM-21' },
+  catSHFFT: { text: 'surgical hip and femur fracture treatment', claim: 'TEAM-21' },
+  catSPINAL: { text: 'spinal fusion', claim: 'TEAM-21' },
+  catCABG: { text: 'coronary artery bypass graft surgery', claim: 'TEAM-21' },
+  catBOWEL: { text: 'major bowel procedure', claim: 'TEAM-21' },
+
+  // Figure 4, the regions' prices for the picked episode type (web/charts/divisionMap.js).
+  barTakeaway: {
+    text: "DRG {drg} ({cat}): {year}'s preliminary target price in each of the {n} regions, from {lo} in {loName} to {hi} in {hiName}.",
+    claim: ['TEAM-57', 'TEAM-58'],
+  },
+  barLegend: { text: 'Target price, standardized dollars', claim: 'TEAM-59' },
+  barLow: { text: 'lowest', claim: null },
+  barHigh: { text: 'highest', claim: null },
+  barNote: {
+    text: 'Outlined: {division}, the region of the hospital the calculator starts with. CMS prices Puerto Rico and the other territories with the Pacific region. Standardized dollars.',
+    claim: ['TEAM-58', 'TEAM-59'],
+  },
+  barSource: { text: 'CMS, TEAM preliminary target prices for {year}, dated {date}.', claim: null },
+  barAlt: { text: 'Map of the United States in its census regions, each shaded by its preliminary target price for the picked episode type, darker for a higher price.', claim: null },
+  barColRegion: { text: 'Region', claim: null },
+  barColStates: { text: 'States', claim: null },
+  barColPrice: { text: 'Target price, standardized dollars', claim: 'TEAM-59' },
+
+  // Under Figure 4: every episode type in every region, in a disclosure.
+  allSummary: { text: 'All {n} episode types × {regions} regions', claim: 'TEAM-57' },
+  allCaption: { text: "CMS's preliminary target prices for {year}, by episode type and region. Standardized dollars.", claim: ['TEAM-57', 'TEAM-59'] },
+  allColType: { text: 'Episode type', claim: null },
+  allAvgCms: { text: "All, CMS's row", claim: 'TEAM-60' },
+  allAvgOurs: { text: "All, this site's mean", claim: null },
+  allMine: { text: 'Shaded: {division}, the region of the hospital the calculator starts with.', claim: null },
+  allDerived: {
+    text: "CMS's file has a row named All for each category but {cats}. For {cats}, the All row here is the plain mean of the category's episode types' prices: this site's arithmetic, not CMS's.",
+    claim: 'TEAM-60',
+  },
 
   // Part 5, your hospital (the calculator).
   yoursHeading: { text: 'Start from public numbers, then put in your own', claim: null },

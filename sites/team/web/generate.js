@@ -26,10 +26,10 @@ export function generateTeam(ctx, { team = loadTeam(), master = loadMaster(), at
   return { updated: { cmsReleased: newestCmsDate(team.meta), changed: builtOn(team.built_at) } };
 }
 
-// The TEAM site's build manifest. No browser script of its own yet: the page loads the figures' (assets.js.figure).
+// The TEAM site's build manifest: the program page's script (client/page.js), beside the figures' (assets.js.figure).
 export const TEAM = {
   id: 'team',
-  entries: {},
+  entries: { 'team-page': 'sites/team/client/page.js' },
   styles: [...KIT_STYLES, 'sites/team/web/styles.css'],
   generate: (ctx, { log } = {}) => generateTeam(ctx, { log }),
 };

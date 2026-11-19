@@ -3,7 +3,7 @@
 // map it replaces). d3-geo projects and draws them here, at build time, as inline SVG: no map code ships to browsers.
 // Colors come from classes in web/styles/charts.css, never from here.
 import { geoAlbersUsa, geoBounds, geoCentroid, geoCircle, geoConicEqualArea, geoDistance, geoPath, geoStream } from 'd3-geo';
-import { feature } from 'topojson-client';
+import { feature, mesh } from 'topojson-client';
 import { escapeHtml, html, Safe } from '../render/html.js';
 import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, plain, r1, r2, WIDTH } from './svg.js';
 import { dotsPath } from './dots.js';
@@ -187,6 +187,20 @@ export function usPaths(shapes, width) {
   const entry = { shapes, height, paths, projection };
   US.set(key, entry);
   return entry;
+}
+
+// Borders of the US map as one path's d, projected as usPaths projects its states at that width: the lines topojson's
+// mesh keeps where keep(a, b) holds for the postal codes of the states on either side (a coast, or an edge no other state
+// of the map shares, has a === b). Not thinned: a short border would be dropped whole. '' when no border passes.
+// For a map that groups its states (the census divisions), where only the groups' edges are drawn heavier.
+export function usMesh(topo, width, keep) {
+  const { projection } = usPaths(stateShapes(topo), width);
+  const codeOf = (g) => CODE_OF_FIPS.get(String(g.id));
+  const lines = mesh(topo, topo.objects.states, (a, b) => {
+    const [ca, cb] = [codeOf(a), codeOf(b)];
+    return US_MAP_CODES.includes(ca) && US_MAP_CODES.includes(cb) && keep(ca, cb);
+  });
+  return relativeD(geoPath(projection).digits(DIGITS)(lines) ?? '');
 }
 
 function checkUsStates(states) {

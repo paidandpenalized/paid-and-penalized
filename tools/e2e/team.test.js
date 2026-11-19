@@ -1,7 +1,8 @@
 // The TEAM program page in a real browser (light and dark): at 1280 and 390 px, no block of words is crushed beside a
 // figure, a stamp or a table (each paragraph, heading, list item and caption is at least MIN_TEXT px wide, or short
 // enough to sit on one line), no stamp runs past its column, no citation breaks inside a word, and the
-// page never scrolls sideways. Runs against dist/ (make build) or any URL; see site.js. (Task 8 adds the lookup's checks.)
+// page never scrolls sideways; and Part 4's picker redraws its map (below). Runs against dist/ (make build) or any URL;
+// see site.js. (Task 8 adds the lookup's checks.)
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { PROGRAM_PATH } from '../../sites/team/web/links.js';
@@ -73,3 +74,75 @@ for (const width of [1280, 390]) {
     }
   });
 }
+
+// Part 4 (sites/team/web/program/bar.js, client/bar.js): the picker shows and is labeled, and a new pick redraws the map
+// (every region's mark and label, in the drawing on screen), the price beside the words and the figure's table, all from
+// the big table's own cells; opening the table never scrolls the page sideways; without JavaScript the picker stays
+// hidden and the map and table are the build's.
+const PICK = '523';
+const part4 = (page) => page.evaluate((pick) => {
+  const bar = document.getElementById('bar');
+  const select = bar.querySelector('select[data-bar-pick]');
+  const label = select ? bar.querySelector(`label[for="${select.id}"]`)?.textContent.trim() : null;
+  const svg = [...bar.querySelectorAll('svg.chart--division-map')].find((s) => s.checkVisibility());
+  const row = [...bar.querySelectorAll('table[data-bar-table] tr')].find((tr) => tr.dataset.drg === pick);
+  const fromTable = row ? [...row.cells].slice(1).map((td) => Number(td.dataset.value)) : [];
+  const marks = svg ? [...svg.querySelectorAll('.chart-mark[data-div]')].map((m) => Number(m.dataset.value)) : [];
+  const labels = svg ? [...svg.querySelectorAll('.chart-div__price')].map((t) => t.textContent) : [];
+  const cells = [...bar.querySelectorAll('figure td[data-div]')].map((td) => Number(td.dataset.value));
+  const reader = Number(bar.querySelector('[data-bar-reader]')?.dataset.barReader);
+  return {
+    shown: Boolean(select?.checkVisibility()), label, value: select?.value ?? null, marks, labels, cells, fromTable, reader,
+    price: bar.querySelector('[data-bar="price"]')?.textContent, drg: bar.querySelector('figcaption [data-bar="drg"]')?.textContent,
+  };
+}, PICK);
+const usd = (v) => `$${Math.round(v).toLocaleString('en-US')}`;
+
+for (const width of [1280, 390]) {
+  describe(`TEAM Part 4 at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width, height: width < 600 ? 844 : 900 });
+    for (const scheme of SCHEMES) {
+      it(`${scheme}: the labeled picker redraws the map, the price and the figure's table from the table's cells; the open table scrolls in its box`, () => withPage(tabs, { path: PROGRAM_PATH, scheme, watched: true }, async (page, { seen }) => {
+        const before = await part4(page);
+        assert.ok(before.shown, 'the picker shows once the script runs');
+        assert.equal(before.label, 'Episode type');
+        assert.equal(before.value, '470');
+        assert.equal(before.marks.length, 9);
+        await page.selectOption('#bar-drg', PICK);
+        const after = await part4(page);
+        assert.equal(after.value, PICK);
+        assert.equal(after.drg, PICK);
+        assert.equal(after.fromTable.length, 9);
+        assert.deepEqual(after.marks, after.fromTable, 'each region\'s mark holds its price from the table');
+        assert.deepEqual(after.cells, after.fromTable, 'the figure\'s table follows');
+        assert.deepEqual(after.labels, after.fromTable.map(usd), 'each region\'s label');
+        assert.equal(after.price, usd(after.fromTable[after.reader - 1]), 'the price beside the words is the reader\'s region\'s');
+        await page.locator('#all-prices > summary').click();
+        await assertNoSideways(page, 'Part 4 with its table open');
+        // web/client/figure.js re-reads the box on the disclosure's toggle (an event after the click): wait for it.
+        await page.waitForFunction(() => {
+          const scroll = document.querySelector('#all-prices .printout__scroll');
+          return scroll.scrollWidth <= scroll.clientWidth + 1 || scroll.getAttribute('role') === 'region';
+        }, null, { timeout: 2000 }).catch(() => {});
+        const box = await page.evaluate(() => {
+          const scroll = document.querySelector('#all-prices .printout__scroll');
+          return { overflows: scroll.scrollWidth > scroll.clientWidth + 1, region: scroll.getAttribute('role'), tabindex: scroll.getAttribute('tabindex') };
+        });
+        if (box.overflows) assert.deepEqual([box.region, box.tabindex], ['region', '0'], 'a table wider than its box scrolls from the keyboard');
+        await assertQuiet(seen, 'TEAM Part 4');
+      }));
+    }
+  });
+}
+
+describe('TEAM Part 4 without JavaScript', () => {
+  const tabs = useContext(shared, { javaScript: false });
+  it('the picker stays hidden; the map, its price and the whole table are the build\'s', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+    const s = await part4(page);
+    assert.equal(s.shown, false);
+    assert.equal(s.value, '470');
+    assert.equal(s.marks.length, 9);
+    const rows = await page.locator('#all-prices tr[data-drg]').count();
+    assert.ok(rows > 30, `${rows} episode types in the table`);
+  }));
+});

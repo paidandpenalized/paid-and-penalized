@@ -85,5 +85,8 @@ export const SECTIONS = Object.freeze(['who', 'change', 'money', 'bar', 'yours',
 // target amount (standardized dollars), spending against it (−0.05: 5% under), a composite quality score and a track.
 // The engine (engine/js/team/reconcile.js) computes every line of the ledger from these.
 export const EXAMPLE = Object.freeze({ target: 10_000_000, spend: -0.05, cqs: 40, track: 3 });
+// Part 4's map and its picker start on this episode type (an MS-DRG in the price file; 470 is the joint replacement
+// without major complications). A choice of this site's, not a rule, so no claim; a test holds it to the price file.
+export const BAR_DRG = '470';
 // Figure 3, the worked example's payoff: spending from SPAN under target to SPAN over, its table every STEP.
 export const PAYOFF = Object.freeze({ span: 0.3, step: 0.05 });

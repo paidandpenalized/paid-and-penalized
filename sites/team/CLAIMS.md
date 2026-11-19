@@ -64,6 +64,10 @@ in copy.
 | TEAM-54 | Once a year, CMS reconciles the spending on a participant's episodes against its reconciliation target price. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "reconcile, on an annual basis, all the episode spending from the episodes attributed to a TEAM participant against the reconciliation target price" | 2026-11-19 |
 | TEAM-55 | CJR-X covers hip, knee and ankle replacements, through the first 90 days of recovery. | https://www.cms.gov/priorities/innovation/innovation-models/cjr-x | "hip, knee, and ankle replacements" … "through the first 90 days of recovery" | 2026-11-19 |
 | TEAM-56 | CMS makes each year's baseline data available at least a month before the performance year. | https://www.ecfr.gov/current/title-42/part-512/section-512.562 | "Annually, at least 1 month prior to every performance year for baseline period data" | 2026-11-19 |
+| TEAM-57 | CMS's preliminary target prices for performance year 2 give one price for each MS-DRG/HCPCS episode type in each of the nine census divisions, with each outpatient (HCPCS) episode reported under its MS-DRG. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "preliminary target prices for each MS-DRG/HCPCS episode type-region (i.e., census division) combination in TEAM" … "HCPCS codes are mapped and reported under the corresponding MS-DRG." | 2026-11-19 |
+| TEAM-58 | CMS's price regions are the Census Bureau's nine divisions, named and listed by state in its workbook, and it prices Puerto Rico and the other US territories with the Pacific division. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "East South Central (AL, KY, MS, TN)" … "Pacific (AK, CA, HI, OR, WA) + other US Territories (AS, GU, MP, PR, VI)" | 2026-11-19 |
+| TEAM-59 | Every dollar value in CMS's preliminary target price workbook is in standardized amounts. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "All dollar values are in standardized amounts." | 2026-11-19 |
+| TEAM-60 | CMS's workbook gives, for each episode category it summarizes, a row named "All" in each division beside the episode types' rows. | https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | "MS-DRG/HCPCS Episode Type" … "All" | 2026-11-19 |
 
 ## Notes on the sources
 
@@ -102,6 +106,11 @@ in copy.
   model page), read in full: TEAM-42 is question 16; TEAM-44 question 66; TEAM-46 question 72; TEAM-47 to TEAM-49
   question 55; TEAM-50 question 54; TEAM-51 question 61; TEAM-53 question 62; TEAM-54 question 37.
 - **TEAM-55.** CMS's CJR-X model page, its summary and its "Solution" point.
+- **TEAM-57 to TEAM-60.** CMS's performance year 2 preliminary target price workbook (`team-py2-prlim-target-prices.xlsx`,
+  52,289 bytes, the same file the manifest's `team-prices` pin is cut from), read with this session's stdlib unzip of its
+  shared strings: TEAM-57 is its Objective text and the Episode Type column's note; TEAM-58 the Region Description rows;
+  TEAM-59 Table 1's title; TEAM-60 the Episode Type column, whose category rows read "All". The workbook has no "All" rows
+  for spinal fusion; the program page's spinal fusion row is this site's plain mean of its episode types' prices.
 
 ## Link check (2026-11-19)
 
@@ -131,3 +140,4 @@ its newest issue date, 2026-11-17).
 | https://www.ecfr.gov/current/title-42/part-512/section-512.582 | 200 (the page; text through the API at 2026-11-17; paragraphs (a) and (b) found) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.586 | 200 (the page; text through the API at 2026-11-17; paragraph (c) found) | direct |
 | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | 200 (the PDF, 506,251 bytes; questions 16, 37, 54, 55, 61, 62, 66 and 72 found) | direct |
+| https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx | 200 (the workbook, 52,289 bytes, sha256 equal to the manifest's `team-prices` derivedFrom; all four quotes found in its shared strings) | direct |
