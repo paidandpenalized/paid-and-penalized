@@ -122,3 +122,10 @@ test('seeded fuzz: decode never throws, state always inside its ranges, encode o
     assert.deepEqual(again.rejected, []);
   }
 });
+
+test('t accepts only a track key: no blank, zero-padded or decimal forms', () => {
+  for (const v of [' 2', '02', '2.0', '2 ', '4', '0', '', '__proto__', 'constructor']) {
+    assert.deepEqual(decodeTeam(`#team&t=${v}`), { state: {}, rejected: ['t'] }, JSON.stringify(v));
+  }
+  assert.deepEqual(decodeTeam('#team&t=3').state, { track: 3 });
+});

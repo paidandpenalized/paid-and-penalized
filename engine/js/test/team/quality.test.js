@@ -87,3 +87,11 @@ test('the CQS stays in 0..100 for pcts in 0..100', () => {
     near(cqs, p);
   }
 });
+
+test('a pct is null, undefined or a finite number from 0 to 100; anything else throws naming only the measure', () => {
+  const vols = { inpatient: 100, lejr: 100 };
+  for (const bad of ['', '50', NaN, Infinity, -1, 100.5, 150, {}, true]) {
+    assert.throws(() => compositeQuality({ falls: bad }, vols), (e) => e instanceof RangeError && /pcts\.falls/.test(e.message) && (String(bad) === '' || !e.message.includes(String(bad))), String(bad));
+  }
+  assert.equal(compositeQuality({ falls: 0, prf: 100 }, vols).cqs >= 0, true);
+});

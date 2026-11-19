@@ -71,7 +71,7 @@ export function decodeTeam(hash) {
 function accept(state, key, value) {
   if (typeof value !== 'string') return false;
   if (key === 'h') { if (!CCN.test(value)) return false; state.ccn = value; return true; }
-  if (key === 't') { if (!/^[123]$/.test(value) || !has(TRACKS, value)) return false; state.track = Number(value); return true; }
+  if (key === 't') { if (!has(TRACKS, value)) return false; state.track = Number(value); return true; }
   const dot = key.indexOf('.');
   const group = dot === -1 ? key : key.slice(0, dot);
   const name = dot === -1 ? null : key.slice(dot + 1);

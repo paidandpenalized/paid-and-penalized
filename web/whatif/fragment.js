@@ -47,10 +47,9 @@ export function decode(hash, { ids, params }) {
   const changes = {};
   const rejected = new Set();
   const text = typeof hash === 'string' ? hash.replace(/^#/, '') : '';
-  const [tag, ...parts] = text.split('&');
-  if (tag !== TAG) return { changes, rejected: [] };
+  if (text !== TAG && !text.startsWith(`${TAG}&`)) return { changes, rejected: [] };
 
-  const seen = parseParts(parts.join('&'));
+  const seen = parseParts(text.slice(TAG.length + 1));
 
   for (const [key, value] of seen) {
     const p = ids.includes(key) ? params[key] : null;

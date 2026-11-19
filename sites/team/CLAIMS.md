@@ -48,7 +48,7 @@ in copy.
 - **TEAM-14 to TEAM-19.** Sections 512.550, 512.547 and 512.537 (TEAM-19, paragraph (a)(1)), read from the eCFR's text at its newest issue date (2026-11-17).
   TEAM-14 joins the gain limit of each track (paragraph (e)(2)(i) to (iii)), Track 3's loss limit ((e)(1)) and Track 2's
   loss limit ((e)(3)). TEAM-15 is paragraph (d)(1)(ii); Track 1's and Track 3's caps are in (d)(1)(i) and (iii). TEAM-16 is
-  the low-volume paragraph of (c), cited elsewhere as (c)(9). TEAM-17 is (b)(1)(i)(D). TEAM-18 is paragraph (a)(2) (the cited baseline
+  the low-volume paragraph (c)(9)(i), which the eCFR numbers as such. TEAM-17 is (b)(1)(i)(D). TEAM-18 is paragraph (a)(2) (the cited baseline
   periods differ by measure and year; the register states only the measure set). The calculator's band width (a
   few percent either side of the estimate) is this site's own choice, not a rule, and has no row.
 
@@ -62,7 +62,7 @@ its newest issue date, 2026-11-17).
 | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | 200 (the section's full text through the eCFR versioner API at 2026-11-17; both definitions found) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.537 | 200 (the section's full text through the API at 2026-11-17, after 503 retries; paragraph (a)(1) found) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.547 | 200 (the section's full text through the API at 2026-11-17, after one 503 retry; paragraphs (a)(2) and (b)(1)(i)(D) found) | direct |
-| https://www.ecfr.gov/current/title-42/part-512/section-512.550 | 200 (the section's full text through the API at 2026-11-17, after one 503 retry; paragraphs (c)(9), (d)(1) and (e) found) | direct |
+| https://www.ecfr.gov/current/title-42/part-512/section-512.550 | 200 (the section's full text through the API at 2026-11-17, after one 503 retry; paragraphs (c)(9)(i), (d)(1) and (e) found) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.508 | 200 (full text through the API; paragraphs (b) and (c) read) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.510 | 200 (full text through the API; paragraphs (b) and (c) read) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.515 | 200 (full text through the API; paragraphs (a) and (b)(1) read) | direct |

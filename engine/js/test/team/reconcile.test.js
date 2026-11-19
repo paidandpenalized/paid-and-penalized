@@ -208,3 +208,36 @@ test('lowVolume must be a boolean', () => {
 test('SOLVE_SPAN is the site\'s search range, sixty percent either way', () => {
   assert.equal(SOLVE_SPAN, 0.6);
 });
+
+test('solveSpend bisects on the unsnapped result: a sub-cent target resolves, and -0 reads as 0', () => {
+  // $1,000,000 target: a result of half a mill (under the half-cent snap) is 5e-10 of target.
+  const s = solveSpend({ cats: one(0), cqs: 50, track: 3, result: 0.001 });
+  near(s, -0.001 / 950_000, 1e-12);
+  assert.ok(s < 0);
+  const n = solveSpend({ cats: one(0), cqs: 50, track: 3, result: -0.001 });
+  near(n, 0.001 / 950_000, 1e-12);
+  assert.ok(n > 0);
+  assert.ok(Object.is(solveSpend({ cats: one(0.2), cqs: 50, track: 3, result: -0 }), 0));
+});
+
+test('marginal: an explicit scenario flag overrides the inference from nonzero spends', () => {
+  const zero = { cats: one(0), cqs: 50, track: 3 };
+  near(marginal(zero).per10Quality, 500); // inferred: no scenario, default reference
+  near(marginal(zero, false).per10Quality, 500);
+  assert.equal(marginal(zero, true).per10Quality, 0); // the reader's all-zero scenario: quality moves nothing at break-even
+  // A nonzero spend with the flag false still gets the default reference.
+  near(marginal({ cats: one(-0.02), cqs: 50, track: 3 }, false).per10Quality, 500);
+  near(marginal({ cats: one(-0.02), cqs: 50, track: 3 }, true).per10Quality, 200);
+});
+
+test('capped follows the snapped amounts: a sub-half-cent overshoot returns zeros and is not capped', () => {
+  // A $0.01 target, landing 50% under: quality is about half a cent, past the 20% gain limit (0.2 cent), but every
+  // returned amount snaps to 0, so reporting a cap would contradict them.
+  const r = reconcile({ cats: [{ key: 'a', target: 0.01, spend: -0.5, lowVolume: false }], cqs: 50, track: 3 });
+  assert.deepEqual([r.quality, r.result, r.capped], [0, 0, null]);
+  // Past the limit by whole dollars it is still capped.
+  assert.equal(reconcile({ cats: one(-0.5), cqs: 50, track: 3 }).capped, 'gain');
+  // The float-residue break-even case is not capped either.
+  const res = reconcile({ cats: [{ key: 'a', target: 1.1e6, spend: 0.07, lowVolume: false }, { key: 'b', target: 7.7e5, spend: -0.10, lowVolume: false }], cqs: 50, track: 2 });
+  assert.equal(res.capped, null);
+});

@@ -47,8 +47,17 @@ function checked({ cats, cqs, track }) {
  *   CQS outside 0..100, or a track other than 1, 2 or 3. The caller clamps reader input first.
  */
 export function reconcile(input) {
-  const t = checked(input);
-  const { cats, cqs } = input;
+  const r = compute(input, checked(input));
+  const { raw, qadj, quality, result, target, limits } = r;
+  // `capped` is read off the snapped amounts, so a residue of float noise at a limit is not "capped".
+  const capped = snap(quality) > limits.gain ? 'gain' : snap(quality) < -limits.loss ? 'loss' : null;
+  return {
+    target, raw: snap(raw), qadj: snap(qadj), quality: snap(quality), result: snap(result), capped, limits, postEpisode: 0,
+  };
+}
+
+// The arithmetic, unsnapped: the solver bisects on this, so sub-cent targets still resolve.
+function compute({ cats, cqs }, t) {
   let target = 0;
   let raw = 0;
   for (const c of cats) {
@@ -63,15 +72,13 @@ export function reconcile(input) {
   const quality = raw + qadj;
   const limits = { gain: t.gain * target, loss: t.loss * target };
   const result = clamp(quality, -limits.loss, limits.gain);
-  const capped = quality > limits.gain ? 'gain' : quality < -limits.loss ? 'loss' : null;
-  return {
-    target, raw: snap(raw), qadj: snap(qadj), quality: snap(quality), result: snap(result), capped, limits, postEpisode: 0,
-  };
+  return { target, raw, qadj, quality, result, limits };
 }
 
 const atSpend = (cats, s) => cats.map((c) => ({ ...c, spend: s }));
 /** The result with every category's spend set to `s` (a share of target: +0.05 is 5% over). */
 export const resultAt = ({ cats, cqs, track }, s) => reconcile({ cats: atSpend(cats, s), cqs, track }).result;
+const rawResultAt = ({ cats, cqs, track }, s) => compute({ cats: atSpend(cats, s), cqs }, TRACKS[track]).result;
 
 /**
  * The scenario band: the result with every category `width` over target (low) and `width` under (high), around
@@ -101,10 +108,10 @@ export function solveSpend(input) {
   checked(input);
   const { result } = input;
   if (!Number.isFinite(result)) fail('result must be a finite number');
-  if (result === 0) return 0;
+  if (result === 0) return 0; // also -0
   // Keep `near` (between 0 and the answer) short of result and `far` at or past it; the boundary is the answer.
   const sign = result > 0 ? -1 : 1;
-  const reaches = (s) => (sign < 0 ? resultAt(input, s) >= result : resultAt(input, s) <= result);
+  const reaches = (s) => (sign < 0 ? rawResultAt(input, s) >= result : rawResultAt(input, s) <= result);
   let far = sign * SOLVE_SPAN;
   if (!reaches(far)) return null;
   let near = 0;
@@ -125,17 +132,19 @@ export function solveSpend(input) {
  *                set. With none set it uses every category BAND_DEFAULT over target, except on Track 1: a track
  *                that can't lose ends at $0 whenever it is over target, where quality moves nothing, so it is read
  *                BAND_DEFAULT under target instead, where quality decides how much of the gain it keeps.
+ * @param {boolean} [scenario] whether the reader set a scenario: true uses the categories' spends as given (even all
+ *   zero), false uses the default reference. Omitted, a scenario is inferred from any spend being nonzero.
  */
-export function marginal(input) {
+export function marginal(input, scenario) {
   checked(input);
   const { cats, cqs, track } = input;
-  const even = resultAt(input, 0);
   const canLose = TRACKS[track].loss > 0;
-  const scenario = cats.some((c) => c.spend !== 0) ? cats : atSpend(cats, canLose ? BAND_DEFAULT : -BAND_DEFAULT);
-  const quality = (q) => reconcile({ cats: scenario, cqs: q, track }).result;
+  const useGiven = scenario ?? cats.some((c) => c.spend !== 0);
+  const reference = useGiven ? cats : atSpend(cats, canLose ? BAND_DEFAULT : -BAND_DEFAULT);
+  const quality = (q) => reconcile({ cats: reference, cqs: q, track }).result;
   return {
-    perPctUnder: resultAt(input, -0.01) - even,
-    perPctOver: even - resultAt(input, 0.01),
+    perPctUnder: resultAt(input, -0.01),
+    perPctOver: 0 - resultAt(input, 0.01), // `0 -`, so a zero result is +0 here, never -0
     per10Quality: quality(Math.min(100, cqs + 10)) - quality(cqs),
   };
 }

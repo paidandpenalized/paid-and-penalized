@@ -4,6 +4,13 @@
 // volumes, not the hospital's episode count. Pure: imports only params.js.
 import { MEASURES, MISSING_QUALITY } from './params.js';
 
+const pctOf = (pcts, key) => {
+  const p = pcts?.[key];
+  if (p === null || p === undefined) return MISSING_QUALITY;
+  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 100) throw new RangeError(`pcts.${key} must be a number from 0 to 100, or null`);
+  return p;
+};
+
 const volumeOf = (v, key) => {
   if (!Number.isFinite(v?.[key]) || v[key] < 0) throw new RangeError(`volumes.${key} must be a non-negative number`);
   return v[key];
@@ -23,6 +30,6 @@ export function compositeQuality(pcts, volumes, measures = MEASURES) {
   const total = keys.reduce((s, k) => s + vol[k], 0);
   if (total === 0) return { cqs: MISSING_QUALITY, weights: Object.fromEntries(keys.map((k) => [k, 0])) };
   const weights = Object.fromEntries(keys.map((k) => [k, vol[k] / total]));
-  const cqs = keys.reduce((s, k) => s + (pcts?.[k] ?? MISSING_QUALITY) * weights[k], 0);
+  const cqs = keys.reduce((s, k) => s + pctOf(pcts, k) * weights[k], 0);
   return { cqs, weights };
 }
