@@ -399,20 +399,13 @@
 }
 
 /* After the Parts: the note on CJR-X (the patient note's callout, at body size), the link to Methods, then the data's
-   dates under their kicker, laid out as the work requirement's sources grid (its labels over their values, two then
-   three to a row). The page ends close to the footer. */
+   dates under their kicker, in the family's as-of grid (pages.css .asof--grid). The page ends close to the footer. */
 .tm-coda { padding-top: 28px; border-top: 1px dotted var(--line); }
 .tm-nextbox { max-width: 62ch; font-size: var(--fs-base); }
 .tm-next { line-height: 1.6; }
 .tm-methods { margin-block: 16px 0; }
 .tm-end { display: grid; gap: 6px; }
 .tm-end .asof { margin: 0; padding-top: 8px; }
-.tm .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px var(--gutter); }
-.tm .asof__list > div { display: block; grid-column: auto; }
-.tm .asof__list dt { font-size: var(--fs-xs); line-height: 1.3; }
-.tm .asof__list dd { max-width: none; font-size: var(--fs-xs); line-height: 1.35; }
-@media (min-width: 560px) { .tm .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 900px) { .tm .asof__list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* The Methods page: the family's contents-and-sections layout (pages.css .doc), its paragraphs and lists at the reading
    measure; the sources' and the remaps' tables in the printout frame; the unknowns as ruled items, each a heading over

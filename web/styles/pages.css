@@ -43,6 +43,14 @@
 @media (max-width: 480px) {
   .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 }
+/* The grid (asofBar's grid): each source its small label over its value, one column on a phone, two from 560px and three
+   from 900px, so a page's several sources close it in two short rows, not a narrow column of wrapped lines. */
+.asof--grid .asof__list { grid-template-columns: minmax(0, 1fr); gap: 8px var(--gutter); }
+.asof--grid .asof__list > div { display: block; grid-column: auto; }
+.asof--grid .asof__list dt { font-size: var(--fs-xs); line-height: 1.3; }
+.asof--grid .asof__list dd { max-width: none; font-size: var(--fs-xs); line-height: 1.35; }
+@media (min-width: 560px) { .asof--grid .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .asof--grid .asof__list { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .source { font-size: var(--fs-sm); color: var(--ink-2); max-width: none; }
 
 /* The citation block: the text selectable, the Copy button beside a short status. */

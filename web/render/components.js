@@ -150,8 +150,9 @@ export const pillClass = (kind) => (kind ? `pill pill--${kind}` : 'pill');
 export const pill = ({ kind = null, label }) => html`<span class="${pillClass(kind)}">${label}</span>`;
 
 // The as-of bar: what the data are and when they are from, one fact each, as a term and its value
-// (items: [{ label, value }], text or Safe).
-export const asofBar = ({ label, items }) => html`<aside class="asof" aria-label="${label}">
+// (items: [{ label, value }], text or Safe). grid: the facts as a grid of small labels over their values (pages.css
+// .asof--grid), for a page that closes on several sources.
+export const asofBar = ({ label, items, grid = false }) => html`<aside class="asof${grid ? ' asof--grid' : ''}" aria-label="${label}">
 <dl class="asof__list">${items.map((item) => html`<div><dt>${item.label}</dt><dd>${item.value}</dd></div>`)}</dl>
 </aside>`;
 

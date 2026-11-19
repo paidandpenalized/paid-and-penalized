@@ -252,7 +252,7 @@ test('the end matter: the CJR-X note a callout under its heading, then Methods, 
   const end = program.slice(program.indexOf('<div class="tm-coda">'), program.indexOf('</article>'));
   assert.match(end, /<aside class="tm-patient tm-nextbox" aria-labelledby="next-h">\s*<h2 class="tm-patient__h" id="next-h">Next: CJR\u2011X<\/h2>\s*<p class="tm-next">From /);
   assert.ok(end.indexOf('class="tm-methods"') > end.indexOf('tm-nextbox'));
-  assert.match(end, /<div class="tm-end">\s*<p class="cap kicker tm-asof__k" aria-hidden="true">Data as of<\/p>\s*<aside class="asof" aria-label="Data as of">/);
+  assert.match(end, /<div class="tm-end">\s*<p class="cap kicker tm-asof__k" aria-hidden="true">Data as of<\/p>\s*<aside class="asof asof--grid" aria-label="Data as of">/);
 });
 
 test('Part 2 qualifies Track 2 for Medicare-dependent hospitals, and says Track 3 is the default from the second year', () => {

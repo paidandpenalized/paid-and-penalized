@@ -45,6 +45,7 @@ export function close(team) {
 <p class="cap kicker tm-asof__k" aria-hidden="true">${t('asofHeading')}</p>
 ${asofBar({
     label: t('asofHeading'),
+    grid: true,
     items: [
       { label: t('asofList'), value: isoDate(team.meta.listAsOf) },
       { label: t('asofPrices'), value: isoDate(team.meta.pricesDated) },
