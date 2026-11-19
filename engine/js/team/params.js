@@ -45,3 +45,7 @@ export const MEASURES = Object.freeze({
 export const BAND_DEFAULT = 0.05;
 export const BAND_MIN = 0.01;
 export const BAND_MAX = 0.20;
+
+// This site's own choice too: "What would it take?" searches for a spending level within this share of target either
+// way (60% over to 60% under), far past where any track's limit binds on the gain side.
+export const SOLVE_SPAN = 0.6;
