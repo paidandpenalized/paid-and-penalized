@@ -24,9 +24,6 @@ export const CJRX_START = '2028-01-01';
 // An ISO date's year ("2027"), as copy names it.
 export const yearOf = (iso) => iso.slice(0, 4);
 
-// DEFAULT_TRACK, the track CMS assigns from performance year 2 unless a participant asks for another and qualifies
-// (§ 512.520(b)), is the engine's (engine/js/team/params.js), re-exported above.
-
 // The rules' other numbers the program page states: how many months after a performance year ends CMS reconciles it
 // (§ 512.550(b)); the days a participant has to flag a calculation error, which are also the days after which an
 // unflagged report is final (§ 512.560(a)); the years a participant keeps its records (§ 512.586(c)); and how long a
