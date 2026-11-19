@@ -17,8 +17,9 @@ import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
+import { isoDate } from '../../../web/render/format.js';
 import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf, whoByCcn, whoOf } from '../../../web/team/calc-data.js';
-import { t } from '../web/calc-copy.js';
+import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
 import { initialState, inputsOf } from '../../../web/team/opening.js';
 import { loadAtlas, loadMaster, loadTeam } from '../web/data.js';
@@ -396,4 +397,27 @@ test('whoOf reads only as far as the hospital\'s row (no map of the whole search
   assert.deepEqual(whoOf(two, '999999'), {});
   assert.deepEqual([...whoByCcn(two).keys()], ['000001', '000002']);
   assert.throws(() => whoOf({ cols: ['ccn'], rows: [] }, '000001'), TypeError);
+});
+
+test('"Copy for a slide": the hospital, its track, the band\'s range, this scenario, "Hypothetical", the sources; "your numbers" only once typed', () => {
+  const v = viewOf(deflt);
+  const text = v.slide();
+  const lines = text.split('\n');
+  assert.ok(lines.length >= 6 && lines.every((l) => l.trim() !== ''), 'one fact a line, none blank');
+  assert.ok(!/[{}]/.test(text), 'every placeholder filled');
+  assert.ok(lines[0].includes(WHO.name) && lines[0].includes(v.hosp.where), 'the hospital, its CCN and place');
+  assert.ok(text.includes(fill('trackName', { n: '3' })) && text.includes(v.ledger.limits), 'the track and its limits');
+  assert.ok(text.includes(v.result.label) && text.includes(v.result.range), 'the band and its range');
+  assert.ok(text.includes(v.ledger.result), 'this scenario\'s result');
+  assert.ok(text.includes(t('slideHyp')), '"Hypothetical · standardized dollars"');
+  for (const date of [team.meta.listAsOf, team.meta.pricesDated, team.meta.qualityReleased]) assert.ok(text.includes(isoDate(date)), 'each source\'s date');
+  for (const year of team.meta.mupYears) assert.ok(text.includes(String(year)), 'the discharges\' years');
+  assert.ok(!/your numbers/.test(text), 'nothing typed: no "your numbers"');
+
+  // The slider is a scenario, not the reader's own number: still no label; the spending is said.
+  const moved = viewOf(deflt, setSlider(initialState(deflt), 4));
+  assert.ok(!/your numbers/.test(moved.slide()) && moved.slide().includes(moved.ledger.s.valuetext), 'the spending, no label');
+  // A typed count: the result includes it, and the text says so.
+  const typed = viewOf(deflt, type(initialState(deflt), deflt, 'n.LEJR', '120'));
+  assert.ok(typed.slide().includes(t('tagMine')) && typed.slide().includes(typed.ledger.result), 'typed: "includes your numbers", with the result that has them');
 });

@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const FILES = ['web/styles/charts-map.css', 'web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'sites/hrrp/web/styles.css', 'hub/styles.css'];
+const FILES = ['web/styles/charts-map.css', 'web/styles/charts.css', 'web/styles/whatif.css', 'web/styles/components.css', 'web/styles/shell.css', 'sites/hacrp/web/styles.css', 'sites/hrrp/web/styles.css', 'sites/team/web/styles.css', 'hub/styles.css'];
 const MARKS = [
   // the chart kit's marks and the figure key's swatches
   '.chart-bar', '.chart-bar-na', '.chart-col', '.chart-col--pen', '.chart-this', '.chart-hyp', '.chart-median', '.chart-line',
@@ -43,6 +43,10 @@ const MARKS = [
   '.hh__bar', '.hh__tick', '.hh__key-tick', '.hh__out', '.hh__nextbox',
   // the scenario range on its track's limits (limitRuler.js; charts-map.css), which the hub's TEAM section draws
   '.chart-ruler__loss', '.chart-ruler__gain', '.chart-ruler__limit', '.chart-ruler__zero',
+  // TEAM's payoff (payoff.js: its line on each side, its limits, its band) and the division map's regions, their borders,
+  // the reader's outline and the labels (sites/team/web/styles.css)
+  '.chart-payoff__gain', '.chart-payoff__loss', '.chart-payoff__limit', '.chart-payoff__band', '.chart-div', '.chart-div__borders',
+  '.chart-div__reader', '.chart-div__price', '.chart-div__name',
   // the hub's home page (hub/styles.css): the scale bar, the states map and its key, the small states' buttons
   '.sbar__frame', '.sbar__sliver', '.sbar__mag', '.sbar__np', '.sbar__bo', '.smap__land', '.smap__hatch', '.st', '.st--pen', '.st--rew',
   '.st--md', '.dkey__hatch', '.sb',
@@ -92,7 +96,7 @@ test('every mark class has a forced-colors rule, so no bar, mark or hatch vanish
 test('a state shown only by fill or shadow keeps a system-color cue under forced colors', () => {
   // ... and the hub's toggles: a hospital page's peer toggle (and its what-if's cut / no cut), the story's peer toggle.
   for (const state of ['.wi-btn[aria-expanded="true"]', '.theme-toggle[aria-pressed="true"]', '.wi-btn[aria-disabled="true"]', '.wi-number[aria-invalid="true"]', '.gb thead th',
-    '.hh__pb[aria-pressed="true"]', '.story .seg button[aria-pressed="true"]']) {
+    '.hh__pb[aria-pressed="true"]', '.story .seg button[aria-pressed="true"]', '.tc-track__opt:has(input:checked)']) {
     assert.match(forced, new RegExp(`${escape(state)}\\s*\\{[^}]*(Highlight|GrayText|CanvasText)`), `${state} has no forced-colors cue`);
   }
 });

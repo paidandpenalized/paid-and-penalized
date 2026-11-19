@@ -525,7 +525,7 @@ describe('TEAM Part 5: the browser\'s first drawing is the build\'s', () => {
     await withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
       await page.waitForTimeout(100);
       const changes = await page.evaluate(() => window.calcMutations);
-      const unexpected = changes.filter((m) => !(m.type === 'attributes' && m.attr === 'hidden' && /\[calcCopy\]|\.tc-incl|\[calcOpen\]/.test(m.what)));
+      const unexpected = changes.filter((m) => !(m.type === 'attributes' && m.attr === 'hidden' && /\[calcCopy\]|\[calcSlide\]|\.tc-incl|\[calcOpen\]/.test(m.what)));
       assert.deepEqual(unexpected, [], 'the first patch changes nothing');
       assert.ok(changes.length >= 3, 'the script showed its controls');
       await assertQuiet(seen, 'TEAM Part 5 on mount');

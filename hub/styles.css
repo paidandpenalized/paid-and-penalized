@@ -504,6 +504,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 /* The hero: the record card and the money left, the figure right. */
 .hh__hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; padding-block: 28px 26px; }
 .hh__card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-self: start; }
+/* With large text on a phone (under 18em), each field takes the row, so a label never runs past its box. */
+@media (max-width: 18em) { .hh__card { grid-template-columns: minmax(0, 1fr); } }
 .hh .hh__name { margin: 4px 0 3px; font: 400 clamp(1.75rem, 3.3vw, 2.625rem)/1.02 var(--font-display); letter-spacing: -0.005em; overflow-wrap: break-word; }
 .hh__card .field__value:not(.hh__name) { font-size: var(--fs-base); }
 .hh__card .field__value.field__value--sm { font-size: var(--fs-sm); line-height: 1.45; }

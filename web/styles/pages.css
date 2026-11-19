@@ -114,7 +114,7 @@
   .doc--side-toc .doc__toc { display: block; }
 }
 .doc__toc-h { margin-bottom: 8px; color: var(--pen-ink); }
-.doc__toc ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 24px; }
+.doc__toc ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 0 24px; }
 @media (min-width: 1120px) { .doc__toc ol { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
 .doc__toc a { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: baseline; min-height: var(--target-min); padding: 3px 0; color: var(--ink); text-decoration: none; font-size: var(--fs-sm); line-height: 1.3; }
 .doc__toc a:hover { text-decoration: underline; }

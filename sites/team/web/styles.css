@@ -38,6 +38,8 @@
 .tm-go:hover { background: var(--ink-2); }
 .tm-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 .tm-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* With large text on a phone (under 18em), each field takes the row, so a label never runs past its box. */
+@media (max-width: 18em) { .tm-card { grid-template-columns: minmax(0, 1fr); } }
 .tm-card .field__value--big { font-family: var(--font-type); font-weight: 700; font-variant-numeric: tabular-nums; }
 .tm-look { display: grid; gap: 8px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
 .tm-look__h { font: 700 var(--fs-sm)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -93,6 +95,8 @@
   .chart-dots--hole { stroke: Canvas; }
   .chart-tracks__gain, .chart-tracks__loss { fill: CanvasText; }
   .chart-payoff__gain, .chart-payoff__loss { stroke: CanvasText; }
+  /* The band keeps its place as an edged box (its tint would be painted over), as the kit's tinted bands do. */
+  .chart-payoff__band { fill: Canvas; fill-opacity: 1; stroke: GrayText; stroke-width: 1px; vector-effect: non-scaling-stroke; }
   .tm-key__dot--team { background: CanvasText; forced-color-adjust: none; }
 }
 
@@ -218,7 +222,8 @@
 /* On a phone the result column dissolves into the grid (display: contents), so only its result box moves up, into the
    "out" area above the inputs; the figure, "What would it take?" and the share line stay after them. */
 .tc-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "out" "left" "rest"; }
-.tc-left, .tc-right { display: grid; gap: 10px; align-content: start; min-width: 0; padding: 12px 14px; }
+/* One column that never grows past its box: the quality table, opened, scrolls in its own frame instead of widening it. */
+.tc-left, .tc-right { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; min-width: 0; padding: 12px 14px; }
 .tc-left { grid-area: left; border-top: 1px solid var(--pen); }
 .tc-static { display: contents; }
 @media (max-width: 61.99em) {
@@ -234,6 +239,9 @@
   .tc-left { border-top: 0; border-right: 1px solid var(--pen); }
   .tc-right { grid-area: right; position: sticky; top: calc(var(--sticky-top, 0px) + 8px); align-self: start; }
 }
+/* Two columns only just wide enough for the text (up to 70em: a laptop with a larger default font): the episode table's
+   last head wraps, so the table keeps to its column. */
+@media (min-width: 62em) and (max-width: 70em) { .tc-ep thead th.num { white-space: normal; } }
 
 /* The track: a radio group drawn as one segmented control (arrow keys move it, as any radio group). */
 .tc-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; border: var(--rule) solid var(--ink); }
@@ -244,6 +252,11 @@
 .tc-track__opt:has(input:checked) { background: var(--ink); color: var(--paper); }
 .tc-track__opt:has(input:checked) small { color: var(--paper); }
 .tc-track__opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; z-index: 1; }
+/* Forced colors would paint the chosen track's ink fill over: it keeps a system color of its own. */
+@media (forced-colors: active) {
+  .tc-track__opt:has(input:checked) { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .tc-track__opt:has(input:checked) small { color: HighlightText; }
+}
 .tc-note { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
 
 /* The episode table and the boxes in it. */
@@ -280,7 +293,7 @@
 .tc-line { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 2px; border-top: 1px solid var(--line); font: 600 var(--fs-sm)/1.25 var(--font-body); }
 .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 1.1fr) auto; }
 .tc-line--res { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
-.tc-no { border: 1px solid var(--pen); color: var(--pen-ink); font: 700 var(--fs-cap)/16px var(--font-type); text-align: center; }
+.tc-no { border: 1px solid var(--pen); color: var(--pen-ink); font: 700 var(--fs-cap)/16px var(--font-type); line-height: max(16px, 1.3em); text-align: center; }
 .tc-op { font-family: var(--font-type); }
 .tc-line .tc-src:not([hidden]) { display: inline; }
 .tc-v { font: 700 var(--fs-sm)/1.2 var(--font-type); text-align: right; white-space: nowrap; }
@@ -338,6 +351,8 @@
 .tc-incl { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
 .tc-copied { font-size: var(--fs-xs); }
 .tc-link { flex-basis: 100%; overflow-wrap: anywhere; font: 400 var(--fs-xs)/1.4 var(--font-type); }
+/* The text for a slide, where the browser wouldn't copy it: its lines as the clipboard would have them. */
+.tc-slide { white-space: pre-line; overflow-wrap: break-word; }
 .tc-private { flex-basis: 100%; color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-type); }
 /* The columns' names a phone sets on each box and result (calc-view.js colLabel); a wider screen has the table's head. */
 .tc-cl { display: none; }
@@ -360,6 +375,13 @@
   .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
   .tc-line--s .tc-range { grid-column: 2 / -1; grid-row: 2; }
 }
+/* A phone with large text (a default font of 20px or more on a 320px screen: under 18em): a row's boxes two to a line,
+   "What would it take?"'s labels and tag free to wrap, so every box shows its whole value and nothing runs past the edge.
+   At the default size none of this applies. */
+@media (max-width: 18em) {
+  .tc-ep tbody td { grid-column: span 3; }
+  .tc-ep td.num, .tc-wwt th, .tc-ww__h .tc-src, .tc-qt .tc-src, .tc-qt thead th.num { white-space: normal; }
+}
 
 /* Part 6: the duties by phase (the phase's name beside its list from 36em), and Figure 5, the clock: a dated line,
    darker from the day the page is about on. */
@@ -378,6 +400,8 @@
 .tm-clock__item--now .tm-clock__what { font-weight: 700; }
 .tm-clock__when { font: 700 var(--fs-xs)/1.5 var(--font-type); }
 .tm-clock__what { font-size: var(--fs-base); line-height: 1.4; }
+/* With large text on a phone (under 18em), each date over its line, so the line keeps the width for its words. */
+@media (max-width: 18em) { .tm-clock__item { grid-template-columns: minmax(0, 1fr); } }
 
 /* Part 7's table: its columns on a wide box, scrolling sideways in its own box in between, and each row a card of
    labeled cells where the box is narrower than 34em (the column heads then hidden, each cell naming its column). */

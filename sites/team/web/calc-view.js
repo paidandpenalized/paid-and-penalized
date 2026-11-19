@@ -19,7 +19,7 @@ import { BAND_DEFAULT, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLV
 import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
+import { count, isoDate, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
 import { flagsNote } from '../../../web/team/copy.js';
 import { engineInput, inputsOf } from '../../../web/team/opening.js';
@@ -144,9 +144,28 @@ function figureOf({ input, r, state }) {
 ${draw(CALC.figWide, 'wide')}`;
 }
 
+// "Copy for a slide" (the what-if standard's): the view as plain text, one fact a line: the hospital, its track and limits,
+// the band's range, this scenario's result and its spending, "Hypothetical · standardized dollars" (and "includes your
+// numbers" once the reader's own numbers are in it), and the sources with their dates. Words from the copy, numbers from
+// the view; what the reader typed shows only as the result already holds it.
+function slideOf(v, { state, sources }) {
+  const [from, to] = [sources.years[0], sources.years[sources.years.length - 1]].map(String);
+  const spend = Object.keys(state.sk).length ? t('slideRows') : v.ledger.s.valuetext;
+  return [
+    fill('slideHosp', { name: v.hosp.name, where: v.hosp.where }),
+    fill('slideTrack', { year: yearOf(PY2_START), track: fill('trackName', { n: String(state.track) }), limits: v.ledger.limits }),
+    v.result.none ? t('outNone') : fill('slideRange', { band: v.result.label, range: v.result.range }),
+    fill('slideResult', { spend, result: v.ledger.result }),
+    v.tags.mine ? fill('slideHypMine', { hyp: t('slideHyp'), mine: t('tagMine') }) : t('slideHyp'),
+    fill('slideSource', { list: isoDate(sources.list), prices: isoDate(sources.prices), from, to, quality: isoDate(sources.quality) }),
+  ].join('\n');
+}
+
 /**
- * The view: plain data for every part of the calculator, plus the payoff's markup as a function (it is the costly part).
- * @param {{hosp: object, state: object, team: {dataYear: number, derived: string[]}}} args hosp: hospOf's; team: calcMeta's
+ * The view: plain data for every part of the calculator, plus the payoff's markup and the text for a slide as functions
+ * (drawn only when wanted).
+ * @param {{hosp: object, state: object, team: {dataYear: number, derived: string[], sources: object}}} args hosp: hospOf's;
+ *   team: calcMeta's
  */
 export function calcView({ hosp, state, team }) {
   const inputs = inputsOf(hosp, state);
@@ -210,7 +229,7 @@ export function calcView({ hosp, state, team }) {
     say: none ? t('sayNone') : fill('say', { band: bandText(state.band), lo: signed(band.low), hi: signed(band.high), result: signed(r.result) }),
   };
 
-  return {
+  const view = {
     hosp: {
       ccn: hosp.ccn, division: hosp.division,
       name: hosp.name ?? fill('calcNameNone', { ccn: hosp.ccn }),
@@ -223,7 +242,9 @@ export function calcView({ hosp, state, team }) {
     wwit: wwitOf({ input, inputs, state, r, band }),
     tags: { mine, text: mine ? t('tagMine') : t('tagPublic') },
     fig: () => figureOf({ input, r, state }),
+    slide: () => slideOf(view, { state, sources: team.sources }),
   };
+  return view;
 }
 
 // ---------- the markup ----------
@@ -334,7 +355,7 @@ ${staticBox('how', statics)}
 ${resultMarkup(v, statics)}
 <figure class="tc-fig"><div data-v="fig">${fig ? v.fig() : ''}</div><figcaption class="tc-foot">${t('figNote')}</figcaption></figure>
 ${wwitMarkup(v)}
-<div class="tc-share"><button type="button" class="fig__btn" data-calc-copy hidden>${t('copyLink')}</button><label class="tc-incl" hidden><input type="checkbox" data-calc-incl> ${t('includeMine')}</label><span class="tc-copied" role="status"></span><p class="tc-link" data-calc-link hidden></p><p class="tc-private">${t('private')}</p></div>
+<div class="tc-share"><button type="button" class="fig__btn" data-calc-copy hidden>${t('copyLink')}</button><label class="tc-incl" hidden><input type="checkbox" data-calc-incl> ${t('includeMine')}</label><button type="button" class="fig__btn" data-calc-slide hidden>${t('copySlide')}</button><span class="tc-copied" role="status"></span><p class="tc-link" data-calc-link hidden></p><p class="tc-link tc-slide" data-calc-slide-text hidden></p><p class="tc-private">${t('private')}</p></div>
 </div>
 </div>`;
 }

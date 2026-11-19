@@ -31,9 +31,13 @@ export function calcRow(p) {
 // The year the episode counts come from: the newest of the file's Medicare data years (team.meta.mupYears).
 export const dataYearOf = (meta) => meta.mupYears[meta.mupYears.length - 1];
 
-// What every hospital's numbers are read against: the year the episode counts come from (dataYearOf) and the categories
-// whose regional average is this site's mean, not CMS's (team.categoryAvgDerived).
-export const calcMeta = (team) => ({ dataYear: dataYearOf(team.meta), derived: [...team.categoryAvgDerived] });
+// What every hospital's numbers are read against: the year the episode counts come from (dataYearOf), the categories
+// whose regional average is this site's mean, not CMS's (team.categoryAvgDerived), and the sources' dates, for the
+// calculator's "Copy for a slide" (the list's, the regional prices', the Medicare discharges' years, the quality file's).
+export const calcMeta = (team) => ({
+  dataYear: dataYearOf(team.meta), derived: [...team.categoryAvgDerived],
+  sources: { list: team.meta.listAsOf, prices: team.meta.pricesDated, years: [...team.meta.mupYears], quality: team.meta.qualityReleased },
+});
 
 // The participants still in TEAM in performance year 2, as one string of their CCNs (six characters each, sorted), for
 // the page itself: it knows which hospitals the file has before fetching it, so a ?h= or a link naming any other

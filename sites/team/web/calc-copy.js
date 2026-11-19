@@ -178,6 +178,21 @@ export const COPY = {
   copied: { text: 'Link copied.', claim: null },
   copyFailed: { text: "Your browser didn't allow copying; the link is selected to copy by hand.", claim: null },
   private: { text: 'Runs in your browser; nothing is sent.', claim: null },
+  // "Copy for a slide": plain text, one fact a line (calc-view.js slideOf), its button and what it says.
+  copySlide: { text: 'Copy for a slide', claim: null },
+  slideCopied: { text: 'Text for a slide copied.', claim: null },
+  slideFailed: { text: "Your browser didn't allow copying; the text is selected to copy by hand.", claim: null },
+  slideHosp: { text: '{name} · {where}', claim: null },
+  slideTrack: { text: 'TEAM, {year} · {track} · limits {limits}', claim: null },
+  slideRange: { text: '{band}: {range} a year', claim: null },
+  slideResult: { text: 'This scenario, spending {spend}, would come to {result}', claim: null },
+  slideRows: { text: 'set by episode type', claim: null },
+  slideHyp: { text: 'Hypothetical · standardized dollars', claim: null },
+  slideHypMine: { text: '{hyp} · {mine}', claim: null },
+  slideSource: {
+    text: "Sources: CMS's TEAM participant list, as of {list}; CMS's TEAM preliminary regional target prices, {prices}; Medicare inpatient discharges, {from} and {to}; Care Compare quality measures, {quality}; this site's arithmetic.",
+    claim: null,
+  },
 
   // The polite line a screen reader hears once the reader pauses, and the line when a box can't take what was typed.
   say: {

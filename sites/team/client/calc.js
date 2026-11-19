@@ -77,6 +77,7 @@ export function mountCalc(section) {
   let dirty = false;
   let forced = false;
   let patches = 0;
+  let draws = 0;
 
   const files = once(() => Promise.all([fetchAsset(section.dataset.src, 'calculator'), loadSearch(section.dataset.search)]).then(([c, s]) => joinFiles(c, s)));
   // The files for a move the reader made, or null after saying they didn't load.
@@ -87,7 +88,7 @@ export function mountCalc(section) {
 
   // The parts only the script can work: shown once it runs (and again on each new hospital's markup).
   const showControls = () => {
-    for (const el of body.querySelectorAll('[data-calc-copy], .tc-incl, [data-calc-open]')) el.hidden = false;
+    for (const el of body.querySelectorAll('[data-calc-copy], [data-calc-slide], .tc-incl, [data-calc-open]')) el.hidden = false;
   };
 
   // The view's markup as nodes (the kit's escaped template, parsed).
@@ -96,10 +97,12 @@ export function mountCalc(section) {
     return tpl.content;
   };
 
-  // The figure: the costliest part to draw.
+  // The figure: the costliest part to draw. Its draws are counted as the patches are (data-draws).
   const drawFigure = () => {
     const box = body.querySelector('[data-v="fig"]');
-    if (box) box.replaceChildren(...parsed(view.fig()).childNodes);
+    if (!box) return;
+    box.replaceChildren(...parsed(view.fig()).childNodes);
+    section.dataset.draws = String(++draws);
   };
 
   // Every keyed element takes its fresh twin's text and attributes; force: inputs too, even the one being typed in.
@@ -253,21 +256,35 @@ export function mountCalc(section) {
       return;
     }
     if (e.target.closest?.('[data-calc-copy]')) copyLink(e.target.closest('[data-calc-copy]'));
+    else if (e.target.closest?.('[data-calc-slide]')) copySlide(e.target.closest('[data-calc-slide]'));
   });
 
   // "Copy a link": this page's address with the state's fragment, the reader's own numbers only when ticked. The clipboard
   // is written, never read; where the browser refuses, the link shows, selected, to copy by hand.
-  async function copyLink(button) {
+  function copyLink(button) {
     const includeMine = Boolean(body.querySelector('[data-calc-incl]')?.checked);
-    const url = `${location.origin}${location.pathname}${fragmentOf(state, { includeMine })}`;
+    copyText(button, `${location.origin}${location.pathname}${fragmentOf(state, { includeMine })}`, '[data-calc-link]', { copied: t('copied'), failed: t('copyFailed') });
+  }
+
+  // "Copy for a slide": the scenario as plain text (calc-view.js slideOf), as the view now has it, so a change not yet
+  // drawn is in it too. Written to the clipboard, never read; the same fallback as the link's.
+  function copySlide(button) {
+    flush();
+    copyText(button, view.slide(), '[data-calc-slide-text]', { copied: t('slideCopied'), failed: t('slideFailed') });
+  }
+
+  // The text to the clipboard, saying so beside the buttons; where the browser refuses, it shows in its own line
+  // (selector), selected, to copy by hand. The line it didn't use stays hidden.
+  async function copyText(button, text, selector, words) {
     const status = button.parentElement.querySelector('.tc-copied');
-    const shown = body.querySelector('[data-calc-link]');
+    const shown = body.querySelector(selector);
     clearTimeout(copiedTimer);
+    for (const other of body.querySelectorAll('[data-calc-link], [data-calc-slide-text]')) if (other !== shown) other.hidden = true;
     const reveal = () => {
-      shown.textContent = url;
+      shown.textContent = text;
       shown.hidden = false;
     };
-    if (await copyOrSelect({ text: url, node: shown, status, copied: t('copied'), failed: t('copyFailed'), reveal })) {
+    if (await copyOrSelect({ text, node: shown, status, ...words, reveal })) {
       copiedTimer = setTimeout(() => { status.textContent = ''; }, COPIED_MS);
     }
   }

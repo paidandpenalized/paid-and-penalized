@@ -196,6 +196,12 @@ a.chip__n:hover .chip__t { text-decoration: underline; text-decoration-color: va
   .ft__asof .ft__note { padding-right: 0; }
   .ft__stamp { position: static; display: inline-block; margin-top: 8px; }
 }
+/* A phone with large text (a default font of 20px or more on a 320px screen: under 18em): the site's and the as-of
+   fields each take the row, and the feedback note goes under its button, so a date or a word never runs past the edge. */
+@media (max-width: 18em) {
+  .ft__site, .ft__asof { grid-column: 1 / -1; }
+  .ft__fb { grid-template-columns: minmax(0, 1fr); }
+}
 /* The narrowest phones (and a desktop zoomed to 400%): the chip's net steps under its name, so the name has the chip's
    whole width before it is cut short. */
 @media (max-width: 400px) {
