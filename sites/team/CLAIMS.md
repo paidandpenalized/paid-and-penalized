@@ -22,6 +22,11 @@ in copy.
 | TEAM-11 | An acute care hospital, the only kind TEAM covers, is one paid under the inpatient prospective payment system; other kinds of hospital are not TEAM participants. | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | "Acute care hospital means a provider subject to the prospective payment system specified in § 412.1(a)(1)" | 2026-11-19 |
 | TEAM-12 | CJR-X, the nationwide expansion of the joint-replacement model, was finalized in the fiscal year 2027 inpatient rule and begins on January 1, 2028. | https://www.cms.gov/priorities/innovation/innovation-models/cjr-x | "will be mandatory nationwide and begin on January 1, 2028" | 2026-11-19 |
 | TEAM-13 | CJR-X exempts hospitals in TEAM, hospitals in Maryland, and hospitals not eligible to be paid under both the inpatient and outpatient systems; the rest of the hospitals paid under the inpatient system must take part. | https://www.cms.gov/priorities/innovation/innovation-models/cjr-x | "Certain hospitals will be exempt, including those participating in the Transforming Episode Accountability Model (TEAM), those located in Maryland" | 2026-11-19 |
+| TEAM-14 | Each track caps what a participant can gain or repay in a performance year as a share of its aggregated reconciliation target price: Track 1 gains up to 10%; Track 2 5% either way; Track 3 20% either way. | https://www.ecfr.gov/current/title-42/part-512/section-512.550 | "cannot exceed 10 percent" … "cannot exceed 5 percent" … "cannot exceed 20 percent" … "must not exceed 5 percent" | 2026-11-19 |
+| TEAM-15 | CMS adjusts a reconciliation amount for quality by a percentage that reaches at most 10% of a gain in every track, and at most 15% of a loss in Track 2 and 10% in Track 3; Track 1 has no loss to adjust. | https://www.ecfr.gov/current/title-42/part-512/section-512.550 | "up to 10 percent for positive reconciliation amounts and up to 15 percent for negative reconciliation amounts" | 2026-11-19 |
+| TEAM-16 | For an episode category where the hospital had fewer than 31 episodes in the three baseline years, CMS caps performance-year spending at the target price, so the category cannot add to a repayment. | https://www.ecfr.gov/current/title-42/part-512/section-512.550 | "did not meet the low volume threshold of at least 31 episodes during the 3-year baseline period" | 2026-11-19 |
+| TEAM-17 | A measure for which the hospital has no raw score, or an incomplete one, is given a scaled quality score of 50. | https://www.ecfr.gov/current/title-42/part-512/section-512.547 | "CMS assigns a scaled quality measure of 50 if the TEAM participant has no or an incomplete raw quality measure score" | 2026-11-19 |
+| TEAM-18 | The performance year 2 quality score uses five measures: hybrid hospital-wide readmission, falls with injury, postoperative respiratory failure and surgical-patient death (failure-to-rescue), each for all episode categories, and the hip and knee replacement patient-reported outcome measure for joint-replacement episodes. | https://www.ecfr.gov/current/title-42/part-512/section-512.547 | "For all episode categories: Hybrid Hospital-Wide All-Cause Readmission Measure" … "For LEJR episodes: Hospital-Level Total Hip and/or Total Knee Arthroplasty" | 2026-11-19 |
 
 ## Notes on the sources
 
@@ -39,6 +44,12 @@ in copy.
   serves the workbook itself.
 - **TEAM-12, TEAM-13.** CMS's CJR-X model page. The start date moved from the proposal's October 1, 2027 to January 1,
   2028 in the final rule (FR Doc 2026-15833, 91 FR 49570).
+- **TEAM-14 to TEAM-18.** Sections 512.550 and 512.547, read from the eCFR's text at its newest issue date (2026-11-17).
+  TEAM-14 joins the gain limit of each track (paragraph (e)(2)(i) to (iii)), Track 3's loss limit ((e)(1)) and Track 2's
+  loss limit ((e)(3)). TEAM-15 is paragraph (d)(1)(ii); Track 1's and Track 3's caps are in (d)(1)(i) and (iii). TEAM-16 is
+  the low-volume paragraph of (c), cited elsewhere as (c)(9). TEAM-17 is (b)(1)(i)(D). TEAM-18 is paragraph (a)(2) (the cited baseline
+  periods differ by measure and year; the register states only the measure set). The calculator's band width (a
+  few percent either side of the estimate) is this site's own choice, not a rule, and has no row.
 
 ## Link check (2026-11-19)
 
@@ -48,6 +59,8 @@ its newest issue date, 2026-11-17).
 | URL | status | via |
 |---|---|---|
 | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | 200 (the section's full text through the eCFR versioner API at 2026-11-17; both definitions found) | direct |
+| https://www.ecfr.gov/current/title-42/part-512/section-512.547 | 200 (the section's full text through the API at 2026-11-17, after one 503 retry; paragraphs (a)(2) and (b)(1)(i)(D) found) | direct |
+| https://www.ecfr.gov/current/title-42/part-512/section-512.550 | 200 (the section's full text through the API at 2026-11-17, after one 503 retry; paragraphs (c)(9), (d)(1) and (e) found) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.508 | 200 (full text through the API; paragraphs (b) and (c) read) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.510 | 200 (full text through the API; paragraphs (b) and (c) read) | direct |
 | https://www.ecfr.gov/current/title-42/part-512/section-512.515 | 200 (full text through the API; paragraphs (a) and (b)(1) read) | direct |
