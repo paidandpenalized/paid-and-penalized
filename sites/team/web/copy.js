@@ -97,7 +97,7 @@ export const COPY = {
     claim: ['TEAM-24', 'TEAM-26', 'TEAM-25'],
   },
   changeStamp: { text: 'Track {track}', claim: null },
-  changeStampSub: { text: '{limit} · the default from {date}', claim: 'TEAM-24' },
+  changeStampSub: { text: '{limit} · default from {date}', claim: 'TEAM-24' },
   changeShare: { text: "The limit is a share of the hospital's whole target amount for the year, not of each episode.", claim: 'TEAM-14' },
 
   // Figure 2, the tracks' limits.

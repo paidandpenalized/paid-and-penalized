@@ -188,7 +188,7 @@ test('the worked example: every ledger line is the engine\'s, from the example\'
 test('Part 2 qualifies Track 2 for Medicare-dependent hospitals, and says Track 3 is the default from the second year', () => {
   const text = words(part('change'));
   assert.match(text, /Medicare-dependent hospitals while that program hasn\u2019t expired when selections are due/);
-  assert.match(text, /±20% · the default from Jan 1, 2027/);
+  assert.match(text, /±20% · default from Jan 1, 2027/);
   assert.match(words(part('who')), /either way; the default track from Jan 1, 2027/);
 });
 

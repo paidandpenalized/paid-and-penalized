@@ -26,7 +26,7 @@
 .tm-part__title--h1 { font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem); line-height: 1; }
 .tm-part__text p { max-width: 62ch; line-height: 1.6; text-wrap: pretty; }
 .tm-dek { color: var(--ink-2); font-size: var(--fs-md); }
-.tm-cite { color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); overflow-wrap: anywhere; }
+.tm-cite { color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); overflow-wrap: break-word; }
 .tm-aside { color: var(--ink-2); font-size: var(--fs-sm); }
 
 /* Part 1: the button to the calculator, the record card (two fields to a row), the lookup box, the map and its key,
@@ -53,12 +53,13 @@
 .tm-patient { display: grid; gap: 4px; max-width: 62ch; padding: 10px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); font-size: var(--fs-sm); line-height: 1.55; }
 .tm-patient__h { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 
-/* Part 2: the Track 3 stamp beside what its limit is a share of. */
-.tm-hook { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px 20px; align-items: center; margin-top: 8px; }
-.tm-hook .stamp { font-size: clamp(1.3rem, 1rem + 1vw, 1.8rem); text-align: center; }
+/* Part 2: the Track 3 stamp beside what its limit is a share of. A wrapping row, so the caption keeps a readable width
+   (20ch at the least) and drops under the stamp when the two don't fit side by side; the stamp never grows past the
+   column (its words wrap inside it first). */
+.tm-hook { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; margin-top: 8px; }
+.tm-hook .stamp { flex: 0 1 auto; max-width: calc(100% - 6px); font-size: clamp(1.3rem, 1rem + 1vw, 1.8rem); text-align: center; text-wrap: balance; }
 .tm-stamp__sub { display: block; margin-top: 2px; font: 700 0.6em/1.2 var(--font-type); letter-spacing: 0.04em; }
-.tm-hook p { font-size: var(--fs-sm); }
-@media (max-width: 30em) { .tm-hook { grid-template-columns: minmax(0, 1fr); } }
+.tm-hook p { flex: 1 1 20ch; min-width: min(20ch, 100%); font-size: var(--fs-sm); }
 
 /* Figures 2 and 3 (web/charts/trackLimits.js, payoff.js): gains in the money-paid ink, repayments in the repaid ink. */
 .chart-tracks__gain { fill: var(--rew); }
