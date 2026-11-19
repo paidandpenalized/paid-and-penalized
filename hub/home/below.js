@@ -204,6 +204,20 @@ function scenarioCard(p, figure) {
 </article>`;
 }
 
+// A payment model's card (live here, outside the dollar estimates: TEAM): its name, CMS's name, its dek, the hospitals
+// on CMS's list (figure: the shell's facts', the footer's same count) and the way to its page. No histogram and no
+// estimate tag: the dollar estimates hold no such model.
+function modelCard(p, figure) {
+  if (!Number.isInteger(figure?.listed)) throw new RangeError(`hub home: the directory has no count for the program "${p.id}" (hub/model.js shellFacts)`);
+  return html`<article class="pc pc--model">
+<h3><span>${p.name}</span> <abbr class="ab" title="${p.long}">${p.ab}</abbr></h3>
+<p class="pc__dek">${programDek(p.id)}</p>
+<p class="pc__big">${fill('dirModelBig', { n: count(figure.listed) })}</p>
+<p class="pc__sub">${COPY.dirModelSub}</p>
+<a class="go" href="${p.path}" aria-label="${fill('dirOpenLabel', { ab: p.ab, name: p.name })}">${fill('dirOpen', { ab: p.ab })}${arrow}</a>
+</article>`;
+}
+
 // A slip for a program under consideration: its abbreviation, name and dek over an empty hatched band, linking to its
 // placeholder page (hub/coming.js).
 const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title="${p.long}">${p.ab}</abbr><b>${p.name}</b><span>${programDek(p.id)}</span><span class="hh__nextbox slip__none"><span>${COPY.soonNone}</span></span></a>`;
@@ -212,27 +226,34 @@ const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title
 // .programs; a scenario's card reads its own); facts: storyFacts; hospitals: hubHospitals; fy: the fiscal year; hrrpFy:
 // the year the Readmissions site's pages show (the estimates' when left out).
 // A card per program the dollar estimates hold (one of them with no page here, stage soon, is under construction: its
-// card's link says so), then the scenarios' cards under their own heading, then the rest by group. The heading counts the
-// programs with pages here and data (live), those under construction, and those under consideration; a scenario is none.
+// card's link says so), then a card per payment model live here outside the estimates (TEAM) under its group's heading,
+// then the scenarios' cards under their own heading, then the rest, under consideration (stage soon), by group: the same
+// split as the tabs and the footer (web/site.js LISTED_PROGRAMS). The heading counts the programs with pages here (live:
+// with data, and the models), those under construction, and those under consideration; a scenario is none.
 export function directory({ programs, figures = {}, facts, hospitals, fy, hrrpFy = fy }) {
   const fyText = String(fy);
   const live = programs.filter((p) => p.inData);
+  const models = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'live');
   const scenarios = programs.filter((p) => p.scenario);
-  const soon = programs.filter((p) => !p.inData && !p.scenario);
+  const soon = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
   const building = live.filter(underConstruction).length;
+  const opened = live.length - building + models.length;
+  for (const p of models) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   for (const p of soon) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program under consideration "${p.id}" is in the group "${p.group}", which the directory has no words for`);
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
   const domain = shareDomain(hospitals);
   const groups = Object.entries(GROUP_WORDS).map(([group, words]) => [words, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
-<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(live.length - building)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(live.length)), more: numberWord(soon.length) })}</h2></div>
+<div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(opened)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(opened)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
 <p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, hrrpFy, domain }))}</div>
-${scenarios.length ? html`<p class="grp cap"><span>${GROUP_WORDS.scenario}</span></p>
+${models.map((p) => html`<p class="grp cap"><span>${GROUP_WORDS[p.group]}</span></p>
+<div class="dir dir--model">${modelCard(p, figures[p.id])}</div>
+`)}${scenarios.length ? html`<p class="grp cap"><span>${GROUP_WORDS.scenario}</span></p>
 <div class="dir dir--scen">${scenarios.map((p) => scenarioCard(p, figures[p.id]))}</div>
-` : ''}<div class="soon">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
+` : ''}<div class="soon" style="--slips:${soon.length}">${groups.map(([words, members]) => html`<div class="sg" style="--n:${members.length}"><p class="grp cap"><span>${words}</span></p>${members.map(slip)}</div>`)}</div>
 </section>`;
 }
 

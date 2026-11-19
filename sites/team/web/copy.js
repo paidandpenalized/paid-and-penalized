@@ -43,12 +43,12 @@ export const COPY = {
   cardRight: { text: 'Performance year {n} · {year}', claim: 'TEAM-07' },
   cardListed: { text: "On CMS's list", claim: null },
   cardListedNote: { text: 'hospitals, as of {date}', claim: 'TEAM-09' },
-  cardAreas: { text: 'Selected areas', claim: null },
-  cardAreasNote: { text: "metro and micro areas CMS chose by random sampling, as its list names them", claim: 'TEAM-02' },
+  cardAreas: { text: 'Mandatory areas', claim: null },
+  cardAreasNote: { text: "metro and micro areas where CMS's list has hospitals that must take part", claim: ['TEAM-01', 'TEAM-09'] },
   cardKinds: { text: 'Kinds of surgery', claim: null },
   cardKindsNote: { text: 'each episode runs through day {days} after discharge', claim: ['TEAM-21', 'TEAM-19'] },
   cardLimit: { text: 'Track {track} limit', claim: null },
-  cardLimitNote: { text: 'of the yearly target, either way, from {date}', claim: ['TEAM-14', 'TEAM-24'] },
+  cardLimitNote: { text: 'of the yearly target, either way; the default track from {date}', claim: ['TEAM-14', 'TEAM-24'] },
 
   // Part 1's lookup box (client/lookup.js fills the mount; without a script it says so).
   lookupHeading: { text: 'Is a hospital in TEAM?', claim: null },
@@ -82,7 +82,7 @@ export const COPY = {
     claim: ['TEAM-20', 'TEAM-19'],
   },
   patientNotice: {
-    text: 'Before you leave the hospital after your surgery, it must give you a written notice that explains TEAM and says your Medicare protections continue.',
+    text: 'Before you go home after your surgery, the hospital must give you a written notice that explains TEAM and says your Medicare protections continue.',
     claim: 'TEAM-32',
   },
 
@@ -93,11 +93,11 @@ export const COPY = {
     claim: ['TEAM-27', 'TEAM-28'],
   },
   changeYearTwo: {
-    text: 'From {date}, CMS puts every hospital in Track {tc} unless it asks for another track and qualifies. Track {tb} is for safety-net, rural, sole community, Medicare-dependent and essential access community hospitals; a safety-net hospital may stay in Track {ta} through {last}.',
+    text: "From {date}, CMS puts every hospital in Track {tc} unless it asks for another track and qualifies. Track {tb} is for safety-net, rural, sole community and essential access community hospitals, and for Medicare-dependent hospitals while that program hasn't expired when selections are due; a safety-net hospital may stay in Track {ta} through {last}.",
     claim: ['TEAM-24', 'TEAM-26', 'TEAM-25'],
   },
   changeStamp: { text: 'Track {track}', claim: null },
-  changeStampSub: { text: '{limit} from {date}', claim: null },
+  changeStampSub: { text: '{limit} · the default from {date}', claim: 'TEAM-24' },
   changeShare: { text: "The limit is a share of the hospital's whole target amount for the year, not of each episode.", claim: 'TEAM-14' },
 
   // Figure 2, the tracks' limits.
@@ -251,7 +251,7 @@ export const COPY = {
   findTargetWhere: { text: 'Interim reconciliation target price reports, in the Custom Export Tool', claim: ['TEAM-51', 'TEAM-50'] },
   findTargetWhen: { text: 'Each quarter', claim: 'TEAM-51' },
   findQuality: { text: 'Your quality scores', claim: null },
-  findQualityWhere: { text: "Care Compare, where this site gets the readmission and surgical-death measures; the hospital's own reports for the rest", claim: null },
+  findQualityWhere: { text: "Care Compare, for the two measures this site prefills; the others are in the hospital's own CMS reports", claim: null },
   findQualityWhen: { text: 'As CMS refreshes each measure', claim: null },
   findSource: { text: '{cite}.', claim: null },
 

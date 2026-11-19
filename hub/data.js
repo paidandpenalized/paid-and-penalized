@@ -63,7 +63,7 @@ let loaded = null;
 //                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
 //                 a hospital page's Medicaid band reads (hospital/medicaid.js)
 //   team          { listed } from the TEAM site's newest emitted file: how many hospitals CMS's TEAM list names (the
-//                 footer's figure), the file's participants plus the list's hospitals the master lacks
+//                 footer's and the directory's figure, the file's counts.listed)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 //   counties      every county's outline (countyShapes of the same atlas, parsed once)
 export function loadHub() {
@@ -89,7 +89,7 @@ export function loadHub() {
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
-    team: { listed: team.participants.length + team.a4.teamMissing.length },
+    team: { listed: team.counts.listed },
     shapes: stateShapes(atlas),
     counties: countyShapes(atlas),
   };

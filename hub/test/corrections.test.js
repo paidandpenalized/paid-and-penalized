@@ -90,6 +90,23 @@ const ENTRIES = [
   { date: '2026-10-30', slug: 'b', body: 'The second correction.' },
 ];
 
+test('an unreleased site has no line; released, a site built from several CMS files says so, as the scenario does', () => {
+  const dates = { cmsReleased: '2026-11-12', changed: '2026-11-19' };
+  const updated = new Map([...SITE_DATES, ['team', dates]]);
+  assert.equal(SITE.sites.team.released, false);
+  const list = (text) => /<ul class="pol__list">[\s\S]*?<\/ul>/.exec(text)[0];
+  const hidden = list(page({ updated }));
+  assert.doesNotMatch(hidden, /Surgical episodes/, 'unreleased: no line');
+  assert.match(hidden, /Hospital-Acquired Conditions: CMS/, 'the released site keeps its line');
+  const released = page({ updated, sites: { ...SITE.sites, team: { ...SITE.sites.team, released: true } } });
+  assert.ok(released.includes('Surgical episodes: built from several CMS files; the newest it uses is dated <time datetime="2026-11-12">'), 'the multi-file wording');
+  // Only unreleased sites drop out: none of the others do.
+  const all = page({ updated: new Map([...SITE_DATES, ['hrrp', dates], ['work-requirement', dates]]) });
+  assert.match(all, /Readmissions: CMS/);
+  assert.match(all, /Medicaid work requirement: a scenario built from many files/);
+  assert.throws(() => page({ updated: new Map([['nope', dates]]) }), /"nope" is not a site/);
+});
+
 test('with no entries the log says so, and is the last section', () => {
   const text = page();
   assert.match(text, /<h1[^>]*>Corrections<\/h1>/);

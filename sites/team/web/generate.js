@@ -22,7 +22,7 @@ export function generateTeam(ctx, { team = loadTeam(), master = loadMaster(), at
   const { assets } = ctx;
   ctx.emit({ path: PROGRAM_PATH, robots, text: programPage({ team, master, atlas, robots, assets }) });
   ctx.emit({ path: METHODS_PATH, robots, text: methodsPage({ sources: loadSources(team), robots, assets }) });
-  log(`TEAM: 2 pages under ${PROGRAM_PATH}, ${team.participants.length + team.a4.teamMissing.length} hospitals on CMS's list`);
+  log(`TEAM: 2 pages under ${PROGRAM_PATH}, ${team.counts.listed} hospitals on CMS's list`);
   return { updated: { cmsReleased: newestCmsDate(team.meta), changed: builtOn(team.built_at) } };
 }
 

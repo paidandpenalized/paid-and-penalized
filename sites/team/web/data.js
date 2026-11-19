@@ -14,7 +14,7 @@ let atlas = null;
 //   prices, categoryAvg, drgCategory, participants, defaultCcn
 //   status        { <ccn>: [code, arg] } for every hospital in the hospital master (lookup-copy.js says what each code means)
 //   a4            { teamMissing: the participants' CCNs the master lacks, cjrxMissing: how many CJR-X list hospitals it lacks }
-//   counts        { selectedAreas: the CBSAs CMS's list gives its mandatory participants, cjrxListed: the CJR-X list's size }
+//   counts        { listed: the hospitals on CMS's TEAM list, selectedAreas: the CBSAs CMS's list gives its mandatory participants, cjrxListed: the CJR-X list's size }
 //   otherIpps     the CCNs of the other open acute IPPS hospitals outside Maryland, not in TEAM (the map's hollow dots)
 //   built_at      when the file was built (UTC); sources: its pins' ids
 export function loadTeam() {

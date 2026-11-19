@@ -96,6 +96,14 @@ test('Parts 1, 2, 3, 6 and 7 each set a figure beside their words', () => {
   }
   assert.match(part('bar'), /<div class="tm-part__fig" data-slot="bar"><\/div>/);
   assert.match(part('yours'), /<section id="calc" class="tm-calc">/);
+  // The figures shorter than their words (the map, the clock) stay beside them on a wide screen: sticky in a figure
+  // column that runs the Part's height (styles.css, from 62em only).
+  for (const id of ['who', 'do']) assert.match(part(id), /<div class="tm-part__fig"><div class="tm-sticky">/, `${id}: sticky`);
+  const css = readFileSync(REPO_ROOT + 'sites/team/web/styles.css', 'utf8');
+  const wide = css.slice(css.indexOf('@media (min-width: 62em) {'), css.indexOf('\n}\n', css.indexOf('@media (min-width: 62em) {')));
+  assert.match(wide, /\.tm-part__fig \{ align-self: stretch; \}/);
+  assert.match(wide, /\.tm-sticky \{ position: sticky;/);
+  assert.doesNotMatch(css.replace(wide, ''), /position: sticky/, 'sticky only from 62em');
   // The hero's button goes to the calculator.
   assert.match(part('who'), /<a class="tm-go" href="#calc">/);
 });
@@ -138,21 +146,30 @@ test('standardized dollars are stated beside every dollar figure', () => {
   for (const b of withDollars) assert.match(words(b), /[Ss]tandardized/, words(b).slice(0, 80));
 });
 
-test('the counts come from the emitted file', () => {
-  const text = words(part('who'));
-  const listed = team.participants.length + team.a4.teamMissing.length;
-  assert.ok(text.includes(listed.toLocaleString('en-US')), 'the list count');
-  assert.ok(text.includes(String(team.counts.selectedAreas)), 'the selected areas');
-  assert.ok(text.includes(String(CATEGORIES.length)), 'the kinds of surgery');
-  assert.ok(text.includes(`±${TRACKS[3].gain * 100}%`), 'Track 3\'s limit');
+test('the counts come from the emitted file: the record card\'s four fields, the map\'s key and the CJR-X line', () => {
+  const who = part('who');
+  const n = (x) => x.toLocaleString('en-US');
+  // The card's fields, label to value, exactly.
+  const card = /<div class="form tm-card">[\s\S]*?<\/div>\n<section/.exec(who)[0];
+  const fields = Object.fromEntries([...card.matchAll(/<p class="field__label"><span class="field__no">\d<\/span>([^<]+)<\/p>\s*<p class="field__value[^"]*">([^<]+)<\/p>/g)].map((m) => [words(m[1]), m[2]]));
+  assert.deepEqual(fields, {
+    'On CMS\u2019s list': n(team.counts.listed),
+    'Mandatory areas': n(team.counts.selectedAreas),
+    'Kinds of surgery': n(CATEGORIES.length),
+    'Track 3 limit': `±${TRACKS[3].gain * 100}%`,
+  });
+  assert.equal(team.counts.listed, team.participants.length + team.a4.teamMissing.length);
   const counts = mapCounts(team, master);
+  assert.equal(counts.listed, team.counts.listed);
   assert.equal(counts.other, team.otherIpps.length);
-  assert.equal(counts.in + counts.ended + counts.missing, listed);
+  assert.equal(counts.in + counts.ended + counts.missing, team.counts.listed);
   // The table counts every hospital the master places in a state, the map's unplaced ones (Puerto Rico's) included.
-  const tabled = counts.byState.reduce((n, r) => n + r.in, 0);
-  assert.equal(tabled, counts.in);
-  assert.ok(text.includes(`In TEAM (${counts.in.toLocaleString('en-US')})`));
-  assert.ok(words(program).includes(team.counts.cjrxListed.toLocaleString('en-US')), 'the CJR-X list\'s size');
+  assert.equal(counts.byState.reduce((k, r) => k + r.in, 0), counts.in);
+  assert.equal(counts.byState.reduce((k, r) => k + r.other, 0), counts.other);
+  const key = words(/<ul class="tm-key"[\s\S]*?<\/ul>/.exec(who)[0]);
+  assert.equal(key, `In TEAM (${n(counts.in)}) Other inpatient-system hospitals, not in TEAM (${n(counts.other)})`);
+  const cjrx = words(/<p class="tm-next">[\s\S]*?<\/p>/.exec(program)[0]);
+  assert.match(cjrx, new RegExp(`CMS\u2019s list names ${n(team.counts.cjrxListed)}\\.`), 'the CJR-X list\'s size');
 });
 
 test('the worked example: every ledger line is the engine\'s, from the example\'s constants', () => {
@@ -168,9 +185,16 @@ test('the worked example: every ledger line is the engine\'s, from the example\'
   assert.match(ledger, /A worked example with round numbers, not a hospital/);
 });
 
-test('the patient note cites the notice rule and says it comes before the patient leaves after surgery', () => {
+test('Part 2 qualifies Track 2 for Medicare-dependent hospitals, and says Track 3 is the default from the second year', () => {
+  const text = words(part('change'));
+  assert.match(text, /Medicare-dependent hospitals while that program hasn\u2019t expired when selections are due/);
+  assert.match(text, /±20% · the default from Jan 1, 2027/);
+  assert.match(words(part('who')), /either way; the default track from Jan 1, 2027/);
+});
+
+test('the patient note cites the notice rule and says it comes before the patient goes home after surgery', () => {
   const note = /<aside class="tm-patient"[\s\S]*?<\/aside>/.exec(program)[0];
-  assert.match(words(note), /Before you leave the hospital after your surgery/);
+  assert.match(words(note), /Before you go home after your surgery, the hospital must give you a written notice that explains TEAM/);
   assert.match(words(note), /512\.582\(b\)\(1\)/);
 });
 

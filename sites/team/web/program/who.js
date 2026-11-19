@@ -14,9 +14,10 @@ import { fill, t } from '../copy.js';
 import { cite, partOf } from '../pages/parts.js';
 
 // The map's drawn width (the figure column's, about, beside the words on a wide screen; it scales down on a phone), and
-// its dots' diameters: a hospital in TEAM, and the ring and hole of a hollow one.
+// its dots' diameters: a hospital in TEAM, and the ring and hole of a hollow one (a thin, small ring in the context ink,
+// so the hospitals in TEAM read first).
 const MAP_WIDTH = 560;
-const DOTS = Object.freeze({ 'chart-dots--team': 5, 'chart-dots--other': 4.4, 'chart-dots--hole': 2.4 });
+const DOTS = Object.freeze({ 'chart-dots--team': 5.2, 'chart-dots--other': 3.4, 'chart-dots--hole': 2.2 });
 const IN_TEAM = new Set(['in', 'in27']);
 const yearOf = (iso) => iso.slice(0, 4);
 
@@ -27,7 +28,7 @@ const yearOf = (iso) => iso.slice(0, 4);
 export function mapCounts(team, master) {
   const inTeam = Object.entries(team.status).filter(([, [code]]) => IN_TEAM.has(code)).map(([ccn]) => ccn);
   const missing = team.a4.teamMissing.length;
-  const listed = team.participants.length + missing;
+  const { listed } = team.counts;
   const states = new Map();
   const tally = (ccn, key) => {
     const { state } = master.get(ccn);

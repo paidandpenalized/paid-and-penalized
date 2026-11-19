@@ -159,6 +159,10 @@ export const COPY = typesetCopy({
   dirScenarioSub: 'Medicaid revenue hospitals could lose a year, low case to high',
   dirOpenScenario: 'Open the scenario',
   dirOpenScenarioLabel: 'Open the scenario, {name}',
+  // A payment model with a page here but outside the dollar estimates (TEAM): a card under its group's heading with the
+  // hospitals on CMS's list for it, as the footer gives them, and the way to its page.
+  dirModelBig: '{n} hospitals',
+  dirModelSub: "On CMS's list. Its dollar figures on this site are scenarios, never part of these estimates.",
   // A program whose page here is under construction: its card's link (to the placeholder page) says so.
   dirBuilding: '{ab}: under construction',
   dirBuildingLabel: '{ab}: under construction, {name}',
