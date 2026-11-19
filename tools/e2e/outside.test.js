@@ -37,6 +37,11 @@ for (const [where, width] of WIDTHS) {
             assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'the theme button sets dark');
             // The colours glide to the dark ones; axe judges the finished page.
             await page.waitForFunction(() => document.getAnimations().every((a) => a.playState === 'finished' || a.effect?.getTiming().iterations === Infinity));
+            // On a phone the only theme button is the footer's, so the click leaves the page scrolled to its end, where
+            // the sticky header sits over whichever footer link the footer's height puts under it; axe counts that link
+            // as a target the header obscures. Back at the top, as the page opens, axe judges the page the light run
+            // judges, in dark.
+            await page.evaluate(() => window.scrollTo(0, 0));
             await settle(page);
           }
           const stamp = page.locator('#hh-status-h');

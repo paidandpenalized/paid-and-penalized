@@ -109,9 +109,9 @@
 /* The worked example's signed lines in Figures 2 and 3's inks: what would be paid in the paid ink, what would be repaid
    (or taken off) in the repaid ink. Round numbers, not a hospital (a named hospital's result stays neutral: the
    calculator's); the sign says it too. */
-/* The paid ink, as text, drawn 30% toward the text ink (oklab), so it clears 4.5:1 on the paper and the panel tone in
+/* The paid ink as text is its text token (--rew-ink, tokens.css), which clears 4.5:1 on the paper and the panel tone in
    both themes (the mark ink alone is about 4:1 on the panel in light); the repaid ink already does. */
-.tm-ledger__v--gain { color: color-mix(in oklab, var(--rew), var(--ink) 30%); }
+.tm-ledger__v--gain { color: var(--rew-ink); }
 .tm-ledger__v--loss { color: var(--pen); }
 @media (forced-colors: active) { .tm-ledger__v--gain, .tm-ledger__v--loss { color: CanvasText; } }
 .tm-ledger__row--total { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
