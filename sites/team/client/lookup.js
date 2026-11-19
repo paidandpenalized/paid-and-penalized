@@ -3,7 +3,8 @@
 // loads with the page: the box's first focus (or first keystroke) fetches its two files, the family search's names and
 // places (data-src) and the lookup's codes and words (data-codes; lookup-copy.js lookupFile), so this script carries no
 // copy. A query lists at most SHOWN hospitals, one line each (the tag, the name, the place, the reason, a link), under a
-// sentence that counts every match, in the box's polite live region. A "yes" links the calculator (?h=<ccn>#calc, which
+// sentence that counts every match. Only the sentence is live (polite): a screen reader hears the count, and the rows,
+// plain content after it, are read as the reader moves on to them. A "yes" links the calculator (?h=<ccn>#calc, which
 // works without this script); with it, the click stays on the page: the address carries ?h=, team:pick ({ ccn }) goes to
 // the document for the calculator, which scrolls into view (smoothly unless the reader asks for reduced motion) and its
 // heading takes the focus. A "no" links the hospital's page across the programs: the hub writes one for every hospital in
@@ -94,32 +95,35 @@ function pick(ccn) {
 // Runs the box in mount (the [data-team-lookup] element), if there is one. wait: the pause before the list follows.
 export function mountLookup(mount, { wait = WAIT } = {}) {
   const input = mount?.querySelector('input');
-  const out = mount?.querySelector('[aria-live]');
-  if (!input || !out) return;
+  const status = mount?.querySelector('[aria-live]');
+  const list = mount?.querySelector('.tm-look__list');
+  if (!input || !status || !list) return;
   const load = once(() => Promise.all([fetchAsset(mount.dataset.src, 'search'), fetchAsset(mount.dataset.codes, 'lookup')])
     .then(([searchFile, codesFile]) => ({ ...lookupIndex(searchFile, codesFile), words: codesFile.words })));
   let timer = 0;
+  const say = (sentence, rows = []) => {
+    status.textContent = sentence;
+    list.replaceChildren(...rows);
+  };
 
   async function show() {
     const query = input.value;
     if (!query.trim()) {
-      out.replaceChildren();
+      say('');
       return;
     }
     let data;
     try {
       data = await load();
     } catch {
-      out.replaceChildren(node('p', 'tm-look__count', mount.dataset.failed));
+      say(mount.dataset.failed);
       return;
     }
     if (input.value !== query) return; // typed on while the files loaded: the next pause lists it
     const { results, total } = search(query, data.index, { limit: SHOWN });
     const w = data.words;
     const sentence = total === 0 ? w.empty : total === 1 ? w.countOne : fillIn(total > results.length ? w.countMore : w.count, { n: count(total), shown: count(results.length) });
-    const list = node('ul', 'tm-look__list');
-    list.append(...results.map((e) => rowOf(e, data.standing.get(e.key), w)));
-    out.replaceChildren(node('p', 'tm-look__count', sentence), ...(results.length ? [list] : []));
+    say(sentence, results.map((e) => rowOf(e, data.standing.get(e.key), w)));
   }
 
   input.addEventListener('focus', () => { load().catch(() => {}); });
@@ -132,9 +136,9 @@ export function mountLookup(mount, { wait = WAIT } = {}) {
     e.preventDefault();
     clearTimeout(timer);
     input.value = '';
-    out.replaceChildren();
+    say('');
   });
-  out.addEventListener('click', (e) => {
+  list.addEventListener('click', (e) => {
     const a = e.target.closest?.('a[data-ccn]');
     if (!a || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();

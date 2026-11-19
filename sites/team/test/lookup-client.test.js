@@ -29,7 +29,8 @@ const ccnWhere = (ok) => {
 const IN = ccnWhere((code) => code === 'in');
 const CAH = ccnWhere((code, arg) => code === 'in_area_kind' && arg === 'critical_access');
 const CJRX = ccnWhere((code) => code === 'cjrx');
-const OUTSIDE = ccnWhere((code) => code === 'outside');
+const OUTSIDE = ccnWhere((code, arg) => code === 'outside' && arg === 'acute');
+const CAH_OUTSIDE = ccnWhere((code, arg) => code === 'outside' && arg === 'critical_access');
 
 // The family search's file, made up: [ccn, name, city, state, kind].
 const searchFile = (rows) => ({ cols: ['ccn', 'name', 'city', 'state', 'kind'], rows, states: {} });
@@ -38,6 +39,7 @@ const ROWS = [
   [CAH, 'Example Prairie Hospital', 'Plainsville', 'KS', 'critical_access'],
   [CJRX, 'Example Coast Hospital', 'Shoreton', 'GA', 'acute'],
   [OUTSIDE, 'Example Hills Hospital', null, 'TN', 'acute'],
+  [CAH_OUTSIDE, 'Example Mesa Hospital', 'Mesaville', 'NM', 'critical_access'],
 ];
 
 // An element of the stand-in DOM that also answers closest() for a link with a CCN, remove() and focus().
@@ -56,11 +58,12 @@ const textOf = (node) => (typeof node === 'string' ? node : node.textContent || 
 function setUp(t, { files = { [SRC]: searchFile(ROWS), [CODES]: FILE }, reduce = false } = {}) {
   const input = el('input');
   input.hidden = true;
-  const out = el('div');
+  const status = el('p');
+  const list = el('ul');
   const nojs = el('p');
   const mount = el('search');
   Object.assign(mount.dataset, { src: SRC, codes: CODES, failed: FAILED });
-  mount.querySelector = (s) => ({ input, '[aria-live]': out, '.tm-look__nojs': nojs })[s] ?? null;
+  mount.querySelector = (s) => ({ input, '[aria-live]': status, '.tm-look__list': list, '.tm-look__nojs': nojs })[s] ?? null;
   const heading = el('h2');
   const calc = el('section');
   calc.scrolled = [];
@@ -96,19 +99,18 @@ function setUp(t, { files = { [SRC]: searchFile(ROWS), [CODES]: FILE }, reduce =
     await settle();
     await settle();
   };
-  // The answer: the sentence, then each row as { tag, name, line, href, ccn }.
+  // The answer: the sentence (the live region's), then each row as { tag, name, line, href, ccn }.
   const answer = () => {
-    const [sentence, list] = out.children;
     return {
-      sentence: sentence ? textOf(sentence) : null,
-      rows: (list?.children ?? []).map((li) => {
+      sentence: status.textContent || null,
+      rows: list.children.map((li) => {
         const [tag, , line] = li.children;
         const [name, , link] = line.children;
         return { li, tag: textOf(tag), name, line: textOf(line), link, href: link.href, ccn: link.dataset.ccn };
       }),
     };
   };
-  return { mount, input, out, nojs, heading, calc, picks, urls, fetched, type, settle, answer };
+  return { mount, input, status, list, nojs, heading, calc, picks, urls, fetched, type, settle, answer };
 }
 
 test('no fetch before focus; on focus, the two files the box names and nothing else, once', async (t) => {
@@ -143,10 +145,14 @@ test('a "no" for a critical access hospital names its kind, and CJR-X when liste
   assert.equal(cah.tag, FILE.words.no);
   assert.ok(cah.line.includes(SEARCH['hospitalKind.critical_access']), 'the kind is named');
   assert.ok(cah.line.startsWith('Example Prairie Hospital, Plainsville, KS. '), 'name, then place');
+  await s.type('mesa');
+  const [away] = s.answer().rows;
+  assert.equal(away.tag, FILE.words.no);
+  assert.ok(away.line.includes(`. ${SEARCH['hospitalKind.critical_access']}, outside the areas`), 'outside the areas, the kind leads');
   await s.type('coast');
   const [listed] = s.answer().rows;
   assert.equal(listed.tag, FILE.words.no);
-  assert.match(listed.line, /CJR-X/);
+  assert.match(listed.line, /CJR\u2011X/);
 });
 
 for (const reduce of [false, true]) {
@@ -159,7 +165,7 @@ for (const reduce of [false, true]) {
     assert.ok(row.href === `?h=${IN}#calc`, 'the link works without the script');
     assert.equal(textOf(row.link), FILE.words.toCalc);
     let prevented = false;
-    s.out.listeners.click({ target: row.link, button: 0, preventDefault: () => { prevented = true; } });
+    s.list.listeners.click({ target: row.link, button: 0, preventDefault: () => { prevented = true; } });
     assert.ok(prevented, 'the script takes the click');
     assert.ok(s.urls.length === 1 && s.urls[0] === `?h=${IN}#calc`, 'the address carries ?h= and #calc');
     assert.equal(s.picks.length, 1);
@@ -177,7 +183,7 @@ test('a click with a modifier key, or not the main button, is the browser\'s', a
   const [row] = s.answer().rows;
   for (const extra of [{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { button: 1 }]) {
     let prevented = false;
-    s.out.listeners.click({ target: row.link, button: 0, ...extra, preventDefault: () => { prevented = true; } });
+    s.list.listeners.click({ target: row.link, button: 0, ...extra, preventDefault: () => { prevented = true; } });
     assert.equal(prevented, false, JSON.stringify(extra));
   }
   assert.equal(s.picks.length, 0);
@@ -231,10 +237,12 @@ test('Escape clears the box and the answer; an emptied box says nothing', async 
   s.input.listeners.keydown({ key: 'Escape', preventDefault: () => { prevented = true; } });
   assert.ok(prevented);
   assert.equal(s.input.value, '');
-  assert.equal(s.out.children.length, 0);
+  assert.equal(s.answer().sentence, null);
+  assert.equal(s.list.children.length, 0);
   await s.type('example');
   await s.type('   ');
-  assert.equal(s.out.children.length, 0);
+  assert.equal(s.answer().sentence, null);
+  assert.equal(s.list.children.length, 0);
 });
 
 test('names inserted as text, not HTML', async (t) => {
@@ -246,7 +254,7 @@ test('names inserted as text, not HTML', async (t) => {
   assert.equal(row.name.textContent, '<b>Bold</b> Example <img src=x onerror=alert(1)>', 'the name renders literally');
   assert.ok(row.line.includes(', <i>City</i>, AL. '), 'the place renders literally');
   const walk = (node) => (typeof node === 'string' ? [] : [node, ...node.children.flatMap(walk)]);
-  for (const node of walk(s.out)) assert.ok(!Object.hasOwn(node, 'innerHTML') && !Object.hasOwn(node, 'outerHTML'), `${node.tag}: markup set`);
+  for (const node of [...walk(s.status), ...walk(s.list)]) assert.ok(!Object.hasOwn(node, 'innerHTML') && !Object.hasOwn(node, 'outerHTML'), `${node.tag}: markup set`);
   const source = readFileSync(REPO_ROOT + 'sites/team/client/lookup.js', 'utf8');
   assert.doesNotMatch(source, /innerHTML|outerHTML|insertAdjacentHTML|setHTML|document\.write/, 'the script writes no markup');
 });
@@ -281,4 +289,15 @@ test('a codes file of another shape, or a status with no words, says the list di
       assert.equal(s.answer().rows.length, 0);
     });
   }
+});
+
+// Only the sentence is live: a screen reader hears "3 hospitals match", and reads the rows, plain content after it, as the
+// reader moves on to them.
+test('the live region holds the sentence alone; the rows are plain content after it', async (t) => {
+  const s = setUp(t);
+  await s.type('example');
+  assert.ok(s.answer().rows.length > 1);
+  assert.equal(s.status.children.length, 0, 'no row inside the live region');
+  assert.equal(typeof s.status.textContent, 'string');
+  assert.equal(s.answer().sentence, FILE.words.count.replace('{n}', count(ROWS.length)));
 });

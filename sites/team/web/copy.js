@@ -265,9 +265,10 @@ export const COPY = {
   clockPrices: { text: "{year}'s regional target prices posted", claim: 'TEAM-53' },
   clockTrack3: { text: 'Track {tc} unless approved for another, limits of {limit} either way', claim: ['TEAM-24', 'TEAM-14'] },
   clockRecon: { text: 'Reconciliation of {year} starts, {months} months after the year', claim: 'TEAM-29' },
-  clockCjrx: { text: 'CJR-X starts nationwide', claim: 'TEAM-12' },
+  // CJR\u2011X: a non-breaking hyphen, so the name never breaks across lines (every TEAM copy says it so).
+  clockCjrx: { text: 'CJR\u2011X starts nationwide', claim: 'TEAM-12' },
   clockEnd: { text: 'The model ends', claim: 'TEAM-20' },
-  clockSource: { text: "{cite}; CMS's TEAM FAQ and CJR-X page; the regional prices' date is CMS's file's.", claim: null },
+  clockSource: { text: "{cite}; CMS's TEAM FAQ and CJR\u2011X page; the regional prices' date is CMS's file's.", claim: null },
   clockColWhen: { text: 'When', claim: null },
   clockColWhat: { text: 'What', claim: null },
 
@@ -304,7 +305,7 @@ export const COPY = {
 
   // After Part 7: CJR-X, and the close (Methods, the as-of line).
   cjrx: {
-    text: "Next, from {date}: CJR-X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows them.",
+    text: "Next, from {date}: CJR\u2011X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows them.",
     claim: ['TEAM-12', 'TEAM-55', 'TEAM-13'],
   },
   methodsLine: { text: 'How this page is built, and every source:', claim: null },
@@ -312,7 +313,7 @@ export const COPY = {
   asofHeading: { text: 'Data as of', claim: null },
   asofList: { text: "CMS's TEAM list", claim: null },
   asofPrices: { text: 'Regional target prices', claim: null },
-  asofCjrx: { text: "CMS's CJR-X list", claim: null },
+  asofCjrx: { text: "CMS's CJR\u2011X list", claim: null },
   asofEpisodes: { text: 'Medicare discharges', claim: null },
   asofEpisodesValue: { text: '{from} and {to}', claim: null },
   asofQuality: { text: 'Quality measures', claim: null },

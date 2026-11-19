@@ -20,6 +20,8 @@ export const COPY = {
     claim: ['TEAM-01', 'TEAM-03', 'TEAM-04'],
   },
   outside: { text: 'Not in an area CMS selected for TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
+  // The same, led by the hospital's kind, for a kind other than acute care (the kind is the hospital list's, not a rule).
+  outsideKind: { text: '{kind}, outside the areas CMS selected for TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
   inAreaKind: {
     text: '{kind}. In a TEAM area, but a hospital of this kind isn\'t paid under the inpatient system TEAM uses, so not in TEAM.',
     claim: ['TEAM-01', 'TEAM-11'],
@@ -31,7 +33,8 @@ export const COPY = {
     claim: ['TEAM-01', 'TEAM-08', 'TEAM-09'],
   },
   areaUnknown: { text: 'Not on CMS\'s list of TEAM participants. We couldn\'t place its county in or out of a TEAM area.', claim: 'TEAM-09' },
-  cjrx: { text: '{reason} In CJR-X from {date}.', claim: ['TEAM-12', 'TEAM-13'] },
+  // CJR\u2011X: a non-breaking hyphen, so the name never breaks across lines (here and in copy.js).
+  cjrx: { text: '{reason} In CJR\u2011X from {date}.', claim: ['TEAM-12', 'TEAM-13'] },
   'kind.unknown': { text: 'A hospital whose kind the hospital list doesn\'t give', claim: null },
   // The box's own words (lookupFile hands them to the browser): each row's tag and its link, and the sentence over the
   // rows, {n} the matches and {shown} the rows listed.
@@ -75,7 +78,9 @@ export function reasonText(code, arg) {
     case 'in27': return yes(fill('in27', { date: dateOf(arg) }));
     case 'ended': return no(fill('ended', { date: dateOf(arg) }));
     case 'maryland': return no(fill('maryland'));
-    case 'outside': return no(fill('outside'));
+    // Outside the areas: an acute care hospital's words say only that; any other kind's lead with the kind (the
+    // master's "unknown" is no kind to name, so it takes the acute words).
+    case 'outside': return no(arg === 'acute' || arg === 'unknown' ? fill('outside') : fill('outsideKind', { kind: kindText(arg) }));
     // The emitter decides which kinds give a reason: in_area_kind for a kind the hospital master marks not paid under the
     // inpatient system, in_area_other for an acute or unknown one that isn't IPPS-paid (closed, converted and the like),
     // whose words say only what the data does: it is not on CMS's list.

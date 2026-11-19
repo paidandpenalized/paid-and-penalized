@@ -9,6 +9,8 @@ import { REPO_ROOT, masterPath, newestYear, pinnedEntry, readJson } from '../../
 import { loadTeam } from '../web/data.js';
 import { lookupAsset } from '../web/lookup.js';
 import { COPY, lookupFile, reasonText } from '../web/lookup-copy.js';
+import { COPY as SITE_COPY } from '../web/copy.js';
+import { COPY as SEARCH } from '../../../hub/search/copy.js';
 import { hospitalPathOf } from '../../../web/site.js';
 import { copyOf } from '../../../web/render/components.js';
 import { CJRX_START, PY2_START } from '../web/constants.js';
@@ -97,7 +99,7 @@ test('reasonText: dates and kinds come from the args', () => {
   assert.equal(reasonText('cjrx', ['unlisted', null]).tag, 'NO');
   const left = reasonText('cjrx', ['ended', '2026-02-15']);
   assert.equal(left.tag, 'NO');
-  assert.match(left.text, /^Left TEAM\..*Feb 15, 2026.* In CJR-X from Jan 1, 2028\.$/);
+  assert.match(left.text, /^Left TEAM\..*Feb 15, 2026.* In CJR\u2011X from Jan 1, 2028\.$/);
   assert.equal(CJRX_START, '2028-01-01');
   assert.equal(PY2_START, '2027-01-01');
 });
@@ -182,4 +184,32 @@ test('lookupFile: the codes, each status\'s words once, the hub folder and the b
   assert.match(file.words.count, /\{n\}/);
   assert.match(file.words.countMore, /\{n\}.*\{shown\}/);
   assert.ok(!/"name"/.test(JSON.stringify(file)), 'a name in the file');
+});
+
+// Outside the selected areas: an acute care hospital's reason names no kind (TEAM covers that kind; its area is the
+// reason), and neither does one of unknown kind; every other kind the file sends there leads with the family's word for
+// it, the same words the search shows.
+test('outside: a kind other than acute leads with its kind; acute and unknown keep the area sentence', () => {
+  const plain = reasonText('outside', 'acute').text;
+  assert.equal(plain, copyOf(COPY).fill('outside'));
+  assert.equal(reasonText('outside', 'unknown').text, plain);
+  const kinds = new Set(asset.rows.map(([, code, arg]) => inner([code, arg])).filter(([why]) => why === 'outside').map(([, kind]) => kind));
+  assert.ok(kinds.size > 3, `${kinds.size} kinds outside the areas`);
+  for (const kind of kinds) {
+    const r = reasonText('outside', kind);
+    assert.equal(r.tag, 'NO', kind);
+    if (kind === 'acute' || kind === 'unknown') continue;
+    assert.ok(r.text.startsWith(`${SEARCH['hospitalKind.' + kind]}, outside the areas CMS selected for TEAM, so not in TEAM.`), kind);
+  }
+  assert.ok(reasonText('outside', 'critical_access').text.startsWith('Critical access hospital, '));
+  assert.deepEqual(COPY.outsideKind.claim, COPY.outside.claim, 'the same claims as the area sentence');
+  assert.throws(() => reasonText('outside', 'no-such-kind'), RangeError);
+});
+
+// "CJR-X" never breaks at its hyphen: every TEAM copy says it with a non-breaking one (U+2011).
+test('every TEAM copy says CJR\u2011X with a non-breaking hyphen', () => {
+  const all = Object.entries({ ...SITE_COPY, ...COPY });
+  assert.ok(all.some(([, { text }]) => text.includes('CJR\u2011X')));
+  for (const [key, { text }] of all) assert.doesNotMatch(text, /CJR-X/, `${key}: an ASCII hyphen in CJR-X`);
+  assert.match(reasonText('cjrx', ['outside', 'acute']).text, /In CJR\u2011X from /);
 });

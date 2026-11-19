@@ -124,12 +124,13 @@ ${fields.map((f, i) => formField({ no: i + 1, label: f.label, value: f.value, no
 // The lookup box: its heading, which labels the box; the mount client/lookup.js runs (it removes the no-JS sentence and
 // shows the box, hidden until then), naming the two files it fetches on the box's first focus (searchUrl, the family
 // search's names and places; lookupUrl, the lookup's codes and words) and the words for a failed load (the family
-// search's); the polite region the answers go in; and the list's date.
+// search's); the answer (its sentence the one polite live region, the rows' list plain content after it); and the
+// list's date.
 const lookupBox = (team, { searchUrl, lookupUrl }) => html`<section class="tm-look" aria-labelledby="look-h">
 <h2 class="tm-look__h" id="look-h"><label for="look">${t('lookupHeading')}</label></h2>
 <search class="tm-look__mount" data-team-lookup data-src="${searchUrl}" data-codes="${lookupUrl}" data-failed="${SEARCH.searchFailed}"><p class="tm-look__nojs">${t('lookupNoScript')}</p>
 <input class="tm-look__in" id="look" type="search" placeholder="${t('lookupPlaceholder')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" hidden>
-<div class="tm-look__out" aria-live="polite"></div></search>
+<div class="tm-look__out"><p class="tm-look__count" aria-live="polite"></p><ul class="tm-look__list"></ul></div></search>
 <p class="tm-look__note">${fill('lookupNote', { date: shortIsoDate(team.meta.listAsOf) })}</p>
 </section>`;
 

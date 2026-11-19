@@ -20,7 +20,7 @@ import { COPY as LOOKUP, lookupFile } from '../web/lookup-copy.js';
 import { COPY as SEARCH } from '../../../hub/search/copy.js';
 import { escapeHtml } from '../../../web/render/html.js';
 import { loadAtlas, loadMaster, loadSources, loadTeam } from '../web/data.js';
-import { TEAM, generateTeam } from '../web/generate.js';
+import { TEAM, generateTeam, lookupMissing } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
 import { programPage } from '../web/pages/program.js';
 import { methodsPage } from '../web/pages/methods.js';
@@ -56,7 +56,9 @@ test('the site is registered unreleased: a live program, noindex and out of the 
     assert.equal(SITE.sites.team.path, PROGRAM_PATH);
     assert.equal(programById('team').stage, 'live');
     const ctx = createContext({ outDir: dir, env: 'production', assets });
-    const result = generateTeam(ctx, { team, master, atlas, log: () => {} });
+    const lines = [];
+    const result = generateTeam(ctx, { team, master, atlas, search: searchOf(lookupFile(team).rows), log: (l) => lines.push(l) });
+    assert.ok(lines.some((l) => /every one of [\d,]+ hospitals the lookup places can be found/.test(l)), 'the coverage line');
     assert.equal(ctx.pages, 2);
     assert.deepEqual([...ctx.indexable], [], 'nothing in the sitemap');
     for (const path of [PROGRAM_PATH, METHODS_PATH]) {
@@ -114,6 +116,26 @@ test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
   assert.match(part('who'), /<a class="tm-go" href="#calc">/);
 });
 
+// A family search file holding these CCNs (the coverage check reads only the CCNs and names).
+const searchOf = (rows) => ({ cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: rows.map(([ccn]) => [ccn, 'Example Hospital', null, 'AL', 'acute']), states: {} });
+
+// The coverage check: every CCN the lookup's codes place is in the family search's file (only those can be listed), or
+// the build stops, saying how many are missing, never which.
+test('the build stops when a hospital the lookup places is missing from the family search', async () => {
+  const { rows } = lookupFile(team);
+  assert.deepEqual(lookupMissing(rows, searchOf(rows)), []);
+  const short = searchOf(rows.slice(2));
+  assert.equal(lookupMissing(rows, short).length, 2);
+  await withTemp('pp-team-', async (dir) => {
+    const ctx = createContext({ outDir: dir, env: 'production', assets });
+    assert.throws(() => generateTeam(ctx, { team, master, atlas, search: short, log: () => {} }), (e) => e instanceof RangeError && /^TEAM lookup: 2 hospitals/.test(e.message) && !rows.slice(0, 2).some(([ccn]) => e.message.includes(ccn)));
+  });
+  // A row without a name can't be found by one.
+  const nameless = searchOf(rows);
+  nameless.rows[0][1] = '';
+  assert.equal(lookupMissing(rows, nameless).length, 1);
+});
+
 // Part 1's lookup box (client/lookup.js runs it): its heading is the visible label of its box; the box, hidden until the
 // script shows it, and the polite region the answers go in; the two files the script fetches on the box's first focus
 // (the family search's and the lookup's codes), named, never loaded by the page; the no-JS sentence; the list's date.
@@ -128,7 +150,9 @@ test('Part 1\'s lookup box: a labeled search box, both files named for the scrip
   const input = /<input [^>]*>/.exec(box)[0];
   for (const attr of ['id="look"', 'type="search"', 'autocomplete="off"', 'spellcheck="false"', ' hidden']) assert.ok(input.includes(attr), attr);
   assert.ok(input.includes(`placeholder="${COPY.lookupPlaceholder.text}"`));
-  assert.match(box, /<div class="tm-look__out" aria-live="polite"><\/div>/);
+  // Only the sentence over the rows is live; the rows' list is plain content after it.
+  assert.match(box, /<div class="tm-look__out"><p class="tm-look__count" aria-live="polite"><\/p><ul class="tm-look__list"><\/ul><\/div>/);
+  assert.equal(box.match(/aria-live/g).length, 1);
   assert.ok(box.includes(`<p class="tm-look__nojs">${COPY.lookupNoScript.text}</p>`));
   assert.doesNotMatch(program, /<link[^>]*(team-lookup|hub-search)/, 'neither file is preloaded');
 });

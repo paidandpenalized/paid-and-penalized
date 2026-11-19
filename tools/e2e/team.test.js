@@ -151,15 +151,17 @@ describe('TEAM Part 4 without JavaScript', () => {
 
 // Part 1's lookup (sites/team/web/program/who.js, client/lookup.js): the page fetches no data file until the reader
 // focuses the box, then exactly the box's two (the family search's and the lookup's codes); a query lists at most SHOWN
-// hospitals under a sentence; from the keyboard alone a "yes" opens the calculator (?h= and #calc in the address,
+// hospitals under a sentence, which alone is the live region; from the keyboard alone a "yes" opens the calculator (?h= and #calc in the address,
 // team:pick heard, the calculator's heading focused) and Escape clears the box; axe finds nothing on the page with an
 // answer showing; the page never scrolls sideways. A hospital in TEAM is picked from the codes file by its status, and its
 // CCN is typed, never printed.
 const dataFiles = (page) => page.evaluate(() => performance.getEntriesByType('resource').map((e) => new URL(e.name).pathname).filter((p) => p.endsWith('.json')));
 const answer = (page) => page.evaluate(() => {
   const out = document.querySelector('.tm-look__out');
-  return { sentence: out.querySelector('.tm-look__count')?.textContent ?? null, rows: out.querySelectorAll('li').length, text: out.textContent };
+  return { sentence: out.querySelector('.tm-look__count').textContent, rows: out.querySelectorAll('li').length, text: out.textContent };
 });
+// The live regions in the lookup, each by what it holds: only the sentence, never the rows.
+const liveRegions = (page) => page.evaluate(() => [...document.querySelectorAll('.tm-look [aria-live]')].map((el) => ({ live: el.getAttribute('aria-live'), rows: el.querySelectorAll('li').length, isCount: el.matches('.tm-look__count') })));
 
 for (const width of [1280, 390]) {
   describe(`TEAM Part 1's lookup at ${width} px`, { concurrency: CONCURRENCY }, () => {
@@ -181,12 +183,13 @@ for (const width of [1280, 390]) {
         const many = await eventually(async () => { const a = await answer(page); return a.rows ? a : null; }, 'rows listed');
         assert.equal(many.rows, SHOWN, `at most ${SHOWN} rows`);
         assert.match(many.sentence, /hospitals match/);
+        assert.deepEqual(await liveRegions(page), [{ live: 'polite', rows: 0, isCount: true }], 'the sentence alone is live');
         await assertNoSideways(page, 'the lookup with rows listed');
         await audit(page, `${PROGRAM_PATH} with the lookup's rows listed`);
 
         await page.keyboard.press('Escape');
         assert.equal(await box.inputValue(), '');
-        assert.deepEqual(await answer(page), { sentence: null, rows: 0, text: '' }, 'Escape clears the answer');
+        assert.deepEqual(await answer(page), { sentence: '', rows: 0, text: '' }, 'Escape clears the answer');
 
         // A hospital in TEAM, by its status in the codes file; its CCN typed, then the keyboard to its link.
         const ccn = await page.evaluate(async (url) => (await (await fetch(url)).json()).rows.find((r) => r[1] === 'in')[0], codes);
