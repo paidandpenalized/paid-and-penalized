@@ -21,9 +21,8 @@
 // view (web/team/opening.js openingOf: the opening state, the engine's input, bandOf at the state's band and reconcile's
 // limits). The Track 2 note is the calculator's own sentence (web/team/copy.js flagsNote). The hub imports no site's code.
 import { PY2_START, TRACKS } from '../../engine/js/team/params.js';
-import { imageOf } from '../../web/charts/figure.js';
+import { drawn, imagePair } from '../../web/charts/figure.js';
 import { limitRuler } from '../../web/charts/limitRuler.js';
-import { WIDTH } from '../../web/charts/svg.js';
 import { fillCopy, stamp } from '../../web/render/components.js';
 import { count, isoMonth, money, pct, shortIsoDate } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
@@ -36,9 +35,6 @@ import { COPY } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
 const signed = (x) => money(x, { sign: true });
-// The ruler beside the words from 560px (a figure's wide variant, charts-map.css .chart[data-fit]); the kit's phone width
-// under it.
-const WIDE = 560;
 
 // The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it and
 // the year its episodes come from. team: loadHub().team.
@@ -49,8 +45,9 @@ export function teamScenario(p, team) {
 // Track 2's number, as the calculator's note names it (the tracks' second).
 const TRACK2 = Object.keys(TRACKS)[1];
 
-// The range on its track's limits, drawn twice (a phone's and a wide one; aria-hidden: the words around it give every
-// number), each with its own hatch.
+// The range on its track's limits, drawn twice as a figure's two variants are (figure.js drawn: the kit's phone width, and
+// the wide one shown from 560px, charts-map.css .chart[data-fit]; aria-hidden: the words around it give every number),
+// each with its own hatch.
 function ruler({ band, r, track, width }) {
   const n = String(track);
   const bandText = `±${pct(width, 0)}`;
@@ -62,8 +59,8 @@ function ruler({ band, r, track, width }) {
     tip: (lo, hi) => fill('tmTip', { lo: signed(lo), hi: signed(hi), band: bandText }),
     wallTip: (side, v) => fill(side === 'gain' ? 'tmWallGain' : 'tmWallLoss', { n, amount: signed(v) }),
   };
-  const draw = (fit, w) => imageOf(limitRuler({ id: `hh-tm-${fit}`, low: band.low, high: band.high, limits: r.limits, words, width: w }), null, fit);
-  return html`<div class="hh__tmr">${draw('narrow', WIDTH)}${draw('wide', WIDE)}</div>`;
+  const pair = drawn((w) => limitRuler({ id: `hh-tm-${w}`, low: band.low, high: band.high, limits: r.limits, words, width: w }));
+  return html`<div class="hh__tmr">${imagePair(pair, null)}</div>`;
 }
 
 const calcLink = (ccn) => html`<a class="hh__deep" href="${SITE.sites.team.path}?h=${ccn}#calc">${fill('tmLink')}${arrow}</a>`;
