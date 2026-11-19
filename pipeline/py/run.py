@@ -4,7 +4,7 @@ Isolated mode (-I) keeps the working directory and user site-packages off sys.pa
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
 the dollar estimates, the HCRIS layer, then the Medicaid scenarios), `backtest` (prints the dollar estimates' back-test
 against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`,
-`extract-hai <zip or csv> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
+`derive-team <raw directory>` (the TEAM source pins; see pp_pipeline/team/derive.py), `extract-hai <zip or csv> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
 pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid work-requirement scenarios; see
 pp_pipeline/emit_medicaid.py), `medicaid conformance` (the JS port's cases; see pp_pipeline/medicaid/conformance.py),
 `hcris <command> ...` (the HCRIS layer: pin, emit, downloads, puf-check, puf-sample, archive-plan; see
@@ -71,6 +71,9 @@ def main(argv):
     if command == "refresh" and len(args) in (1, 2) and args[1:] in ([], ["--pr"]):
         from pp_pipeline import refresh
         return refresh.main(args[0], pr=len(args) == 2)
+    if command == "derive-team" and len(args) == 1:
+        from pp_pipeline.team import derive
+        return derive.main(args[0])
     if command == "extract-hai" and len(args) == 2:
         from pp_pipeline import hai_extract
         return hai_extract.main(args[0], args[1])

@@ -1,0 +1,161 @@
+"""The TEAM source pins: each derived CSV matches the counts and spot values the manifest recorded when it was derived,
+and the derivation functions behave on small synthetic inputs (no hospital names; the raw files are never in git).
+
+To check the price pin against the raw workbook too, set PP_TEAM_PRICES_XLSX to the workbook's path."""
+import csv
+import io
+import os
+import unittest
+from collections import Counter
+from pathlib import Path
+
+from pp_engine import xlsx
+from pp_engine.tests.test_xlsx import make_xlsx
+from pp_pipeline.files import manifest_entry, read_pinned_bytes
+from pp_pipeline.refresh_sources import MAX_PIN
+from pp_pipeline.team import derive
+
+TEAM_IDS = ("team-participants", "team-prices", "cjrx-participants", "team-mup-dy2023", "team-mup-dy2024", "team-quality")
+
+
+def pin_rows(pin_id):
+    return list(csv.DictReader(io.StringIO(read_pinned_bytes(pin_id).decode("utf-8"))))
+
+
+class PinRecords(unittest.TestCase):
+    def test_each_pin_records_its_source_and_stays_under_the_size_limit(self):
+        for pin_id in TEAM_IDS:
+            with self.subTest(pin_id):
+                entry = manifest_entry(pin_id)
+                self.assertTrue(entry["path"].startswith("team-py2/"))
+                self.assertLess(entry["bytes"], MAX_PIN)
+                src = entry["derivedFrom"]
+                for key in ("file", "bytes", "sha256", "downloadUrl", "lastModified"):
+                    self.assertIn(key, src)
+                self.assertEqual(entry["derivedBy"], "pipeline/py/pp_pipeline/team/derive.py")
+                self.assertTrue(src["downloadUrl"].startswith("https://"))
+                self.assertNotIn("archive", src)  # no archive copy is claimed
+
+    def test_the_lists_record_their_as_of_dates_and_quality_its_release(self):
+        for pin_id in ("team-participants", "cjrx-participants"):
+            self.assertRegex(manifest_entry(pin_id)["asOf"], r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+        self.assertRegex(manifest_entry("team-prices")["asOf"], r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+        self.assertRegex(manifest_entry("team-quality")["pdcReleased"], r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
+
+
+class ParticipantsPin(unittest.TestCase):
+    def test_participants_pin(self):
+        counts = manifest_entry("team-participants")["counts"]
+        rows = pin_rows("team-participants")
+        self.assertEqual(list(rows[0]), list(derive.PARTICIPANT_COLUMNS))
+        self.assertEqual(len(rows), counts["rows"])
+        self.assertEqual(len({r["ccn"] for r in rows}), len(rows))
+        by_kind = Counter(r["participation"] for r in rows)
+        self.assertEqual(dict(by_kind), counts["byParticipation"])
+        self.assertEqual(dict(Counter(r["start"] for r in rows)), counts["byStart"])
+        self.assertEqual(sum(counts["byStart"].values()), len(rows))
+        self.assertTrue(all(len(r["ccn"]) == 6 for r in rows))
+
+
+class PricesPin(unittest.TestCase):
+    def test_prices_pin(self):
+        entry = manifest_entry("team-prices")
+        spot = entry["spotCheck"]
+        rows = [r for r in pin_rows("team-prices")
+                if (r["category"], r["drg"], r["division"]) == (spot["category"], spot["drg"], spot["division"])]
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["price"], spot["price"])
+        self.assertEqual(len(pin_rows("team-prices")), entry["counts"]["rows"])
+
+    @unittest.skipUnless(os.environ.get("PP_TEAM_PRICES_XLSX"),
+                         "set PP_TEAM_PRICES_XLSX to the raw price workbook to compare a cell")
+    def test_the_spot_price_equals_the_workbooks_cell(self):
+        spot = manifest_entry("team-prices")["spotCheck"]
+        table = xlsx.sheet_rows(Path(os.environ["PP_TEAM_PRICES_XLSX"]).read_bytes(), derive.PRICE_SHEET, "prices")
+        cell = [float(r[8]) for r in table
+                if len(r) > 8 and r[0].isdigit() and derive.CATEGORY_CODES.get(r[1]) == spot["category"]
+                and r[2] == spot["drg"] and r[3] == f"CENS_DIV_{spot['division']}"]
+        self.assertEqual(cell, [float(spot["price"])])
+
+
+class OtherPins(unittest.TestCase):
+    def test_cjrx_pin_counts(self):
+        entry = manifest_entry("cjrx-participants")
+        rows = pin_rows("cjrx-participants")
+        self.assertEqual(list(rows[0]), list(derive.CJRX_COLUMNS))
+        self.assertEqual(len(rows), entry["counts"]["rows"])
+        self.assertEqual(len({r["ccn"] for r in rows}), len(rows))
+
+    def test_mup_pins_hold_only_the_episode_and_predecessor_drgs(self):
+        team = {r["drg"] for r in pin_rows("team-prices") if r["drg"] != derive.ALL_ROWS}
+        allowed = team | set(derive.PREDECESSOR_DRGS)
+        for pin_id in ("team-mup-dy2023", "team-mup-dy2024"):
+            with self.subTest(pin_id):
+                rows = pin_rows(pin_id)
+                self.assertEqual(list(rows[0]), list(derive.MUP_COLUMNS))
+                self.assertEqual(len(rows), manifest_entry(pin_id)["counts"]["rows"])
+                self.assertLessEqual({r["drg"] for r in rows}, allowed)
+                self.assertTrue(all(int(r["discharges"]) >= 11 for r in rows))  # CMS omits smaller cells
+                self.assertEqual(len({(r["ccn"], r["drg"]) for r in rows}), len(rows))
+
+    def test_quality_pin_counts(self):
+        entry = manifest_entry("team-quality")
+        rows = pin_rows("team-quality")
+        self.assertEqual(list(rows[0]), list(derive.QUALITY_COLUMNS))
+        self.assertEqual(dict(Counter(r["measure"] for r in rows)), entry["counts"]["byMeasure"])
+        self.assertEqual(set(entry["counts"]["byMeasure"]), {"hybrid_hwr", "iscmr"})
+        for r in rows:
+            float(r["value"])
+
+
+class Derivations(unittest.TestCase):
+    def test_participants_from_a_workbook(self):
+        wb = make_xlsx({"List": [
+            ["A note as of August 18, 2026"],
+            ["Mandatory or Voluntary Participant", "Hospital CCN", "Hospital Name", "CBSA", "CBSA Name", "CBSA State",
+             "Participation Start Date", "Participation End Date", "Newly Identified TEAM Participant Relative to Previous List"],
+            ["Voluntary", "990002", "Test Two", "11111", "Town, ZZ", "ZZ", "01/01/2027", "12/31/2030", "Y"],
+            ["Mandatory", "990001", "Test One", "11111", "Town, ZZ", "ZZ", "01/01/2026", "12/31/2030", "N"],
+            ["End of Worksheet"]]})
+        text, counts, as_of = derive.participants(wb)
+        rows = list(csv.DictReader(io.StringIO(text)))
+        self.assertEqual([r["ccn"] for r in rows], ["990001", "990002"])  # sorted
+        self.assertEqual((rows[1]["start"], rows[1]["end"], rows[1]["newly_identified"]), ("2027-01-01", "2030-12-31", "Y"))
+        self.assertEqual(counts["byParticipation"], {"mandatory": 1, "voluntary": 1})
+        self.assertEqual(as_of, "2026-08-18")
+
+    def test_prices_keep_category_average_rows_flagged(self):
+        hdr = ["Initial Sort Order", "Episode Category", "MS-DRG", "Region", "Desc", "Benchmark", "Trend", "Discount", "Price"]
+        wb = make_xlsx({"Overview": [["x"]], derive.PRICE_SHEET: [
+            ["Title"], hdr,
+            ["1", "IP-Coronary artery bypass graft", "231", "CENS_DIV_1", "d", "100.5", "1.05", "0.015", "103.9"],
+            ["2", "IP-Coronary artery bypass graft", "All", "CENS_DIV_1", "d", "50.25", "1.03", "0.015", "51"]]})
+        rows = list(csv.DictReader(io.StringIO(derive.prices(wb)[0])))
+        self.assertEqual([(r["category"], r["drg"], r["division"], r["average_row"]) for r in rows],
+                         [("CABG", "231", "1", "0"), ("CABG", "All", "1", "1")])
+        self.assertEqual(rows[0]["discount"], "0.015")
+
+    def test_mup_keeps_only_the_wanted_drgs(self):
+        raw = ("Rndrng_Prvdr_CCN,Rndrng_Prvdr_Org_Name,DRG_Cd,Tot_Dschrgs\n"
+               "990001,x,231,12\n990001,x,003,40\n990002,x,456,11.0\n")
+        text, counts = derive.mup(raw.encode("utf-8"), {"231", "456"})
+        self.assertEqual(text.splitlines(), ["ccn,drg,discharges", "990001,231,12", "990002,456,11"])
+        self.assertEqual(counts["rows"], 2)
+
+    def test_quality_keeps_numeric_scores_for_the_two_measures(self):
+        hdr = '"Facility ID","Measure ID","Score","Start Date","End Date"\n'
+        raw = (hdr + '990002,Hybrid_HWR,15.5,07/01/2024,06/30/2025\n990001,Hybrid_HWR,Not Available,07/01/2024,06/30/2025\n'
+               '990001,Other,3,07/01/2024,06/30/2025\n')
+        iscmr = hdr + '990001,ISCMR,50.1,07/01/2023,06/30/2025\n'
+        text, counts = derive.quality(raw.encode("utf-8"), iscmr.encode("utf-8"))
+        self.assertEqual(text.splitlines()[1:], ["990002,hybrid_hwr,15.5,2024-07-01,2025-06-30",  # by measure, then CCN
+                                                 "990001,iscmr,50.1,2023-07-01,2025-06-30"])
+        self.assertEqual(counts["byMeasure"], {"iscmr": 1, "hybrid_hwr": 1})
+
+    def test_a_missing_column_is_refused(self):
+        with self.assertRaises(ValueError):
+            derive.mup(b"a,b\n1,2\n", {"231"})
+
+
+if __name__ == "__main__":
+    unittest.main()
