@@ -1,5 +1,5 @@
 // TEAM's reconciliation for one hospital's performance year (42 CFR 512.550), plus the scenario band, the "What would it
-// take?" solver and the marginal figures the calculator and the hub band show. Pure: imports only params.js; no DOM,
+// take?" solver and the marginal figures the calculator and the hub band show. Pure: imports only params.js and stats.js; no DOM,
 // fs or clock. Cheap enough to run on every slider input.
 //
 // A category (`Cat`) is {key, target, spend, lowVolume}:
@@ -12,6 +12,7 @@
 // adjustment on that sum (§ 512.550(d)); then the stop-gain and stop-loss limits as shares of the summed target of
 // every category, low-volume ones included (§ 512.550(e), and § 512.505's aggregated target price). The adjustment
 // for high post-episode spending (§ 512.550(f)) needs CMS's own data, so it is not modelled: `postEpisode` is always 0.
+import { clamp } from '../stats.js';
 import { BAND_DEFAULT, SOLVE_SPAN, TRACKS } from './params.js';
 
 // Sums of products leave residue such as -1.35e-11 at a true break-even, which a formatter shows as "-$0". Any amount
@@ -61,7 +62,7 @@ export function reconcile(input) {
   const qadj = -p * raw;
   const quality = raw + qadj;
   const limits = { gain: t.gain * target, loss: t.loss * target };
-  const result = Math.min(Math.max(quality, -limits.loss), limits.gain);
+  const result = clamp(quality, -limits.loss, limits.gain);
   const capped = quality > limits.gain ? 'gain' : quality < -limits.loss ? 'loss' : null;
   return {
     target, raw: snap(raw), qadj: snap(qadj), quality: snap(quality), result: snap(result), capped, limits, postEpisode: 0,
@@ -69,17 +70,18 @@ export function reconcile(input) {
 }
 
 const atSpend = (cats, s) => cats.map((c) => ({ ...c, spend: s }));
-const resultAt = ({ cats, cqs, track }, s) => reconcile({ cats: atSpend(cats, s), cqs, track }).result;
+/** The result with every category's spend set to `s` (a share of target: +0.05 is 5% over). */
+export const resultAt = ({ cats, cqs, track }, s) => reconcile({ cats: atSpend(cats, s), cqs, track }).result;
 
 /**
  * The scenario band: the result with every category `width` over target (low) and `width` under (high), around
  * break-even. The categories' own spends are ignored; their low-volume flags still apply.
  * @returns {{low: number, high: number}} dollars
  */
-export function bandOf({ cats, cqs, track, width }) {
-  checked({ cats, cqs, track });
+export function bandOf(input) {
+  checked(input);
+  const { width } = input;
   if (!Number.isFinite(width) || width < 0) fail('width must be a finite number >= 0');
-  const input = { cats, cqs, track };
   return { low: resultAt(input, width), high: resultAt(input, -width) };
 }
 
@@ -95,11 +97,11 @@ export function bandOf({ cats, cqs, track, width }) {
  * @returns {number|null} the spend (+0.05 is 5% over), 0 for a result of 0, or null when no s in ±SOLVE_SPAN reaches
  *   `result`: past a limit, any loss on Track 1, or a loss larger than the non-low-volume categories can make.
  */
-export function solveSpend({ cats, cqs, track, result }) {
-  checked({ cats, cqs, track });
+export function solveSpend(input) {
+  checked(input);
+  const { result } = input;
   if (!Number.isFinite(result)) fail('result must be a finite number');
   if (result === 0) return 0;
-  const input = { cats, cqs, track };
   // Keep `near` (between 0 and the answer) short of result and `far` at or past it; the boundary is the answer.
   const sign = result > 0 ? -1 : 1;
   const reaches = (s) => (sign < 0 ? resultAt(input, s) >= result : resultAt(input, s) <= result);
@@ -124,9 +126,9 @@ export function solveSpend({ cats, cqs, track, result }) {
  *                that can't lose ends at $0 whenever it is over target, where quality moves nothing, so it is read
  *                BAND_DEFAULT under target instead, where quality decides how much of the gain it keeps.
  */
-export function marginal({ cats, cqs, track }) {
-  checked({ cats, cqs, track });
-  const input = { cats, cqs, track };
+export function marginal(input) {
+  checked(input);
+  const { cats, cqs, track } = input;
   const even = resultAt(input, 0);
   const canLose = TRACKS[track].loss > 0;
   const scenario = cats.some((c) => c.spend !== 0) ? cats : atSpend(cats, canLose ? BAND_DEFAULT : -BAND_DEFAULT);

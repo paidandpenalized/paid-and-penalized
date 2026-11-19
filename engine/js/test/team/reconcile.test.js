@@ -5,8 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { reconcile, bandOf, solveSpend, marginal } from '../../team/reconcile.js';
 import { BAND_DEFAULT, SOLVE_SPAN } from '../../team/params.js';
+import { makeNear } from './helpers.js';
 
-const near = (a, b, tol = 1e-6) => assert.ok(Math.abs(a - b) <= tol, `${a} is not within ${tol} of ${b}`);
+const near = makeNear(1e-6);
 const one = (spend, extra = {}) => [{ key: 'x', target: 1_000_000, spend, lowVolume: false, ...extra }];
 
 // CMS's fact-sheet examples: a reconciliation amount of plus or minus ten thousand dollars at a CQS of 100, 50 and 0.

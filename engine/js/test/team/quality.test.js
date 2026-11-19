@@ -2,11 +2,11 @@
 // volume, plus the method constants in params.js. No hospital appears; every input is a made-up number.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { near } from './helpers.js';
 import { compositeQuality } from '../../team/quality.js';
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, TRACKS } from '../../team/params.js';
 
 const KEYS = ['hybrid_hwr', 'iscmr', 'falls', 'prf', 'thatka_prom'];
-const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol, `${a} is not within ${tol} of ${b}`);
 
 test('params: the five PY2 measures, which episodes each applies to, and which are public', () => {
   assert.deepEqual(Object.keys(MEASURES).sort(), [...KEYS].sort());

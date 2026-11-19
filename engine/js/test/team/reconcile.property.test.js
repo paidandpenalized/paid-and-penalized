@@ -2,7 +2,7 @@
 // Seeded, so failures reproduce; messages print the trial number only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcile, bandOf, solveSpend } from '../../team/reconcile.js';
+import { reconcile, bandOf, solveSpend, resultAt } from '../../team/reconcile.js';
 import { BAND_MAX, BAND_MIN, SOLVE_SPAN, TRACKS } from '../../team/params.js';
 import { mulberry32 } from '../prng.js';
 
@@ -21,8 +21,6 @@ function randomCase(rand) {
   const cqs = rand() < 0.1 ? Math.round(rand()) * 100 : rand() * 100;
   return { cats, cqs, track: 1 + Math.floor(rand() * 3) };
 }
-
-const at = (input, s) => reconcile({ ...input, cats: input.cats.map((c) => ({ ...c, spend: s })) }).result;
 
 test(`monotone: raising one category's spend never raises the result (${TRIALS} trials)`, () => {
   const rand = mulberry32(20261119);
@@ -95,10 +93,10 @@ test(`solveSpend round-trips within $1, and null only when the result is out of 
     }
     solved++;
     assert.ok(s >= -SOLVE_SPAN && s <= SOLVE_SPAN, msg);
-    assert.ok(Math.abs(at(input, s) - result) <= 1, msg);
+    assert.ok(Math.abs(resultAt(input, s) - result) <= 1, msg);
     // At a limit the answer is the spend closest to zero that reaches it: one step toward zero falls short.
-    if (result !== 0 && result === r0.limits.gain) assert.ok(at(input, s * (1 - 1e-6)) < result, msg);
-    if (result !== 0 && result === -r0.limits.loss) assert.ok(at(input, s * (1 - 1e-6)) > result, msg);
+    if (result !== 0 && result === r0.limits.gain) assert.ok(resultAt(input, s * (1 - 1e-6)) < result, msg);
+    if (result !== 0 && result === -r0.limits.loss) assert.ok(resultAt(input, s * (1 - 1e-6)) > result, msg);
     if (result === 0) assert.equal(s, 0, msg);
     if (input.track === 1) assert.ok(result >= 0, msg);
   }
@@ -111,7 +109,7 @@ test(`the band brackets break-even, and a $0 target gives all zeros (${TRIALS} t
     const input = randomCase(rand);
     const width = BAND_MIN + rand() * (BAND_MAX - BAND_MIN);
     const { low, high } = bandOf({ ...input, width });
-    const mid = at(input, 0);
+    const mid = resultAt(input, 0);
     const msg = `trial ${t}`;
     assert.ok(low <= mid && mid <= high, msg);
     const zero = { ...input, cats: input.cats.map((c) => ({ ...c, target: 0 })) };
