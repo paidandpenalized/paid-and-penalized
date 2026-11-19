@@ -202,7 +202,8 @@ for (const width of [1280, 390]) {
         const after = await page.evaluate(() => ({ search: location.search, hash: location.hash, focused: document.activeElement.id, picks: window.picks }));
         // Compared in place, so a failure prints no CCN.
         assert.ok(after.search === `?h=${ccn}`, 'the address carries ?h= with the hospital');
-        assert.equal(after.hash, '#calc');
+        // The calculator takes the hospital, then writes its own state over the bare #calc (client/calc.js).
+        await eventually(async () => page.evaluate((c) => location.hash === `#team&h=${c}`, ccn), 'the calculator writes #team&h= for the hospital');
         assert.ok(after.picks.length === 1 && after.picks[0].ccn === ccn, `team:pick heard once with the CCN (${after.picks.length} heard)`);
         assert.equal(after.focused, 'yours-h', 'the calculator\'s heading takes the focus');
         await assertQuiet(seen, 'TEAM Part 1\'s lookup');
@@ -216,5 +217,149 @@ describe('TEAM Part 1\'s lookup without JavaScript', () => {
   it('the box stays hidden and says the search needs JavaScript', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
     assert.equal(await page.locator('#look').isVisible(), false);
     assert.ok(await page.locator('.tm-look__nojs').isVisible());
+  }));
+});
+
+// Part 5, the calculator (sites/team/web/program/calc.js, calc-view.js, client/calc.js): no data file before the reader
+// moves toward another hospital, then exactly the calculator's two (its participants and the family search's names); its
+// height at 1280 within a tenth of the approved mockup's (about 860 px) and no clipped table column; the result box first
+// on a phone and nothing sticky there; a typed number becomes "your number" and the tag says so; a box that can't take
+// what was typed goes back and says so; the address carries public inputs only; axe finds nothing; the page never
+// scrolls sideways. Hospitals are picked from the calculator's file by property; no CCN is printed.
+const MOCKUP_HEIGHT = 860;
+const calcFiles = (page) => page.evaluate(() => [document.getElementById('calc').dataset.src, document.getElementById('calc').dataset.search]);
+const calcSays = (page) => page.evaluate(() => {
+  const calc = document.getElementById('calc');
+  const text = (sel) => calc.querySelector(sel)?.textContent.trim() ?? null;
+  const out = calc.querySelector('.tc-out').getBoundingClientRect();
+  const track = calc.querySelector('.tc-track').getBoundingClientRect();
+  const scroll = calc.querySelector('.tc-scroll');
+  return {
+    height: calc.getBoundingClientRect().height, tag: text('[data-v="tag"]'), srcN: text('[data-v="src.n.LEJR"]'), track: calc.querySelector('input[name="tc-track"]:checked')?.value,
+    l6: text('[data-v="l.limitsLabel"]'), where: text('[data-v="where"]'), outFirst: out.top < track.top, sticky: getComputedStyle(calc.querySelector('.tc-right')).position,
+    clipped: scroll.scrollWidth > scroll.clientWidth + 1, banner: !calc.querySelector('[data-calc-banner]').hidden, msg: text('.tc-msg'),
+  };
+});
+
+for (const width of [1280, 390]) {
+  describe(`TEAM Part 5's calculator at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width, height: width < 600 ? 844 : 900 });
+    for (const scheme of SCHEMES) {
+      it(`${scheme}: no fetch until the picker, then its two files; the layout; typed numbers; the address; axe clean; no sideways scroll`, () => withPage(tabs, { path: PROGRAM_PATH, scheme, watched: true }, async (page, { seen }) => {
+        const first = await calcSays(page);
+        if (width === 1280) {
+          assert.ok(Math.abs(first.height - MOCKUP_HEIGHT) <= MOCKUP_HEIGHT / 10, `the calculator is ${Math.round(first.height)} px tall, within a tenth of ${MOCKUP_HEIGHT}`);
+          assert.equal(first.sticky, 'sticky', 'the result column stays in view');
+          assert.ok(!first.clipped, 'every table column fits');
+        } else {
+          assert.ok(first.outFirst, 'the result box comes first on a phone');
+          assert.equal(first.sticky, 'static', 'nothing sticky on a phone');
+        }
+        assert.equal(first.tag, 'Scenario · public data');
+        assert.ok(!first.banner, 'no banner without a link');
+        assert.deepEqual(await dataFiles(page), [], 'no data file before the reader moves');
+
+        // A typed number is the reader's own; the tag says the result includes it.
+        await page.locator('#tc-n-LEJR').fill('120');
+        await page.locator('#tc-n-LEJR').press('Tab');
+        const typed = await calcSays(page);
+        assert.equal(typed.srcN, 'your number');
+        assert.equal(typed.tag, 'includes your numbers');
+        assert.equal(await page.locator('[data-v="tag"]').evaluate((el) => getComputedStyle(el).fontStyle), 'italic');
+        // What a box can't take goes back, said beside it.
+        await page.locator('#tc-p-CABG').fill('abc');
+        await page.locator('#tc-p-CABG').press('Tab');
+        assert.match(await page.locator('#tc-p-CABG').inputValue(), /^\$[\d,]+$/, 'back to its last good value');
+        assert.match((await calcSays(page)).msg ?? '', /isn.t a number from/);
+        // The address, once the reader pauses: the hospital and public inputs, never the typed count.
+        await eventually(async () => page.evaluate(() => location.hash.startsWith('#team&h=')), 'the state in the fragment');
+        assert.ok(!(await page.evaluate(() => location.hash)).includes('n.LEJR'), 'own numbers stay out of the address');
+        await assertNoSideways(page, 'the calculator');
+        await audit(page, `${PROGRAM_PATH} with the calculator in use`);
+
+        // The picker's focus fetches exactly the calculator's two files.
+        assert.deepEqual(await dataFiles(page), [], 'still no data file');
+        await page.locator('#tc-pick-q').focus();
+        const files = await calcFiles(page);
+        await eventually(async () => (await dataFiles(page)).length === 2, 'both files fetched on the picker\'s focus');
+        assert.deepEqual((await dataFiles(page)).sort(), files.sort(), 'exactly the calculator\'s two files');
+        await assertQuiet(seen, 'TEAM Part 5');
+      }));
+    }
+  });
+}
+
+describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
+  const tabs = useContext(shared, { width: 1280, height: 900 });
+  it('keyboard only: Tab to the track, the arrow keys move it; on to the slider, the arrow keys move it', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    await page.locator('[data-calc-random]').focus();
+    await page.keyboard.press(TAB_KEYS.next);
+    assert.equal(await page.evaluate(() => document.activeElement.name), 'tc-track', 'the track is next in the tab order');
+    await page.keyboard.press('ArrowLeft');
+    assert.equal((await calcSays(page)).track, '2');
+    assert.equal((await calcSays(page)).l6, 'Track 2 limits');
+    // Each row's three boxes and its low-volume box, then the slider.
+    for (let i = 0; i < 21; i++) await page.keyboard.press(TAB_KEYS.next);
+    assert.equal(await page.evaluate(() => document.activeElement.id), 'tc-s', 'the slider after the rows');
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('[data-v="l.s"]').textContent(), '+0.5%');
+    assert.equal(await page.locator('#tc-s').getAttribute('aria-valuetext'), '0.5% over target');
+    await assertQuiet(seen, 'TEAM Part 5 by keyboard');
+  }));
+
+  it('a link: valid keys apply under the banner; a 2,000-character junk fragment applies nothing and throws nothing', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&n.LEJR=120&zz=1`, watched: true }, async (page, { seen }) => {
+    await eventually(async () => (await calcSays(page)).banner, 'the banner');
+    const s = await calcSays(page);
+    assert.equal(s.track, '2');
+    assert.equal(s.srcN, 'your number');
+    assert.match(await page.locator('[data-calc-rejected]').textContent(), /zz/);
+    const junk = `#team&${'%3Cb%3E=1&s=abc&'.repeat(200)}`.slice(0, 2000);
+    await page.goto(`${tabs.base}${PROGRAM_PATH}${junk}`);
+    await page.reload();
+    const after = await calcSays(page);
+    assert.ok(!after.banner, 'nothing valid applied: no banner');
+    assert.equal(after.track, '3');
+    await assertQuiet(seen, 'TEAM Part 5 by link');
+  }));
+
+  it('team:pick and "Show one at random" load another hospital; Part 4\'s region follows it', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    const src = (await calcFiles(page))[0];
+    // A participant in another region than the default's, from the calculator's own file.
+    const pick = await page.evaluate(async (url) => {
+      const file = await (await fetch(url)).json();
+      const div = Number(document.querySelector('[data-bar-reader]').dataset.barReader);
+      const row = file.rows.find((r) => r[1] !== div && r.slice(4, 24).some((x, i) => i % 4 === 0 && x > 0));
+      return { ccn: row[0], div: row[1] };
+    }, src);
+    await page.evaluate((ccn) => document.dispatchEvent(new CustomEvent('team:pick', { detail: { ccn } })), pick.ccn);
+    await eventually(async () => page.evaluate((c) => document.querySelector('#calc [data-v="where"]').textContent.includes(c), pick.ccn), 'the calculator shows the hospital');
+    const bar = await page.evaluate(() => {
+      const head = [...document.querySelectorAll('#all-prices thead th')];
+      return {
+        reader: Number(document.querySelector('[data-bar-reader]').dataset.barReader),
+        shaded: head.filter((th) => th.classList.contains('tm-all__mine')).map((th) => Number(th.dataset.div)),
+        moved: document.querySelectorAll('#bar [data-moved-outline]').length,
+        name: document.querySelector('#bar [data-bar="division"]').textContent,
+      };
+    });
+    assert.equal(bar.reader, pick.div, 'Part 4\'s region is the new hospital\'s');
+    assert.deepEqual(bar.shaded, [pick.div], 'the table shades its column');
+    assert.ok(bar.moved >= 1, 'the outline moved');
+    await eventually(async () => page.evaluate((c) => location.hash === `#team&h=${c}`, pick.ccn), 'the address names it');
+    const before = (await calcSays(page)).where;
+    await page.locator('[data-calc-random]').click();
+    await eventually(async () => (await calcSays(page)).where !== before, 'another hospital at random');
+    assert.doesNotMatch((await calcSays(page)).where, /, VA$/, 'never the skipped state');
+    await assertQuiet(seen, 'TEAM Part 5 following a pick');
+  }));
+});
+
+describe('TEAM Part 5 without JavaScript', () => {
+  const tabs = useContext(shared, { javaScript: false });
+  it('the default hospital\'s numbers show; the controls that need the script stay hidden', () => withPage(tabs, { path: PROGRAM_PATH }, async (page) => {
+    assert.ok(await page.locator('.tc__nojs').isVisible());
+    assert.match(await page.locator('[data-v="out.range"]').textContent(), /\$/);
+    assert.equal(await page.locator('[data-calc-random]').isVisible(), false);
+    assert.equal(await page.locator('#tc-pick').isVisible(), false);
   }));
 });

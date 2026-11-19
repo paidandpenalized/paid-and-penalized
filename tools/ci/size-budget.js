@@ -72,7 +72,11 @@ export const PROGRAM_BUDGETS = {
   // and 5 to 7, Part 4's figure and the calculator still to land): the program page 55.2 KB + 15% (63.5 KB), rounded up
   // to 70 KB, and Methods 25.2 KB + 15% (29.0 KB), rounded up to 30 KB. The figure and the calculator each raise the
   // program budget as they land, a decision recorded here.
-  team: { program: 70 * KB, methods: 30 * KB },
+  // Part 4's figure, the lookup and the calculator (Tasks 7b to 9), 2026-11-19: the program page 94.7 KB + 15% (108.9 KB),
+  // rounded up to 110 KB. The calculator's script is most of the rise (its view, words, engine and the family's search
+  // box, about 19.5 KB); every participant's numbers stay in a hashed file fetched on the reader's first move (not
+  // counted here: team-calc, 19.4 KB brotli). The hub's 70 KB budget is untouched.
+  team: { program: 110 * KB, methods: 30 * KB },
 };
 // The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
 // most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:
