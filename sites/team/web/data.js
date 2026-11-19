@@ -6,6 +6,7 @@ import { ATLAS_ID } from '../../../web/charts/geo.js';
 
 let loaded = null;
 let master = null;
+let masterSources = null;
 let atlas = null;
 
 // The TEAM file, read once per build, as the file gives it:
@@ -22,12 +23,18 @@ export function loadTeam() {
   return loaded;
 }
 
-// Each master hospital's place, by CCN: { state, lat, lon } (lat and lon null where the master has no point). Read once.
-export function loadMaster() {
+// The hospital master, read once for both of what the pages take from it (loadMaster, loadSharedSources).
+function readMaster() {
   if (!master) {
     const file = readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital')));
     master = new Map(file.hospitals.map((h) => [h.ccn, { state: h.state, lat: h.lat ?? null, lon: h.lon ?? null }]));
+    masterSources = new Set(file.sources);
   }
+}
+
+// Each master hospital's place, by CCN: { state, lat, lon } (lat and lon null where the master has no point).
+export function loadMaster() {
+  readMaster();
   return master;
 }
 
@@ -42,12 +49,11 @@ export function loadSources(team = loadTeam()) {
   });
 }
 
-// The ids of the TEAM file's pins that the hospital master reads too (its own `sources`): Methods lists them apart from
-// TEAM's own. Read once.
-let shared = null;
+// The ids of the pins the hospital master reads (its own `sources`): Methods lists the TEAM file's pins among them apart
+// from TEAM's own.
 export function loadSharedSources() {
-  shared ??= new Set(readJson(REPO_ROOT + masterPath(newestYear('data/emitted/hospital'))).sources);
-  return shared;
+  readMaster();
+  return masterSources;
 }
 
 // The pinned us-atlas topology the map is drawn from (web/charts/geo.js stateShapes reads its states). Read once.
