@@ -8,7 +8,7 @@
 // for its pins (loadSources) or a named constant; the words are methods/copy.js's, the citations methods/cites.js's
 // and constants.js's.
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES } from '../../../../engine/js/team/params.js';
-import { printout, sentenceOf } from '../../../../web/render/components.js';
+import { docSections, printout, sentenceOf } from '../../../../web/render/components.js';
 import { count, decimal, fractionWord, isoDate, isoMonth, listText, money, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
@@ -26,10 +26,6 @@ import { PY2_NUMBER, cite, labelOf, shellOf } from './parts.js';
 const sentence = sentenceOf(fill);
 // A paragraph of words, with its citation when it states a rule.
 const para = (words, ref = null) => html`<p>${words}${ref ? cite(ref) : ''}</p>`;
-const sec = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
-<h2 class="doc__h" id="${id}-h">${heading}</h2>
-${body}
-</section>`;
 // A list of lead paragraphs: items [[head key, words, ref]].
 const leads = (items) => html`<ul class="tm-meth__list">${items.map(([head, words, ref]) => html`<li><strong>${t(head)}</strong> ${words}${ref ? cite(ref) : ''}</li>`)}</ul>`;
 const period = ({ start, end }) => [isoDate(start), isoDate(end)];
@@ -254,15 +250,7 @@ export function methodsPage({ team, sources, shared, robots, assets }) {
 <h1>${t('methodsTitle')}</h1>
 <p class="tm-meth__lede">${fill('methodsIntro', { cite: CITES.subpart })}</p>
 </header>
-<div class="doc">
-<nav class="doc__toc" aria-labelledby="toc-h">
-<p class="doc__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
-<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
-</nav>
-<div class="doc__main">
-${sections.map(sec)}
-</div>
-</div>
+${docSections({ contents: t('contentsHeading'), sections })}
 </article>`;
   return page({
     title: `${t('methodsTitle')} · ${SITE.name}`,

@@ -156,6 +156,23 @@ export const asofBar = ({ label, items, grid = false }) => html`<aside class="as
 <dl class="asof__list">${items.map((item) => html`<div><dt>${item.label}</dt><dd>${item.value}</dd></div>`)}</dl>
 </aside>`;
 
+// Contents and sections (pages.css .doc, a Methods page's body): a numbered contents column under its heading
+// (contents), each entry a link to its section, beside the sections, each ruled apart under its h2.
+// sections: [{ id, heading, body }] (heading text or Safe, body Safe).
+export const docSection = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
+<h2 class="doc__h" id="${id}-h">${heading}</h2>
+${body}
+</section>`;
+export const docSections = ({ contents, sections }) => html`<div class="doc">
+<nav class="doc__toc" aria-labelledby="toc-h">
+<p class="doc__toc-h cap" id="toc-h">${contents}</p>
+<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
+</nav>
+<div class="doc__main">
+${sections.map(docSection)}
+</div>
+</div>`;
+
 // The citation block: the text to cite, selectable without JavaScript, and a Copy button the script (web/client/cite.js)
 // shows. The button's words and the two status messages are the site's; the script reads the messages from data-copied
 // and data-failed. A page holding this block lists the script (assets.js.cite) in its scripts.
