@@ -252,7 +252,9 @@ export function calcView({ hosp, state, team }) {
 
 const tag = (key, { mine, text }) => html`<span class="tc-src${mine ? ' tc-src--mine' : ''}" data-v="${key}">${text}</span>`;
 const vh = (id, text) => html`<label class="vh" for="${id}">${text}</label>`;
-const box = ({ id, key, value, mine, label, mode = 'decimal', cls = '' }) => html`${vh(id, label)}<input class="tc-in${cls}${mine ? ' is-mine' : ''}" id="${id}" data-in="${key}" type="text" inputmode="${mode}" autocomplete="off" spellcheck="false" value="${value}">`;
+// A box the reader types a number into (every one: the table's, the band's, "What would it take?"'s).
+const textIn = ({ id, key, value, mode = 'decimal', cls = '' }) => html`<input class="tc-in${cls}" id="${id}" data-in="${key}" type="text" inputmode="${mode}" autocomplete="off" spellcheck="false" value="${value}">`;
+const box = ({ mine, label, cls = '', ...rest }) => html`${vh(rest.id, label)}${textIn({ ...rest, cls: `${cls}${mine ? ' is-mine' : ''}` })}`;
 const scenTag = (tags) => html`<span class="tc-tag${tags.mine ? ' tc-tag--mine' : ''}" data-v="tag">${tags.text}</span>`;
 
 function rowMarkup(row) {
@@ -304,7 +306,7 @@ function resultMarkup(v, statics) {
 <p class="tc-out__at" data-v="out.at">${r.at}</p>
 <p class="tc-out__none" data-v="out.none"${r.none ? '' : html` hidden`}>${t('outNone')}</p>
 <div class="tc-out__hyp"><p>${t('outHyp')}</p>
-<p class="tc-band"><label for="tc-band">${t('bandLabel')}<span class="vh"> ${t('bandFull')}</span></label><input class="tc-in tc-in--band" id="tc-band" data-in="band" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="${v.band.value}"><span aria-hidden="true">%</span></p>
+<p class="tc-band"><label for="tc-band">${t('bandLabel')}<span class="vh"> ${t('bandFull')}</span></label>${textIn({ id: 'tc-band', key: 'band', value: v.band.value, cls: ' tc-in--band' })}<span aria-hidden="true">%</span></p>
 ${staticBox('why', statics)}</div>
 </div>`;
 }
@@ -312,7 +314,7 @@ ${staticBox('why', statics)}</div>
 function wwitMarkup(v) {
   const w = v.wwit;
   const row = (label, key, text) => html`<tr><th scope="row">${label}</th><td data-v="${key}">${text}</td></tr>`;
-  const ask = (label, id, key, value, full) => html`<label for="${id}">${label}<span class="vh"> ${full}</span></label> <input class="tc-in tc-in--m" id="${id}" data-in="${key}" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="${value}">`;
+  const ask = (label, id, key, value, full) => html`<label for="${id}">${label}<span class="vh"> ${full}</span></label> ${textIn({ id, key, value, cls: ' tc-in--m' })}`;
   return html`<section class="tc-ww" aria-labelledby="tc-ww-h"><h3 class="tc-ww__h"><span id="tc-ww-h">${t('wwHeading')}</span> <span class="tc-src" data-v="ww.tag">${w.tag}</span></h3>
 <table class="tc-wwt"><tbody>
 <tr><th scope="row">${ask(t('wwEarn'), 'tc-earn', 'earn', w.earn.value, t('wwEarnFull'))}</th><td data-v="ww.earn">${w.earn.text}</td></tr>
