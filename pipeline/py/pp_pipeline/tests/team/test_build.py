@@ -3,7 +3,7 @@ then the whole build from the pins, recounted rule by rule here. Failure message
 figure."""
 import functools
 import unittest
-from collections import Counter, defaultdict
+from collections import Counter
 
 from pp_engine.schema import validate
 from pp_engine.team import episodes, quality, status
@@ -102,7 +102,7 @@ def hosp(ccn, **kw):
 
 
 class Status(unittest.TestCase):
-    AREA = status.Area(counties={"99001"}, states={"ZZ"}, doubtful={"99003"})
+    AREA = status.Area(counties={"99001"}, states={"ZZ"})
 
     def code(self, h, listed=None, cjrx=(), place="99001"):
         return status.status_of(h, listed, set(cjrx), {h["ccn"]: place} if place else {}, self.AREA)
@@ -139,63 +139,36 @@ class Status(unittest.TestCase):
         self.assertEqual(self.code(hosp("990001", state="YY", kind="critical_access"), place=None),
                          ["outside", "critical_access"])
 
-    def test_a_county_that_may_lie_in_a_selected_area_is_not_called_outside(self):
-        self.assertEqual(self.code(hosp("990001"), place="99003"), ["area_unknown", None])
-        self.assertEqual(self.code(hosp("990001"), cjrx=["990001"], place="99003"), ["cjrx", ["area_unknown", None]])
-
     def test_cjrx_wraps_the_reason(self):
         self.assertEqual(self.code(hosp("990001"), cjrx=["990001"], place="99002"), ["cjrx", ["outside", "acute"]])
         self.assertEqual(self.code(hosp("990001"), cjrx=["990001"]), ["cjrx", ["unlisted", None]])
 
-    def test_selected_areas_reach_divisions_and_unlisted_micropolitan_counties(self):
-        participants = [{"ccn": "990001", "cbsa": "11110", "cbsa_name": "Big, ZZ-XX", "participation": "mandatory"},
-                        {"ccn": "990002", "cbsa": "22220", "cbsa_name": "Small, ZZ", "participation": "mandatory"},
-                        {"ccn": "990003", "cbsa": "33330", "cbsa_name": "Other, YY", "participation": "voluntary"}]
-        crosswalk = [{"fips": "99001", "state": "ZZ", "cbsa": "11114"},  # a division of 11110
-                     {"fips": "99002", "state": "ZZ", "cbsa": "11114"},
-                     {"fips": "99003", "state": "ZZ", "cbsa": ""},  # micropolitan: blank in the crosswalk
-                     {"fips": "99004", "state": "ZZ", "cbsa": "22220"},
-                     {"fips": "99005", "state": "YY", "cbsa": "33330"},
-                     {"fips": "99006", "state": "YY", "cbsa": ""}]
+    PARTICIPANTS = [{"ccn": "990001", "cbsa": "11110", "participation": "mandatory"},  # a metro with divisions
+                    {"ccn": "990002", "cbsa": "22220", "participation": "mandatory"},  # a micropolitan area
+                    {"ccn": "990003", "cbsa": "33330", "participation": "voluntary"}]
+    CROSSWALK = [{"fips": f"9900{i}", "state": "ZZ" if i < 5 else "YY"} for i in range(1, 8)]
+    # The delineation's CBSA for each county: 99001-99002 two divisions of 11110, 99003-99004 the micropolitan
+    # area's central and outlying counties, 99005 the voluntary participant's CBSA; 99006 and 99007 in no CBSA.
+    CBSA_OF = {"99001": "11110", "99002": "11110", "99003": "22220", "99004": "22220", "99005": "33330"}
+
+    def test_a_selected_area_is_every_county_the_delineation_puts_in_a_selected_cbsa(self):
         placed = {"990001": "99001", "990002": "99003", "990003": "99005"}
-        area = status.selected_area(participants, crosswalk, placed, {"990001": "ZZ", "990002": "ZZ", "990003": "YY"})
-        self.assertEqual(area.counties, {"99001", "99002", "99003", "99004"})  # not 99005: voluntary only
+        area = status.selected_area(self.PARTICIPANTS, self.CROSSWALK, self.CBSA_OF, placed,
+                                    {"990001": "ZZ", "990002": "ZZ", "990003": "YY"})
+        # Another division's county and an outlying micropolitan county are in; not 99005 (voluntary only).
+        self.assertEqual(area.counties, {"99001", "99002", "99003", "99004"})
         self.assertEqual(area.states, {"ZZ"})
+        self.assertEqual(status.list_cbsa_mismatches(self.PARTICIPANTS, self.CBSA_OF, placed), [])
 
-    def test_counties_the_crosswalk_cannot_place_are_doubtful_where_a_selected_area_may_reach(self):
-        # 11110 is divided (its participant's county carries a division code); 22220 is micropolitan (its participant's
-        # county is blank). Another division's county, or a blank county, may belong to one of them when it lies in a
-        # state its title names; elsewhere it cannot.
-        participants = [{"ccn": "990001", "cbsa": "11110", "cbsa_name": "Big, ZZ-XX", "participation": "mandatory"},
-                        {"ccn": "990002", "cbsa": "22220", "cbsa_name": "Small, WW", "participation": "mandatory"}]
-        crosswalk = [{"fips": "99001", "state": "ZZ", "cbsa": "11114"},  # the participant's division
-                     {"fips": "99002", "state": "XX", "cbsa": "12344"},  # another division, in a state 11110 names
-                     {"fips": "99003", "state": "YY", "cbsa": "56784"},  # a division in a state no divided area names
-                     {"fips": "99004", "state": "WW", "cbsa": ""},  # the micropolitan participant's county
-                     {"fips": "99005", "state": "WW", "cbsa": ""},  # blank, in the micropolitan area's state
-                     {"fips": "99006", "state": "ZZ", "cbsa": ""},  # blank, in a state only a divided area names
-                     {"fips": "99007", "state": "WW", "cbsa": "77770"}]  # a whole CBSA the crosswalk names: not selected
-        placed = {"990001": "99001", "990002": "99004"}
-        area = status.selected_area(participants, crosswalk, placed, {"990001": "ZZ", "990002": "WW"})
-        self.assertEqual(area.counties, {"99001", "99004"})
-        self.assertEqual(area.doubtful, {"99002", "99005"})
-
-    def test_a_cbsa_title_must_name_its_states(self):
-        participants = [{"ccn": "990001", "cbsa": "22220", "cbsa_name": "No states", "participation": "mandatory"}]
-        crosswalk = [{"fips": "99001", "state": "ZZ", "cbsa": ""}]
-        with self.assertRaises(ValueError):
-            status.selected_area(participants, crosswalk, {"990001": "99001"}, {"990001": "ZZ"})
-
-
-    def test_a_county_or_code_shared_by_two_list_cbsas_is_refused(self):
-        crosswalk = [{"fips": "99001", "state": "ZZ", "cbsa": ""}, {"fips": "99002", "state": "ZZ", "cbsa": "11114"},
-                     {"fips": "99003", "state": "ZZ", "cbsa": "11114"}]
-        same_county = [{"ccn": "990001", "cbsa": "11110", "cbsa_name": "A, ZZ", "participation": "mandatory"},
-                       {"ccn": "990002", "cbsa": "22220", "cbsa_name": "B, ZZ", "participation": "mandatory"}]
-        with self.assertRaises(ValueError):
-            status.selected_area(same_county, crosswalk, {"990001": "99001", "990002": "99001"}, {})
-        with self.assertRaises(ValueError):
-            status.selected_area(same_county, crosswalk, {"990001": "99002", "990002": "99003"}, {})
+    def test_a_participant_the_delineation_places_elsewhere_still_counts_its_county(self):
+        # A mandatory participant is in TEAM by definition: its own county counts as in its list CBSA even where the
+        # delineation puts that county in another CBSA, or in none. The check names it.
+        placed = {"990001": "99006", "990002": "99003"}
+        area = status.selected_area(self.PARTICIPANTS, self.CROSSWALK, self.CBSA_OF, placed, {})
+        self.assertEqual(area.counties, {"99001", "99002", "99003", "99004", "99006"})
+        self.assertEqual(status.list_cbsa_mismatches(self.PARTICIPANTS, self.CBSA_OF, placed), ["990001"])
+        voluntary_elsewhere = {"990003": "99007"}  # only mandatory participants are checked
+        self.assertEqual(status.list_cbsa_mismatches(self.PARTICIPANTS, self.CBSA_OF, voluntary_elsewhere), [])
 
 
 class Divisions(unittest.TestCase):
@@ -268,36 +241,15 @@ class WholeBuild(unittest.TestCase):
         cjrx["ended"] = expect["cjrx"] = len(ended) - expect["ended"]
         expect["in27"] = sum(r["end"] >= start and r["start"] >= start for r in on_list)
         expect["in"] = sum(r["end"] >= start and r["start"] < start for r in on_list)
-        # Off the list: the area is recomputed here from the pins (selected CBSAs, the crosswalk, the mandatory
-        # participants' counties); county placement is the build's (tested above on synthetic rows).
+        # Off the list: the area is recomputed here from the pins (the delineation's county CBSAs, the selected CBSAs,
+        # the mandatory participants' counties); county placement is the build's (tested above on synthetic rows).
         placed, _ = status.place_counties(p.hospitals, p.crosswalk, p.shapes)
-        selected = {r["cbsa"] for r in p.participants if r["participation"] == "mandatory"}
-        mandatory_counties = {placed[r["ccn"]] for r in p.participants
-                              if r["participation"] == "mandatory" and r["ccn"] in placed}
-        codes_there = {x["cbsa"] for x in p.crosswalk if x["fips"] in mandatory_counties and x["cbsa"]}
-        area = {x["fips"] for x in p.crosswalk if x["cbsa"] in selected | codes_there} | mandatory_counties
+        mandatory = [r for r in p.participants if r["participation"] == "mandatory"]
+        selected = {r["cbsa"] for r in mandatory}
+        area = {x["fips"] for x in p.delineation if x["cbsa"] in selected} | {
+            placed[r["ccn"]] for r in mandatory if r["ccn"] in placed}
         state_of = {x["fips"]: x["state"] for x in p.crosswalk}
-        area_states = {state_of[f] for f in area if f in state_of} | {
-            by_ccn[r["ccn"]]["state"] for r in p.participants if r["participation"] == "mandatory" and r["ccn"] in by_ccn}
-        # Doubtful counties: a selected CBSA the crosswalk has no code for is either divided (a participant's county
-        # carries a division code, last digit 4) or micropolitan (a participant's county is blank). Outside the area,
-        # a division's county in a state a divided one's title names, or a blank county in a state a micropolitan
-        # one's names, may still lie in it.
-        code_of = {x["fips"]: x["cbsa"] for x in p.crosswalk}
-        open_cbsas = selected - set(code_of.values())
-        titles = {r["cbsa"]: r["cbsa_name"] for r in p.participants}
-        their_codes = defaultdict(set)  # open CBSA -> its mandatory participants' crosswalk codes
-        for r in p.participants:
-            if r["cbsa"] in open_cbsas and r["participation"] == "mandatory" and r["ccn"] in placed:
-                their_codes[r["cbsa"]].add(code_of[placed[r["ccn"]]])
-        divided = {c for c, codes in their_codes.items() if any(x.endswith("4") for x in codes)}
-        micro = {c for c, codes in their_codes.items() if "" in codes}
-
-        def named(cbsas):
-            return {st for c in cbsas for st in titles[c].split(", ")[-1].split("-")}
-        doubtful = {f for f, c in code_of.items() if f not in area and (
-            (c.endswith("4") and state_of[f] in named(open_cbsas - micro))
-            or (not c and state_of[f] in named(open_cbsas - divided)))}
+        area_states = {state_of[f] for f in area} | {by_ccn[r["ccn"]]["state"] for r in mandatory if r["ccn"] in by_ccn}
         for ccn, h in by_ccn.items():
             if ccn in listed:
                 continue
@@ -306,8 +258,6 @@ class WholeBuild(unittest.TestCase):
                 reason = "maryland"
             elif f is None:
                 reason = "outside" if h["state"] not in area_states else "area_unknown"
-            elif f in doubtful:
-                reason = "area_unknown"
             elif f not in area:
                 reason = "outside"
             elif not (h["kind"] == "acute" and h["ipps"]):
@@ -324,6 +274,18 @@ class WholeBuild(unittest.TestCase):
         self.assertEqual(dict(got), dict(+expect))
         got_cjrx = Counter(arg[0] for c, arg in fresh()["status"].values() if c == "cjrx")
         self.assertEqual(dict(got_cjrx), dict(+cjrx))
+
+    def test_every_mandatory_participants_county_is_in_its_list_cbsa(self):
+        # The delineation and CMS's list agree: the county each mandatory participant is placed in is, by the
+        # delineation, in the participant's list CBSA. Failure messages give counts only.
+        p = pins()
+        placed, _ = status.place_counties(p.hospitals, p.crosswalk, p.shapes)
+        cbsa_of = {x["fips"]: x["cbsa"] for x in p.delineation}
+        mandatory = [r for r in p.participants if r["participation"] == "mandatory"]
+        differ = sum(r["ccn"] in placed and cbsa_of.get(placed[r["ccn"]]) != r["cbsa"] for r in mandatory)
+        self.assertEqual(differ, 0, f"{differ} mandatory participant(s) placed in a county outside their list CBSA")
+        checked = sum(r["ccn"] in placed for r in mandatory)
+        self.assertGreater(checked, 0, "no mandatory participant placed")
 
     def test_ended_participants_are_not_active(self):
         for r in fresh()["participants"]:

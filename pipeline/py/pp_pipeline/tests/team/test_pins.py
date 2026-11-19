@@ -18,6 +18,7 @@ from pp_engine.parse import SchemaError
 from pp_engine.team import episodes
 from pp_engine.tests.test_xlsx import make_xlsx
 from pp_pipeline.files import manifest_entry, read_manifest, read_pinned_csv as pin_rows, write_manifest
+from pp_pipeline.tests.team.helpers import pins
 from pp_pipeline.refresh_sources import MAX_PIN
 from pp_pipeline.team import derive
 
@@ -111,6 +112,29 @@ class OtherPins(unittest.TestCase):
             float(r["value"])
 
 
+class DelineationPin(unittest.TestCase):
+    def test_delineation_pin(self):
+        entry = manifest_entry(derive.DELINEATION)
+        rows = pin_rows(derive.DELINEATION)
+        self.assertEqual(list(rows[0]), list(derive.DELINEATION_COLUMNS))
+        self.assertEqual(len(rows), entry["counts"]["rows"])
+        self.assertEqual(dict(Counter(r["area"] for r in rows)), entry["counts"]["byArea"])
+        self.assertRegex(entry["delineated"], r"^[0-9]{4}-[0-9]{2}$")
+        self.assertEqual(entry["derivedBy"], derive.DERIVED_BY)
+        self.assertTrue(entry["derivedFrom"]["downloadUrl"].startswith("https://www2.census.gov/"))
+        self.assertEqual(len({r["fips"] for r in rows}), len(rows))
+        for r in rows:
+            self.assertRegex(r["fips"] + r["cbsa"], r"^[0-9]{10}$")
+            self.assertIn(r["area"], ("metro", "micro"))
+            self.assertTrue(r["division"] == "" or (r["area"] == "metro" and r["division"].isdigit()))
+
+    def test_every_delineated_county_is_one_the_crosswalk_has(self):
+        # Placement draws counties from CMS's crosswalk; a delineated county it lacked could never be placed.
+        crosswalk = {r["fips"] for r in pins().crosswalk}
+        missing = sum(r["fips"] not in crosswalk for r in pin_rows(derive.DELINEATION))
+        self.assertEqual(missing, 0, f"{missing} delineated counties not in the crosswalk")
+
+
 class Derivations(unittest.TestCase):
     def test_participants_from_a_workbook(self):
         wb = make_xlsx({"List": [
@@ -126,6 +150,25 @@ class Derivations(unittest.TestCase):
         self.assertEqual((rows[1]["start"], rows[1]["end"], rows[1]["newly_identified"]), ("2027-01-01", "2030-12-31", "Y"))
         self.assertEqual(counts["byParticipation"], {"mandatory": 1, "voluntary": 1})
         self.assertEqual(as_of, "2026-08-18")
+
+    def test_delineation_from_a_workbook(self):
+        hdr = ["CBSA Code", "Metropolitan Division Code", "CSA Code", "CBSA Title", "Metropolitan/Micropolitan Statistical Area",
+               "Metropolitan Division Title", "CSA Title", "County/County Equivalent", "State Name", "FIPS State Code",
+               "FIPS County Code", "Central/Outlying County"]
+        wb = make_xlsx({"List 1": [
+            ["A table"], ["List 1. CORE BASED STATISTICAL AREAS (CBSAs), JULY 2023"], hdr,
+            ["99990", "", "", "Small, ZZ", "Micropolitan Statistical Area", "", "", "A County", "Z", "99", "003", "Central"],
+            ["99980", "99984", "", "Big, ZZ-YY", "Metropolitan Statistical Area", "Part", "", "B County", "Z", "99", "001", "Central"],
+            [""], ["Note: a note under the table."]]})
+        text, counts, delineated = derive.delineation(wb)
+        self.assertEqual(text.splitlines(), ["fips,cbsa,cbsa_title,area,division", '99001,99980,"Big, ZZ-YY",metro,99984',
+                                             '99003,99990,"Small, ZZ",micro,'])
+        self.assertEqual(counts, {"rows": 2, "byArea": {"metro": 1, "micro": 1}})
+        self.assertEqual(delineated, "2023-07")
+        bad = make_xlsx({"List 1": [["List 1, JULY 2023"], hdr,
+                                    ["99990", "", "", "T, ZZ", "Some Other Area", "", "", "A", "Z", "99", "003", "Central"]]})
+        with self.assertRaises(ValueError):
+            derive.delineation(bad)
 
     def test_prices_keep_category_average_rows_flagged(self):
         hdr = ["Initial Sort Order", "Episode Category", "MS-DRG", "Region", "Desc", "Benchmark", "Trend", "Discount", "Price"]

@@ -1,11 +1,15 @@
-"""Derive the TEAM source pins (data/pinned/team-py2/) from CMS's raw files, and record them in the manifest.
+"""Derive the TEAM source pins (data/pinned/team-py2/, data/pinned/omb-delineation-2023/) from CMS's and the Census
+Bureau's raw files, and record them in the manifest.
 
-Six sources, seven pins; raw downloads stay out of git (a pin is a small CSV derived from one):
+Seven pins; raw downloads stay out of git (a pin is a small CSV derived from one):
   team-participants   CMS's TEAM participant list (xlsx)                      -> participants.csv
   team-prices         CMS's PY2 preliminary target price workbook (xlsx)       -> prices.csv
   cjrx-participants   CMS's CJR-X participant list (xlsx)                      -> cjrx.csv
   team-mup-dy2023/24  Medicare Inpatient Hospitals by Provider and Service     -> mup-dy2023.csv, mup-dy2024.csv
   team-quality        Provider Data Catalog Hybrid_HWR and ISCMR rows          -> quality.csv
+  omb-delineation-2023  the Census Bureau's List 1 of OMB's July 2023 CBSA    -> list1-counties.csv
+                      delineation (xlsx; the delineation the crosswalk's FY2025 CBSA column follows): every county in
+                      a metropolitan or micropolitan CBSA, with its CBSA and metropolitan division
 
     python3 -I pipeline/py/run.py derive-team <directory holding the raw files, found by name> --retrieved YYYY-MM-DD
         [--repin]
@@ -54,6 +58,13 @@ PRICE_COLUMNS = ("category", "drg", "division", "benchmark", "trend", "discount"
 CJRX_COLUMNS = ("ccn", "state", "name")
 MUP_COLUMNS = ("ccn", "drg", "discharges")
 QUALITY_COLUMNS = ("ccn", "measure", "value", "start", "end")
+DELINEATION = "omb-delineation-2023"
+DELINEATION_COLUMNS = ("fips", "cbsa", "cbsa_title", "area", "division")
+# List 1's header text for each column it is read from.
+DELINEATION_HEADERS = {
+    "cbsa": "CBSA Code", "division": "Metropolitan Division Code", "cbsa_title": "CBSA Title",
+    "area": "Metropolitan/Micropolitan Statistical Area", "state": "FIPS State Code", "county": "FIPS County Code"}
+DELINEATION_AREAS = {"Metropolitan Statistical Area": "metro", "Micropolitan Statistical Area": "micro"}
 
 MUP_ENCODING = "cp1252"  # CMS writes the Medicare inpatient files in Windows-1252 (0x96 is an en dash in a DRG title)
 PRICE_SHEET = "Prelim_TP_DRG_Reg"
@@ -109,6 +120,14 @@ SOURCES = {
         "iscmr": {"file": "Complications_and_Deaths-Hospital.csv",
                   "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/"
                                  "6af7c44d77436e5a1caac3ce39a83fe9_1792599556/Complications_and_Deaths-Hospital.csv"}},
+    DELINEATION: {
+        "title": "OMB core-based statistical area delineation, July 2023 (Census Bureau List 1): counties by CBSA and "
+                 "metropolitan division",
+        "path": "omb-delineation-2023/list1-counties.csv", "file": "list1_2023.xlsx",
+        "downloadUrl": "https://www2.census.gov/programs-surveys/metro-micro/geographies/reference-files/2023/"
+                       "delineation-files/list1_2023.xlsx",
+        "landingPage": "https://www.census.gov/geographies/reference-files/time-series/demo/metro-micro/"
+                       "delineation-files.html"},
 }
 MUP_PINS = ("team-mup-dy2023", "team-mup-dy2024")
 SPOT_CHECK = ("CABG", "231", "1")  # a price cell the pin test compares with the workbook: category, DRG, division
@@ -203,6 +222,30 @@ def mup_drgs(price_rows):
     and every retired DRG the build moves to a successor (pp_engine.team.episodes.REMAPS), since the data years still
     count cases under those."""
     return {r["drg"] for r in price_rows if r["average_row"] != "1"} | set(REMAPS)
+
+
+def delineation(data):
+    """(csv text, counts, the delineation's month as YYYY-MM) from List 1's bytes (its first sheet): one row per county
+    in a CBSA, by 5-digit county FIPS code; `area` is metro or micro, `division` the metropolitan division code or
+    blank. The notes under the table are skipped."""
+    sheet = xlsx.sheet_rows(data, None, "delineation")
+    month = next((m for r in sheet[:5] if r for m in [re.search(r"([A-Z]+) ([0-9]{4})$", r[0].strip())] if m), None)
+    if month is None:
+        raise ValueError("delineation: no 'MONTH YYYY' at the end of a title line")
+    delineated = datetime.strptime(f"{month.group(1).title()} {month.group(2)}", "%B %Y").strftime("%Y-%m")
+    body = {}
+    for r in table(sheet, DELINEATION_HEADERS["cbsa"], DELINEATION_HEADERS, "delineation"):
+        if not re.fullmatch(r"[0-9]{5}", r["cbsa"]):
+            continue  # the notes under the table
+        fips = r["state"] + r["county"]
+        if not re.fullmatch(r"[0-9]{5}", fips) or fips in body:
+            raise ValueError("delineation: a county FIPS code is malformed or appears twice")
+        if r["area"] not in DELINEATION_AREAS:
+            raise ValueError(f"delineation: unknown area type {r['area']!r}")
+        body[fips] = [fips, r["cbsa"], r["cbsa_title"], DELINEATION_AREAS[r["area"]], r["division"]]
+    rows_ = [body[k] for k in sorted(body)]
+    counts = {"rows": len(rows_), "byArea": dict(sorted(Counter(r[3] for r in rows_).items()))}
+    return _csv(DELINEATION_COLUMNS, rows_), counts, delineated
 
 
 def _records(data, anchor, columns, label, encoding="utf-8-sig"):
@@ -321,6 +364,8 @@ def build_all(raw_dir, retrieved):
     first = _source_record(raw[quality_src["hwr"]["file"]], quality_src["hwr"], dates)
     first["alsoRead"] = _source_record(raw[quality_src["iscmr"]["file"]], quality_src["iscmr"], dates)
     entry("team-quality", text, first, counts=counts, pdcReleased=dates["pdcReleased"], pdcModified=dates["pdcModified"])
+    text, counts, delineated = delineation(read(DELINEATION))
+    entry(DELINEATION, text, source(DELINEATION), counts=counts, delineated=delineated)
     return out
 
 

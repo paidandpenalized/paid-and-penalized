@@ -29,7 +29,7 @@ export const LOOKUP_COPY = {
     text: 'In a TEAM area and paid under the inpatient system, but not on CMS\'s list of participants. CMS updates the list each quarter, and a new hospital must take part from the start of the performance year after one full performance year.',
     claim: ['TEAM-01', 'TEAM-08', 'TEAM-09'],
   },
-  areaUnknown: { text: 'We couldn\'t place this hospital\'s county in or out of a TEAM area, so we can\'t say. CMS\'s list has the answer.', claim: null },
+  areaUnknown: { text: 'Not on CMS\'s list of TEAM participants. We couldn\'t place its county in or out of a TEAM area.', claim: 'TEAM-09' },
   cjrx: { text: '{reason} In CJR-X from {date}.', claim: ['TEAM-12', 'TEAM-13'] },
   'kind.unknown': { text: 'A hospital whose kind the hospital list doesn\'t give', claim: null },
 };

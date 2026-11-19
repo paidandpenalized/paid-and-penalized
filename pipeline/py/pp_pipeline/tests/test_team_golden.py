@@ -26,7 +26,7 @@ class Golden(unittest.TestCase):
 
     def test_the_six_team_pins_and_the_crosswalk_are_sources(self):
         self.assertTrue({"team-participants", "team-prices", "cjrx-participants", "team-mup-dy2023", "team-mup-dy2024",
-                         "team-quality", "county-cbsa-fy2027"} <= set(fresh()["sources"]))
+                         "team-quality", "county-cbsa-fy2027", "omb-delineation-2023"} <= set(fresh()["sources"]))
 
     def test_the_file_is_small(self):
         from pp_engine.contract import format_emitted

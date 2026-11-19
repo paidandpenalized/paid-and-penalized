@@ -540,8 +540,8 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   and quality percentiles for each hospital on CMS's TEAM list, and a status for every hospital in the hospital master.
   It is estimated from public files, not CMS's own episode attribution. `fy` is 2027: performance year 2 is calendar
   2027, priced with FY2027 MS-DRGs. Built by `pp_pipeline/emit_team.py` (run by `run.py emit`) from the six TEAM pins
-  (`data/pinned/team-py2/`), the FY2027 county-to-CBSA crosswalk, the us-atlas county shapes and the emitted hospital
-  master. Method: `pp_engine/team/`.
+  (`data/pinned/team-py2/`), OMB's July 2023 CBSA delineation (`data/pinned/omb-delineation-2023/`), the FY2027
+  county-to-CBSA crosswalk, the us-atlas county shapes and the emitted hospital master. Method: `pp_engine/team/`.
 - Prices: CMS's preliminary PY2 target prices, rounded to the cent, by MS-DRG and census division (the territories are
   priced with division 9, as CMS's workbook does). Category averages are CMS's own rows; spinal fusion has none, so its
   average is the plain mean of its DRG prices in each division, and `categoryAvgDerived` lists it.
@@ -567,28 +567,22 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   and episodes in 4 or more categories.
 - Status, in rule order: on the TEAM list (`in`; `in27` for a start on or after 2027-01-01; `ended` for an end before
   it), Maryland, then for everyone else the county's place. The selected areas are the CBSAs on the list that hold a
-  mandatory participant. A county is in one when the crosswalk's FY2025 CBSA column names a selected CBSA, when a
-  mandatory participant sits in it, or when its crosswalk code is the code of a county where one sits: the crosswalk
-  gives a large metro's metropolitan division in place of its CBSA and leaves micropolitan counties blank. (The master's
-  own `cbsa` is not used; it follows newer delineations.) A hospital's county is the master's FIPS code, else its county
-  name matched in the crosswalk, else the county shape holding its map point, else the county of the other hospitals in
-  its city. Off the list: `outside` (county in no selected area), `in_area_kind` (a kind the master marks not paid
-  under the IPPS), `in_area_other` (acute or of unknown kind, yet not IPPS-paid: closed, converted and the like),
-  `ihs` (Indian Health Service or tribal), `unlisted` (acute, IPPS, in an area, yet not on the list), and
-  `area_unknown`. A hospital on the CJR-X list carries `cjrx` around its reason, or around `ended` for one that left
-  TEAM; a current participant on the CJR-X list fails the build. `area_unknown` is a county not placed, in a state that
-  has a selected area (a state with none makes it `outside`), or a placed county the crosswalk cannot settle: that
-  reaches only the divisions and micropolitan counties where a mandatory participant sits, so a selected CBSA the
-  crosswalk has no code for (divided, or micropolitan) may hold other counties it cannot name. A county outside the
-  reached area is `area_unknown`, not `outside`, when its code is a metropolitan division's (OMB division codes end in
-  4) and its state is one a selected divided CBSA's title names, or when its code is blank (micropolitan or rural:
-  the crosswalk does not say which) and its state is one a selected micropolitan CBSA's title names. No pinned file maps
-  a division to its CBSA or a blank county to a micropolitan one, so these stay unknown; the lookup sends the reader
-  to CMS's list. This changes only the reason given for a hospital not on the list, never whether a hospital is in
-  TEAM.
+  mandatory participant. A county is in one when OMB's July 2023 delineation (OMB Bulletin 23-01, the Census Bureau's
+  List 1, pinned as `omb-delineation-2023`; the delineation the crosswalk's FY2025 CBSA column follows) puts it in a
+  selected CBSA. The delineation names every county of a CBSA, so a metro's every metropolitan division and a
+  micropolitan area's outlying counties are placed directly; the crosswalk, which gives divisions in place of their
+  CBSA and leaves micropolitan counties blank, is used only for placing a hospital's county. A mandatory participant
+  is in TEAM by definition, so its own county counts as in its list CBSA even where the delineation disagrees; the
+  build counts those (none in this build: each of the 710 placed mandatory participants sits in a county the
+  delineation puts in its list CBSA; one is not placed). (The master's own `cbsa` is not used.) A hospital's county is
+  the master's FIPS code, else its county name matched in the crosswalk, else the county shape holding its map point,
+  else the county of the other hospitals in its city. Off the list: `outside` (county in no selected area),
+  `in_area_kind` (a kind the master marks not paid under the IPPS), `in_area_other` (acute or of unknown kind, yet not
+  IPPS-paid: closed, converted and the like), `ihs` (Indian Health Service or tribal), `unlisted` (acute, IPPS, in an
+  area, yet not on the list), and `area_unknown` (county not placed, in a state that has a selected area; a state with
+  none makes it `outside`). A hospital on the CJR-X list carries `cjrx` around its reason, or around `ended` for one
+  that left TEAM; a current participant on the CJR-X list fails the build.
 - The list as of 2026-08-18 has 721 CCNs; the master has 720 of them (`a4.teamMissing`). Across the 5,482 master
-  hospitals: in 715, in27 2, ended 3, maryland 56, outside 1,092, in_area_kind 326, in_area_other 3, ihs 4,
-  unlisted 7, area_unknown 1,061 (6 unplaced Connecticut hospitals under an old county name, the crosswalk having the
-  state's planning regions; the rest placed counties the crosswalk cannot settle), cjrx 2,213 (outside 1,659,
-  area_unknown 545, in_area_other 5, ihs 2, unlisted 2). Of the 1,600 placed-but-unsettled hospitals, 1,471 sit in
-  blank counties and 129 in division counties.
+  hospitals: in 715, in27 2, ended 3, maryland 56, outside 2,134, in_area_kind 338, in_area_other 3, ihs 4,
+  unlisted 8, area_unknown 6 (Connecticut hospitals under an old county name; the crosswalk has the state's planning
+  regions), cjrx 2,213 (outside 2,204, in_area_other 5, ihs 2, unlisted 2).

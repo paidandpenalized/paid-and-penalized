@@ -98,10 +98,10 @@ def participant(entry, h, ctx):
             "target": episodes.target_amount(latest, ctx["prices"], div)}
 
 
-def build(participants, price_rows, cjrx, prior, latest, quality_values, hospitals, crosswalk, shapes):
+def build(participants, price_rows, cjrx, prior, latest, quality_values, hospitals, crosswalk, delineation, shapes):
     """(body, notes). `prior`, `latest`: the two data years' {ccn: {drg: discharges}}; `quality_values`:
-    {measure: {ccn: value}}; `cjrx`: the CJR-X CCNs; `crosswalk`: [{fips, county, state, cbsa}]; `shapes`:
-    geo.Counties or None."""
+    {measure: {ccn: value}}; `cjrx`: the CJR-X CCNs; `crosswalk`: [{fips, county, state, cbsa}] (the counties placement
+    draws on); `delineation`: OMB's [{fips, cbsa, ...}] for the counties in a CBSA; `shapes`: geo.Counties or None."""
     prices, avg, drg_category, derived = episodes.price_tables(price_rows)
     if set(avg) != set(episodes.CATEGORIES):
         raise ValueError("price pin: its categories are not the five TEAM categories")
@@ -112,7 +112,8 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
            "quality": quality_values, "tables": quality_tables(quality_values, hospitals)}
     records = [participant(r, by_ccn[r["ccn"]], ctx) for r in participants if r["ccn"] in by_ccn]
     placed, routes = status.place_counties(hospitals, crosswalk, shapes)
-    area = status.selected_area(participants, crosswalk, placed, {h["ccn"]: h["state"] for h in hospitals})
+    cbsa_of = {r["fips"]: r["cbsa"] for r in delineation}
+    area = status.selected_area(participants, crosswalk, cbsa_of, placed, {h["ccn"]: h["state"] for h in hospitals})
     codes = {h["ccn"]: status.status_of(h, listed.get(h["ccn"]), cjrx, placed, area) for h in hospitals}
     body = {
         "prices": {d: dict(sorted(v.items())) for d, v in sorted(prices.items())},
@@ -126,6 +127,7 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
                "cjrxMissing": len(set(cjrx) - set(by_ccn))},
     }
     notes = {"routes": Counter(routes.values()), "unplaced": len(hospitals) - len(placed),
+             "cbsa_mismatches": len(status.list_cbsa_mismatches(participants, cbsa_of, placed)),
              "codes": Counter(c for c, _ in codes.values()),
              "cjrx_reasons": Counter(a[0] for c, a in codes.values() if c == "cjrx")}
     return body, notes

@@ -1,5 +1,6 @@
-"""Build the TEAM file, data/emitted/team/fy2027/team.json, from the six TEAM pins (data/pinned/team-py2/), the
-county-to-CBSA crosswalk and county shapes, and the repo's emitted hospital master.
+"""Build the TEAM file, data/emitted/team/fy2027/team.json, from the six TEAM pins (data/pinned/team-py2/), OMB's
+July 2023 CBSA delineation (data/pinned/omb-delineation-2023/), the county-to-CBSA crosswalk and county shapes, and the
+repo's emitted hospital master.
 
     python3 -I pipeline/py/run.py emit        (runs every emitter; this one last)
 
@@ -26,13 +27,14 @@ SCHEMA = "team.schema.json"
 FY = 2027  # performance year 2 (calendar 2027), FY2027 MS-DRGs
 
 PARTICIPANTS, PRICES, CJRX, QUALITY = "team-participants", "team-prices", "cjrx-participants", "team-quality"
+DELINEATION = "omb-delineation-2023"  # OMB's July 2023 CBSA delineation, by county (pp_pipeline.team.derive)
 MUP = {"team-mup-dy2023": 2023, "team-mup-dy2024": 2024}  # the prior and the latest data year, in that order
-PINS = (PARTICIPANTS, PRICES, CJRX, *MUP, QUALITY, emit_hospital.CBSA, emit_hospital.COUNTIES)
+PINS = (PARTICIPANTS, PRICES, CJRX, *MUP, QUALITY, DELINEATION, emit_hospital.CBSA, emit_hospital.COUNTIES)
 
 
 class Inputs:
     """The pins parsed: participants, price rows, the CJR-X CCNs, the two data years' cells, quality values, the
-    master and its hospitals, the crosswalk and the county shapes."""
+    master and its hospitals, the crosswalk, the delineation and the county shapes."""
 
     def __init__(self, manifest):
         self.manifest = manifest
@@ -45,6 +47,7 @@ class Inputs:
         require_current(self.master, manifest, "the hospital master")
         self.hospitals = self.master["hospitals"]
         self.crosswalk = read_crosswalk()
+        self.delineation = read_pinned_csv(DELINEATION)
         self.shapes = emit_hospital.counties()
 
 
@@ -86,7 +89,7 @@ def meta(manifest):
 def build_with_notes(built_at):
     p = Inputs(read_manifest())
     body, notes = build.build(p.participants, p.price_rows, p.cjrx, p.prior, p.latest, p.quality, p.hospitals,
-                              p.crosswalk, p.shapes)
+                              p.crosswalk, p.delineation, p.shapes)
     sources = list(dict.fromkeys([*PINS, *p.master["sources"]]))
     doc = {**envelope(SCHEMA_VERSION, METHODS_VERSION, sources, p.manifest, built_at, FY), "meta": meta(p.manifest),
            **body}
@@ -109,6 +112,7 @@ def main():
     print(f"wrote {path.relative_to(REPO_ROOT)}: {len(out['participants'])} participants, {len(out['status'])} "
           f"statuses {dict(sorted(notes['codes'].items()))}, CJR-X reasons {dict(sorted(notes['cjrx_reasons'].items()))}, "
           f"counties placed by {dict(sorted(notes['routes'].items()))}, {notes['unplaced']} unplaced, "
+          f"{notes['cbsa_mismatches']} mandatory participant(s) placed outside their list CBSA, "
           f"{len(out['a4']['teamMissing'])} list CCN(s) not in the master, {path.stat().st_size} bytes, "
           f"built_at {out['built_at']}")
     return 0

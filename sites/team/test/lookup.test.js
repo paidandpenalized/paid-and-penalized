@@ -132,6 +132,15 @@ test('in_area_other takes the neutral sentence, alone or inside CJR-X', () => {
   assert.match(reasonText('in_area_kind', 'critical_access').text, /of this kind isn.t paid/);
 });
 
+test('area_unknown reads true under its NO tag: off the list, county not placed', () => {
+  const r = reasonText('area_unknown', null);
+  assert.equal(r.tag, 'NO');
+  assert.match(r.text, /^Not on CMS.s list of TEAM participants\. /);
+  assert.match(r.text, /couldn.t place its county in or out of a TEAM area/);
+  assert.doesNotMatch(r.text, /can.t say/, 'says it cannot say under a NO tag');
+  assert.deepEqual([LOOKUP_COPY.areaUnknown.claim].flat(), ['TEAM-09']);
+});
+
 test('a CJR-X status whose inner code contradicts the rules is refused', () => {
   for (const code of ['in', 'in27', 'maryland', 'cjrx']) assert.throws(() => reasonText('cjrx', [code, null]), RangeError, code);
   assert.equal(reasonText('cjrx', ['in_area_kind', 'psychiatric']).tag, 'NO');
