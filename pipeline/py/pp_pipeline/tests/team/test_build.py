@@ -337,6 +337,14 @@ class WholeBuild(unittest.TestCase):
         self.assertEqual(doc["defaultCcn"], pool[(len(pool) - 1) // 2]["ccn"])
         self.assertEqual(default_ccn(doc["participants"]), doc["defaultCcn"])
 
+    def test_each_participant_carries_its_list_cbsa_name(self):
+        listed = {r["ccn"]: r["cbsa_name"] for r in pins().participants}
+        named = 0
+        for r in fresh()["participants"]:
+            self.assertEqual(r["cbsaName"], listed[r["ccn"]], "a participant's CBSA name")
+            named += bool(r["cbsaName"])
+        self.assertGreater(named, 0, "no participant has a CBSA name")
+
     def test_a4_every_listed_ccn_is_a_participant_or_a_recorded_miss(self):
         doc = fresh()
         listed = {r["ccn"] for r in pins().participants}

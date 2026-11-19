@@ -107,8 +107,8 @@ def participant(entry, h, ctx):
                      "price": episodes.category_price(alloc, ctx["prices"], div, ctx["avg"][cat][div]),
                      "hidden": hidden[cat],
                      "lowVolume": episodes.is_low_volume(episodes.episode_count(prior.get(cat, {})), n)}
-    return {"ccn": ccn, "division": division, "participation": entry["participation"], "start": entry["start"],
-            "end": entry["end"], "active": entry["end"] >= status.PY2_START, "track2Flags": track2_flags(h),
+    return {"ccn": ccn, "division": division, "cbsaName": entry["cbsa_name"], "participation": entry["participation"],
+            "start": entry["start"], "end": entry["end"], "active": entry["end"] >= status.PY2_START, "track2Flags": track2_flags(h),
             "cats": cats, "quality": participant_quality(ccn, ctx["quality"], ctx["tables"]),
             "target": episodes.target_amount(latest, ctx["prices"], div)}
 
