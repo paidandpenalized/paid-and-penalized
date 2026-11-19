@@ -6,8 +6,8 @@
 //
 // For a participant on CMS's TEAM list (one row of the TEAM file's participants, which holds only the list CCNs the
 // hospital master has; any other hospital gets ''):
-//   left   the kicker, the heading, the status line ("In TEAM since {start} · mandatory · {area} area", "from" for a
-//          participant starting in performance year 2), the track it would be in, the calculator's Track 2 note when the
+//   left   the kicker, the heading, the status line ("In TEAM since {start} · mandatory · {CBSA} area", or for a voluntary
+//          participant "· voluntary · {CBSA}", with no "area"; "from" for a participant starting in performance year 2), the track it would be in, the calculator's Track 2 note when the
 //          hospital list marks it for Track 2, the note keeping it out of the net and the list's date;
 //   right  what its reconciliation would come to a year if its spending landed within the default band of target, on
 //          Track 3: the label with the scenario tag, the range, its episodes and target amount (standardized dollars),
@@ -27,7 +27,7 @@ import { fillCopy, stamp } from '../../web/render/components.js';
 import { count, isoMonth, money, pct, shortIsoDate } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE } from '../../web/site.js';
-import { calcMeta, calcRow, hospOf } from '../../web/team/calc-data.js';
+import { calcRow, hospOf } from '../../web/team/calc-data.js';
 import { flagsNote } from '../../web/team/copy.js';
 import { openingOf } from '../../web/team/opening.js';
 import { arrow } from '../parts.js';
@@ -36,11 +36,10 @@ import { COPY } from './copy.js';
 const fill = (key, values) => fillCopy(COPY, key, values);
 const signed = (x) => money(x, { sign: true });
 
-// The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it and
-// the year its episodes come from. team: loadHub().team.
-export function teamScenario(p, team) {
+// The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it.
+export function teamScenario(p) {
   const hosp = hospOf(calcRow(p));
-  return { hosp, ...openingOf(hosp), dataYear: calcMeta(team).dataYear };
+  return { hosp, ...openingOf(hosp) };
 }
 // Track 2's number, as the calculator's note names it (the tracks' second).
 const TRACK2 = Object.keys(TRACKS)[1];
@@ -69,7 +68,7 @@ const calcLink = (ccn) => html`<a class="hh__deep" href="${SITE.sites.team.path}
  * The section for a hospital (h: the hub's, or an outside one; only its ccn is read), or '' when CMS's TEAM list (as the
  * TEAM file has it) does not name it, so the page is then exactly as it was without the section.
  * @param {{ccn: string}} h
- * @param {{meta: object, categoryAvgDerived: string[], participants: Map<string, object>}|null} team loadHub().team (null:
+ * @param {{meta: object, dataYear: number, participants: Map<string, object>}|null} team loadHub().team (null:
  *   no section on any page, for a caller with no TEAM file)
  * @param {{net: boolean}} opts whether the page shows a Medicare net above (the note says the section is never part of it)
  */
@@ -98,9 +97,12 @@ ${right}
       html`<div class="hh__wbr">${stamp({ label: fill('tmEndedStamp'), ink: true })}<p class="hh__why">${fill('tmEnded', { date: shortIsoDate(p.end) })}</p></div>`);
   }
 
-  const s = teamScenario(p, team);
+  const s = teamScenario(p);
+  // A mandatory participant's place is the area CMS selected; a voluntary one joined on its own, so its place is only where
+  // it is, never "area".
+  const voluntary = p.participation === 'voluntary';
   const status = fill(p.start < PY2_START ? 'tmSince' : 'tmFrom', {
-    date: shortIsoDate(p.start), kind: fill(p.participation === 'voluntary' ? 'tmVoluntary' : 'tmMandatory'), area: p.cbsaName,
+    date: shortIsoDate(p.start), kind: fill(voluntary ? 'tmVoluntary' : 'tmMandatory'), place: voluntary ? p.cbsaName : fill('tmArea', { name: p.cbsaName }),
   });
   const track = fill('tmTrack', { date: shortIsoDate(PY2_START), n: String(s.track) });
   const flags = s.hosp.flags.length ? html` ${flagsNote(s.hosp.flags, TRACK2)}` : '';
@@ -116,7 +118,7 @@ ${right}
 <p class="hh__wbd">${fill('tmDollars', { n, episodes: count(s.episodes), target: money(s.r.target) })}</p>
 ${ruler(s)}
 <p class="hh__wbscale">${fill('tmHatched', { n, loss: money(-s.r.limits.loss), gain: signed(s.r.limits.gain) })}</p>
-<p class="hh__why">${fill('tmHow', { year: String(s.dataYear), py: isoMonth(PY2_START).year })}</p>
+<p class="hh__why">${fill('tmHow', { year: String(team.dataYear), py: isoMonth(PY2_START).year })}</p>
 ${calcLink(p.ccn)}`;
   return section(left, right);
 }

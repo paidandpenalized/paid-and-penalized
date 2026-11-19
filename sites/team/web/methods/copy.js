@@ -75,7 +75,7 @@ export const COPY = {
     claim: null,
   },
   epRemap: {
-    text: "The data year counts some cases under MS-DRGs that CMS's performance year {py} prices don't have. This site moves them to the priced MS-DRGs that took them over; where the cases went two ways by procedure code, which the file doesn't carry, it splits them evenly, so some counts end in a half.",
+    text: "The data year counts some cases under MS-DRGs that CMS's performance year {py} prices don't have. This site moves them to the priced MS-DRGs that took them over; where the cases went two ways by procedure code, which the file doesn't carry, it splits them evenly between the two. Both halves of each split stay in one episode type, so every count stays whole; only the mix of MS-DRG prices behind a count is an even guess.",
     claim: null,
   },
   remapCaption: { text: 'MS-DRGs in the data year, moved to the priced ones', claim: null },
@@ -90,7 +90,7 @@ export const COPY = {
     claim: 'TEAM-16',
   },
   lvHere: {
-    text: "The baseline years' counts aren't public. This site adds the file's {n} data years, {from} and {to}, multiplies the sum by {scale} to stand in for {years} years, and ticks the category when the result is under {lv}. The calculator lets you change any tick.",
+    text: "The baseline years' counts aren't public. This site adds the file's {n} data years, {list}, multiplies the sum by {scale} to stand in for {years} years, and ticks the category when the result is under {lv}. The calculator lets you change any tick.",
     claim: null,
   },
   lvScope: {

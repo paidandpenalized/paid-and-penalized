@@ -28,9 +28,12 @@ export function calcRow(p) {
     ...PUBLIC_MEASURES.flatMap((m) => [p.quality[m]?.pct ?? null, p.quality[m]?.value ?? null])];
 }
 
-// What every hospital's numbers are read against: the year the episode counts come from (the newer of the two Medicare
-// data years) and the categories whose regional average is this site's mean, not CMS's (team.categoryAvgDerived).
-export const calcMeta = (team) => ({ dataYear: team.meta.mupYears[team.meta.mupYears.length - 1], derived: [...team.categoryAvgDerived] });
+// The year the episode counts come from: the newest of the file's Medicare data years (team.meta.mupYears).
+export const dataYearOf = (meta) => meta.mupYears[meta.mupYears.length - 1];
+
+// What every hospital's numbers are read against: the year the episode counts come from (dataYearOf) and the categories
+// whose regional average is this site's mean, not CMS's (team.categoryAvgDerived).
+export const calcMeta = (team) => ({ dataYear: dataYearOf(team.meta), derived: [...team.categoryAvgDerived] });
 
 // The participants still in TEAM in performance year 2, as one string of their CCNs (six characters each, sorted), for
 // the page itself: it knows which hospitals the file has before fetching it, so a ?h= or a link naming any other
@@ -67,12 +70,22 @@ export function hospOf(row, who = {}) {
 // The family search file's rows as { name, city, state } by CCN: what the build's default hospital, the calculator's
 // picker and Part 1's lookup read of it. Throws on a file without those columns.
 const WHO_COLS = ['ccn', 'name', 'city', 'state'];
-export function whoByCcn(search) {
+// The file's column positions for WHO_COLS, and a row as { name, city, state }.
+function whoReader(search) {
   const at = WHO_COLS.map((c) => (Array.isArray(search?.cols) ? search.cols.indexOf(c) : -1));
   if (at.includes(-1) || !Array.isArray(search.rows)) throw new TypeError('TEAM: not the family search\'s file');
   const [ccn, name, city, state] = at;
-  return new Map(search.rows.map((r) => [r[ccn], { name: r[name], city: r[city], state: r[state] }]));
+  return { ccn, who: (r) => ({ name: r[name], city: r[city], state: r[state] }) };
+}
+export function whoByCcn(search) {
+  const { ccn, who } = whoReader(search);
+  return new Map(search.rows.map((r) => [r[ccn], who(r)]));
 }
 
-// The family search file's row for ccn as { name, city, state }, or {} when it has none.
-export const whoOf = (search, ccn) => whoByCcn(search).get(ccn) ?? {};
+// The family search file's row for ccn as { name, city, state }, or {} when it has none: one pass to the row, no map of
+// the whole file.
+export function whoOf(search, ccn) {
+  const { ccn: at, who } = whoReader(search);
+  const row = search.rows.find((r) => r[at] === ccn);
+  return row ? who(row) : {};
+}

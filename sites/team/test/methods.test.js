@@ -125,6 +125,14 @@ test('the episode floor (C16): hidden cells under the file\'s cut-off, no outpat
     assert.ok(map, `remap ${from}`);
     for (const drg of Object.keys(map)) assert.ok(to.includes(drg), `remap ${from} → ${drg}`);
   }
+  // An even split never leaves a half case: both halves land in one episode type (the file's drgCategory), so every
+  // participant's count per type is whole, and the words say so rather than promise halves.
+  for (const [from, map] of Object.entries(team.method.remaps)) {
+    assert.equal(new Set(Object.keys(map).map((drg) => team.drgCategory[drg])).size, 1, `remap ${from} stays in one episode type`);
+  }
+  assert.ok(team.participants.every((p) => Object.values(p.cats).every((c) => Number.isInteger(c.n))), 'every count whole');
+  assert.doesNotMatch(s, /\bhalf\b/, 'no count ends in a half');
+  assert.match(s, /every count stays whole/);
 });
 
 test('low volume: the rule, the approximation (two public years times the file\'s scale against the threshold), and its scope', () => {
@@ -134,6 +142,10 @@ test('low volume: the rule, the approximation (two public years times the file\'
   assert.ok(s.includes(`${from} and ${to}, multiplies the sum by ${decimal(team.method.baselineScale, 1)}`));
   assert.equal(team.method.baselineScale, BASELINE_YEARS / team.meta.mupYears.length, 'the file\'s scale is the baseline years over the data years');
   assert.match(s, /each episode’s amount before it sums them/);
+  // The sentence follows the file's years, however many: three years are named and counted as three.
+  const three = { ...team, meta: { ...team.meta, mupYears: [from - 1, from, to] } };
+  const other = words(/<section class="doc__sec" id="low-volume"[\s\S]*?<\/section>/.exec(methodsPage({ team: three, sources, shared: loadSharedSources(), robots, assets: testAssets() }))[0]);
+  assert.ok(other.includes(`the file’s three data years, ${from - 1}, ${from}, and ${to}, multiplies`), 'three years named and counted');
 });
 
 test('quality: CMS\'s cohort and this site\'s, the cohort sizes and periods from the file, the missing-data score', () => {

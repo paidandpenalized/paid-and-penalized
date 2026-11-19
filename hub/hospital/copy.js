@@ -225,16 +225,17 @@ export const COPY = typesetCopy({
   wbLink: 'This hospital on the work-requirement page',
 
   // The TEAM section (team.js), the Medicaid band's twin: a scenario of a payment model's reconciliation, never a penalty,
-  // never part of the net. Its heading; the status line (its start, mandatory or voluntary, the area as CMS's list names
-  // it), the track it would be in, the note and the list's date. For a participant with public episodes: the label (the
-  // scenario tag follows), the range (printed as the calculator prints its own), the line under it, the
-  // ruler's words, the hatched walls' note, where the numbers come from and the link into the calculator. One with none: a
+  // never part of the net. Its heading; the status line (its start, mandatory or voluntary, and its place as CMS's list
+  // names it: "area" only for a mandatory participant, whose area CMS selected), the track it would be in, the note and
+  // the list's date. For a participant with public episodes: the label (the scenario tag follows), the range (printed as
+  // the calculator prints its own), the line under it, the ruler's words, the hatched walls' note, where the numbers come from and the link into the calculator. One with none: a
   // sentence and the link. One that left: the stamp and its end date, no dollars.
   tmKicker: 'Surgical episodes (a scenario)',
   tmKickerEnded: 'Surgical episodes',
   tmHeading: { text: "TEAM, Medicare's surgical episode model", claim: ['HUB-11', 'HUB-25'] },
-  tmSince: { text: 'In TEAM since {date} · {kind} · {area} area', claim: 'TEAM-09' },
-  tmFrom: { text: 'In TEAM from {date} · {kind} · {area} area', claim: 'TEAM-09' },
+  tmSince: { text: 'In TEAM since {date} · {kind} · {place}', claim: 'TEAM-09' },
+  tmFrom: { text: 'In TEAM from {date} · {kind} · {place}', claim: 'TEAM-09' },
+  tmArea: { text: '{name} area', claim: 'HUB-11' },
   tmMandatory: 'mandatory',
   tmVoluntary: { text: 'voluntary', claim: 'TEAM-06' },
   tmTrack: { text: 'From {date}, CMS puts it in Track {n} unless it asks for another track and CMS approves.', claim: 'TEAM-24' },

@@ -17,7 +17,7 @@ import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
-import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf } from '../../../web/team/calc-data.js';
+import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf, whoByCcn, whoOf } from '../../../web/team/calc-data.js';
 import { t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
 import { initialState, inputsOf } from '../../../web/team/opening.js';
@@ -383,4 +383,17 @@ test('a link with no hospital, arriving on a page already open, applies to the h
   assert.ok(to.ccn === other && to.values.s === 5 && !to.dropped);
   // On a fresh page (nothing showing yet) it goes to the ?h= or the default, as before.
   assert.ok(arrival({ link: readLink('#team&s=5'), defaultCcn: deflt.ccn, known: () => true }).ccn === deflt.ccn);
+});
+
+test('whoOf reads only as far as the hospital\'s row (no map of the whole search file); {} for one it lacks; whoByCcn maps them all', () => {
+  const cols = ['ccn', 'name', 'city', 'state', 'other'];
+  const rows = [['000001', 'A', 'Town A', 'AA', 1], ['000002', 'B', 'Town B', 'BB', 2]];
+  // A third row that throws when read: a lookup that stops at its row never touches it.
+  Object.defineProperty(rows, 2, { get() { throw new Error('read past the row'); }, enumerable: true });
+  rows.length = 3;
+  assert.deepEqual(whoOf({ cols, rows }, '000002'), { name: 'B', city: 'Town B', state: 'BB' });
+  const two = { cols, rows: rows.slice(0, 2) };
+  assert.deepEqual(whoOf(two, '999999'), {});
+  assert.deepEqual([...whoByCcn(two).keys()], ['000001', '000002']);
+  assert.throws(() => whoOf({ cols: ['ccn'], rows: [] }, '000001'), TypeError);
 });

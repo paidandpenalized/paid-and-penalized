@@ -7,7 +7,8 @@ import { compositeQuality } from '../../engine/js/team/quality.js';
 import { bandOf, reconcile } from '../../engine/js/team/reconcile.js';
 // The test reads the calculator itself (sites/team), to hold the hub's section to its opening view; the hub does not.
 import { calcView } from '../../sites/team/web/calc-view.js';
-import { calcMeta, calcRow, hospOf } from '../../web/team/calc-data.js';
+import { calcMeta, calcRow, dataYearOf, hospOf } from '../../web/team/calc-data.js';
+import { loadTeam } from '../../sites/team/web/data.js';
 import { flagsNote } from '../../web/team/copy.js';
 import { initialState } from '../../web/team/opening.js';
 import { textOf } from '../../pipeline/site/html.js';
@@ -19,6 +20,8 @@ import { teamBand } from '../hospital/team.js';
 
 const HUB = loadHub();
 const TEAM = HUB.team;
+// The calculator's meta, from the TEAM file itself (the hub's model carries only what its section reads).
+const META = calcMeta(loadTeam());
 const ALL = [...TEAM.participants.values()];
 const signed = (x) => money(x, { sign: true });
 const esc = (text) => escapeHtml(text);
@@ -73,7 +76,7 @@ test('ended → no dollars: the status and its end date only, no range, ruler or
 });
 
 test('range equals bandOf at Track 3, BAND_DEFAULT, and the calculator\'s opening range, to the printed figure', () => {
-  const meta = calcMeta({ meta: TEAM.meta, categoryAvgDerived: TEAM.categoryAvgDerived });
+  const meta = META;
   for (const p of FIVE) {
     const b = band(p);
     const { low, high, r, hosp } = ruleBand(p);
@@ -94,14 +97,17 @@ test('the status line: since its start, its kind of participation, its area as C
   const b = textOf(band(PLAIN));
   assert.ok(b.includes(`In TEAM since ${shortIsoDate(PLAIN.start)} · mandatory · ${PLAIN.cbsaName} area`), 'the status line');
   assert.ok(b.includes(`CMS’s TEAM list as of ${shortIsoDate(TEAM.meta.listAsOf)}`), 'the list\'s date');
-  assert.ok(textOf(band(VOLUNTARY)).includes(' · voluntary · '), 'a voluntary participant says so');
+  // A voluntary participant joined on its own: its place, never "area", which says CMS selected it.
+  const vol = textOf(band(VOLUNTARY));
+  assert.ok(vol.includes(` · voluntary · ${VOLUNTARY.cbsaName}`), 'a voluntary participant says so, with its place');
+  assert.ok(!vol.includes(`${VOLUNTARY.cbsaName} area`), 'no "area" for a voluntary participant');
   assert.ok(!b.includes('may be eligible for Track'), 'no Track 2 note without a public flag');
 });
 
 test('a public Track 2 flag: the calculator\'s own note, at the default track', () => {
   const b = band(FLAGGED);
   const hosp = hospOf(calcRow(FLAGGED));
-  const calc = calcView({ hosp, state: initialState(hosp), team: calcMeta({ meta: TEAM.meta, categoryAvgDerived: TEAM.categoryAvgDerived }) });
+  const calc = calcView({ hosp, state: initialState(hosp), team: META });
   assert.equal(calc.note, flagsNote(hosp.flags, '2'), 'the calculator\'s note at its opening track is the flags\' sentence');
   assert.ok(b.includes(esc(calc.note)), 'the calculator\'s sentence');
 });
@@ -139,7 +145,7 @@ test('never a forecast or a penalty: "would" and "scenario", never "will", "lose
 });
 
 test('every participant with public episodes: the section\'s range is the calculator\'s opening range, and its ruler\'s ends are bandOf\'s', () => {
-  const meta = calcMeta({ meta: TEAM.meta, categoryAvgDerived: TEAM.categoryAvgDerived });
+  const meta = META;
   let differ = 0;
   for (const p of DRAWN) {
     const b = band(p);
@@ -149,4 +155,12 @@ test('every participant with public episodes: the section\'s range is the calcul
   }
   assert.equal(differ, 0, 'participants whose section and calculator disagree');
   assert.ok(DRAWN.length > 0);
+});
+
+test('the hub model carries the episodes\' data year once (dataYearOf), not the calculator\'s category list; the section needs no more', () => {
+  assert.equal(TEAM.dataYear, dataYearOf(loadTeam().meta));
+  assert.ok(!('categoryAvgDerived' in TEAM), 'only what the section reads');
+  const lean = { meta: TEAM.meta, dataYear: TEAM.dataYear, participants: TEAM.participants };
+  for (const p of FIVE) assert.equal(String(teamBand({ ccn: p.ccn }, lean, { net: true })), band(p), 'the same section from the lean model');
+  assert.ok(band(FIVE[0]).includes(`inpatient discharges in ${TEAM.dataYear}`), 'the data year in its words');
 });

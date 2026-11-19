@@ -101,13 +101,14 @@ ${printout(html`<table class="gb tm-meth__remap">
   };
 }
 
+// The data years named in full ("2023 and 2024"), however many the file has, and counted from it.
 function lowVolumeSection(team) {
-  const [from, to] = team.meta.mupYears.map(String);
+  const data = team.meta.mupYears;
   const years = numberWord(BASELINE_YEARS);
   const lv = count(LOW_VOLUME);
   return {
     id: 'low-volume', heading: t('lvHeading'), body: html`${para(fill('lvRule', { lv, years }), C.lowVolume)}
-${para(fill('lvHere', { n: numberWord(team.meta.mupYears.length), from, to, scale: decimal(team.method.baselineScale, 1), years, lv }))}
+${para(fill('lvHere', { n: numberWord(data.length), list: listText(data.map(String)), scale: decimal(team.method.baselineScale, 1), years, lv }))}
 ${para(t('lvScope'), C.lowVolumeFaq)}`,
   };
 }
