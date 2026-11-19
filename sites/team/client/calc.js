@@ -18,24 +18,25 @@ import { SETTLE_MS } from '../../../web/client/live-status.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
 import { once } from '../../../web/client/once.js';
 import { buildIndex } from '../../../web/client/search.js';
-import { count, placeText } from '../../../web/render/format.js';
+import { count } from '../../../web/render/format.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
-import { CALC_COLS, hospOf } from '../web/calc-data.js';
+import { CALC_COLS, hospOf, whoByCcn } from '../web/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView, initialState } from '../web/calc-view.js';
 import { BOXES, addressOf, applyLink, arrival, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
-import { loadSearch } from './files.js';
+import { hospitalEntry, loadSearch } from './files.js';
 
 // How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
 const COPIED_MS = 2000;
 
 // The participants' file and the family search's, joined: { rows: Map ccn -> row, who: Map ccn -> { name, city, state },
-// meta }. Throws on a file of another shape.
+// named (the participants the search names: the picker's and the random pick's), meta }. Throws on a file of another
+// shape.
 function joinFiles(calcFile, searchFile) {
   if (String(calcFile?.cols) !== String(CALC_COLS) || !Array.isArray(calcFile.rows) || !calcFile.meta) throw new TypeError('calculator: not the participants\' file');
-  const at = (c) => searchFile.cols.indexOf(c);
-  const who = new Map(searchFile.rows.map((r) => [r[at('ccn')], { name: r[at('name')], city: r[at('city')], state: r[at('state')] }]));
-  return { rows: new Map(calcFile.rows.map((r) => [r[0], r])), who, meta: calcFile.meta };
+  const rows = new Map(calcFile.rows.map((r) => [r[0], r]));
+  const who = whoByCcn(searchFile);
+  return { rows, who, named: [...rows.keys()].filter((ccn) => who.get(ccn)?.name), meta: calcFile.meta };
 }
 
 // Each element's key in the drawn markup: its data-v or data-in.
@@ -245,10 +246,7 @@ export function mountCalc(section) {
 
   const form = section.querySelector('form.omni');
   if (form) {
-    const entries = () => files().then((f) => [...f.rows.keys()].filter((ccn) => f.who.get(ccn)?.name).map((ccn) => {
-      const who = f.who.get(ccn);
-      return { type: 'hospital', key: ccn, label: who.name, sub: placeText(who), extra: [who.city, who.state].filter(Boolean).join(' '), href: ccn };
-    })).then(buildIndex);
+    const entries = () => files().then((f) => buildIndex(f.named.map((ccn) => hospitalEntry({ ccn, ...f.who.get(ccn) }, ccn))));
     const input = form.querySelector('input');
     mountOmnibox(form, {
       load: entries,
@@ -274,7 +272,7 @@ export function mountCalc(section) {
       sayEl.textContent = t('calcFailed');
       return;
     }
-    const pool = [...f.rows.keys()].map((ccn) => ({ ccn, state: f.who.get(ccn)?.state ?? null })).filter((r) => f.who.get(r.ccn)?.name);
+    const pool = f.named.map((ccn) => ({ ccn, state: f.who.get(ccn).state }));
     const ccn = randomPick(pool, Math.random, hosp.ccn);
     if (ccn) load(ccn);
   });

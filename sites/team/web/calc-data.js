@@ -57,9 +57,15 @@ export function hospOf(row, who = {}) {
   return { ccn, division, flags: flags ? flags.split(' ') : [], start, cats, quality, name: who.name ?? null, city: who.city ?? null, state: who.state ?? null };
 }
 
-// The family search file's row for ccn as { name, city, state }, or {} when it has none.
-export function whoOf(search, ccn) {
-  const at = (c) => search.cols.indexOf(c);
-  const row = search.rows.find((r) => r[at('ccn')] === ccn);
-  return row ? { name: row[at('name')], city: row[at('city')], state: row[at('state')] } : {};
+// The family search file's rows as { name, city, state } by CCN: what the build's default hospital, the calculator's
+// picker and Part 1's lookup read of it. Throws on a file without those columns.
+const WHO_COLS = ['ccn', 'name', 'city', 'state'];
+export function whoByCcn(search) {
+  const at = WHO_COLS.map((c) => (Array.isArray(search?.cols) ? search.cols.indexOf(c) : -1));
+  if (at.includes(-1) || !Array.isArray(search.rows)) throw new TypeError('TEAM: not the family search\'s file');
+  const [ccn, name, city, state] = at;
+  return new Map(search.rows.map((r) => [r[ccn], { name: r[name], city: r[city], state: r[state] }]));
 }
+
+// The family search file's row for ccn as { name, city, state }, or {} when it has none.
+export const whoOf = (search, ccn) => whoByCcn(search).get(ccn) ?? {};

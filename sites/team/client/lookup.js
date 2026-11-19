@@ -18,16 +18,16 @@ import { CCN } from '../../../engine/js/ccn.js';
 import { fetchAsset } from '../../../web/client/fetch-asset.js';
 import { once } from '../../../web/client/once.js';
 import { buildIndex, search } from '../../../web/client/search.js';
-import { count, placeText } from '../../../web/render/format.js';
+import { count } from '../../../web/render/format.js';
+import { whoByCcn } from '../web/calc-data.js';
 import { LOOKUP_COLS } from '../web/lookup.js';
-import { loadSearch } from './files.js';
+import { hospitalEntry, loadSearch } from './files.js';
 
 // The rows listed at most (the design's: a short answer under the box, not a directory).
 export const SHOWN = 5;
 // How long typing must pause before the list follows, in milliseconds: long enough that the live region is not read
 // out at every letter.
 const WAIT = 150;
-const SEARCH_COLS = ['ccn', 'name', 'city', 'state'];
 
 const fillIn = (text, values) => text.replace(/\{(\w+)\}/g, (all, k) => values[k] ?? all);
 
@@ -36,9 +36,12 @@ const fillIn = (text, values) => text.replace(/\{(\w+)\}/g, (all, k) => values[k
 // (the box then says the list didn't load).
 export function lookupIndex(searchFile, codesFile) {
   const bad = () => new TypeError('lookup: a file is not the one the box reads');
-  const cols = searchFile?.cols;
-  const at = SEARCH_COLS.map((c) => (Array.isArray(cols) ? cols.indexOf(c) : -1));
-  if (at.includes(-1) || !Array.isArray(searchFile.rows)) throw bad();
+  let who;
+  try {
+    who = whoByCcn(searchFile);
+  } catch {
+    throw bad();
+  }
   const { rows, reasons, hub } = codesFile ?? {};
   if (String(codesFile?.cols) !== String(LOOKUP_COLS) || !Array.isArray(rows) || !reasons || typeof hub !== 'string') throw bad();
   const standing = new Map();
@@ -48,12 +51,10 @@ export function lookupIndex(searchFile, codesFile) {
     standing.set(ccn, reason);
   }
   const entries = [];
-  for (const row of searchFile.rows) {
-    const [ccn, name, city, state] = at.map((i) => row[i]);
+  for (const [ccn, place] of who) {
     const reason = standing.get(ccn);
-    if (!reason || !CCN.test(ccn) || typeof name !== 'string') continue;
-    const href = reason[2] === 'calc' ? `?h=${ccn}#calc` : `${hub}${ccn.toLowerCase()}/`;
-    entries.push({ type: 'hospital', key: ccn, label: name, sub: placeText({ city, state }), extra: [city, state].filter(Boolean).join(' '), href });
+    if (!reason || !CCN.test(ccn) || typeof place.name !== 'string') continue;
+    entries.push(hospitalEntry({ ccn, ...place }, reason[2] === 'calc' ? `?h=${ccn}#calc` : `${hub}${ccn.toLowerCase()}/`));
   }
   return { index: buildIndex(entries), standing };
 }
