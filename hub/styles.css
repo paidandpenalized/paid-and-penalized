@@ -771,26 +771,9 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
 }
 
 /* The TEAM section (hub/hospital/team.js), the Medicaid band's twin in every class above: for a participant, its scenario
-   range on its track's limits (web/charts/limitRuler.js), the phone's drawing under 560px and the wide one from there
-   (charts-map.css .chart[data-fit]). The hub's sheet carries only the map part of the chart kit, so the few kit rules the
-   ruler needs are here, scoped to it: its labels (in rem, the kit's 11 and 12 units at the default text size, so they
-   grow with the reader's), the hatch, the invisible hit areas. The repaid part in the pen, the paid part in the paid ink,
-   the walls hatched past each limit. */
+   range on its track's limits (web/charts/limitRuler.js, styled by the map kit the hub carries, charts-map.css), the
+   phone's drawing under 560px and the wide one from there (.chart[data-fit]). */
 .hh__tmr { max-width: 40rem; margin-top: 12px; }
-.hh__tmr .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
-.hh__tmr .chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
-.hh__tmr .chart-hatch { color: var(--ink-3); }
-.hh__tmr .chart-hit { fill: transparent; }
-.chart-ruler__loss { fill: var(--pen); }
-.chart-ruler__gain { fill: var(--rew); }
-.chart-ruler__limit, .chart-ruler__axis { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-.chart-ruler__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
-.chart-ruler__end { font-size: 0.75rem; font-weight: 700; }
-@media (forced-colors: active) {
-  .hh__tmr .chart-hatch { color: CanvasText; }
-  .chart-ruler__loss, .chart-ruler__gain { fill: CanvasText; }
-  .chart-ruler__limit, .chart-ruler__axis, .chart-ruler__zero { stroke: CanvasText; }
-}
 
 /* The peer table's fold, then the source and fairness lines. */
 .hh__tbl { margin-top: 26px; padding-block: 28px 18px; border-top: 1px dotted var(--line); }

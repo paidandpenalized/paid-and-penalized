@@ -230,11 +230,10 @@ const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title
 // then the scenarios' cards under their own heading, then the rest, under consideration (stage soon), by group: the same
 // split as the tabs and the footer (web/site.js LISTED_PROGRAMS). The heading counts the programs with pages here (live:
 // with data, and the models), those under construction, and those under consideration; a scenario is none.
-// The directory's split of the registry's programs (pure; the page's browser checks read it too): live, the programs the
-// dollar estimates hold (a card each); models, the payment models live here outside them (a card each); scenarios (a card
-// each); soon, the rest under consideration (a slip each), and soonGroups, the groups those slips fall in, in GROUP_WORDS'
-// order (a heading each).
-export function directorySplit(programs) {
+// The directory's split of the registry's programs (pure): live, the programs the dollar estimates hold (a card each);
+// models, the payment models live here outside them (a card each); scenarios (a card each); soon, the rest under
+// consideration (a slip each), and soonGroups, the groups those slips fall in, in GROUP_WORDS' order (a heading each).
+function directorySplit(programs) {
   const soon = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
   return {
     live: programs.filter((p) => p.inData),

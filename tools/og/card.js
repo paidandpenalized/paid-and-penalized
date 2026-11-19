@@ -13,7 +13,8 @@
 // penalized, the count at the maximum), its dots red where the hospital's payment adjustment factor is below 1. TEAM's
 // card is HACRP's frame with two of the TEAM file's counts under the title (the hospitals on CMS's list, the areas CMS
 // drew), its dots dark for a hospital in TEAM in performance year 2 and a pale gray otherwise: membership, never a
-// result (a card with `ink` carries the dark dots' rule and the paler gray). No other card holds a number, and none a byline.
+// result (a card with `ink` carries the dark dots' rule and the paler gray), and its words all in ink, the penalty red
+// nowhere (`penWords: false`): TEAM is a payment model. No other card holds a number, and none a byline.
 import { readFileSync } from 'node:fs';
 import { hubAsset } from '../../hub/asset.js';
 import { hubModel } from '../../hub/data.js';
@@ -58,8 +59,9 @@ const host = new URL(SITE.origin).host;
 // A title as the program's page sets it: a line per word, a hyphenated word broken after its hyphen.
 const titleLines = (title) => title.split(' ').flatMap((word) => word.split(/(?<=-)/));
 
-// Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red; size its font
-// size and top the words' top edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
+// Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red (and the kickers in
+// the red's text ink) unless penWords is false, when every word is in ink; size its font size and top the words' top
+// edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
 // the hospital's net dollars in the hub asset or its CCN among HACRP's cut hospitals (cut, a Set).
 export const CARDS = {
   family: {
@@ -108,6 +110,8 @@ export const CARDS = {
     // TEAM in performance year 2, gray for the rest.
     tone: ({ ccn }, { teamIn }) => (teamIn.has(ccn) ? 'ink' : null),
     ink: true,
+    // A payment model, never a penalty: the title and kicker in ink.
+    penWords: false,
     // The hospitals CMS's list names and the areas it drew, from the TEAM file's counts.
     fields: ({ team }) => [
       [count(team.counts.listed), teamT('ogListed')],
@@ -170,7 +174,8 @@ export function cardHtml(id, inputs) {
     if (!fonts[file]) throw new RangeError(`share card: no font file "${file}"`);
     return `@font-face { font-family: '${family}'; font-weight: ${weight}; font-style: normal; src: url(data:font/woff2;base64,${fonts[file]}) format('woff2'); }`;
   });
-  const last = card.lines.length - 1;
+  // The line in the penalty red: the title's last, unless the card's words are all in ink.
+  const last = card.penWords === false ? -1 : card.lines.length - 1;
   const css = `* { box-sizing: border-box; margin: 0; }
 html, body { width: ${CARD_SIZE.width}px; height: ${CARD_SIZE.height}px; overflow: hidden; }
 body { position: relative; background: var(--grain) repeat, var(--paper); color: var(--ink); font-family: var(--font-body); }
@@ -193,7 +198,7 @@ body { position: relative; background: var(--grain) repeat, var(--paper); color:
 .kick + .addr { margin-top: 14px; }
 .mapbox { position: absolute; right: 70px; top: 96px; width: ${MAP_BOX.width}px; height: ${MAP_BOX.height}px; }
 .map circle { fill-opacity: .85; }
-.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }${card.ink ? '\n.map .ink { fill: var(--ink); fill-opacity: .9; } .map .none { fill: var(--neutral); fill-opacity: .45; }' : ''}`;
+.map .pen { fill: var(--pen); } .map .rew { fill: var(--rew); } .map .none { fill: var(--ink-3); }${card.ink ? '\n.map .ink { fill: var(--ink); fill-opacity: .9; } .map .none { fill: var(--neutral); fill-opacity: .45; }' : ''}${card.penWords === false ? '\n.kick { color: var(--ink); }' : ''}`;
   return html`<!doctype html>
 <!-- drawn with ${raw(JSON.stringify(RENDER))} -->
 <html lang="en"><head><meta charset="utf-8">

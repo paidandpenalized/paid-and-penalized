@@ -4,7 +4,9 @@
 // the table its figure carries (figure() throws when one is not).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readPinned } from '../../pipeline/files.js';
+import { readFileSync } from 'node:fs';
+import { REPO_ROOT, readPinned } from '../../pipeline/files.js';
+import { MAP_KIT_STYLE } from '../../pipeline/site/assets.js';
 import { DIVISIONS } from '../../engine/js/divisions.js';
 import { divisionLabels, divisionMap } from '../charts/divisionMap.js';
 import { evenSteps } from '../charts/evenSteps.js';
@@ -188,6 +190,15 @@ test('limitRuler: its marks carry whole dollars, as limitRulerValues tables them
   const odd = { ...RULER, low: -546000.376000000004, high: 551000.5, limits: { gain: 2300000.25, loss: 2300000.25 } };
   assert.deepEqual(values(limitRuler({ ...odd, width: WIDTH })).sort((a, b) => a - b), [-2300000, -546000, 551001, 2300000]);
   assert.deepEqual(limitRulerValues(odd).map((r) => r.value), [-546000, 551001, -2300000, 2300000]);
+});
+
+test('limitRuler: the map kit every page that can draw it carries (charts-map.css, the hub\'s and every program site\'s) styles each class it draws; no page sheet keeps its own copy', () => {
+  const kit = readFileSync(`${REPO_ROOT}${MAP_KIT_STYLE}`, 'utf8');
+  // The frame's and the marks' own classes need no rule, nor the wall (its fill is the hatch, set on the element).
+  const drawn = new Set([...String(limitRuler({ ...RULER, width: WIDTH })).matchAll(/class="([^"]+)"/g)].flatMap((m) => m[1].split(' ')));
+  for (const cls of drawn) if (!['chart', 'chart-mark', 'chart-ruler__wall'].includes(cls) && !cls.startsWith('chart--')) assert.ok(kit.includes(`.${cls} `) || kit.includes(`.${cls},`), `the map kit styles .${cls}`);
+  const hub = readFileSync(`${REPO_ROOT}hub/styles.css`, 'utf8');
+  assert.doesNotMatch(hub, /\.chart-ruler__|\.hh__tmr \.chart-/, 'the hub sheet keeps no copy of the ruler\'s or the kit\'s rules');
 });
 
 test('limitRuler: bad input throws', () => {

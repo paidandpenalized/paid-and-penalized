@@ -5,7 +5,6 @@
 // (E2E_BASE_URL); see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { directorySplit } from '../../hub/home/below.js';
 import { SITE } from '../../web/site.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, ENGINE, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, clickInPlace, fetchDecoded, settle, useBrowser, useContext, visit, withPage } from './lib.js';
@@ -801,11 +800,13 @@ describe('the worksheet on a narrow phone', () => {
 // Below the story, the directory: each card (the programs with data, the payment models live here, then the scenarios')
 // ends in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at
 // every layout each group's name sits on one line inside its row, each slip's band holds its words on one line, and
-// slips in one row are one height with their bands on one bottom edge (from 1200 px they share one row). The counts are
-// the directory's own split of the registry (hub/home/below.js directorySplit), so a program that changes stage needs no
-// edit here.
-const SPLIT = directorySplit(SITE.programs);
-const CARDS = SPLIT.live.length + SPLIT.models.length + SPLIT.scenarios.length;
+// slips in one row are one height with their bands on one bottom edge (from 1200 px they share one row). The counts come
+// from the registry by the directory's rule, written out here (not hub/home/below.js's own split, so a fault there
+// fails): a card for each program with data, each scenario, and each payment model live here; a slip for each program
+// under consideration, under its group's name.
+const CARDS = SITE.programs.filter((p) => p.inData || p.scenario || p.stage === 'live').length;
+const SOON = SITE.programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
+const SPLIT = { soon: SOON, soonGroups: [...new Set(SOON.map((p) => p.group))] };
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
