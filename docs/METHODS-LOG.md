@@ -533,3 +533,50 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Each hospital's row carries its base fields rounded (dollars to whole dollars; ratios and shares to 6 places), so a
   browser rerun matches the roll-ups to rounding, not exactly. The cost reports are early: FY2023 is under 80% settled
   (the HCRIS layer's flag), and the page re-bases to FY2024 at about 80% settled.
+
+## team methods_version 1 (2026-11-19)
+- `data/emitted/team/fy2027/team.json` holds the data behind the TEAM pages (the Transforming Episode Accountability
+  Model, 42 CFR 512 subpart E): CMS's preliminary performance year 2 target prices, an episode estimate, target amount
+  and quality percentiles for each hospital on CMS's TEAM list, and a status for every hospital in the hospital master.
+  It is estimated from public files, not CMS's own episode attribution. `fy` is 2027: performance year 2 is calendar
+  2027, priced with FY2027 MS-DRGs. Built by `pp_pipeline/emit_team.py` (run by `run.py emit`) from the six TEAM pins
+  (`data/pinned/team-py2/`), the FY2027 county-to-CBSA crosswalk, the us-atlas county shapes and the emitted hospital
+  master. Method: `pp_engine/team/`.
+- Prices: CMS's preliminary PY2 target prices, rounded to the cent, by MS-DRG and census division (the territories are
+  priced with division 9, as CMS's workbook does). Category averages are CMS's own rows; spinal fusion has none, so its
+  average is the plain mean of its DRG prices in each division, flagged `derived`.
+- Episodes: a participant's Medicare fee-for-service inpatient discharges under each category's DRGs in the latest
+  data year (CMS's Medicare Inpatient Hospitals by Provider and Service file, data year 2024). Discharges under DRGs the
+  FY2027 grouper no longer has move to their successors: 453-455 to 426-428 and 456-458 to the new 523-525, all of
+  them; 459 and 460 split evenly between 447 and 450, and between 448 and 451 (the public file has no procedure codes to
+  split them as CMS does), so some counts end in .5. The counts are a floor: CMS leaves out any hospital-DRG cell under
+  11 discharges (`hidden` counts the category's absent cells), outpatient joint replacement and spinal fusion are not
+  in the file, and CMS attributes episodes after exclusions the file cannot apply.
+- Price and target: a category's price is the episode-weighted mean of the hospital's division DRG prices, or the
+  category average when it has no episodes; the target is episodes times price summed over the five categories, to the
+  cent (equal, within a cent, to the sum over DRGs). Low volume (§ 512.550(c)(9), fewer than 31 episodes in the 3-year
+  baseline) is approximated as the two data years' (2023 and 2024) episodes times 3/2 under 31.
+- Quality: Hybrid hospital-wide readmission and surgical-complication mortality (ISCMR) values from the Provider Data
+  Catalog. A participant's percentile per measure is the share of the other hospitals in the cohort with a worse
+  (higher) value or the same value, floored to a whole percent; ties take the higher percentile (§ 512.547(b)(1)(i)(A)).
+  The cohort, an approximation of CMS's, is every IPPS hospital in the master with a value. No value: null (the
+  calculator then uses 50, § 512.547(b)(1)(i)(D)).
+- Track 2 flags: SCH, MDH and EACH from the master's special statuses, and `rural` when the impact file does not class
+  the hospital urban. Safety-net status is not public, so an empty list does not rule Track 2 out.
+- Default hospital: the lower median, by target then CCN, of mandatory participants active in PY2 with no Track 2 flag
+  and episodes in 4 or more categories.
+- Status, in rule order: on the TEAM list (`in`; `in27` for a start on or after 2027-01-01; `ended` for an end before
+  it), Maryland, then for everyone else the county's place. The selected areas are the CBSAs on the list that hold a
+  mandatory participant. A county is in one when the crosswalk's FY2025 CBSA column names a selected CBSA, when a
+  mandatory participant sits in it, or when its crosswalk code is the code of a county where one sits: the crosswalk
+  gives a large metro's metropolitan division in place of its CBSA and leaves micropolitan counties blank. (The master's
+  own `cbsa` is not used; it follows newer delineations.) A hospital's county is the master's FIPS code, else its county
+  name matched in the crosswalk, else the county shape holding its map point, else the county of the other hospitals in
+  its city. Off the list: `outside` (county in no selected area), `in_area_kind` (not an acute IPPS hospital),
+  `ihs` (Indian Health Service or tribal), `unlisted` (acute, IPPS, in an area, yet not on the list), and
+  `area_unknown` (county not placed, in a state that has a selected area; a state with none makes it `outside`). A
+  hospital on the CJR-X list carries `cjrx` around its reason.
+- The list as of 2026-08-18 has 721 CCNs; the master has 720 of them (`a4.teamMissing`). Across the 5,482 master
+  hospitals: in 715, in27 2, ended 3, maryland 56, outside 2,147, in_area_kind 329, ihs 4, unlisted 7, area_unknown 6
+  (Connecticut hospitals under an old county name; the crosswalk has the state's planning regions), cjrx 2,213
+  (outside 2,204, in_area_kind 5, ihs 2, unlisted 2).

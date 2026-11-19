@@ -1,0 +1,403 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "team.schema.json",
+  "title": "TEAM (Transforming Episode Accountability Model, 42 CFR 512 subpart E): performance year 2 prices, participants' episode estimates and a status for every hospital",
+  "description": "ESTIMATED from public files, not CMS's own attribution (method: docs/METHODS-LOG.md, `team`). `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs. Prices are CMS's preliminary PY2 target prices in standardized dollars, to the cent, by MS-DRG and census division (1-9; the territories are priced with division 9). A participant's episodes are Medicare fee-for-service inpatient discharges from the latest data year (`meta.mupYears`), so they are a floor; its `target` is the sum over categories of n x price, to the cent. `status` holds, for every hospital in the hospital master, [code, arg]: in [participation], in27 [start date], ended [end date], maryland, outside [master kind], in_area_kind [master kind], ihs, unlisted, area_unknown, or cjrx [[code, arg]] (on the CJR-X list; the inner pair is the reason the hospital is not in TEAM). The codes are `$defs/statusCode`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "methods_version",
+    "source_manifest",
+    "sources",
+    "built_at",
+    "fy",
+    "meta",
+    "prices",
+    "categoryAvg",
+    "drgCategory",
+    "participants",
+    "status",
+    "defaultCcn",
+    "a4"
+  ],
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "price": {
+      "description": "Standardized dollars.",
+      "type": "number",
+      "minimum": 0
+    },
+    "statusCode": {
+      "enum": [
+        "in",
+        "in27",
+        "ended",
+        "maryland",
+        "outside",
+        "in_area_kind",
+        "ihs",
+        "unlisted",
+        "area_unknown",
+        "cjrx"
+      ]
+    },
+    "measure": {
+      "description": "The hospital's public value (lower is better) and its percentile (0-100, ties take the higher; 42 CFR 512.547(b)(1)(i)(A)) among IPPS hospitals with a value; null when the hospital has no public value (the calculator then uses 50, § 512.547(b)(1)(i)(D)).",
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "pct"
+      ],
+      "properties": {
+        "value": {
+          "type": "number"
+        },
+        "pct": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "category": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "n",
+        "price",
+        "hidden",
+        "lowVolume"
+      ],
+      "properties": {
+        "n": {
+          "description": "Episodes: the latest data year's Medicare inpatient discharges under the category's DRGs, retired DRGs moved to their FY2027 successors (an assumed even split makes some counts end in .5). A floor: cells under 11 discharges are hidden and outpatient cases are not public.",
+          "type": "number",
+          "minimum": 0
+        },
+        "price": {
+          "description": "The episode-weighted mean of the division's DRG prices over those episodes; the category average when n is 0.",
+          "$ref": "#/$defs/price"
+        },
+        "hidden": {
+          "description": "How many of the category's DRG cells the latest data year leaves out (each 0 to 10 discharges).",
+          "type": "integer",
+          "minimum": 0
+        },
+        "lowVolume": {
+          "description": "Both data years' episodes, scaled by 3/2 to stand for the 3-year baseline, under 31 (§ 512.550(c)(9)).",
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "methods_version": {
+      "$ref": "common.schema.json#/$defs/methodsVersion"
+    },
+    "source_manifest": {
+      "$ref": "common.schema.json#/$defs/sha256"
+    },
+    "sources": {
+      "$ref": "common.schema.json#/$defs/sources"
+    },
+    "built_at": {
+      "$ref": "common.schema.json#/$defs/builtAt"
+    },
+    "fy": {
+      "description": "Performance year 2 is calendar 2027, priced with FY2027 MS-DRGs.",
+      "const": 2027
+    },
+    "meta": {
+      "description": "Source dates: the participant list's and the CJR-X list's as-of dates, the price workbook's date, the two Medicare inpatient data years (prior, latest), the quality values' Provider Data Catalog release, and the methods version.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "listAsOf",
+        "cjrxAsOf",
+        "pricesDated",
+        "mupYears",
+        "qualityReleased",
+        "methods_version"
+      ],
+      "properties": {
+        "listAsOf": {
+          "$ref": "#/$defs/date"
+        },
+        "cjrxAsOf": {
+          "$ref": "#/$defs/date"
+        },
+        "pricesDated": {
+          "$ref": "#/$defs/date"
+        },
+        "mupYears": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 2013
+          }
+        },
+        "qualityReleased": {
+          "$ref": "#/$defs/date"
+        },
+        "methods_version": {
+          "$ref": "common.schema.json#/$defs/methodsVersion"
+        }
+      }
+    },
+    "prices": {
+      "description": "{MS-DRG: {division: price}}.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/$defs/price"
+        }
+      }
+    },
+    "categoryAvg": {
+      "description": "{category: {division: price}}: CMS's category-average rows. A category CMS gives none for (spinal fusion) has the plain mean of its DRG prices in each division and `derived: true`.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "LEJR",
+        "SHFFT",
+        "SPINAL",
+        "CABG",
+        "BOWEL"
+      ],
+      "properties": {
+        "LEJR": {
+          "type": "object",
+          "properties": {
+            "derived": {
+              "const": true
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/price"
+          }
+        },
+        "SHFFT": {
+          "type": "object",
+          "properties": {
+            "derived": {
+              "const": true
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/price"
+          }
+        },
+        "SPINAL": {
+          "type": "object",
+          "properties": {
+            "derived": {
+              "const": true
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/price"
+          }
+        },
+        "CABG": {
+          "type": "object",
+          "properties": {
+            "derived": {
+              "const": true
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/price"
+          }
+        },
+        "BOWEL": {
+          "type": "object",
+          "properties": {
+            "derived": {
+              "const": true
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/price"
+          }
+        }
+      }
+    },
+    "drgCategory": {
+      "description": "{MS-DRG: episode category}.",
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "LEJR",
+          "SHFFT",
+          "SPINAL",
+          "CABG",
+          "BOWEL"
+        ]
+      }
+    },
+    "participants": {
+      "description": "One per CCN on the TEAM list that the hospital master has, by CCN.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ccn",
+          "division",
+          "participation",
+          "start",
+          "end",
+          "active",
+          "track2Flags",
+          "cats",
+          "quality",
+          "target"
+        ],
+        "properties": {
+          "ccn": {
+            "$ref": "common.schema.json#/$defs/ccn"
+          },
+          "division": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9
+          },
+          "participation": {
+            "enum": [
+              "mandatory",
+              "voluntary"
+            ]
+          },
+          "start": {
+            "$ref": "#/$defs/date"
+          },
+          "end": {
+            "$ref": "#/$defs/date"
+          },
+          "active": {
+            "description": "False when participation ended before performance year 2.",
+            "type": "boolean"
+          },
+          "track2Flags": {
+            "description": "Track 2 eligibility the master shows (SCH, MDH, EACH, rural). Safety-net status is not public, so an empty list does not rule Track 2 out.",
+            "type": "array",
+            "items": {
+              "enum": [
+                "SCH",
+                "MDH",
+                "EACH",
+                "rural"
+              ]
+            }
+          },
+          "cats": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "LEJR",
+              "SHFFT",
+              "SPINAL",
+              "CABG",
+              "BOWEL"
+            ],
+            "properties": {
+              "LEJR": {
+                "$ref": "#/$defs/category"
+              },
+              "SHFFT": {
+                "$ref": "#/$defs/category"
+              },
+              "SPINAL": {
+                "$ref": "#/$defs/category"
+              },
+              "CABG": {
+                "$ref": "#/$defs/category"
+              },
+              "BOWEL": {
+                "$ref": "#/$defs/category"
+              }
+            }
+          },
+          "quality": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "hybrid_hwr",
+              "iscmr"
+            ],
+            "properties": {
+              "hybrid_hwr": {
+                "$ref": "#/$defs/measure"
+              },
+              "iscmr": {
+                "$ref": "#/$defs/measure"
+              }
+            }
+          },
+          "target": {
+            "$ref": "#/$defs/price"
+          }
+        }
+      }
+    },
+    "status": {
+      "description": "{CCN: [code, arg]} for every hospital in the hospital master (see the description above; codes: $defs/statusCode).",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 2,
+        "items": {
+          "type": [
+            "string",
+            "null",
+            "array"
+          ],
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "defaultCcn": {
+      "description": "The calculator's default hospital: the lower median, by target then CCN, of mandatory active participants with no Track 2 flag and episodes in 4 or more categories.",
+      "$ref": "common.schema.json#/$defs/ccn"
+    },
+    "a4": {
+      "description": "`teamMissing`: CCNs on the TEAM list the hospital master lacks; `cjrxMissing`: how many CJR-X CCNs it lacks.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "teamMissing",
+        "cjrxMissing"
+      ],
+      "properties": {
+        "teamMissing": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/ccn"
+          }
+        },
+        "cjrxMissing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 Isolated mode (-I) keeps the working directory and user site-packages off sys.path; the two package roots are added
 here instead, so nothing needs installing. Commands: `test`, `emit` (the hospital master, the Readmissions data,
-the dollar estimates, the HCRIS layer, then the Medicaid scenarios), `backtest` (prints the dollar estimates' back-test
+the dollar estimates, the HCRIS layer, the Medicaid scenarios, then the TEAM file), `backtest` (prints the dollar estimates' back-test
 against hospitals' cost reports; see pp_pipeline/backtest_dollars.py), `extract-pos <raw POS csv>`,
 `derive-team <raw directory>` (the TEAM source pins; see pp_pipeline/team/derive.py), `extract-hai <zip or csv> <pin id>` (see pp_pipeline/hai_extract.py), `extract-hcris <HCRIS zip>` (see
 pp_pipeline/hcris_extract.py), `medicaid build` (the Medicaid work-requirement scenarios; see
@@ -33,11 +33,11 @@ def emit():
     """Run every emitter, so one that reports a failure does not hide the next; the exit code is the worst of them.
     (The dollars read the HACRP file and the HACRP site's emitted file, not the master; `make emit` runs that site's
     emitter first. The HCRIS layer reads only its own pins; the Medicaid scenarios read
-    the layer's, the master's and the dollars' emitted files, so they run last.)"""
-    from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp, emit_medicaid
+    the layer's, the master's and the dollars' emitted files, so they run after them. The TEAM file reads the master.)"""
+    from pp_pipeline import emit_dollars, emit_hospital, emit_hrrp, emit_medicaid, emit_team
     from pp_pipeline.hcris import emit as emit_hcris
     # Each has a main() that returns its exit code. Order matters: Readmissions reads the master's committed file.
-    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars, emit_hcris, emit_medicaid)
+    EMITTERS = (emit_hospital, emit_hrrp, emit_dollars, emit_hcris, emit_medicaid, emit_team)
     return max([emitter.main() for emitter in EMITTERS])
 
 
