@@ -39,9 +39,12 @@ test('the picker: a labeled select, server-rendered on BAR_DRG, every episode ty
   assert.ok(picker, 'the picker, hidden until the script shows it');
   assert.match(picker, /<label for="bar-drg">Episode type<\/label>/);
   assert.match(picker, /<select id="bar-drg" data-bar-pick>/);
-  const options = [...picker.matchAll(/<option value="(\d+)"( selected)?>DRG (\d+)<\/option>/g)];
+  const options = [...picker.matchAll(/<option value="(\d+)"( selected)?>(\d+) · ([^<]+)<\/option>/g)];
   assert.deepEqual(options.filter((m) => m[2]).map((m) => m[1]), [BAR_DRG], 'DRG 470 alone selected');
   assert.ok(options.every((m) => m[1] === m[3]));
+  // Each option names its episode type's category, in the category words the sentences use.
+  assert.equal(options.find((m) => m[1] === BAR_DRG)[4], 'lower extremity joint replacement');
+  for (const m of options) assert.match(picker, new RegExp(`data-cat="${m[4]}">[\\s\\S]*?value="${m[1]}"`), `DRG ${m[1]} under its own category`);
   assert.deepEqual(options.map((m) => m[1]).sort(), Object.keys(team.prices).sort(), 'every episode type in the file, once');
   const groups = [...picker.matchAll(/<optgroup label="([^"]+)" data-cat="([^"]+)">([\s\S]*?)<\/optgroup>/g)];
   assert.equal(groups.length, CATEGORIES.length);
@@ -54,7 +57,8 @@ test('the price beside the words: BAR_DRG in the reader\'s region, from the file
   const now = words(/<p class="tm-now"[\s\S]*?<\/p>/.exec(bar)[0]);
   assert.ok(now.startsWith(roundedDollars(prices[reader])), now.slice(0, 20));
   assert.match(now, new RegExp(`for DRG ${BAR_DRG} \\(lower extremity joint replacement\\) in ${nameOf(reader)}, the region of the hospital the calculator below starts with\\. Standardized dollars\\.`));
-  assert.match(bar, /<p class="tm-now" aria-live="polite">/);
+  // One announcement per pick: the script rewrites the paragraph a span at a time, and the region is read whole.
+  assert.match(bar, /<p class="tm-now" aria-live="polite" aria-atomic="true">/);
 });
 
 test('Figure 4: the nine regions shaded by BAR_DRG\'s prices, each labeled, the reader\'s outlined; regions only, never a hospital', () => {

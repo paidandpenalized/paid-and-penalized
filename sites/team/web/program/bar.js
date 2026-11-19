@@ -42,13 +42,13 @@ export function readerDivision(team) {
 // The picker: a label and a select of every episode type, grouped by category, BAR_DRG selected. Hidden until the page's
 // script runs, since without it a pick would change nothing.
 const picker = (team) => html`<p class="tm-pick" data-bar-picker hidden><label for="bar-drg">${t('barPick')}</label>
-<select id="bar-drg" data-bar-pick>${drgsByCategory(team).map(({ cat, drgs }) => html`<optgroup label="${capitalize(catWords(cat))}" data-cat="${catWords(cat)}">${drgs.map((drg) => html`<option value="${drg}"${drg === BAR_DRG ? html` selected` : ''}>${fill('barOption', { drg })}</option>`)}</optgroup>`)}</select></p>`;
+<select id="bar-drg" data-bar-pick>${drgsByCategory(team).map(({ cat, drgs }) => html`<optgroup label="${capitalize(catWords(cat))}" data-cat="${catWords(cat)}">${drgs.map((drg) => html`<option value="${drg}"${drg === BAR_DRG ? html` selected` : ''}>${fill('barPickOption', { drg, cat: catWords(cat) })}</option>`)}</optgroup>`)}</select></p>`;
 
 // The picked episode type's price in the reader's region, large, and the sentence that says what it is: one paragraph,
-// read out again when the pick changes.
+// read out again, whole and once, when the pick changes (aria-atomic: the script rewrites it a span at a time).
 function now(team, reader) {
   const cat = team.drgCategory[BAR_DRG];
-  return html`<p class="tm-now" aria-live="polite"><span class="tm-now__price">${live('price', roundedDollars(team.prices[BAR_DRG][reader]))}</span>
+  return html`<p class="tm-now" aria-live="polite" aria-atomic="true"><span class="tm-now__price">${live('price', roundedDollars(team.prices[BAR_DRG][reader]))}</span>
 <span class="tm-now__says">${sentence('barSays', { drg: live('drg', BAR_DRG), cat: live('cat', catWords(cat)) }, { year: yearOf(PY2_START), division: divisionName(reader) })}</span></p>`;
 }
 

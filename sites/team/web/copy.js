@@ -165,6 +165,8 @@ export const COPY = {
   // the calculator starts with's region's (client/bar.js rewrites the parts in data-bar spans when the pick changes).
   barPick: { text: 'Episode type', claim: null },
   barOption: { text: 'DRG {drg}', claim: null },
+  // A picker option: the DRG and its category's words (the cat* keys below, each TEAM-21's).
+  barPickOption: { text: '{drg} · {cat}', claim: null },
   barSays: {
     text: "CMS's preliminary target price for {year} for DRG {drg} ({cat}) in {division}, the region of the hospital the calculator below starts with. Standardized dollars.",
     claim: ['TEAM-57', 'TEAM-59'],

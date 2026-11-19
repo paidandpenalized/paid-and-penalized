@@ -97,10 +97,10 @@
 
 /* Part 4's words: the picker (its label over the select, as the lookup box's heading), then the picked episode type's
    price in the reader's region in large type, and the sentence that says what it is. */
-.tm-pick { display: grid; gap: 6px; max-width: 22rem; }
+.tm-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 26rem; }
 .tm-pick[hidden] { display: none; }
 .tm-pick label { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
-.tm-pick select { padding: 0 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 max(1rem, 1em)/1.2 var(--font-body); }
+.tm-pick select { width: 100%; min-width: 0; padding: 0 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 max(1rem, 1em)/1.2 var(--font-body); }
 .tm-pick select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tm-now { display: grid; gap: 6px; }
 .tm-now > span { display: block; }
