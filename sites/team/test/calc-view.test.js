@@ -1,4 +1,5 @@
-// Part 5's calculator (web/calc-view.js, web/calc-data.js, web/program/calc.js, client/calc-state.js): the build draws the
+// Part 5's calculator (web/calc-view.js, the family's web/team/calc-data.js and opening.js, web/program/calc.js,
+// client/calc-state.js): the build draws the
 // default hospital exactly as the browser first draws it; typed numbers are the reader's own; a row's spending overrides
 // the slider for that row alone; "What would it take?" says when an answer is not possible, and why; quality by measure
 // starts collapsed and scores as the engine does; the opening hospital and "Show one at random" follow the rules; a
@@ -16,9 +17,10 @@ import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
-import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf } from '../web/calc-data.js';
+import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf } from '../../../web/team/calc-data.js';
 import { t } from '../web/calc-copy.js';
-import { calcMarkup, calcView, initialState, inputsOf } from '../web/calc-view.js';
+import { calcMarkup, calcView } from '../web/calc-view.js';
+import { initialState, inputsOf } from '../../../web/team/opening.js';
 import { loadAtlas, loadMaster, loadTeam } from '../web/data.js';
 import { programPage } from '../web/pages/program.js';
 

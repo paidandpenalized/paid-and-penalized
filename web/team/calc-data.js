@@ -1,9 +1,10 @@
-// The calculator's data: each TEAM participant in performance year 2 as one compact row, shared by the build and the
+// The TEAM calculator's data (sites/team), shared with the hub's TEAM section on a participant's page
+// (hub/hospital/team.js): each TEAM participant in performance year 2 as one compact row, shared by the build and the
 // browser. The build puts the default hospital's row in the page (so the calculator works before anything loads) and
 // every active participant's in one hashed file the page fetches on the reader's first move toward another hospital;
 // both pass through hospOf, so the server's drawing and the browser's first one read the same numbers. Pure: no DOM,
 // file or clock; imports only the engine's category list.
-import { CATEGORIES } from '../../../engine/js/team/params.js';
+import { CATEGORIES } from '../../engine/js/team/params.js';
 
 // A row: the CCN, the census division, the Track 2 flags (space-separated, '' for none), the participation start date,
 // then per category (CATEGORIES order) the episodes, the average target price (to the cent), the hidden cells and the

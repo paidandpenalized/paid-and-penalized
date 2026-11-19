@@ -2,12 +2,14 @@
 // picked by property, never by name or CCN; failure messages print no hospital's name, CCN or dollar figure.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BAND_DEFAULT, CATEGORIES, MEASURES } from '../../engine/js/team/params.js';
+import { BAND_DEFAULT, CATEGORIES, MEASURES, PY2_START } from '../../engine/js/team/params.js';
 import { compositeQuality } from '../../engine/js/team/quality.js';
 import { bandOf, reconcile } from '../../engine/js/team/reconcile.js';
-import { calcMeta, calcRow, hospOf } from '../../sites/team/web/calc-data.js';
-import { calcView, initialState, noteOf } from '../../sites/team/web/calc-view.js';
-import { PY2_START } from '../../sites/team/web/constants.js';
+// The test reads the calculator itself (sites/team), to hold the hub's section to its opening view; the hub does not.
+import { calcView } from '../../sites/team/web/calc-view.js';
+import { calcMeta, calcRow, hospOf } from '../../web/team/calc-data.js';
+import { flagsNote } from '../../web/team/copy.js';
+import { initialState } from '../../web/team/opening.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { count, money, shortIsoDate } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
@@ -97,7 +99,9 @@ test('the status line: since its start, its kind of participation, its area as C
 test('a public Track 2 flag: the calculator\'s own note, at the default track', () => {
   const b = band(FLAGGED);
   const hosp = hospOf(calcRow(FLAGGED));
-  assert.ok(b.includes(esc(noteOf(hosp, initialState(hosp).track))), 'the calculator\'s sentence');
+  const calc = calcView({ hosp, state: initialState(hosp), team: calcMeta({ meta: TEAM.meta, categoryAvgDerived: TEAM.categoryAvgDerived }) });
+  assert.equal(calc.note, flagsNote(hosp.flags, '2'), 'the calculator\'s note at its opening track is the flags\' sentence');
+  assert.ok(b.includes(esc(calc.note)), 'the calculator\'s sentence');
 });
 
 test('a 2027 starter: "In TEAM from" its start, and its band (the file\'s starters have no public episodes, so one with them is made from another participant\'s row)', () => {

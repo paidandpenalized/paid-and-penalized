@@ -1,6 +1,6 @@
 // Part 5's calculator, rev. 3: the view of one hospital's 2027 reconciliation and its markup, shared by the build (which
 // draws the rule-picked default hospital) and the browser (client/calc.js, which redraws it as the reader types). Pure: a
-// hospital (calc-data.js hospOf), the reader's state and the file's meta in; plain data and the kit's escaped markup out.
+// hospital (web/team/calc-data.js hospOf), the reader's state and the file's meta in; plain data and the kit's escaped markup out.
 // Every dollar is the engine's (engine/js/team/: reconcile, bandOf, solveSpend, marginal, compositeQuality); the view
 // only gathers the inputs, formats and words them.
 //
@@ -15,14 +15,15 @@
 // The markup marks every part that changes: data-v="key" on an element whose text and attributes follow the state, and
 // data-in="key" on each input (the browser sets its value, unless the reader is typing in it). The figure (data-v="fig")
 // is the costly part, so the browser redraws it once per frame.
-import { BAND_DEFAULT, CATEGORIES, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLVE_SPAN, TRACKS } from '../../../engine/js/team/params.js';
-import { compositeQuality } from '../../../engine/js/team/quality.js';
+import { BAND_DEFAULT, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLVE_SPAN, TRACKS } from '../../../engine/js/team/params.js';
 import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, listText, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
+import { count, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
-import { CALC, DEFAULT_TRACK, PAYOFF, PY2_START, TRACK1_LAST, yearOf } from './constants.js';
+import { flagsNote } from '../../../web/team/copy.js';
+import { engineInput, inputsOf } from '../../../web/team/opening.js';
+import { CALC, PAYOFF, PY2_START, TRACK1_LAST, yearOf } from './constants.js';
 import { fill, t } from './calc-copy.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
@@ -36,43 +37,17 @@ const bandText = (p) => `±${pctOf(p, { sign: false })}`;
 // The composite quality score at one decimal, a whole score without its ".0".
 const scoreText = (x) => String(Math.round(x * 10) / 10);
 
-// The state a hospital opens with: Track 3 (CMS's default from performance year 2), on target, the ±5% band, nothing typed.
-export const initialState = (hosp) => ({
-  ccn: hosp.ccn, track: DEFAULT_TRACK, s: 0, sk: {}, band: BAND_DEFAULT * 100, ov: { n: {}, p: {} }, lv: {}, q: {}, mine: new Set(), moved: false, earn: null, owe: null,
-});
-
-// The numbers the engine takes, the reader's over the hospital's: per category the episodes, price, spending (a share)
-// and low-volume flag; the quality percentiles (null: CMS's missing-data score) and the composite score with its weights.
-export function inputsOf(hosp, state) {
-  const cats = CATEGORIES.map((key) => {
-    const pub = hosp.cats[key];
-    const n = state.ov.n[key] ?? pub.n;
-    const price = state.ov.p[key] ?? pub.price;
-    return { key, n, price, target: n * price, spend: (state.sk[key] ?? state.s) / 100, lowVolume: state.lv[key] ?? pub.lowVolume };
-  });
-  const pcts = Object.fromEntries(MEASURE_KEYS.map((m) => [m, state.q[m] ?? hosp.quality[m]?.pct ?? null]));
-  const episodes = cats.reduce((sum, c) => sum + c.n, 0);
-  const { cqs, weights } = compositeQuality(pcts, { inpatient: episodes, lejr: cats.find((c) => c.key === 'LEJR').n });
-  return { cats, pcts, cqs, weights, episodes, track: state.track };
-}
-
-// The engine's input from inputsOf's: what reconcile and bandOf take. The hub's TEAM section on a participant's page
-// (hub/hospital/team.js) goes through it and inputsOf too, so its band is the calculator's opening one to the cent.
-export const engineInput = ({ cats, cqs, track }) => ({ cats: cats.map(({ key, target, spend, lowVolume }) => ({ key, target, spend, lowVolume })), cqs, track });
-
 // A source tag's words and whether it is the reader's own.
 const src = (mine, words) => ({ mine, text: mine ? t('srcMine') : words });
 
 // The note under the track control: Track 1's eligibility when it is chosen, and the hospital's public Track 2 flags (or,
-// on Track 2 with none, who Track 2 is open to). Track 1 and 2 stay selectable: the reader's scenario, not advice. The
-// hub's TEAM section shows the same note at the default track.
-export function noteOf(hosp, track) {
+// on Track 2 with none, who Track 2 is open to). Track 1 and 2 stay selectable: the reader's scenario, not advice.
+function noteOf(hosp, track) {
   const parts = [];
   const [ta, tb] = TRACK_NUMBERS.map(String);
   if (track === 1) parts.push(fill('noteTrack1', { ta, year: yearOf(TRACK1_LAST) }));
   if (hosp.flags.length) {
-    const words = [...hosp.flags].sort((a, b) => (a === 'rural' ? -1 : b === 'rural' ? 1 : 0)).map((f) => t(`flag${f === 'rural' ? 'Rural' : f}`));
-    parts.push(fill(hosp.flags.includes('MDH') ? 'noteFlagsMdh' : 'noteFlags', { kinds: listText(words), tb }));
+    parts.push(flagsNote(hosp.flags, tb));
   } else if (track === 2) {
     parts.push(fill('noteTrack2', { tb }));
   }

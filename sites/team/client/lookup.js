@@ -19,7 +19,7 @@ import { fetchAsset } from '../../../web/client/fetch-asset.js';
 import { once } from '../../../web/client/once.js';
 import { buildIndex, search } from '../../../web/client/search.js';
 import { count } from '../../../web/render/format.js';
-import { whoByCcn } from '../web/calc-data.js';
+import { whoByCcn } from '../../../web/team/calc-data.js';
 import { LOOKUP_COLS } from '../web/lookup.js';
 import { hospitalEntry, loadSearch } from './files.js';
 

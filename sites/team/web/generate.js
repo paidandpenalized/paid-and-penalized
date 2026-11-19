@@ -9,7 +9,7 @@ import { robotsFor } from '../../../pipeline/site/context.js';
 import { count } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import { loadAtlas, loadMaster, loadSources, loadTeam } from './data.js';
-import { calcAsset } from './calc-data.js';
+import { calcAsset } from '../../../web/team/calc-data.js';
 import { lookupFile } from './lookup-copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from './links.js';
 import { methodsPage } from './pages/methods.js';

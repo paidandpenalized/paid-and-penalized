@@ -42,28 +42,17 @@ export const COPY = {
   calcDropped: { text: "The link names a hospital the calculator doesn't have, so its numbers were left out.", claim: null },
   calcLoaded: { text: 'The calculator now shows {name}.', claim: null },
 
-  // The track control and the note under it.
+  // The track control and the note under it (a hospital's public Track 2 flags are web/team/copy.js's note, which the
+  // hub's TEAM section prints too).
   trackLegend: { text: 'The track for this scenario', claim: null },
   trackName: { text: 'Track {n}', claim: null },
   trackUp: { text: 'upside only', claim: null },
   trackBoth: { text: '±{pct}', claim: null },
   noteTrack1: { text: 'Track {ta} is open only to safety-net hospitals, and only through {year}: a scenario, not advice.', claim: 'TEAM-25' },
-  noteFlags: {
-    text: "Medicare's hospital list marks it {kinds}, so it may be eligible for Track {tb}; safety-net status isn't public.",
-    claim: 'TEAM-26',
-  },
-  noteFlagsMdh: {
-    text: "Medicare's hospital list marks it {kinds}, so it may be eligible for Track {tb}; safety-net status isn't public, and the Medicare-dependent route holds only while that program hasn't expired when selections are due.",
-    claim: 'TEAM-26',
-  },
   noteTrack2: {
     text: "Track {tb} is open to rural, safety-net, sole community and essential access community hospitals, and to Medicare-dependent hospitals while that program lasts; nothing public marks this one, and safety-net status isn't public.",
     claim: 'TEAM-26',
   },
-  flagSCH: { text: 'a sole community hospital', claim: null },
-  flagMDH: { text: 'a Medicare-dependent hospital', claim: null },
-  flagEACH: { text: 'an essential access community hospital', claim: null },
-  flagRural: { text: 'rural', claim: null },
 
   // The episode table: its heads, each row's notes, the source under each box and the boxes' names.
   colEpisode: { text: 'Episode', claim: null },

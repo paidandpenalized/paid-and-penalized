@@ -227,7 +227,7 @@ export const COPY = typesetCopy({
   // The TEAM section (team.js), the Medicaid band's twin: a scenario of a payment model's reconciliation, never a penalty,
   // never part of the net. Its heading; the status line (its start, mandatory or voluntary, the area as CMS's list names
   // it), the track it would be in, the note and the list's date. For a participant with public episodes: the label (the
-  // scenario tag follows), the range is the calculator's own words (sites/team/web/calc-copy.js outRange), the line under it, the
+  // scenario tag follows), the range (printed as the calculator prints its own), the line under it, the
   // ruler's words, the hatched walls' note, where the numbers come from and the link into the calculator. One with none: a
   // sentence and the link. One that left: the stamp and its end date, no dollars.
   tmKicker: 'Surgical episodes (a scenario)',
@@ -243,6 +243,7 @@ export const COPY = typesetCopy({
   tmAsOf: { text: "CMS's TEAM list as of {date}.", claim: 'TEAM-09' },
   tmLabel: 'If its {year} episode spending lands in a {band} band around target',
   tmTag: 'SCENARIO · PUBLIC DATA',
+  tmRange: '{lo} to {hi}',
   tmDollars: { text: 'a year, Track {n} · at least {episodes} Medicare episodes a year · target amount {target}, in standardized dollars', claim: 'TEAM-59' },
   tmStopGain: 'stop-gain {amount}',
   tmStopLoss: 'stop-loss {amount}',

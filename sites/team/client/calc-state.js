@@ -6,7 +6,7 @@ import { clamp } from '../../../engine/js/stats.js';
 import { BAND_DEFAULT, MISSING_QUALITY } from '../../../engine/js/team/params.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
-import { initialState } from '../web/calc-view.js';
+import { initialState } from '../../../web/team/opening.js';
 import { CALC, DEFAULT_TRACK } from '../web/constants.js';
 import { MAX_EPISODES, MAX_PRICE, RANGES, decodeTeam, encodeTeam } from './share.js';
 

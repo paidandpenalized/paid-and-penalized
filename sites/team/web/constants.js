@@ -3,29 +3,29 @@
 // constant named here. The method constants are the engine's (engine/js/team/params.js), re-exported so the gate sees
 // them; the band's constants are this site's own choices, not rules, so they are not here. The dates below are rules of
 // CMS's, dated and sourced in the register.
-import { CQS_CAPS, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, TRACKS } from '../../../engine/js/team/params.js';
+import { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, TRACKS } from '../../../engine/js/team/params.js';
 
-export { CQS_CAPS, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, TRACKS };
+// PY2_START and DEFAULT_TRACK are the engine's (the hub's TEAM section reads them too); their claims are below.
+export { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, TRACKS };
 export const CLAIM_PREFIX = 'TEAM';
 export const METHOD_CONSTANTS = Object.freeze({ TRACKS: 'object', CQS_CAPS: 'object', LOW_VOLUME: 'number', EPISODE_DAYS: 'number', MISSING_QUALITY: 'number', MEASURES: 'object' });
 
 // The model's dates, each a rule of CMS's (its claim below). ISO dates; pages format them with web/render/format.js.
 //   MODEL_START, MODEL_END  the model performance period (§ 512.505)
-//   PY2_START               the second performance year's first day (performance years are calendar years)
+//   PY2_START               the second performance year's first day: the engine's (engine/js/team/params.js)
 //   TRACK1_LAST             the last day a safety-net hospital may be in Track 1: performance year 3's end (§ 512.520(b))
 //   PY2_DATA_DUE            when performance year 2's data request and data sharing agreement were due (CMS's FAQ)
 //   CJRX_START              the day CJR-X starts (the nationwide expansion of the joint-replacement model)
 export const MODEL_START = '2026-01-01';
 export const MODEL_END = '2030-12-31';
-export const PY2_START = '2027-01-01';
 export const TRACK1_LAST = '2028-12-31';
 export const PY2_DATA_DUE = '2026-09-01';
 export const CJRX_START = '2028-01-01';
 // An ISO date's year ("2027"), as copy names it.
 export const yearOf = (iso) => iso.slice(0, 4);
 
-// The track CMS assigns from performance year 2 unless a participant asks for another and qualifies (§ 512.520(b)).
-export const DEFAULT_TRACK = 3;
+// DEFAULT_TRACK, the track CMS assigns from performance year 2 unless a participant asks for another and qualifies
+// (§ 512.520(b)), is the engine's (engine/js/team/params.js), re-exported above.
 
 // The rules' other numbers the program page states: how many months after a performance year ends CMS reconciles it
 // (§ 512.550(b)); the days a participant has to flag a calculation error, which are also the days after which an

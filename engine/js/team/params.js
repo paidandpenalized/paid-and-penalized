@@ -16,6 +16,12 @@ export const CQS_CAPS = Object.freeze(Object.fromEntries(
   Object.entries(TRACKS).map(([track, t]) => [track, Object.freeze({ gain: t.qGain, loss: t.qLoss })]),
 ));
 
+// TEAM-07. The second performance year's first day (performance years are calendar years; the model began January 1,
+// 2026), an ISO date. TEAM-24. The track CMS assigns from performance year 2 unless a participant asks for another and
+// qualifies (§ 512.520(b)).
+export const PY2_START = '2027-01-01';
+export const DEFAULT_TRACK = 3;
+
 // TEAM-19. The episode runs through the 30th day after the anchor discharge (or the anchor procedure), the discharge
 // day counting as day 1 (§ 512.537(a)(1)).
 export const EPISODE_DAYS = 30;

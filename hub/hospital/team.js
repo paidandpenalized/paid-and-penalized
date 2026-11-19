@@ -16,21 +16,21 @@
 // A participant with no public episodes (a $0 target): the status and a sentence sending the reader to the calculator
 // with the link, no range or ruler. One that left before performance year 2: the stamp and its end date, no dollars.
 //
-// The numbers are the calculator's opening ones for the hospital, to the cent: its row as the calculator reads it
-// (calc-data.js calcRow then hospOf), its opening state (calc-view.js initialState), the engine's input from them
-// (inputsOf, engineInput), then the engine's bandOf at the state's band and reconcile's limits.
-import { bandOf, reconcile } from '../../engine/js/team/reconcile.js';
-import { calcMeta, calcRow, hospOf } from '../../sites/team/web/calc-data.js';
-import { fill as calcFill } from '../../sites/team/web/calc-copy.js';
-import { engineInput, initialState, inputsOf, noteOf } from '../../sites/team/web/calc-view.js';
-import { PY2_START, yearOf } from '../../sites/team/web/constants.js';
+// The numbers are the calculator's opening ones for the hospital, to the cent, from the family's TEAM modules the
+// calculator reads too: its row as the calculator reads it (web/team/calc-data.js calcRow then hospOf) and its opening
+// view (web/team/opening.js openingOf: the opening state, the engine's input, bandOf at the state's band and reconcile's
+// limits). The Track 2 note is the calculator's own sentence (web/team/copy.js flagsNote). The hub imports no site's code.
+import { PY2_START, TRACKS } from '../../engine/js/team/params.js';
 import { imageOf } from '../../web/charts/figure.js';
 import { limitRuler } from '../../web/charts/limitRuler.js';
 import { WIDTH } from '../../web/charts/svg.js';
 import { fillCopy, stamp } from '../../web/render/components.js';
-import { count, money, pct, shortIsoDate } from '../../web/render/format.js';
+import { count, isoMonth, money, pct, shortIsoDate } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE } from '../../web/site.js';
+import { calcMeta, calcRow, hospOf } from '../../web/team/calc-data.js';
+import { flagsNote } from '../../web/team/copy.js';
+import { openingOf } from '../../web/team/opening.js';
 import { arrow } from '../parts.js';
 import { COPY } from './copy.js';
 
@@ -40,18 +40,14 @@ const signed = (x) => money(x, { sign: true });
 // under it.
 const WIDE = 560;
 
-// The calculator's opening view of a participant, in numbers: the engine's input, its reconciliation at target (the
-// limits and the target amount), the band and the episodes. team: loadHub().team.
+// The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it and
+// the year its episodes come from. team: loadHub().team.
 export function teamScenario(p, team) {
   const hosp = hospOf(calcRow(p));
-  const state = initialState(hosp);
-  const inputs = inputsOf(hosp, state);
-  const input = engineInput(inputs);
-  return {
-    hosp, track: state.track, width: state.band / 100, episodes: inputs.episodes,
-    r: reconcile(input), band: bandOf({ ...input, width: state.band / 100 }), dataYear: calcMeta(team).dataYear,
-  };
+  return { hosp, ...openingOf(hosp), dataYear: calcMeta(team).dataYear };
 }
+// Track 2's number, as the calculator's note names it (the tracks' second).
+const TRACK2 = Object.keys(TRACKS)[1];
 
 // The range on its track's limits, drawn twice (a phone's and a wide one; aria-hidden: the words around it give every
 // number), each with its own hatch.
@@ -110,7 +106,7 @@ ${right}
     date: shortIsoDate(p.start), kind: fill(p.participation === 'voluntary' ? 'tmVoluntary' : 'tmMandatory'), area: p.cbsaName,
   });
   const track = fill('tmTrack', { date: shortIsoDate(PY2_START), n: String(s.track) });
-  const flags = s.hosp.flags.length ? html` ${noteOf(s.hosp, s.track)}` : '';
+  const flags = s.hosp.flags.length ? html` ${flagsNote(s.hosp.flags, TRACK2)}` : '';
   const left = head('tmKicker', html`<p class="hh__wbnote">${status}. ${track}${flags}</p>
 <p class="hh__wbnote">${fill(net ? 'tmNote' : 'tmNoteAlone')} ${asOf}</p>`);
 
@@ -118,12 +114,12 @@ ${right}
   if (s.r.target === 0) return section(left, html`<p class="hh__why">${fill('tmNone')}</p>\n${calcLink(p.ccn)}`);
 
   const n = String(s.track);
-  const right = html`<p class="hh__wblab">${fill('tmLabel', { year: yearOf(PY2_START), band: `±${pct(s.width, 0)}` })} <span class="scen-tag">${fill('tmTag')}</span></p>
-<p class="hh__wbv">${calcFill('outRange', { lo: signed(s.band.low), hi: signed(s.band.high) })}</p>
+  const right = html`<p class="hh__wblab">${fill('tmLabel', { year: isoMonth(PY2_START).year, band: `±${pct(s.width, 0)}` })} <span class="scen-tag">${fill('tmTag')}</span></p>
+<p class="hh__wbv">${fill('tmRange', { lo: signed(s.band.low), hi: signed(s.band.high) })}</p>
 <p class="hh__wbd">${fill('tmDollars', { n, episodes: count(s.episodes), target: money(s.r.target) })}</p>
 ${ruler(s)}
 <p class="hh__wbscale">${fill('tmHatched', { n, loss: money(-s.r.limits.loss), gain: signed(s.r.limits.gain) })}</p>
-<p class="hh__why">${fill('tmHow', { year: String(s.dataYear), py: yearOf(PY2_START) })}</p>
+<p class="hh__why">${fill('tmHow', { year: String(s.dataYear), py: isoMonth(PY2_START).year })}</p>
 ${calcLink(p.ccn)}`;
   return section(left, right);
 }

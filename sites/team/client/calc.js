@@ -20,9 +20,10 @@ import { once } from '../../../web/client/once.js';
 import { buildIndex } from '../../../web/client/search.js';
 import { count } from '../../../web/render/format.js';
 import { isScenarioHash } from '../../../web/whatif/fragment.js';
-import { CALC_COLS, ccnSet, hospOf, whoByCcn } from '../web/calc-data.js';
+import { CALC_COLS, ccnSet, hospOf, whoByCcn } from '../../../web/team/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
-import { calcMarkup, calcView, initialState } from '../web/calc-view.js';
+import { calcMarkup, calcView } from '../web/calc-view.js';
+import { initialState } from '../../../web/team/opening.js';
 import { BOXES, addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
 import { hospitalEntry, loadSearch } from './files.js';
 
