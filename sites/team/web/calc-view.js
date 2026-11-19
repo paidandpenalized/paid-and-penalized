@@ -17,7 +17,7 @@
 // is the costly part, so the browser redraws it once per frame.
 import { BAND_DEFAULT, CATEGORIES, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLVE_SPAN, TRACKS } from '../../../engine/js/team/params.js';
 import { compositeQuality } from '../../../engine/js/team/quality.js';
-import { bandOf, marginal, reconcile, resultAt, solveSpend } from '../../../engine/js/team/reconcile.js';
+import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, listText, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
@@ -27,9 +27,6 @@ import { fill, t } from './calc-copy.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
 const TRACK_NUMBERS = Object.keys(TRACKS).map(Number);
-// The engine leaves sub-cent residue at a true zero; a row's amount under half a cent is shown as $0.
-const HALF_CENT = 0.005;
-const snap = (x) => (Math.abs(x) < HALF_CENT ? 0 : x);
 const yearOf = (iso) => iso.slice(0, 4);
 const signed = (x) => money(x, { sign: true });
 // A percent the reader set (5 is 5%), at one decimal only when it has one: "0%", "+2.5%", "−3%".

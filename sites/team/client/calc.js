@@ -11,6 +11,7 @@
 // marked data-in) takes its fresh twin's text and attributes; an input the reader is typing in keeps what they typed.
 // The payoff figure is redrawn once per frame, and the polite sentence for a screen reader once the reader pauses
 // (SETTLE_MS). A box that can't take what was typed goes back to its last good value and says so.
+import { copyOrSelect } from '../../../web/client/clipboard.js';
 import { fetchAsset } from '../../../web/client/fetch-asset.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { SETTLE_MS } from '../../../web/client/live-status.js';
@@ -231,19 +232,12 @@ export function mountCalc(section) {
     const status = button.parentElement.querySelector('.tc-copied');
     const shown = body.querySelector('[data-calc-link]');
     clearTimeout(copiedTimer);
-    status.textContent = '';
-    try {
-      await navigator.clipboard.writeText(url);
-      status.textContent = t('copied');
-      copiedTimer = setTimeout(() => { status.textContent = ''; }, COPIED_MS);
-    } catch {
+    const reveal = () => {
       shown.textContent = url;
       shown.hidden = false;
-      const range = document.createRange();
-      range.selectNodeContents(shown);
-      getSelection()?.removeAllRanges();
-      getSelection()?.addRange(range);
-      status.textContent = t('copyFailed');
+    };
+    if (await copyOrSelect({ text: url, node: shown, status, copied: t('copied'), failed: t('copyFailed'), reveal })) {
+      copiedTimer = setTimeout(() => { status.textContent = ''; }, COPIED_MS);
     }
   }
 

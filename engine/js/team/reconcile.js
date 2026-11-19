@@ -16,9 +16,9 @@ import { clamp } from '../stats.js';
 import { BAND_DEFAULT, QUALITY_STEP, SOLVE_SPAN, TRACKS } from './params.js';
 
 // Sums of products leave residue such as -1.35e-11 at a true break-even, which a formatter shows as "-$0". Any amount
-// under half a cent either way is that residue, so it becomes +0.
+// under half a cent either way is that residue, so it becomes +0. The calculator's view snaps a row's amount the same way.
 const HALF_CENT = 0.005;
-const snap = (x) => (Math.abs(x) < HALF_CENT ? 0 : x);
+export const snap = (x) => (Math.abs(x) < HALF_CENT ? 0 : x);
 
 const fail = (what) => {
   throw new RangeError(`TEAM reconciliation: ${what}`);

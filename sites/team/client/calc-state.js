@@ -2,6 +2,7 @@
 // applies over a hospital's numbers, what a typed box does, the link the page writes and shares, and the hospital "Show
 // one at random" draws. No DOM: client/calc.js runs these against the page, and the tests run them alone. The state's
 // shape is calc-view.js's.
+import { clamp } from '../../../engine/js/stats.js';
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, SOLVE_SPAN } from '../../../engine/js/team/params.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
@@ -41,6 +42,8 @@ export const BOXES = Object.freeze({
 const OWN = new Set(['n', 'p', 'q']);
 
 const round = (x, decimals) => Math.round(x * 10 ** decimals) / 10 ** decimals + 0;
+// An "all five" spending held to the slider's reach (+ 0: never -0).
+const toSlider = (s) => clamp(s, -CALC.slider, CALC.slider) + 0;
 const copyState = (s) => ({ ...s, sk: { ...s.sk }, ov: { n: { ...s.ov.n }, p: { ...s.ov.p } }, lv: { ...s.lv }, q: { ...s.q }, mine: new Set(s.mine) });
 
 // A box's value read from its text: { value } when the text is a number in the box's range (rounded to its decimals),
@@ -90,7 +93,7 @@ export function typeInto(state, hosp, key, text) {
 }
 
 // The "all five" slider, the track, a low-volume box.
-export const setSlider = (state, s) => ({ ...copyState(state), s: Math.max(-CALC.slider, Math.min(CALC.slider, s)) + 0, moved: true });
+export const setSlider = (state, s) => ({ ...copyState(state), s: toSlider(s), moved: true });
 export const setTrack = (state, track) => ({ ...copyState(state), track });
 export function setLowVolume(state, cat, checked) {
   const next = copyState(state);
@@ -104,7 +107,7 @@ export function setLowVolume(state, cat, checked) {
 export function applyLink(state, link) {
   const next = copyState(state);
   if (link.track !== undefined) next.track = link.track;
-  if (link.s !== undefined) next.s = Math.max(-CALC.slider, Math.min(CALC.slider, link.s)) + 0;
+  if (link.s !== undefined) next.s = toSlider(link.s);
   if (link.band !== undefined) next.band = link.band;
   for (const [cat, v] of Object.entries(link.sk ?? {})) next.sk[cat] = v;
   for (const g of ['n', 'p']) for (const [cat, v] of Object.entries(link.ov?.[g] ?? {})) { next.ov[g][cat] = v; next.mine.add(`${g}.${cat}`); }
