@@ -304,11 +304,12 @@ export function mountCalc(section) {
     const query = followedCcn(search);
     const base = first.row[0];
     let f = null;
+    let failed = false;
     if ([link?.ccn, query].some((ccn) => ccn && ccn !== base)) {
       try {
         f = await files();
       } catch {
-        sayEl.textContent = t('calcFailed');
+        failed = true;
       }
     }
     const to = arrival({ link, query, defaultCcn: base, known: (ccn) => Boolean(f?.rows.has(ccn)) });
@@ -317,7 +318,9 @@ export function mountCalc(section) {
       if (to.ccn === base) show(home, to.values ? applyLink(initialState(home), to.values) : initialState(home), { quiet: true });
       else await load(to.ccn, { values: to.values, quiet: true });
     }
-    if (to.dropped) sayEl.textContent = t('calcDropped');
+    // One sentence: a file that didn't load is what matters (it is also why a link was dropped).
+    if (failed) sayEl.textContent = t('calcFailed');
+    else if (to.dropped) sayEl.textContent = t('calcDropped');
     const rejected = section.querySelector('[data-calc-rejected]');
     rejected.textContent = link?.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
     banner.hidden = !isScenario(state, hosp);

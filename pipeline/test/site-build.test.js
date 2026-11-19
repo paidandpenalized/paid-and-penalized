@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
-import { buildAssets, hash8, stylesheet, withoutClaims } from '../site/assets.js';
+import { COPY_FILE, buildAssets, hash8, stripClaims, stylesheet, withoutClaims } from '../site/assets.js';
+import { build as esbuild } from 'esbuild';
 import { HUB } from '../../hub/pages.js';
 import { loadHub } from '../../hub/data.js';
 import { EXAMPLE_CCN } from '../../hub/model.js';
@@ -161,11 +162,39 @@ test('no browser bundle calls a built-in newer than the ES2020 target', () =>
     for (const [name, path] of Object.entries(js)) {
       const text = readFileSync(join(out, path), 'utf8');
       for (const [builtIn, re] of NEWER_BUILT_INS) assert.doesNotMatch(text, re, `${name}: ${builtIn}`);
-      // The copy gate's claim ids stay in the source: a copy file reaches a bundle as words only (assets.js
-      // withoutClaims). TEAM's page script reads its words from copy files alone, so none of it carries a claim.
-      if (name === 'team-page') assert.ok(!/\bclaim:/.test(text), `${name}: a copy entry's claim`);
     }
   }));
+
+// The copy gate's claim ids stay in the source: every copy file a bundle reads reaches it as words only. Each entry is
+// bundled as the build bundles it; every input the metafile lists that the copy filter matches must have gone through
+// the plugin and come out with no claim, and a bundle that imports a copy file still reads its words.
+test('every bundle reads its copy files without their claims, and still reads their words', async () => {
+  const entries = mergeEntries(SHARED_ENTRIES, ...SITES.map((s) => s.entries ?? {}));
+  const loaded = new Map();
+  let copies = 0;
+  for (const [name, path] of Object.entries(entries)) {
+    const result = await esbuild({
+      entryPoints: [join(REPO_ROOT, path)], bundle: true, format: 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
+      absWorkingDir: REPO_ROOT, plugins: [stripClaims((p, contents) => loaded.set(p, contents))],
+    });
+    for (const input of Object.keys(result.metafile.inputs).filter((i) => COPY_FILE.test(i) && !i.includes('node_modules'))) {
+      copies += 1;
+      const contents = loaded.get(join(REPO_ROOT, input));
+      assert.ok(contents !== undefined, `${name}: ${input} went through the claim strip`);
+      assert.ok(!/\bclaim:/.test(contents), `${name}: ${input} keeps a claim`);
+    }
+  }
+  assert.ok(copies > 0, 'the bundles read copy files');
+  // A bundle that imports a copy file reads the same words as the source.
+  await withTemp(async (dir) => {
+    const entry = join(dir, 'entry.js');
+    writeFileSync(entry, `import { fill, t } from ${JSON.stringify(join(REPO_ROOT, 'sites/team/web/calc-copy.js'))};\nexport const words = [t('srcMine'), fill('calcPickCount', { n: '7' })];\n`);
+    const out = await esbuild({ entryPoints: [entry], bundle: true, format: 'esm', write: false, logLevel: 'silent', plugins: [stripClaims()] });
+    const { words } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString('base64')}`);
+    assert.deepEqual(words, ['your number', '7 TEAM hospitals match.']);
+    assert.ok(!/\bclaim:/.test(out.outputFiles[0].text));
+  });
+});
 
 test('a bundle takes copy entries\' claims out, in every form a copy file writes them, and stops on any other', () => {
   const source = "a: { text: 'x', claim: null },\n  b: { text: 'y', claim: 'TEAM-01' },\n  c: {\n    text: 'z',\n    claim: ['TEAM-01', 'TEAM-02'],\n  },";

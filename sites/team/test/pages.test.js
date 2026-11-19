@@ -10,7 +10,7 @@ import { REPO_ROOT } from '../../../pipeline/files.js';
 import { KIT_STYLES } from '../../../pipeline/site/assets.js';
 import { createContext } from '../../../pipeline/site/context.js';
 import { textOf } from '../../../pipeline/site/html.js';
-import { headerOf, testAssets, withTemp } from '../../../pipeline/test/helpers.js';
+import { headerOf, readerWords, testAssets, withTemp } from '../../../pipeline/test/helpers.js';
 import { reconcile } from '../../../engine/js/team/reconcile.js';
 import { CATEGORIES } from '../../../engine/js/team/params.js';
 import { SITE, programById } from '../../../web/site.js';
@@ -262,4 +262,17 @@ test('the Methods page: one h1, Methods current, noindex, canonical', () => {
   assert.ok(methods.includes('<meta name="robots" content="noindex">'));
   assert.ok(headerOf(methods).includes('data-nav="methods" aria-current="true"'));
   assert.ok(methods.includes(`<link rel="canonical" href="${SITE.origin}${METHODS_PATH}">`));
+});
+
+// Every TEAM sentence as the pages render it (the copy filled with its numbers, words and parts) has no word twice in a
+// row ("about about half"): the program page's text and its attributes a reader hears, and Methods'.
+export const repeatedWords = (text) => [...text.matchAll(/\b([A-Za-z]+)\s+\1\b/gi)].map((m) => m[0]);
+test('no word repeats back to back anywhere in the rendered TEAM copy', () => {
+  assert.deepEqual(repeatedWords('about about half, and And so; that that'), ['about about', 'and And', 'that that']);
+  for (const [name, page] of [['program', program], ['methods', methods]]) {
+    assert.deepEqual(repeatedWords(readerWords(main(page)).replace(/\s+/g, ' ')), [], name);
+  }
+  // The calculator's "why?" and Methods' #band say "about half" once.
+  assert.ok(words(program).includes("In this site\u2019s count from CMS\u2019s CJR reconciliation file, about half of hospitals"), 'the why');
+  assert.ok(words(methods).includes('In those years, about half of hospitals ended a year within 5% of their target.'), 'Methods #band');
 });

@@ -244,7 +244,7 @@ export const COPY = {
   },
   whySummary: { text: 'why?', claim: null },
   whyText: {
-    text: "In this site's count from CMS's CJR reconciliation file, about {share} of hospitals ended a full-risk year within {band} of target; {methods}. Set the band from {lo} to {hi}.",
+    text: "In this site's count from CMS's CJR reconciliation file, {share} of hospitals ended a full-risk year within {band} of target; {methods}. Set the band from {lo} to {hi}.",
     claim: null,
   },
   whyMethods: { text: 'how it was counted is in Methods', claim: null },
@@ -368,7 +368,7 @@ export const COPY = {
   },
   methodsBandHeading: { text: "The calculator's band", claim: null },
   methodsBand: {
-    text: "The calculator draws its result {band} of target either way by default, and the reader can set it from {lo} to {hi}. This site's own count: in CMS's CJR final reconciliation file, for CJR's full-risk performance years, each hospital's final reconciliation amount per episode against CJR's average target price for that year. About {share} of hospitals ended a full-risk year within {within} of their target.",
+    text: "The calculator draws its result {band} of target either way by default, and the reader can set it from {lo} to {hi}. This site's own count: in CMS's CJR final reconciliation file, for CJR's full-risk performance years, each hospital's final reconciliation amount per episode against CJR's average target price for that year. In those years, {share} of hospitals ended a year within {within} of their target.",
     claim: null,
   },
   methodsRepo: { text: 'The code, the pinned files and the claims register:', claim: null },

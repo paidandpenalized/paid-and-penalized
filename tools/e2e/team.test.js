@@ -307,19 +307,23 @@ describe('TEAM Part 5 from the keyboard, by link, and following a pick', () => {
     await assertQuiet(seen, 'TEAM Part 5 by keyboard');
   }));
 
-  it('a link: valid keys apply under the banner; a 2,000-character junk fragment applies nothing and throws nothing', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&n.LEJR=120&zz=1`, watched: true }, async (page, { seen }) => {
+  it('a link: valid keys apply under the banner, the keys it couldn\'t use named', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&n.LEJR=120&zz=1`, watched: true }, async (page, { seen }) => {
     await eventually(async () => (await calcSays(page)).banner, 'the banner');
     const s = await calcSays(page);
     assert.equal(s.track, '2');
     assert.equal(s.srcN, 'your number');
     assert.ok(/zz/.test(await page.locator('[data-calc-rejected]').textContent()), 'the key it couldn\'t use is named');
-    const junk = `#team&${'%3Cb%3E=1&s=abc&'.repeat(200)}`.slice(0, 2000);
-    await page.goto(`${tabs.base}${PROGRAM_PATH}${junk}`);
-    await page.reload();
+    await assertQuiet(seen, 'TEAM Part 5 by link');
+  }));
+
+  const junk = `#team&${'%3Cb%3E=1&s=abc&'.repeat(200)}`.slice(0, 2000);
+  it('a page opened with a 2,000-character junk fragment applies nothing and throws nothing', () => withPage(tabs, { path: `${PROGRAM_PATH}${junk}`, watched: true }, async (page, { seen }) => {
+    await page.waitForTimeout(100);
     const after = await calcSays(page);
     assert.ok(!after.banner, 'nothing valid applied: no banner');
     assert.equal(after.track, '3');
-    await assertQuiet(seen, 'TEAM Part 5 by link');
+    assert.equal(after.tag, 'Scenario · public data');
+    await assertQuiet(seen, 'TEAM Part 5 with a junk link');
   }));
 
   it('"Start from the public numbers" puts a linked scenario back to the hospital\'s public numbers, in place', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&t=2&s=5&n.LEJR=120&b=8`, watched: true }, async (page, { seen }) => {
@@ -392,6 +396,22 @@ describe('TEAM Part 5: the browser\'s first drawing is the build\'s', () => {
       assert.deepEqual(unexpected, [], 'the first patch changes nothing');
       assert.ok(changes.length >= 3, 'the script showed its controls');
       await assertQuiet(seen, 'TEAM Part 5 on mount');
+    });
+  });
+});
+
+// A link naming another hospital while the participants' file won't load: the page stays on the default hospital's
+// public numbers and its polite line says the one thing that matters, the failure (not also that the link was dropped).
+describe('TEAM Part 5 when its file won\'t load', () => {
+  const tabs = useContext(shared, { width: 1280, height: 900 });
+  it('one sentence, the failure; the default hospital, its public numbers', async () => {
+    await tabs.context.route(/\/assets\/team-calc\.[0-9a-f]{8}\.json$/, (route) => route.abort());
+    await withPage(tabs, { path: `${PROGRAM_PATH}#team&h=ZZZZZZ&t=2&n.LEJR=40` }, async (page) => {
+      await eventually(async () => (await page.locator('[data-calc-say]').textContent()) !== '', 'the polite line speaks');
+      await page.waitForTimeout(200);
+      assert.equal(await page.locator('[data-calc-say]').textContent(), 'The list of TEAM hospitals didn\u2019t load. Try again.');
+      const s = await calcSays(page);
+      assert.ok(s.track === '3' && s.srcN !== 'your number' && !s.banner, 'nothing from the link applied');
     });
   });
 });

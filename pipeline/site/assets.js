@@ -108,12 +108,20 @@ export const withoutClaims = (source, path = 'a copy file') => {
   if (/\bclaim:/.test(out)) throw new RangeError(`${path}: a claim the bundle can't take out`);
   return out;
 };
-const stripClaims = {
+// The copy files a bundle reads (a copy.js or a <name>-copy.js), outside node_modules. onLoaded(path, contents): told
+// what each one became, for the tests.
+export const COPY_FILE = /(^|[/\\-])copy\.js$/;
+export const stripClaims = (onLoaded = () => {}) => ({
   name: 'strip-claims',
   setup(build) {
-    build.onLoad({ filter: /(^|[/\\-])copy\.js$/ }, (args) => ({ contents: withoutClaims(readFileSync(args.path, 'utf8'), args.path), loader: 'js' }));
+    build.onLoad({ filter: COPY_FILE }, (args) => {
+      if (/[/\\]node_modules[/\\]/.test(args.path)) return undefined;
+      const contents = withoutClaims(readFileSync(args.path, 'utf8'), args.path);
+      onLoaded(args.path, contents);
+      return { contents, loader: 'js' };
+    });
   },
-};
+});
 
 export async function buildAssets({ outDir, entries = {}, classic = [], siteStyles = {} }) {
   for (const name of classic) if (!Object.hasOwn(entries, name)) throw new RangeError(`no classic entry "${name}" in entries`);
@@ -132,7 +140,7 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     const result = await esbuild({
       entryPoints: [repoPath(path)],
       bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
-      plugins: [stripClaims],
+      plugins: [stripClaims()],
       absWorkingDir: REPO_ROOT, // the metafile's input paths (licenseNotice) are then the repository's
     });
     js[name] = writeHashed(dir, name, 'js', licenseNotice(result.metafile) + result.outputFiles[0].text);

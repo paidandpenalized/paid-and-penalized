@@ -43,7 +43,7 @@ export const COPY = {
   calcLoaded: { text: 'The calculator now shows {name}.', claim: null },
 
   // The track control and the note under it.
-  trackLegend: { text: 'Track', claim: null },
+  trackLegend: { text: 'The track for this scenario', claim: null },
   trackName: { text: 'Track {n}', claim: null },
   trackUp: { text: 'upside only', claim: null },
   trackBoth: { text: '±{pct}', claim: null },
