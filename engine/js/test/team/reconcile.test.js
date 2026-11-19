@@ -179,7 +179,29 @@ test('marginal: dollars per 1% under and over at break-even, and per 10 quality 
   assert.equal(marginal({ cats: one(-0.02), cqs: 100, track: 3 }).per10Quality, 0);
   const m1 = marginal({ cats: one(0), cqs: 50, track: 1 });
   assert.equal(m1.perPctOver, 0);
-  assert.equal(m1.per10Quality, 0);
+  // Track 1 can't lose, so with no scenario set its quality figure is read BAND_DEFAULT under target: $50,000 at p
+  // 0.05 vs 0.04.
+  assert.ok(m1.per10Quality > 0);
+  near(m1.per10Quality, 500);
+  // A Track 1 scenario that is set is still used as given.
+  assert.equal(marginal({ cats: one(0.02), cqs: 50, track: 1 }).per10Quality, 0);
+});
+
+test('floating-point residue under half a cent reads as +0, never -$0', () => {
+  const cats = [
+    { key: 'a', target: 1.1e6, spend: 0.07, lowVolume: false },
+    { key: 'b', target: 7.7e5, spend: -0.10, lowVolume: false },
+  ];
+  const r = reconcile({ cats, cqs: 50, track: 2 });
+  for (const k of ['raw', 'qadj', 'quality', 'result']) assert.ok(Object.is(r[k], 0), `${k} is ${r[k]}`);
+  assert.equal(r.capped, null);
+});
+
+test('lowVolume must be a boolean', () => {
+  for (const lowVolume of ['false', 'true', 0, 1, null, undefined]) {
+    assert.throws(() => reconcile({ cats: one(0.1, { lowVolume }), cqs: 50, track: 3 }),
+      (e) => e instanceof RangeError && /lowVolume/.test(e.message));
+  }
 });
 
 test('SOLVE_SPAN is the site\'s search range, sixty percent either way', () => {

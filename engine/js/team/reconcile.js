@@ -14,6 +14,11 @@
 // for high post-episode spending (§ 512.550(f)) needs CMS's own data, so it is not modelled: `postEpisode` is always 0.
 import { BAND_DEFAULT, SOLVE_SPAN, TRACKS } from './params.js';
 
+// Sums of products leave residue such as -1.35e-11 at a true break-even, which a formatter shows as "-$0". Any amount
+// under half a cent either way is that residue, so it becomes +0.
+const HALF_CENT = 0.005;
+const snap = (x) => (Math.abs(x) < HALF_CENT ? 0 : x);
+
 const fail = (what) => {
   throw new RangeError(`TEAM reconciliation: ${what}`);
 };
@@ -23,6 +28,7 @@ function checked({ cats, cqs, track }) {
   cats.forEach((c, i) => {
     if (!Number.isFinite(c?.target) || c.target < 0) fail(`cats[${i}].target must be a finite number >= 0`);
     if (!Number.isFinite(c.spend)) fail(`cats[${i}].spend must be a finite number`);
+    if (typeof c.lowVolume !== 'boolean') fail(`cats[${i}].lowVolume must be true or false`);
   });
   if (!Number.isFinite(cqs) || cqs < 0 || cqs > 100) fail('cqs must be a number from 0 to 100');
   if (!Number.isInteger(track) || !TRACKS[track]) fail('track must be 1, 2 or 3');
@@ -35,9 +41,9 @@ function checked({ cats, cqs, track }) {
  *   limits: {gain: number, loss: number}, postEpisode: 0}} dollars throughout. `raw` is the reconciliation amount after
  *   the low-volume caps and Track 1's floor; `qadj` the quality adjustment added to it; `quality` their sum; `result`
  *   that clamped to the limits (positive: CMS pays; negative: the hospital repays). `limits` are positive dollars.
- *   A $0 target (or no categories) gives 0 everywhere.
- * @throws {RangeError} on a non-finite or negative target, a non-finite spend, a CQS outside 0..100, or a track
- *   other than 1, 2 or 3. The caller clamps reader input first.
+ *   A $0 target (or no categories) gives 0 everywhere, and any amount under half a cent is +0.
+ * @throws {RangeError} on a non-finite or negative target, a non-finite spend, a lowVolume that is not a boolean, a
+ *   CQS outside 0..100, or a track other than 1, 2 or 3. The caller clamps reader input first.
  */
 export function reconcile(input) {
   const t = checked(input);
@@ -52,12 +58,14 @@ export function reconcile(input) {
   if (t.loss === 0 && raw < 0) raw = 0;
   // A gain loses up to qGain as the CQS falls; a loss is forgiven up to qLoss as it rises (§ 512.550(d)).
   const p = raw >= 0 ? t.qGain * (1 - cqs / 100) : t.qLoss * (cqs / 100);
-  const qadj = 0 - p * raw; // `0 -` keeps a zero amount's adjustment +0, never -0
+  const qadj = -p * raw;
   const quality = raw + qadj;
   const limits = { gain: t.gain * target, loss: t.loss * target };
   const result = Math.min(Math.max(quality, -limits.loss), limits.gain);
   const capped = quality > limits.gain ? 'gain' : quality < -limits.loss ? 'loss' : null;
-  return { target, raw, qadj, quality, result, capped, limits, postEpisode: 0 };
+  return {
+    target, raw: snap(raw), qadj: snap(qadj), quality: snap(quality), result: snap(result), capped, limits, postEpisode: 0,
+  };
 }
 
 const atSpend = (cats, s) => cats.map((c) => ({ ...c, spend: s }));
@@ -112,13 +120,16 @@ export function solveSpend({ cats, cqs, track, result }) {
  *   perPctUnder  what landing 1% under target everywhere adds, from break-even;
  *   perPctOver   what landing 1% over target everywhere costs, from break-even;
  *   per10Quality what 10 more CQS points (capped at 100) add, at the reader's scenario when any category's spend is
- *                set, else with every category BAND_DEFAULT over target.
+ *                set. With none set it uses every category BAND_DEFAULT over target, except on Track 1: a track
+ *                that can't lose ends at $0 whenever it is over target, where quality moves nothing, so it is read
+ *                BAND_DEFAULT under target instead, where quality decides how much of the gain it keeps.
  */
 export function marginal({ cats, cqs, track }) {
   checked({ cats, cqs, track });
   const input = { cats, cqs, track };
   const even = resultAt(input, 0);
-  const scenario = cats.some((c) => c.spend !== 0) ? cats : atSpend(cats, BAND_DEFAULT);
+  const canLose = TRACKS[track].loss > 0;
+  const scenario = cats.some((c) => c.spend !== 0) ? cats : atSpend(cats, canLose ? BAND_DEFAULT : -BAND_DEFAULT);
   const quality = (q) => reconcile({ cats: scenario, cqs: q, track }).result;
   return {
     perPctUnder: resultAt(input, -0.01) - even,

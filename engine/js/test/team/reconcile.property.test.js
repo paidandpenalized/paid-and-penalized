@@ -64,6 +64,18 @@ function near(a, b, msg) {
   assert.ok(Math.abs(a - b) <= EPS * Math.max(1, Math.abs(b)), msg);
 }
 
+// The most and least a uniform spend within the search range can give, worked out in closed form from the rule rather
+// than by calling the solver's own edge test: every category SOLVE_SPAN under target is a gain on the whole target;
+// SOLVE_SPAN over is a loss on the non-low-volume targets only, and none at all on Track 1.
+function reach({ cats, cqs, track }) {
+  const t = TRACKS[track];
+  const total = cats.reduce((s, c) => s + c.target, 0);
+  const losing = cats.reduce((s, c) => s + (c.lowVolume ? 0 : c.target), 0);
+  const hi = Math.min(t.gain * total, (1 - t.qGain * (1 - cqs / 100)) * SOLVE_SPAN * total);
+  const lo = t.loss === 0 ? 0 : Math.max(-t.loss * total, -(1 - t.qLoss * (cqs / 100)) * SOLVE_SPAN * losing);
+  return { lo, hi };
+}
+
 test(`solveSpend round-trips within $1, and null only when the result is out of reach (${TRIALS} trials)`, () => {
   const rand = mulberry32(5512550);
   let solved = 0;
@@ -76,13 +88,17 @@ test(`solveSpend round-trips within $1, and null only when the result is out of 
     const s = solveSpend({ ...input, result });
     const msg = `trial ${t}`;
     if (s === null) {
-      const unreachable = result > at(input, -SOLVE_SPAN) || result < at(input, SOLVE_SPAN);
-      assert.ok(unreachable, msg);
+      const { lo, hi } = reach(input);
+      const slack = EPS * Math.max(1, Math.abs(result));
+      assert.ok(result > hi - slack || result < lo + slack, msg);
       continue;
     }
     solved++;
     assert.ok(s >= -SOLVE_SPAN && s <= SOLVE_SPAN, msg);
     assert.ok(Math.abs(at(input, s) - result) <= 1, msg);
+    // At a limit the answer is the spend closest to zero that reaches it: one step toward zero falls short.
+    if (result !== 0 && result === r0.limits.gain) assert.ok(at(input, s * (1 - 1e-6)) < result, msg);
+    if (result !== 0 && result === -r0.limits.loss) assert.ok(at(input, s * (1 - 1e-6)) > result, msg);
     if (result === 0) assert.equal(s, 0, msg);
     if (input.track === 1) assert.ok(result >= 0, msg);
   }
