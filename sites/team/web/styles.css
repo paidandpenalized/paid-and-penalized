@@ -110,7 +110,6 @@
 .tm-pick[hidden] { display: none; }
 .tm-pick label { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
 .tm-pick select { width: 100%; min-width: 0; padding: 0 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 max(1rem, 1em)/1.2 var(--font-body); }
-.tm-pick select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tm-now { display: grid; gap: 6px; }
 .tm-now > span { display: block; }
 .tm-now__price { font: 700 clamp(2.4rem, 1.9rem + 1.8vw, 3.4rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
@@ -255,7 +254,8 @@
 .tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
 .tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); }
 .tc-lvc { width: 2.4rem; text-align: center !important; }
-.tc-lvc input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
+/* The checkboxes (a row's low-volume box, "include my numbers"). Focus rings are the family's (base.css :focus-visible). */
+.tc-lvc input, .tc-incl input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
 .tc-in { width: 5.2rem; min-height: 28px; height: 28px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; background: var(--paper-2); font: 400 var(--fs-sm)/1 var(--font-type); font-variant-numeric: tabular-nums; }
 .tc-in--p { width: 6.4rem; }
 .tc-in--q { width: 3.6rem; }
@@ -281,7 +281,6 @@
 .tc-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -8px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); -webkit-appearance: none; appearance: none; }
 .tc-range::-moz-range-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
 .tc-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
-.tc-range:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tc-foot { color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-body); }
 
 /* Quality by measure and "How each line works": disclosures, closed by default. */
@@ -325,7 +324,6 @@
 .tc-wwt tr:first-child > * { border-top: 0; }
 .tc-share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .tc-incl { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
-.tc-incl input { width: 18px; height: 18px; min-height: 0; margin: 0; accent-color: var(--ink); }
 .tc-copied { font-size: var(--fs-xs); }
 .tc-link { flex-basis: 100%; overflow-wrap: anywhere; font: 400 var(--fs-xs)/1.4 var(--font-type); }
 .tc-private { flex-basis: 100%; color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-type); }
@@ -363,7 +361,6 @@
    labeled cells where the box is narrower than 34em (the column heads then hidden, each cell naming its column). */
 .tm-tablefig { margin: 0; }
 .tm-table { container-type: inline-size; overflow-x: auto; }
-.tm-table:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tm-find { min-width: 0; font-family: var(--font-body); }
 .tm-find caption { padding-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-align: start; text-transform: uppercase; }
 .tm-find thead th { white-space: normal; }
