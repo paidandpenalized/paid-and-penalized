@@ -14,7 +14,8 @@ export const MAX_FACTOR = 10;
 export const limitOf = (p) => toUnit(MAX_FACTOR * p.cap, p.decimals);
 
 // A scenario link: #whatif&... A bare #whatif is the section's own anchor and carries no scenario.
-export const isScenarioHash = (hash) => typeof hash === 'string' && hash.startsWith(`#${TAG}&`);
+// Other calculators keep the same shape under their own tag (TEAM's #team&...), so the tag is a parameter.
+export const isScenarioHash = (hash, tag = TAG) => typeof hash === 'string' && hash.startsWith(`#${tag}&`);
 // Whether a URL fragment is the what-if's: #whatif or a scenario (a skip link's #main and the heading's #whatif-h
 // are not).
 export const isWhatIfHash = (hash) => hash === `#${TAG}` || isScenarioHash(hash);

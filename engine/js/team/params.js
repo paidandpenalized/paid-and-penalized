@@ -49,3 +49,7 @@ export const BAND_MAX = 0.20;
 // This site's own choice too: "What would it take?" searches for a spending level within this share of target either
 // way (60% over to 60% under), far past where any track's limit binds on the gain side.
 export const SOLVE_SPAN = 0.6;
+
+// The five episode categories, in the emitted file's drgCategory spelling and the order the pages list them.
+// (Mirrors engine/py/pp_engine/team/episodes.py CATEGORIES.)
+export const CATEGORIES = Object.freeze(['LEJR', 'SHFFT', 'SPINAL', 'CABG', 'BOWEL']);
