@@ -409,14 +409,19 @@
       }
     },
     "counts": {
-      "description": "What the program page states: `selectedAreas`, the CBSAs CMS's list gives its mandatory participants; `cjrxListed`, the hospitals on CMS's CJR-X list.",
+      "description": "What the program page states: `listed`, the hospitals on CMS's TEAM list (the participants plus any the master lacks); `selectedAreas`, the CBSAs CMS's list gives its mandatory participants; `cjrxListed`, the hospitals on CMS's CJR-X list.",
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "listed",
         "selectedAreas",
         "cjrxListed"
       ],
       "properties": {
+        "listed": {
+          "type": "integer",
+          "minimum": 0
+        },
         "selectedAreas": {
           "type": "integer",
           "minimum": 0

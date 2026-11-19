@@ -357,6 +357,8 @@ class WholeBuild(unittest.TestCase):
 
     def test_the_program_pages_counts_come_from_the_pins(self):
         doc, p = fresh(), pins()
+        self.assertEqual(doc["counts"]["listed"], len(p.participants))
+        self.assertEqual(doc["counts"]["listed"], len(doc["participants"]) + len(doc["a4"]["teamMissing"]))
         self.assertEqual(doc["counts"]["selectedAreas"],
                          len({r["cbsa"] for r in p.participants if r["participation"] == "mandatory"}))
         self.assertEqual(doc["counts"]["cjrxListed"], len(p.cjrx))

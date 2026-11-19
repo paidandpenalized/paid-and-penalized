@@ -1,6 +1,6 @@
 """The TEAM file's body from parsed inputs: prices, each participant's episode estimate, target amount and quality
 percentiles, the default hospital, a status for every master hospital, the list CCNs the master lacks, and the counts
-the program page states (the selected areas on CMS's list, the CJR-X list's size, the other IPPS hospitals its map draws).
+the program page states (the hospitals on CMS's list, the selected areas on it, the CJR-X list's size, the other IPPS hospitals its map draws).
 
 `build` takes the pins already parsed (pp_pipeline.emit_team reads them) and returns (body, notes); `notes` holds
 counts for the build report, never written to the file.
@@ -140,7 +140,8 @@ def build(participants, price_rows, cjrx, prior, latest, quality_values, hospita
         "defaultCcn": default_ccn(records),
         "a4": {"teamMissing": sorted(c for c in listed if c not in by_ccn),
                "cjrxMissing": len(set(cjrx) - set(by_ccn))},
-        "counts": {"selectedAreas": len({r["cbsa"] for r in participants if r["participation"] == "mandatory"}),
+        "counts": {"listed": len(participants),
+                   "selectedAreas": len({r["cbsa"] for r in participants if r["participation"] == "mandatory"}),
                    "cjrxListed": len(cjrx)},
         "otherIpps": other_ipps(hospitals, codes),
     }
