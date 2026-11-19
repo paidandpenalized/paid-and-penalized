@@ -97,6 +97,28 @@ test('reasonText: dates and kinds come from the args', () => {
   assert.equal(PY2_START, '2027-01-01');
 });
 
+test('every distinct status in the emitted file renders; acute and unknown kinds make no claim about the kind', (t) => {
+  const pairs = new Map();
+  const add = ([code, arg]) => pairs.set(JSON.stringify([code, arg]), [code, arg]);
+  for (const [, code, arg] of asset.rows) { add([code, arg]); if (code === 'cjrx') add(['cjrx', arg]); }
+  let neutral = 0;
+  for (const [code, arg] of pairs.values()) {
+    const text = reasonText(code, arg).text;
+    const inner = code === 'cjrx' ? arg : [code, arg];
+    if (inner[0] === 'in_area_kind' && ['acute', 'unknown'].includes(inner[1])) {
+      neutral += 1;
+      assert.doesNotMatch(text, /of this kind|isn.t paid/, 'a kind claim for an acute or unknown kind');
+    }
+  }
+  assert.ok(neutral > 0, 'no acute or unknown kind seen');
+  t.diagnostic(`${pairs.size} distinct statuses rendered, ${neutral} of them an acute or unknown kind`);
+});
+
+test('a CJR-X status whose inner code contradicts the rules is refused', () => {
+  for (const inner of ['in', 'in27', 'ended', 'maryland', 'cjrx']) assert.throws(() => reasonText('cjrx', [inner, null]), RangeError, inner);
+  assert.equal(reasonText('cjrx', ['in_area_kind', 'acute']).tag, 'NO');
+});
+
 test('reasonText refuses a code or kind it has no words for', () => {
   assert.throws(() => reasonText('nonsense', null), RangeError);
   assert.throws(() => reasonText('in_area_kind', 'no-such-kind'), RangeError);

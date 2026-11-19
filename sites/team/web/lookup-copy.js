@@ -23,9 +23,10 @@ export const LOOKUP_COPY = {
     text: '{kind}. In a TEAM area, but a hospital of this kind isn\'t paid under the inpatient system TEAM uses, so not in TEAM.',
     claim: ['TEAM-01', 'TEAM-11'],
   },
-  ihs: { text: 'An Indian Health Service hospital. CMS excluded these from TEAM, so not in TEAM.', claim: 'TEAM-05' },
+  ihs: { text: 'An Indian Health Service or tribal hospital in a TEAM area. It isn\'t on CMS\'s list of TEAM participants.', claim: 'TEAM-09' },
+  inAreaListed: { text: 'In a TEAM area, but not on CMS\'s list of TEAM participants.', claim: 'TEAM-09' },
   unlisted: {
-    text: 'In a TEAM area and paid under the inpatient system, but not on CMS\'s list of participants. CMS updates the list each quarter, and a new hospital joins only after one full performance year.',
+    text: 'In a TEAM area and paid under the inpatient system, but not on CMS\'s list of participants. CMS updates the list each quarter, and a new hospital must take part from the start of the performance year after one full performance year.',
     claim: ['TEAM-01', 'TEAM-08', 'TEAM-09'],
   },
   areaUnknown: { text: 'We couldn\'t place this hospital\'s county in or out of a TEAM area, so we can\'t say. CMS\'s list has the answer.', claim: null },
@@ -35,6 +36,13 @@ export const LOOKUP_COPY = {
 
 const { fill } = copyOf(LOOKUP_COPY);
 const KIND_KEY = 'hospitalKind.';
+// The kinds the hospital master says are not paid under the inpatient system: only these get the kind sentence. An acute
+// or unknown kind in a TEAM area has no such reason to give (the master's flag is false for closed hospitals and the like),
+// so its words say only what the data does: it is not on CMS's list.
+const NOT_IPPS_KINDS = new Set(['critical_access', 'psychiatric', 'va', 'dod', 'childrens', 'cancer', 'long_term', 'rural_emergency']);
+// What may sit inside a CJR-X status: the reasons a hospital is not in TEAM (a hospital in TEAM, one starting or one that
+// left, a Maryland one, or a nested CJR-X pair contradicts the rules).
+const CJRX_INNER = new Set(['outside', 'in_area_kind', 'ihs', 'unlisted', 'area_unknown']);
 
 // A master kind in words: the family search's, else (the master's "unknown") this lookup's own.
 function kindText(kind) {
@@ -61,12 +69,12 @@ export function reasonText(code, arg) {
     case 'ended': return no(fill('ended', { date: dateOf(arg) }));
     case 'maryland': return no(fill('maryland'));
     case 'outside': return no(fill('outside'));
-    case 'in_area_kind': return no(fill('inAreaKind', { kind: kindText(arg) }));
+    case 'in_area_kind': return no(NOT_IPPS_KINDS.has(arg) ? fill('inAreaKind', { kind: kindText(arg) }) : (kindText(arg), fill('inAreaListed')));
     case 'ihs': return no(fill('ihs'));
     case 'unlisted': return no(fill('unlisted'));
     case 'area_unknown': return no(fill('areaUnknown'));
     case 'cjrx': {
-      if (!Array.isArray(arg) || arg.length !== 2 || arg[0] === 'cjrx') throw new RangeError('lookup: a CJR-X status carries the inner [code, arg] pair');
+      if (!Array.isArray(arg) || arg.length !== 2 || !CJRX_INNER.has(arg[0])) throw new RangeError('lookup: a CJR-X status carries the inner [code, arg] pair');
       return no(fill('cjrx', { reason: reasonText(arg[0], arg[1]).text, date: dateOf(CJRX_START) }));
     }
     default: throw new RangeError(`lookup: no words for status ${JSON.stringify(code)}`);

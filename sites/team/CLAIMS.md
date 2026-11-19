@@ -15,7 +15,6 @@ in copy.
 | TEAM-02 | CMS picked the mandatory TEAM areas (core-based statistical areas) by random sampling, so a hospital in an area it did not pick is not required to take part. | https://www.ecfr.gov/current/title-42/part-512/section-512.515 | "CMS uses stratified random sampling to select the mandatory CBSAs included in TEAM." | 2026-11-19 |
 | TEAM-03 | Maryland's hospitals are not paid under the inpatient prospective payment system, under the state's total cost of care model. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "Maryland hospitals are not paid under the IPPS" | 2026-11-19 |
 | TEAM-04 | CMS left out of TEAM's selection any area lying entirely in Maryland. | https://www.ecfr.gov/current/title-42/part-512/section-512.515 | "Are located entirely in the State of Maryland." | 2026-11-19 |
-| TEAM-05 | CMS finalized excluding Indian Health Service hospitals from TEAM participation. | https://www.govinfo.gov/content/pkg/FR-2025-08-04/html/2025-14681.htm | "excluding Indian Health Service (IHS) hospitals from TEAM participation" | 2026-11-19 |
 | TEAM-06 | Voluntary participation was a one-time choice open to hospitals outside the mandatory areas that had stayed in the CJR model to its end or in BPCI Advanced to its end. | https://www.ecfr.gov/current/title-42/part-512/section-512.510 | "must not be located in a mandatory CBSA" … "Be a participant hospital in the CJR model" … "BPCI Advanced model" | 2026-11-19 |
 | TEAM-07 | Each TEAM performance year is a calendar year and the model began on January 1, 2026, so the second performance year starts January 1, 2027. | https://www.ecfr.gov/current/title-42/part-512/section-512.505 | "Performance year means a 12-month period beginning on January 1" … "Model start date means January 1, 2026" | 2026-11-19 |
 | TEAM-08 | A new hospital in a mandatory area, or one that newly meets the participant definition, must take part from the start of the performance year after one full performance year. | https://www.ecfr.gov/current/title-42/part-512/section-512.508 | "must participate in TEAM at the beginning of the performance year that follows one full performance year" | 2026-11-19 |
@@ -32,8 +31,6 @@ in copy.
   hospital". The first quote joins paragraph (1) and paragraph (2) of the first definition.
 - **TEAM-03.** The fiscal year 2026 inpatient final rule, FR Doc 2025-14681 (published August 4, 2025), in its
   discussion of the Maryland Total Cost of Care Model, which the rule says concludes on December 31, 2026.
-- **TEAM-05.** The same rule's overview of its TEAM changes, item (3). The register says nothing of tribal hospitals: the
-  sentence the rule's overview supports is about Indian Health Service hospitals.
 - **TEAM-06.** Section 512.510(b): the CJR condition is that the hospital participated until the model's last day,
   December 31, 2024; the BPCI Advanced one, until December 31, 2025. Section 512.510(c): the election period ran January 1
   to January 31, 2025.
