@@ -70,6 +70,11 @@ export function mountCalc(section) {
   let copiedTimer = 0;
 
   const files = once(() => Promise.all([fetchAsset(section.dataset.src, 'calculator'), loadSearch(section.dataset.search)]).then(([c, s]) => joinFiles(c, s)));
+  // The files for a move the reader made, or null after saying they didn't load.
+  const filesOrSay = () => files().catch(() => {
+    sayEl.textContent = t('calcFailed');
+    return null;
+  });
 
   // The parts only the script can work: shown once it runs (and again on each new hospital's markup).
   const showControls = () => {
@@ -163,14 +168,8 @@ export function mountCalc(section) {
   // Moves to the participant ccn from the file (a pick, a random draw, team:pick): its opening state, keeping the reader's
   // spending and band, as they were comparing. Says so, and writes the address.
   const load = async (ccn, { values = null, quiet = false } = {}) => {
-    let f;
-    try {
-      f = await files();
-    } catch {
-      sayEl.textContent = t('calcFailed');
-      return false;
-    }
-    const row = f.rows.get(ccn);
+    const f = await filesOrSay();
+    const row = f?.rows.get(ccn);
     if (!row) return false;
     meta = f.meta;
     const h = hospOf(row, f.who.get(ccn));
@@ -265,13 +264,8 @@ export function mountCalc(section) {
   const random = section.querySelector('[data-calc-random]');
   random.hidden = false;
   random.addEventListener('click', async () => {
-    let f;
-    try {
-      f = await files();
-    } catch {
-      sayEl.textContent = t('calcFailed');
-      return;
-    }
+    const f = await filesOrSay();
+    if (!f) return;
     const pool = f.named.map((ccn) => ({ ccn, state: f.who.get(ccn).state }));
     const ccn = randomPick(pool, Math.random, hosp.ccn);
     if (ccn) load(ccn);
