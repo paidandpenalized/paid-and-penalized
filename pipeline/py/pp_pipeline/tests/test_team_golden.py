@@ -1,18 +1,13 @@
 """The TEAM file's goldens: a fresh build from the pins equals the committed file, which was built from the current
 pins. Episode counts, prices and percentiles are estimates from public files, not CMS's own: a change here is a methods
 change (docs/METHODS-LOG.md), not a fix."""
-import functools
 import unittest
 
 from pp_pipeline import emit_team
 from pp_pipeline.files import read_json, read_manifest, require_current
+from pp_pipeline.tests.team.helpers import fresh
 
 EMITTED = emit_team.emitted_path()
-
-
-@functools.lru_cache(maxsize=None)
-def fresh():
-    return emit_team.build_from_pins("2000-01-01T00:00:00Z")
 
 
 def with_built_at(doc):

@@ -7,25 +7,45 @@ Six sources, seven pins; raw downloads stay out of git (a pin is a small CSV der
   team-mup-dy2023/24  Medicare Inpatient Hospitals by Provider and Service     -> mup-dy2023.csv, mup-dy2024.csv
   team-quality        Provider Data Catalog Hybrid_HWR and ISCMR rows          -> quality.csv
 
-    python3 -I pipeline/py/run.py derive-team <directory holding the raw files, found by name>
+    python3 -I pipeline/py/run.py derive-team <directory holding the raw files, found by name> --retrieved YYYY-MM-DD
+
+`--retrieved` is the day the raw files were downloaded. CMS's Last-Modified dates come from a sidecar beside the
+downloads, `source-dates.json` at the top of the raw directory (the way the HCRIS layer takes `--posted`), keyed by
+raw file name:
+
+    {"files": {"<raw file name>": "YYYY-MM-DD", ...one per raw file...},
+     "pdcReleased": "YYYY-MM-DD", "pdcModified": "YYYY-MM-DD"}
+
+`files` holds each file's Last-Modified date as CMS's server gave it; `pdcReleased` and `pdcModified` are the Provider
+Data Catalog dataset's release and modification dates (the quality pin's). SOURCES below holds only what does not
+change between downloads: each pin's title, path and URLs.
 
 The manifest entry for each pin (derivedFrom: URL, size, SHA-256, CMS's Last-Modified date; plus asOf, counts and a
 spot value recorded at derive time) is written here, then the CSV only when it is the bytes the entry names.
 """
+import argparse
 import csv
 import hashlib
 import io
+import json
 import re
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
 from pp_engine import xlsx
-from pp_pipeline.files import read_manifest, write_derived_pin, write_manifest
+from pp_engine.parse import rows, table
+from pp_pipeline.files import file_sha256, read_manifest, write_derived_pin, write_manifest
 
 DERIVED_BY = "pipeline/py/pp_pipeline/team/derive.py"
-RETRIEVED = "2026-11-19"  # the day these files were downloaded
+SIDECAR = "source-dates.json"
 
-PARTICIPANT_COLUMNS = ("ccn", "name", "cbsa", "cbsa_name", "cbsa_state", "participation", "start", "end", "newly_identified")
+# The participant list's header text for each CSV column, in the pin's column order.
+PARTICIPANT_HEADERS = {
+    "ccn": "Hospital CCN", "name": "Hospital Name", "cbsa": "CBSA", "cbsa_name": "CBSA Name", "cbsa_state": "CBSA State",
+    "participation": "Mandatory or Voluntary Participant", "start": "Participation Start Date",
+    "end": "Participation End Date", "newly_identified": "Newly Identified TEAM Participant Relative to Previous List"}
+PARTICIPANT_COLUMNS = tuple(PARTICIPANT_HEADERS)
 PRICE_COLUMNS = ("category", "drg", "division", "benchmark", "trend", "discount", "price", "average_row")
 CJRX_COLUMNS = ("ccn", "state", "name")
 MUP_COLUMNS = ("ccn", "drg", "discharges")
@@ -48,55 +68,48 @@ PREDECESSOR_DRGS = tuple(str(d) for d in range(453, 461))
 # Provider Data Catalog measure ids -> the pin's measure names.
 QUALITY_MEASURES = {"Hybrid_HWR": "hybrid_hwr", "ISCMR": "iscmr"}
 
-PARTICIPANTS_FILE = "team-participant-list.xlsx"
-PRICES_FILE = "team-py2-prlim-target-prices.xlsx"
-CJRX_FILE = "cjrx-participant-list.xlsx"
-MUP_FILES = {"team-mup-dy2023": "MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV", "team-mup-dy2024": "MUP_INP_RY26_P03_V10_DY24_PrvSvc.CSV"}
-QUALITY_FILES = ("Unplanned_Hospital_Visits-Hospital.csv", "Complications_and_Deaths-Hospital.csv")
-
-# Where each raw file came from. `lastModified` is the date CMS's server gave for the file when it was retrieved.
+# Where each pin comes from: the static facts. The dates (`lastModified`, the catalog's) come from the sidecar.
+TEAM_PAGE = "https://www.cms.gov/priorities/innovation/innovation-models/team-model"
+MUP_PAGE = ("https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/"
+            "medicare-inpatient-hospitals-by-provider-and-service")
 SOURCES = {
     "team-participants": {
-        "title": "TEAM participant list (CMS)", "file": PARTICIPANTS_FILE, "lastModified": "2026-09-22",
-        "downloadUrl": "https://www.cms.gov/team-model-participant-list",
-        "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model"},
+        "title": "TEAM participant list (CMS)", "path": "team-py2/participants.csv",
+        "file": "team-participant-list.xlsx", "downloadUrl": "https://www.cms.gov/team-model-participant-list",
+        "landingPage": TEAM_PAGE},
     "team-prices": {
-        "title": "TEAM performance year 2 preliminary target prices (CMS)", "file": PRICES_FILE, "lastModified": "2026-11-06",
+        "title": "TEAM performance year 2 preliminary target prices (CMS)", "path": "team-py2/prices.csv",
+        "file": "team-py2-prlim-target-prices.xlsx",
         "downloadUrl": "https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx",
-        "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model"},
+        "landingPage": TEAM_PAGE},
     "cjrx-participants": {
-        "title": "CJR-X participant list (CMS)", "file": CJRX_FILE, "lastModified": "2026-10-05",
+        "title": "CJR-X participant list (CMS)", "path": "team-py2/cjrx.csv", "file": "cjrx-participant-list.xlsx",
         "downloadUrl": "https://www.cms.gov/priorities/innovation/files/cjrx-participant-list.xlsx",
         "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/cjr-x"},
     "team-mup-dy2023": {
         "title": "Medicare Inpatient Hospitals by Provider and Service, data year 2023: episode and predecessor DRGs",
-        "file": MUP_FILES["team-mup-dy2023"], "lastModified": "2025-05-14",
+        "path": "team-py2/mup-dy2023.csv", "file": "MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
         "downloadUrl": "https://data.cms.gov/sites/default/files/2025-05/ca1c9013-8c7c-4560-a4a1-28cf7e43ccc8/"
                        "MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
-        "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/"
-                       "medicare-inpatient-hospitals-by-provider-and-service"},
+        "landingPage": MUP_PAGE},
     "team-mup-dy2024": {
         "title": "Medicare Inpatient Hospitals by Provider and Service, data year 2024: episode and predecessor DRGs",
-        "file": MUP_FILES["team-mup-dy2024"], "lastModified": "2026-04-10",
+        "path": "team-py2/mup-dy2024.csv", "file": "MUP_INP_RY26_P03_V10_DY24_PrvSvc.CSV",
         "downloadUrl": "https://data.cms.gov/sites/default/files/2026-04/828defb5-c9e6-4442-8c1b-f27bc0799daf/"
                        "MUP_INP_RY26_P03_V10_DY24_PrvSvc.CSV",
-        "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/"
-                       "medicare-inpatient-hospitals-by-provider-and-service"},
+        "landingPage": MUP_PAGE},
+    "team-quality": {
+        "title": "Hospital-wide readmission (Hybrid_HWR) and surgical complications mortality (ISCMR) scores, "
+                 "Provider Data Catalog",
+        "path": "team-py2/quality.csv", "landingPage": "https://data.cms.gov/provider-data/dataset/632h-zaca",
+        "hwr": {"file": "Unplanned_Hospital_Visits-Hospital.csv",
+                "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/"
+                               "30edc1d0417a34b58affcc2495a02b0a_1792599927/Unplanned_Hospital_Visits-Hospital.csv"},
+        "iscmr": {"file": "Complications_and_Deaths-Hospital.csv",
+                  "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/"
+                                 "6af7c44d77436e5a1caac3ce39a83fe9_1792599556/Complications_and_Deaths-Hospital.csv"}},
 }
-QUALITY_SOURCE = {
-    "title": "Hospital-wide readmission (Hybrid_HWR) and surgical complications mortality (ISCMR) scores, Provider Data Catalog",
-    "pdcReleased": "2026-11-12", "pdcModified": "2026-10-20",
-    "landingPage": "https://data.cms.gov/provider-data/dataset/632h-zaca",
-    "hwr": {"file": QUALITY_FILES[0], "lastModified": "2026-10-21",
-            "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/"
-                           "30edc1d0417a34b58affcc2495a02b0a_1792599927/Unplanned_Hospital_Visits-Hospital.csv"},
-    "iscmr": {"file": QUALITY_FILES[1], "lastModified": "2026-10-21",
-              "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/"
-                             "6af7c44d77436e5a1caac3ce39a83fe9_1792599556/Complications_and_Deaths-Hospital.csv"},
-}
-PIN_PATHS = {"team-participants": "team-py2/participants.csv", "team-prices": "team-py2/prices.csv",
-             "cjrx-participants": "team-py2/cjrx.csv", "team-mup-dy2023": "team-py2/mup-dy2023.csv",
-             "team-mup-dy2024": "team-py2/mup-dy2024.csv", "team-quality": "team-py2/quality.csv"}
+MUP_PINS = ("team-mup-dy2023", "team-mup-dy2024")
 SPOT_CHECK = ("CABG", "231", "1")  # a price cell the pin test compares with the workbook: category, DRG, division
 
 
@@ -115,13 +128,6 @@ def _iso(us_date, what):
         raise ValueError(f"{what}: {us_date!r} is not a MM/DD/YYYY date") from None
 
 
-def _find(rows, first_cell_prefix, what):
-    for i, r in enumerate(rows):
-        if r and r[0].startswith(first_cell_prefix):
-            return i
-    raise ValueError(f"{what}: no header row starting {first_cell_prefix!r}")
-
-
 def _as_of(text, what):
     m = re.search(r"as of ([A-Z][a-z]+ [0-9]{1,2}, [0-9]{4})", text)
     if not m:
@@ -131,30 +137,21 @@ def _as_of(text, what):
 
 def participants(data):
     """(csv text, counts, as-of date) from the participant list workbook's bytes (its first sheet)."""
-    rows = xlsx.sheet_rows(data, None, "participant list")
-    as_of = _as_of(rows[0][0], "participant list")
-    head = _find(rows, "Mandatory or Voluntary", "participant list")
+    sheet = xlsx.sheet_rows(data, None, "participant list")
+    as_of = _as_of(sheet[0][0], "participant list")
     out = {}
-    for r in rows[head + 1:]:
-        if not r or r[0] not in ("Mandatory", "Voluntary"):
+    for r in table(sheet, PARTICIPANT_HEADERS["participation"], PARTICIPANT_HEADERS, "participant list"):
+        if r["participation"] not in ("Mandatory", "Voluntary"):
             continue
-        r = r + [""] * (9 - len(r))
-        ccn = r[1].strip()
-        if ccn in out:
+        if r["ccn"] in out:
             raise ValueError("participant list: a CCN appears twice")
-        out[ccn] = [ccn, r[2].strip(), r[3].strip(), r[4].strip(), r[5].strip(), r[0].lower(),
-                    _iso(r[6], "participant start"), _iso(r[7], "participant end"), r[8].strip()]
+        out[r["ccn"]] = [r["ccn"], r["name"], r["cbsa"], r["cbsa_name"], r["cbsa_state"], r["participation"].lower(),
+                         _iso(r["start"], "participant start"), _iso(r["end"], "participant end"),
+                         r["newly_identified"]]
     body = [out[k] for k in sorted(out)]
-    counts = {"rows": len(body),
-              "byParticipation": _tally(r[5] for r in body), "byStart": _tally(r[6] for r in body)}
+    counts = {"rows": len(body), "byParticipation": dict(sorted(Counter(r[5] for r in body).items())),
+              "byStart": dict(sorted(Counter(r[6] for r in body).items()))}
     return _csv(PARTICIPANT_COLUMNS, body), counts, as_of
-
-
-def _tally(values):
-    t = {}
-    for v in values:
-        t[v] = t.get(v, 0) + 1
-    return dict(sorted(t.items()))
 
 
 def prices(data):
@@ -189,60 +186,50 @@ def price_as_of(data):
 
 def cjrx(data):
     """(csv text, counts, as-of date) from the CJR-X participant list workbook's bytes (its first sheet)."""
-    rows = xlsx.sheet_rows(data, None, "CJR-X list")
-    as_of = _as_of(rows[0][0], "CJR-X list")
-    head = _find(rows, "Provider ID", "CJR-X list")
+    sheet = xlsx.sheet_rows(data, None, "CJR-X list")
+    as_of = _as_of(sheet[0][0], "CJR-X list")
     body = {}
-    for r in rows[head + 1:]:
-        if r and re.fullmatch(r"[0-9]{6}", r[0].strip()):
-            if r[0].strip() in body:
+    for r in table(sheet, "Provider ID", {"ccn": "Provider ID", "state": "State", "name": "Hospital Name"}, "CJR-X list"):
+        if re.fullmatch(r"[0-9]{6}", r["ccn"]):
+            if r["ccn"] in body:
                 raise ValueError("CJR-X list: a CCN appears twice")
-            body[r[0].strip()] = [r[0].strip(), r[1].strip(), r[2].strip()]
+            body[r["ccn"]] = [r["ccn"], r["state"], r["name"]]
     return _csv(CJRX_COLUMNS, [body[k] for k in sorted(body)]), {"rows": len(body)}, as_of
 
 
-def _dict_rows(data, needed, what, encoding="utf-8-sig"):
-    reader = csv.DictReader(io.StringIO(data.decode(encoding)))
-    missing = [c for c in needed if c not in (reader.fieldnames or [])]
-    if missing:
-        raise ValueError(f"{what}: expected column(s) {', '.join(missing)} not found")
-    return reader
+def _records(data, anchor, columns, label, encoding="utf-8-sig"):
+    """Records from CSV bytes: parse.table on the header row starting `anchor`; `columns` maps key -> header text."""
+    return table(rows(data.decode(encoding), ","), anchor, columns, label)
 
 
 def mup(data, drgs):
     """(csv text, counts) from a Medicare Inpatient by Provider and Service file's bytes: the rows for `drgs`."""
     cells = {}
-    for r in _dict_rows(data, ("Rndrng_Prvdr_CCN", "DRG_Cd", "Tot_Dschrgs"), "Medicare inpatient file",
-                           MUP_ENCODING):
-        if r["DRG_Cd"] in drgs:
-            key = (r["Rndrng_Prvdr_CCN"], r["DRG_Cd"])
+    for r in _records(data, "Rndrng_Prvdr_CCN", {"ccn": "Rndrng_Prvdr_CCN", "drg": "DRG_Cd", "n": "Tot_Dschrgs"},
+                      "Medicare inpatient file", MUP_ENCODING):
+        if r["drg"] in drgs:
+            key = (r["ccn"], r["drg"])
             if key in cells:
                 raise ValueError("Medicare inpatient file: a provider-DRG cell appears twice")
-            cells[key] = int(float(r["Tot_Dschrgs"]))
+            cells[key] = int(float(r["n"]))
     return _csv(MUP_COLUMNS, [[c, d, n] for (c, d), n in sorted(cells.items())]), {"rows": len(cells)}
 
 
 def quality(hwr_data, iscmr_data):
     """(csv text, counts) of the numeric Hybrid_HWR and ISCMR scores from the two Provider Data Catalog files."""
+    columns = {"ccn": "Facility ID", "measure": "Measure ID", "score": "Score", "start": "Start Date", "end": "End Date"}
     body = []
     for data in (hwr_data, iscmr_data):
-        for r in _dict_rows(data, ("Facility ID", "Measure ID", "Score", "Start Date", "End Date"), "quality file"):
-            name = QUALITY_MEASURES.get(r["Measure ID"])
+        for r in _records(data, "Facility ID", columns, "quality file"):
+            name = QUALITY_MEASURES.get(r["measure"])
             try:
-                float(r["Score"])
+                float(r["score"])
             except ValueError:
                 continue  # "Not Available" and the like
             if name:
-                body.append([r["Facility ID"], name, r["Score"], _iso(r["Start Date"], "quality start"),
-                             _iso(r["End Date"], "quality end")])
+                body.append([r["ccn"], name, r["score"], _iso(r["start"], "quality start"), _iso(r["end"], "quality end")])
     body.sort(key=lambda r: (r[1], r[0]))
-    return _csv(QUALITY_COLUMNS, body), {"byMeasure": _tally(r[1] for r in body)}
-
-
-def _source_record(path, info):
-    data = path.read_bytes()
-    return {"file": info["file"], "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-            "downloadUrl": info["downloadUrl"], "lastModified": info["lastModified"]}
+    return _csv(QUALITY_COLUMNS, body), {"byMeasure": dict(sorted(Counter(r[1] for r in body).items()))}
 
 
 def _find_raw(raw_dir, name):
@@ -252,57 +239,93 @@ def _find_raw(raw_dir, name):
     return hits[0]
 
 
-def build_all(raw_dir):
-    """{pin id: (csv text, manifest entry without bytes/sha256)} for every TEAM pin, from the raw files in `raw_dir`."""
-    raw = {name: _find_raw(raw_dir, name) for name in
-           (PARTICIPANTS_FILE, PRICES_FILE, CJRX_FILE, *MUP_FILES.values(), *QUALITY_FILES)}
+def _read_dates(raw_dir):
+    """The sidecar's {'files': {raw file name: date}, 'pdcReleased', 'pdcModified'}; every date must be YYYY-MM-DD."""
+    path = Path(raw_dir) / SIDECAR
+    try:
+        dates = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise FileNotFoundError(f"{path}: the sidecar of CMS's Last-Modified dates is missing (see the module docstring)") from None
+    for date in (*dates.get("files", {}).values(), dates.get("pdcReleased"), dates.get("pdcModified")):
+        _check_date(date, SIDECAR)
+    return dates
+
+
+def _check_date(value, what):
+    if not (isinstance(value, str) and re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", value)):
+        raise ValueError(f"{what}: {value!r} is not a YYYY-MM-DD date")
+    datetime.strptime(value, "%Y-%m-%d")
+
+
+def _source_record(path, info, dates):
+    """The manifest's derivedFrom for one raw file: its name, size, SHA-256, URL and Last-Modified date."""
+    sha, size = file_sha256(path)
+    try:
+        last_modified = dates["files"][info["file"]]
+    except KeyError:
+        raise ValueError(f"{SIDECAR}: no date for {info['file']}") from None
+    return {"file": info["file"], "bytes": size, "sha256": sha, "downloadUrl": info["downloadUrl"],
+            "lastModified": last_modified}
+
+
+def build_all(raw_dir, retrieved):
+    """{pin id: (CSV bytes, manifest entry)} for every TEAM pin, from the raw files in `raw_dir` (and its sidecar of
+    Last-Modified dates); `retrieved` is the day they were downloaded."""
+    _check_date(retrieved, "retrieved")
+    dates = _read_dates(raw_dir)
+    quality_src = SOURCES["team-quality"]
+    raw = {info["file"]: _find_raw(raw_dir, info["file"])
+           for info in (*(s for pin_id, s in SOURCES.items() if "file" in s), quality_src["hwr"], quality_src["iscmr"])}
     out = {}
 
-    def entry(pin_id, derived_from, **extra):
-        src = SOURCES.get(pin_id, QUALITY_SOURCE)
-        return {"id": pin_id, "title": src["title"], "path": PIN_PATHS[pin_id], "derivedFrom": derived_from,
-                "derivedBy": DERIVED_BY, "landingPage": src["landingPage"], "retrieved": RETRIEVED,
-                **extra}
+    def entry(pin_id, text, derived_from, **extra):
+        data, src = text.encode("utf-8"), SOURCES[pin_id]
+        out[pin_id] = (data, {"id": pin_id, "title": src["title"], "path": src["path"], "bytes": len(data),
+                              "sha256": hashlib.sha256(data).hexdigest(), "derivedFrom": derived_from,
+                              "derivedBy": DERIVED_BY, "landingPage": src["landingPage"], "retrieved": retrieved,
+                              **extra})
 
-    text, counts, as_of = participants(raw[PARTICIPANTS_FILE].read_bytes())
-    out["team-participants"] = (text, entry("team-participants", _source_record(raw[PARTICIPANTS_FILE], SOURCES["team-participants"]),
-                                            asOf=as_of, counts=counts))
-    price_bytes = raw[PRICES_FILE].read_bytes()
+    def source(pin_id):
+        info = SOURCES[pin_id]
+        return _source_record(raw[info["file"]], info, dates)
+
+    def read(pin_id):
+        return raw[SOURCES[pin_id]["file"]].read_bytes()
+
+    text, counts, as_of = participants(read("team-participants"))
+    entry("team-participants", text, source("team-participants"), asOf=as_of, counts=counts)
+    price_bytes = read("team-prices")
     text, counts = prices(price_bytes)
     cat, drg, div = SPOT_CHECK
-    spot = [r for r in csv.DictReader(io.StringIO(text)) if (r["category"], r["drg"], r["division"]) == SPOT_CHECK]
+    price_rows = list(csv.DictReader(io.StringIO(text)))
+    spot = [r for r in price_rows if (r["category"], r["drg"], r["division"]) == SPOT_CHECK]
     if len(spot) != 1:
         raise ValueError("price workbook: the spot-check row is missing")
-    out["team-prices"] = (text, entry("team-prices", _source_record(raw[PRICES_FILE], SOURCES["team-prices"]),
-                                      asOf=price_as_of(price_bytes), counts=counts,
-                                      spotCheck={"category": cat, "drg": drg, "division": div, "price": spot[0]["price"]}))
-    text, counts, as_of = cjrx(raw[CJRX_FILE].read_bytes())
-    out["cjrx-participants"] = (text, entry("cjrx-participants", _source_record(raw[CJRX_FILE], SOURCES["cjrx-participants"]),
-                                            asOf=as_of, counts=counts))
-    wanted = {r["drg"] for r in csv.DictReader(io.StringIO(out["team-prices"][0])) if r["drg"] != ALL_ROWS} | set(PREDECESSOR_DRGS)
-    for pin_id, name in MUP_FILES.items():
-        text, counts = mup(raw[name].read_bytes(), wanted)
-        out[pin_id] = (text, entry(pin_id, _source_record(raw[name], SOURCES[pin_id]), counts=counts))
-    q = QUALITY_SOURCE
-    text, counts = quality(raw[QUALITY_FILES[0]].read_bytes(), raw[QUALITY_FILES[1]].read_bytes())
-    first = _source_record(raw[QUALITY_FILES[0]], q["hwr"])
-    first["alsoRead"] = _source_record(raw[QUALITY_FILES[1]], q["iscmr"])
-    out["team-quality"] = (text, entry("team-quality", first, counts=counts,
-                                       pdcReleased=q["pdcReleased"], pdcModified=q["pdcModified"]))
+    entry("team-prices", text, source("team-prices"), asOf=price_as_of(price_bytes), counts=counts,
+          spotCheck={"category": cat, "drg": drg, "division": div, "price": spot[0]["price"]})
+    text, counts, as_of = cjrx(read("cjrx-participants"))
+    entry("cjrx-participants", text, source("cjrx-participants"), asOf=as_of, counts=counts)
+    wanted = {r["drg"] for r in price_rows if r["drg"] != ALL_ROWS} | set(PREDECESSOR_DRGS)
+    for pin_id in MUP_PINS:
+        text, counts = mup(read(pin_id), wanted)
+        entry(pin_id, text, source(pin_id), counts=counts)
+    text, counts = quality(raw[quality_src["hwr"]["file"]].read_bytes(), raw[quality_src["iscmr"]["file"]].read_bytes())
+    first = _source_record(raw[quality_src["hwr"]["file"]], quality_src["hwr"], dates)
+    first["alsoRead"] = _source_record(raw[quality_src["iscmr"]["file"]], quality_src["iscmr"], dates)
+    entry("team-quality", text, first, counts=counts, pdcReleased=dates["pdcReleased"], pdcModified=dates["pdcModified"])
     return out
 
 
-def main(raw_dir):
-    built = build_all(raw_dir)
+def main(argv):
+    parser = argparse.ArgumentParser(prog="run.py derive-team", description="Derive the TEAM source pins from CMS's raw files.")
+    parser.add_argument("raw_dir", help=f"the directory holding the raw files and {SIDECAR}")
+    parser.add_argument("--retrieved", required=True, help="the day the raw files were downloaded (YYYY-MM-DD)")
+    args = parser.parse_args(argv)
+    built = build_all(args.raw_dir, args.retrieved)
     manifest = [e for e in read_manifest() if e["id"] not in built]
-    codes = 0
-    for pin_id, (text, entry) in built.items():
-        data = text.encode("utf-8")
-        entry = {**{k: entry[k] for k in ("id", "title", "path")}, "bytes": len(data),
-                 "sha256": hashlib.sha256(data).hexdigest(), **{k: v for k, v in entry.items() if k not in ("id", "title", "path")}}
-        manifest.append(entry)
-        built[pin_id] = (data, entry)
+    manifest.extend(entry for _, entry in built.values())
     write_manifest(manifest)
+    codes = 0
     for data, entry in built.values():
         codes |= write_derived_pin(entry, data)
     return codes

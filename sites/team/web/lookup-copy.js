@@ -69,7 +69,10 @@ export function reasonText(code, arg) {
     case 'ended': return no(fill('ended', { date: dateOf(arg) }));
     case 'maryland': return no(fill('maryland'));
     case 'outside': return no(fill('outside'));
-    case 'in_area_kind': return no(NOT_IPPS_KINDS.has(arg) ? fill('inAreaKind', { kind: kindText(arg) }) : (kindText(arg), fill('inAreaListed')));
+    case 'in_area_kind': {
+      const kind = kindText(arg); // refuses a kind it has no words for, whichever sentence follows
+      return no(NOT_IPPS_KINDS.has(arg) ? fill('inAreaKind', { kind }) : fill('inAreaListed'));
+    }
     case 'ihs': return no(fill('ihs'));
     case 'unlisted': return no(fill('unlisted'));
     case 'area_unknown': return no(fill('areaUnknown'));

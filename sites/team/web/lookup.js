@@ -7,5 +7,5 @@
 export const LOOKUP_COLS = Object.freeze(['ccn', 'code', 'arg']);
 
 export function lookupAsset(team) {
-  return { cols: [...LOOKUP_COLS], rows: Object.entries(team.status).map(([ccn, [code, arg]]) => [ccn, code, arg]) };
+  return { cols: LOOKUP_COLS, rows: Object.entries(team.status).map(([ccn, [code, arg]]) => [ccn, code, arg]) };
 }

@@ -22,12 +22,12 @@ Status codes, each [code, arg]:
 from collections import defaultdict, namedtuple
 
 from pp_engine import geo
+from pp_engine.parse import MARYLAND
 
 # Performance year 2 is calendar 2027 (§ 512.505, "performance year"); the file describes it.
 PY2_START = "2027-01-01"
-MARYLAND = "MD"
 TRIBAL = "Tribal"  # Care Compare's ownership value for a tribally owned hospital (the master's ownDetail)
-STATE_FIPS_PREFIX = {abbr: fips for abbr, fips, _ in geo.STATES}
+STATE_FIPS_PREFIX = {abbr: fips for fips, abbr in geo.STATE_FIPS.items()}
 
 # The selected areas as counties: `counties`, FIPS codes in a selected CBSA; `states`, the states holding any of them.
 Area = namedtuple("Area", "counties states")

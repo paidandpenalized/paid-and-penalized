@@ -8,8 +8,8 @@ from collections import Counter
 from pp_engine.schema import validate
 from pp_engine.team import episodes, quality, status
 from pp_engine.team.build import default_ccn, division_of
-from pp_pipeline import emit_team
 from pp_pipeline.files import load_schemas
+from pp_pipeline.tests.team.helpers import fresh, pins
 
 
 def price_rows(cells):
@@ -167,16 +167,6 @@ class Placement(unittest.TestCase):
         placed, routes = status.place_counties(hospitals, crosswalk, shapes=None)
         self.assertEqual(placed, {"990001": "99002", "990002": "99001", "990003": "99002"})
         self.assertEqual(routes, {"990001": "fips", "990002": "name", "990003": "city"})
-
-
-@functools.lru_cache(maxsize=None)
-def fresh():
-    return emit_team.build_from_pins("2000-01-01T00:00:00Z")
-
-
-@functools.lru_cache(maxsize=None)
-def pins():
-    return emit_team.inputs_from_pins()
 
 
 @functools.lru_cache(maxsize=None)

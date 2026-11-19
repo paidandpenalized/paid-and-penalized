@@ -56,8 +56,9 @@ def quality_tables(quality_values, hospitals):
     ipps = {h["ccn"] for h in hospitals if h["ipps"]}
     out = {}
     for m in MEASURES:
-        cohort = {c: v for c, v in quality_values[m].items() if c in ipps}
-        out[m] = (sorted(cohort.values()), quality.percentiles(cohort))
+        values = {c: v for c, v in quality_values[m].items() if c in ipps}
+        cohort = sorted(values.values())
+        out[m] = (cohort, quality.percentiles(values, cohort))
     return out
 
 
@@ -77,10 +78,12 @@ def participant(entry, h, ctx):
     """One participant's record. `ctx`: prices, averages, DRG categories, source DRGs, the two data years' cells,
     quality values and tables."""
     ccn = entry["ccn"]
-    div = str(division_of(h["state"]))
-    latest = episodes.allocate(ctx["latest"].get(ccn, {}), ctx["drg_category"])
+    division = division_of(h["state"])
+    div = str(division)  # the price tables are keyed by the workbook's text
+    latest_cells = ctx["latest"].get(ccn, {})
+    latest = episodes.allocate(latest_cells, ctx["drg_category"])
     prior = episodes.allocate(ctx["prior"].get(ccn, {}), ctx["drg_category"])
-    hidden = episodes.hidden_cells(ctx["latest"].get(ccn, {}), ctx["sources"])
+    hidden = episodes.hidden_cells(latest_cells, ctx["sources"])
     cats = {}
     for cat in episodes.CATEGORIES:
         alloc = latest.get(cat, {})
@@ -89,7 +92,7 @@ def participant(entry, h, ctx):
                      "price": episodes.category_price(alloc, ctx["prices"], div, ctx["avg"][cat][div]),
                      "hidden": hidden[cat],
                      "lowVolume": episodes.is_low_volume(episodes.episode_count(prior.get(cat, {})), n)}
-    return {"ccn": ccn, "division": int(div), "participation": entry["participation"], "start": entry["start"],
+    return {"ccn": ccn, "division": division, "participation": entry["participation"], "start": entry["start"],
             "end": entry["end"], "active": entry["end"] >= status.PY2_START, "track2Flags": track2_flags(h),
             "cats": cats, "quality": participant_quality(ccn, ctx["quality"], ctx["tables"]),
             "target": episodes.target_amount(latest, ctx["prices"], div)}

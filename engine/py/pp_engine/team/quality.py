@@ -23,7 +23,9 @@ def percentile(value, cohort, in_cohort=True):
     return floor(100 * (worse + tied) / others)
 
 
-def percentiles(values):
-    """{ccn: percentile} for every hospital in the cohort {ccn: value}."""
-    cohort = sorted(values.values())
+def percentiles(values, cohort=None):
+    """{ccn: percentile} for every hospital in the cohort {ccn: value}; `cohort`: its sorted values, when the caller
+    has them."""
+    if cohort is None:
+        cohort = sorted(values.values())
     return {ccn: percentile(v, cohort) for ccn, v in values.items()}

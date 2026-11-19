@@ -10,16 +10,14 @@ from collections import Counter
 from pathlib import Path
 
 from pp_engine import xlsx
+from pp_engine.parse import SchemaError
 from pp_engine.tests.test_xlsx import make_xlsx
-from pp_pipeline.files import manifest_entry, read_pinned_bytes
+from pp_pipeline.emit_team import pin_rows
+from pp_pipeline.files import manifest_entry
 from pp_pipeline.refresh_sources import MAX_PIN
 from pp_pipeline.team import derive
 
 TEAM_IDS = ("team-participants", "team-prices", "cjrx-participants", "team-mup-dy2023", "team-mup-dy2024", "team-quality")
-
-
-def pin_rows(pin_id):
-    return list(csv.DictReader(io.StringIO(read_pinned_bytes(pin_id).decode("utf-8"))))
 
 
 class PinRecords(unittest.TestCase):
@@ -153,8 +151,8 @@ class Derivations(unittest.TestCase):
         self.assertEqual(counts["byMeasure"], {"iscmr": 1, "hybrid_hwr": 1})
 
     def test_a_missing_column_is_refused(self):
-        with self.assertRaises(ValueError):
-            derive.mup(b"a,b\n1,2\n", {"231"})
+        with self.assertRaises(SchemaError):
+            derive.mup(b"Rndrng_Prvdr_CCN,x\n1,2\n", {"231"})
 
 
 if __name__ == "__main__":

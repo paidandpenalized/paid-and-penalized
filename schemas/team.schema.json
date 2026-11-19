@@ -96,6 +96,28 @@
           "type": "boolean"
         }
       }
+    },
+    "categoryCode": {
+      "description": "The five TEAM episode categories.",
+      "enum": [
+        "LEJR",
+        "SHFFT",
+        "SPINAL",
+        "CABG",
+        "BOWEL"
+      ]
+    },
+    "categoryAverage": {
+      "description": "One category's {division: price}, plus `derived: true` when CMS gave no average row for it.",
+      "type": "object",
+      "properties": {
+        "derived": {
+          "const": true
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/price"
+      }
     }
   },
   "properties": {
@@ -179,59 +201,19 @@
       ],
       "properties": {
         "LEJR": {
-          "type": "object",
-          "properties": {
-            "derived": {
-              "const": true
-            }
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/price"
-          }
+          "$ref": "#/$defs/categoryAverage"
         },
         "SHFFT": {
-          "type": "object",
-          "properties": {
-            "derived": {
-              "const": true
-            }
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/price"
-          }
+          "$ref": "#/$defs/categoryAverage"
         },
         "SPINAL": {
-          "type": "object",
-          "properties": {
-            "derived": {
-              "const": true
-            }
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/price"
-          }
+          "$ref": "#/$defs/categoryAverage"
         },
         "CABG": {
-          "type": "object",
-          "properties": {
-            "derived": {
-              "const": true
-            }
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/price"
-          }
+          "$ref": "#/$defs/categoryAverage"
         },
         "BOWEL": {
-          "type": "object",
-          "properties": {
-            "derived": {
-              "const": true
-            }
-          },
-          "additionalProperties": {
-            "$ref": "#/$defs/price"
-          }
+          "$ref": "#/$defs/categoryAverage"
         }
       }
     },
@@ -239,13 +221,7 @@
       "description": "{MS-DRG: episode category}.",
       "type": "object",
       "additionalProperties": {
-        "enum": [
-          "LEJR",
-          "SHFFT",
-          "SPINAL",
-          "CABG",
-          "BOWEL"
-        ]
+        "$ref": "#/$defs/categoryCode"
       }
     },
     "participants": {

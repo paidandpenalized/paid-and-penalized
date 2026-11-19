@@ -13,7 +13,6 @@ percentiles, the default hospital, a status for every master hospital, and the l
 """
 import csv
 import io
-import re
 import sys
 from datetime import datetime, timezone
 
@@ -29,7 +28,7 @@ SCHEMA = "team.schema.json"
 FY = 2027  # performance year 2 (calendar 2027), FY2027 MS-DRGs
 
 PARTICIPANTS, PRICES, CJRX, QUALITY = "team-participants", "team-prices", "cjrx-participants", "team-quality"
-MUP = ("team-mup-dy2023", "team-mup-dy2024")  # the prior and the latest data year, in that order
+MUP = {"team-mup-dy2023": 2023, "team-mup-dy2024": 2024}  # the prior and the latest data year, in that order
 PINS = (PARTICIPANTS, PRICES, CJRX, *MUP, QUALITY, emit_hospital.CBSA, emit_hospital.COUNTIES)
 
 
@@ -39,11 +38,11 @@ class Inputs:
 
     def __init__(self, manifest):
         self.manifest = manifest
-        self.participants = _csv(PARTICIPANTS)
-        self.price_rows = _csv(PRICES)
-        self.cjrx = {r["ccn"] for r in _csv(CJRX)}
+        self.participants = pin_rows(PARTICIPANTS)
+        self.price_rows = pin_rows(PRICES)
+        self.cjrx = {r["ccn"] for r in pin_rows(CJRX)}
         self.prior, self.latest = (_mup(pin) for pin in MUP)
-        self.quality = _quality(_csv(QUALITY))
+        self.quality = _quality(pin_rows(QUALITY))
         self.master = read_json(emit_hospital.committed_path())
         require_current(self.master, manifest, "the hospital master")
         self.hospitals = self.master["hospitals"]
@@ -51,14 +50,15 @@ class Inputs:
         self.shapes = emit_hospital.counties()
 
 
-def _csv(pin_id):
+def pin_rows(pin_id):
+    """A CSV pin's rows as dicts."""
     return list(csv.DictReader(io.StringIO(read_pinned_bytes(pin_id).decode("utf-8"))))
 
 
 def _mup(pin_id):
     """{ccn: {drg: discharges}} from a Medicare inpatient pin."""
     out = {}
-    for r in _csv(pin_id):
+    for r in pin_rows(pin_id):
         out.setdefault(r["ccn"], {})[r["drg"]] = int(r["discharges"])
     return out
 
@@ -81,36 +81,23 @@ def read_crosswalk():
     return table(rows(text, "\t"), "FIPS County Code", columns, "county-CBSA crosswalk")
 
 
-def mup_year(pin_id):
-    """A Medicare inpatient pin's data year, from its id (team-mup-dy<YYYY>)."""
-    return int(re.fullmatch(r"team-mup-dy([0-9]{4})", pin_id).group(1))
-
-
-def inputs_from_pins():
-    return Inputs(read_manifest())
-
-
 def meta(manifest):
-    """Source dates from the manifest entries, the data years from the Medicare inpatient pins' ids."""
+    """Source dates from the manifest entries, the data years from MUP."""
     def entry(pin):
         return manifest_entry(pin, manifest)
     return {"listAsOf": entry(PARTICIPANTS)["asOf"], "cjrxAsOf": entry(CJRX)["asOf"],
-            "pricesDated": entry(PRICES)["asOf"], "mupYears": [mup_year(p) for p in MUP],
+            "pricesDated": entry(PRICES)["asOf"], "mupYears": list(MUP.values()),
             "qualityReleased": entry(QUALITY)["pdcReleased"], "methods_version": METHODS_VERSION}
 
 
 def build_with_notes(built_at):
-    p = inputs_from_pins()
+    p = Inputs(read_manifest())
     body, notes = build.build(p.participants, p.price_rows, p.cjrx, p.prior, p.latest, p.quality, p.hospitals,
                               p.crosswalk, p.shapes)
     sources = list(dict.fromkeys([*PINS, *p.master["sources"]]))
     doc = {**envelope(SCHEMA_VERSION, METHODS_VERSION, sources, p.manifest, built_at, FY), "meta": meta(p.manifest),
            **body}
     return doc, notes
-
-
-def build_from_pins(built_at):
-    return build_with_notes(built_at)[0]
 
 
 def emitted_path():
