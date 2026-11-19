@@ -94,14 +94,17 @@ def selected_area(participants, crosswalk, placed, state_of):
     mandatory = [r for r in participants if r["participation"] == "mandatory"]
     selected = {r["cbsa"] for r in mandatory}
     code = {r["fips"]: r["cbsa"] for r in crosswalk}
-    sites = {placed[r["ccn"]]: r for r in mandatory if r["ccn"] in placed}
-    parent = defaultdict(set)
-    for fips, r in sites.items():
+    sites, parent = defaultdict(set), defaultdict(set)  # county -> list CBSAs; crosswalk code -> list CBSAs
+    for r in mandatory:
+        fips = placed.get(r["ccn"])
+        if fips is None:
+            continue
+        sites[fips].add(r["cbsa"])
         if code.get(fips) and code[fips] not in selected:
             parent[code[fips]].add(r["cbsa"])
-    split = sorted(c for c, ps in parent.items() if len(ps) > 1)
+    split = sorted(k for k, ps in [*sites.items(), *parent.items()] if len(ps) > 1)
     if split:
-        raise ValueError(f"county-CBSA crosswalk: {len(split)} code(s) hold participants of more than one CBSA")
+        raise ValueError(f"county-CBSA crosswalk: {len(split)} county or code(s) hold participants of more than one CBSA")
     reach = selected | set(parent)
     counties = {f for f, c in code.items() if c in reach} | set(sites)
     state_by_fips = {r["fips"]: r["state"] for r in crosswalk}
@@ -125,6 +128,8 @@ def reason_code(h, placed, area):
         return ["maryland", None]
     fips = placed.get(h["ccn"])
     if fips is None:
+        # An unplaced county is outside every selected area when its state has none (Alaska, the Pacific territories,
+        # the Virgin Islands); elsewhere the rules cannot tell.
         return ["outside", h["kind"]] if h["state"] not in area.states else ["area_unknown", None]
     if fips not in area.counties:
         return ["outside", h["kind"]]

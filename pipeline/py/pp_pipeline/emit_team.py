@@ -20,7 +20,6 @@ from datetime import datetime, timezone
 from pp_engine.contract import envelope
 from pp_engine.parse import rows, table
 from pp_engine.team import build
-from pp_engine.team.episodes import allocate, price_tables
 from pp_pipeline import emit_hospital
 from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, read_pinned_bytes,
                                read_zip_text_cp1252, require_current, write_emitted)
@@ -89,13 +88,6 @@ def mup_year(pin_id):
 
 def inputs_from_pins():
     return Inputs(read_manifest())
-
-
-def allocations():
-    """{ccn: {category: {FY2027 DRG: episodes}}} for the latest data year (the target's episodes), for the tests."""
-    p = inputs_from_pins()
-    _, _, drg_category = price_tables(p.price_rows)
-    return {r["ccn"]: allocate(p.latest.get(r["ccn"], {}), drg_category) for r in p.participants}
 
 
 def meta(manifest):

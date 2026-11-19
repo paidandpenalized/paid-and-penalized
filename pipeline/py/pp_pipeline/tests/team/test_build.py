@@ -7,7 +7,7 @@ from collections import Counter
 
 from pp_engine.schema import validate
 from pp_engine.team import episodes, quality, status
-from pp_engine.team.build import default_ccn
+from pp_engine.team.build import default_ccn, division_of
 from pp_pipeline import emit_team
 from pp_pipeline.files import load_schemas
 
@@ -27,17 +27,20 @@ class Episodes(unittest.TestCase):
         self.assertEqual(alloc["LEJR"], {"469": 40})
         self.assertEqual(sum(alloc["SPINAL"].values()), 20 + 11 + 12)
 
-    def test_every_remap_target_is_a_drg_of_one_category(self):
+    def test_every_remap_target_is_a_priced_drg_of_one_category(self):
+        _, _, drg_category = episodes.price_tables(pins().price_rows)
         for source, targets in episodes.REMAPS.items():
             self.assertAlmostEqual(sum(targets.values()), 1)
-            self.assertEqual(len({self.DRG_CATEGORY.get(t, "SPINAL") for t in targets}), 1, source)
+            self.assertTrue(set(targets) <= set(drg_category), source)
+            self.assertEqual(len({drg_category[t] for t in targets}), 1, source)
 
     def test_hidden_counts_the_source_cells_absent_from_the_file(self):
         sources = episodes.source_drgs(self.DRG_CATEGORY)
         self.assertNotIn("523", sources["SPINAL"])  # new in FY2027: no data year counts cases under it
         self.assertIn("456", sources["SPINAL"])
         hidden = episodes.hidden_cells({"426": 12, "456": 30}, sources)
-        self.assertEqual(hidden["SPINAL"], len(sources["SPINAL"]) - 2)
+        # SPINAL's sources here: 426, 447, 450 and retired 453, 456, 459 (454 and the rest map outside this table).
+        self.assertEqual(hidden["SPINAL"], 4)
         self.assertEqual(hidden["LEJR"], 1)
 
     def test_low_volume_scales_two_years_to_three(self):
@@ -46,7 +49,9 @@ class Episodes(unittest.TestCase):
         below = (threshold / factor) - 1
         self.assertTrue(episodes.is_low_volume(below, 0))
         self.assertFalse(episodes.is_low_volume(threshold, 0))
-        self.assertEqual(episodes.is_low_volume(10, 10), (10 + 10) * factor < threshold)
+        self.assertFalse(episodes.is_low_volume(10, 11))  # 21 x 1.5 = 31.5
+        self.assertTrue(episodes.is_low_volume(10, 10))  # 20 x 1.5 = 30
+        self.assertTrue(episodes.is_low_volume(10.5, 10))  # 20.5 x 1.5 = 30.75 (split counts)
 
     def test_category_price_is_episode_weighted_and_falls_back_to_the_average(self):
         prices = {"447": {"1": 100.0}, "450": {"1": 200.0}}
@@ -130,6 +135,27 @@ class Status(unittest.TestCase):
         self.assertEqual(area.states, {"ZZ"})
 
 
+    def test_a_county_or_code_shared_by_two_list_cbsas_is_refused(self):
+        crosswalk = [{"fips": "99001", "state": "ZZ", "cbsa": ""}, {"fips": "99002", "state": "ZZ", "cbsa": "11114"},
+                     {"fips": "99003", "state": "ZZ", "cbsa": "11114"}]
+        same_county = [{"ccn": "990001", "cbsa": "11111", "participation": "mandatory"},
+                       {"ccn": "990002", "cbsa": "22222", "participation": "mandatory"}]
+        with self.assertRaises(ValueError):
+            status.selected_area(same_county, crosswalk, {"990001": "99001", "990002": "99001"}, {})
+        with self.assertRaises(ValueError):
+            status.selected_area(same_county, crosswalk, {"990001": "99002", "990002": "99003"}, {})
+
+
+class Divisions(unittest.TestCase):
+    def test_territories_take_the_pacific_division_and_an_unknown_state_raises(self):
+        pacific = division_of("CA")
+        for territory in ("AS", "GU", "MP", "PR", "VI"):
+            self.assertEqual(division_of(territory), pacific, territory)
+        self.assertEqual(division_of("ME"), 1)
+        with self.assertRaises(ValueError):
+            division_of("ZZ")
+
+
 class Placement(unittest.TestCase):
     def test_counties_by_fips_name_then_city(self):
         crosswalk = [{"fips": "99001", "county": "SAINT LUCIE", "state": "ZZ", "cbsa": ""},
@@ -151,6 +177,14 @@ def fresh():
 @functools.lru_cache(maxsize=None)
 def pins():
     return emit_team.inputs_from_pins()
+
+
+@functools.lru_cache(maxsize=None)
+def allocations():
+    """{ccn: {category: {FY2027 DRG: episodes}}} for the latest data year (the target's episodes)."""
+    p = pins()
+    _, _, drg_category = episodes.price_tables(p.price_rows)
+    return {r["ccn"]: episodes.allocate(p.latest.get(r["ccn"], {}), drg_category) for r in p.participants}
 
 
 class WholeBuild(unittest.TestCase):
@@ -222,7 +256,7 @@ class WholeBuild(unittest.TestCase):
     def test_every_active_target_is_the_sum_of_episodes_times_price(self):
         doc = fresh()
         prices = doc["prices"]
-        allocated = emit_team.allocations()
+        allocated = allocations()
         checked = 0
         for r in doc["participants"]:
             if not r["active"]:

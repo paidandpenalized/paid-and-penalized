@@ -11,7 +11,8 @@ from pp_engine.team import episodes, quality, status
 
 # The price workbook's census divisions 1-9 follow the Census Bureau's numbering, which is geo.DIVISIONS' order.
 DIVISION_NUMBER = {name: i for i, name in enumerate(geo.DIVISIONS, start=1)}
-# The workbook prices the territories (AS, GU, MP, PR, VI) with the Pacific division.
+# The workbook prices the territories with the Pacific division ("Pacific ... + other US Territories").
+TERRITORIES = ("AS", "GU", "MP", "PR", "VI")
 TERRITORY_DIVISION = DIVISION_NUMBER["Pacific"]
 MEASURES = ("hybrid_hwr", "iscmr")
 TRACK2_TYPES = ("SCH", "MDH", "EACH")  # special statuses that make a hospital eligible for Track 2 (§ 512.520(b)(4))
@@ -22,8 +23,13 @@ DEFAULT_MIN_CATEGORIES = 4
 
 
 def division_of(state):
+    """The price workbook's census division (1-9) for a state or territory; an unknown code raises."""
+    if state in TERRITORIES:
+        return TERRITORY_DIVISION
     _, name = geo.region_of(state)
-    return DIVISION_NUMBER[name] if name else TERRITORY_DIVISION
+    if name is None:
+        raise ValueError("a participant's state has no census division")
+    return DIVISION_NUMBER[name]
 
 
 def track2_flags(h):

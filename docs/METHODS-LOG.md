@@ -575,7 +575,10 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   its city. Off the list: `outside` (county in no selected area), `in_area_kind` (not an acute IPPS hospital),
   `ihs` (Indian Health Service or tribal), `unlisted` (acute, IPPS, in an area, yet not on the list), and
   `area_unknown` (county not placed, in a state that has a selected area; a state with none makes it `outside`). A
-  hospital on the CJR-X list carries `cjrx` around its reason.
+  hospital on the CJR-X list carries `cjrx` around its reason. Residual: a county of a selected micropolitan CBSA
+  where no mandatory participant sits, and a metropolitan division's county in a division with no participant, are
+  called `outside` though they may lie in a selected area (the crosswalk cannot place them); this changes only the
+  reason given for a hospital not on the list, never whether a hospital is in TEAM.
 - The list as of 2026-08-18 has 721 CCNs; the master has 720 of them (`a4.teamMissing`). Across the 5,482 master
   hospitals: in 715, in27 2, ended 3, maryland 56, outside 2,147, in_area_kind 329, ihs 4, unlisted 7, area_unknown 6
   (Connecticut hospitals under an old county name; the crosswalk has the state's planning regions), cjrx 2,213
