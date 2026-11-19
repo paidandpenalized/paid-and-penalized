@@ -5,6 +5,8 @@
 // (E2E_BASE_URL); see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { directorySplit } from '../../hub/home/below.js';
+import { SITE } from '../../web/site.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, ENGINE, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, clickInPlace, fetchDecoded, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 
@@ -796,10 +798,14 @@ describe('the worksheet on a narrow phone', () => {
   }));
 });
 
-// Below the story, the directory: each live program's card (the three programs with data, then the scenario's card) ends
-// in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
-// row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom
-// edge (from 1200 px the six share one row).
+// Below the story, the directory: each card (the programs with data, the payment models live here, then the scenarios')
+// ends in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at
+// every layout each group's name sits on one line inside its row, each slip's band holds its words on one line, and
+// slips in one row are one height with their bands on one bottom edge (from 1200 px they share one row). The counts are
+// the directory's own split of the registry (hub/home/below.js directorySplit), so a program that changes stage needs no
+// edit here.
+const SPLIT = directorySplit(SITE.programs);
+const CARDS = SPLIT.live.length + SPLIT.models.length + SPLIT.scenarios.length;
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
@@ -839,12 +845,12 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
-      assert.deepEqual(f.go, [1, 1, 1, 1], `${width} px: each card's way to its page on one line, the scenario's too`);
-      assert.equal(f.names, 3, `${width} px: three groups`);
+      assert.deepEqual(f.go, Array(CARDS).fill(1), `${width} px: each of the ${CARDS} cards' way to its page on one line, the scenario's too`);
+      assert.equal(f.names, SPLIT.soonGroups.length, `${width} px: ${SPLIT.soonGroups.length} groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
-      assert.equal(f.bands, 6, `${width} px: six slips`);
+      assert.equal(f.bands, SPLIT.soon.length, `${width} px: ${SPLIT.soon.length} slips`);
       assert.equal(f.bandsOk, true, `${width} px: each band's words on one line, inside it`);
-      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the six slips share one row`);
+      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the ${SPLIT.soon.length} slips share one row`);
       assert.ok(f.heightSpread <= 1, `${width} px: slips in one row are one height (spread ${f.heightSpread} px)`);
       assert.ok(f.bandSpread <= 1, `${width} px: bands in one row share a bottom edge (spread ${f.bandSpread} px)`);
     }

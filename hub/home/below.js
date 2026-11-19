@@ -230,12 +230,24 @@ const slip = (p) => html`<a class="slip" href="${p.path}"><abbr class="ab" title
 // then the scenarios' cards under their own heading, then the rest, under consideration (stage soon), by group: the same
 // split as the tabs and the footer (web/site.js LISTED_PROGRAMS). The heading counts the programs with pages here (live:
 // with data, and the models), those under construction, and those under consideration; a scenario is none.
+// The directory's split of the registry's programs (pure; the page's browser checks read it too): live, the programs the
+// dollar estimates hold (a card each); models, the payment models live here outside them (a card each); scenarios (a card
+// each); soon, the rest under consideration (a slip each), and soonGroups, the groups those slips fall in, in GROUP_WORDS'
+// order (a heading each).
+export function directorySplit(programs) {
+  const soon = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
+  return {
+    live: programs.filter((p) => p.inData),
+    models: programs.filter((p) => !p.inData && !p.scenario && p.stage === 'live'),
+    scenarios: programs.filter((p) => p.scenario),
+    soon,
+    soonGroups: Object.keys(GROUP_WORDS).filter((group) => soon.some((p) => p.group === group)),
+  };
+}
+
 export function directory({ programs, figures = {}, facts, hospitals, fy, hrrpFy = fy }) {
   const fyText = String(fy);
-  const live = programs.filter((p) => p.inData);
-  const models = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'live');
-  const scenarios = programs.filter((p) => p.scenario);
-  const soon = programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
+  const { live, models, scenarios, soon, soonGroups } = directorySplit(programs);
   const building = live.filter(underConstruction).length;
   const opened = live.length - building + models.length;
   for (const p of models) if (!has(GROUP_WORDS, p.group)) throw new RangeError(`hub home: the program "${p.id}" is in the group "${p.group}", which the directory has no words for`);
@@ -243,7 +255,7 @@ export function directory({ programs, figures = {}, facts, hospitals, fy, hrrpFy
   // The share axis every histogram shares with the story's charts (hub/client/scale.js), from each program's and the
   // net's percent of pay.
   const domain = shareDomain(hospitals);
-  const groups = Object.entries(GROUP_WORDS).map(([group, words]) => [words, soon.filter((p) => p.group === group)]).filter(([, members]) => members.length);
+  const groups = soonGroups.map((group) => [GROUP_WORDS[group], soon.filter((p) => p.group === group)]);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
 <div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(opened)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(opened)), more: numberWord(soon.length) })}</h2></div>
 <p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>

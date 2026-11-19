@@ -81,7 +81,7 @@ in copy.
 | TEAM-71 | The fiscal year 2027 inpatient final rule made each year's quality baseline the same period as that year's measurement period. | https://www.govinfo.gov/content/pkg/FR-2026-08-04/html/2026-15833.htm | "the CQS baseline for a given TEAM performance year is identical to the applicable measurement period for that year" | 2026-11-19 |
 | TEAM-72 | CMS's FAQ gives the falls with injury and postoperative respiratory failure measures a calendar 2027 measurement and baseline period for performance year 2. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "baseline period is the same as the applicable performance period" … "Falls with Injury (CMIT ID #1518) N/A January 1, 2027 through December 31, 2027" | 2026-11-19 |
 | TEAM-73 | For performance year 2, reporting the falls with injury and postoperative respiratory failure measures is voluntary for TEAM participants. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "TEAM participants are not required to select the Hospital Harm–Falls with Injury or Hospital Harm–Postoperative Respiratory Failure eCQMs" | 2026-11-19 |
-| TEAM-74 | The composite quality score is the sum of the weighted measure scores, from 0 to 100; a gain is cut by 10% × (1 − score/100), and a Track 2 repayment by 15% × score/100 (Track 3's the same as Track 2's with 10%). | https://www.cms.gov/files/document/team-qualityscoring-fs.pdf | "The CQS will be the sum of weighted measure scores and will range from 0 to 100." … "[h] = 10%*(1-[g]/100)" … "[h] = 15%*[g]/100" | 2026-11-19 |
+| TEAM-74 | The composite quality score is the sum of the weighted measure scores, from 0 to 100; a gain is cut by 10% × (1 − score/100), and a Track 2 repayment by 15% × score/100 (Track 3's the same as Track 2's with 10%). | https://www.cms.gov/files/document/team-qualityscoring-fs.pdf | "the sum of weighted measure scores and will range from 0 to 100" … "[h] = 10%*(1-[g]/100)" … "[h] = 15%*[g]/100" … "[h] = 10%*[g]/100" | 2026-11-19 |
 | TEAM-75 | CMS's FAQ applies the low-volume adjustment to the episode-level reconciliation amounts before it sums them for the hospital. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "CMS first compares the reconciliation target prices and the TEAM participant’s PY spending to obtain the episode-level reconciliation amounts. Then, CMS applies the low-volume adjustment." | 2026-11-19 |
 | TEAM-76 | CMS's FAQ says reconciliation begins about six months after each performance year ends. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "The reconciliation process will begin approximately 6 months after the end of each PY." | 2026-11-19 |
 | TEAM-77 | Before each performance year CMS tells participants about track selection, its deadline and their safety-net status. | https://www.cms.gov/priorities/innovation/files/team-technical-faqs.pdf | "additional information about the track selection process and deadline, as well as safety net hospital status, prior to each PY" | 2026-11-19 |
@@ -143,10 +143,14 @@ in copy.
   (a)(2)(ii) and (iii) reading "CY 2026". TEAM-72's second quote is the falls row of question 71's table, read in its
   cells' order (its first cell, "N/A", is performance year 1's). TEAM-73 is question 73; TEAM-75 question 38; TEAM-76
   question 37; TEAM-77 question 16. TEAM-74 is CMS's Quality Scoring fact sheet (September 2025, 389,538 bytes), its
-  "Calculate Weighted Scaled Scores" step and the CQS adjustment tables' column formulas ([g] is the CQS, [h] the
-  adjustment percentage). TEAM-78 is section 512.525(d)(1)(ii) and (d)(4)(ii). TEAM-79 is CMS's methodology for the
-  Medicare Inpatient Hospitals files (May 2024, 304,374 bytes; the dataset page lists it for the data year 2024 file),
-  section 3, "Population".
+  "Calculate Weighted Scaled Scores" step and the three CQS adjustment tables' column formulas, in order: positive
+  amounts (Tracks 1-3), negative amounts in Track 2, negative amounts in Track 3 ([g] is the CQS, [h] the adjustment
+  percentage). TEAM-78 is section 512.525(d)(1)(ii) and (d)(4)(ii). TEAM-79 is CMS's methodology for the
+  Medicare Inpatient Hospitals files (May 2024, 304,374 bytes), section 3, "Population". Its "RY24" is the release
+  year of the document, not a data year: data.cms.gov's resource listings for the data year 2023 and 2024 files (both
+  pinned here; dataset-resources API, checked 2026-11-19) each give this document as the files' methodology, and no
+  newer one is posted. Its text names no data year; it describes the calendar-year files in general. The pages cite it
+  without the release label.
 
 ## Link check (2026-11-19)
 
