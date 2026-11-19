@@ -3,14 +3,13 @@
 // one at random" draws. No DOM: client/calc.js runs these against the page, and the tests run them alone. The state's
 // shape is calc-view.js's.
 import { clamp } from '../../../engine/js/stats.js';
-import { BAND_DEFAULT, BAND_MAX, BAND_MIN, SOLVE_SPAN } from '../../../engine/js/team/params.js';
+import { BAND_DEFAULT } from '../../../engine/js/team/params.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { initialState } from '../web/calc-view.js';
 import { CALC, DEFAULT_TRACK } from '../web/constants.js';
-import { MAX_EPISODES, MAX_PRICE, decodeTeam, encodeTeam } from './share.js';
+import { MAX_EPISODES, MAX_PRICE, RANGES, decodeTeam, encodeTeam } from './share.js';
 
-const PCT_SPAN = SOLVE_SPAN * 100;
 
 // Where a page opens, once it knows which participants the calculator has (known(ccn)): the hospital a link names
 // (#team&h=…, readLink's), else the address's ?h= (query), else the default. A link's values apply only to the hospital
@@ -25,15 +24,16 @@ export function arrival({ link = null, query = null, defaultCcn, known }) {
   return { ccn: knows(query) ? query : defaultCcn, values, dropped: Boolean(named) && Object.keys(link.values).length > 0 };
 }
 
-// Each box the reader can type in: how its text is read, the range it takes, its decimals (the share link's), and where
-// the value goes (a path in the state; a category or measure box names its key after the dot: n.LEJR).
+// Each box the reader can type in: how its text is read, the range it takes and its decimals (the share link's own,
+// share.js RANGES), and where the value goes (a path in the state; a category or measure box names its key after the
+// dot: n.LEJR).
 const MAX_AMOUNT = MAX_EPISODES * MAX_PRICE;
 export const BOXES = Object.freeze({
-  n: { parse: parseMoney, lo: 0, hi: MAX_EPISODES, decimals: 0, path: ['ov', 'n'] },
-  p: { parse: parseMoney, lo: 0, hi: MAX_PRICE, decimals: 0, path: ['ov', 'p'] },
-  sk: { parse: parsePct, lo: -PCT_SPAN, hi: PCT_SPAN, decimals: 1, path: ['sk'] },
-  q: { parse: parsePct, lo: 0, hi: 100, decimals: 1, path: ['q'] },
-  band: { parse: parsePct, lo: BAND_MIN * 100, hi: BAND_MAX * 100, decimals: 1, path: null },
+  n: { parse: parseMoney, ...RANGES.n, path: ['ov', 'n'] },
+  p: { parse: parseMoney, ...RANGES.p, path: ['ov', 'p'] },
+  sk: { parse: parsePct, ...RANGES.sk, path: ['sk'] },
+  q: { parse: parsePct, ...RANGES.q, path: ['q'] },
+  band: { parse: parsePct, ...RANGES.b, path: null },
   earn: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
   owe: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
 });

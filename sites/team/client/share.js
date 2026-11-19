@@ -41,6 +41,8 @@ const FIELDS = [
   { key: 'q', lo: 0, hi: 100, decimals: 1, names: MEASURE_KEYS, slot: ['q'], mine: true },
 ];
 const FLAG_GROUP = 'lv';
+// Each number key's range and decimals, by key: the calculator's boxes take the same (client/calc-state.js BOXES).
+export const RANGES = Object.freeze(Object.fromEntries(FIELDS.map(({ key, lo, hi, decimals }) => [key, { lo, hi, decimals }])));
 
 // state[...slot][name] = value, or state[...slot] = value when name is null, making the objects on the way.
 function put(state, slot, name, value) {
