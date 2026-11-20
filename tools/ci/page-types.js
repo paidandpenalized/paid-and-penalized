@@ -43,13 +43,18 @@ const placeKindIn = (programPath, kinds, pathOf) => (path) => kinds.find((kind) 
 // The kind of the place whose page is at a site path ('state' for '/hacrp/state/ca/'), or null for any other path.
 export const placeKind = placeKindIn(PROGRAM_PATH, KINDS, placePath);
 
+// A site of two pages, a program page and Methods (no hospital, place or dictionary pages): their predicates, from its
+// links module's PROGRAM_PATH and METHODS_PATH.
+const twoPages = (links) => ({
+  program: (path) => path === links.PROGRAM_PATH,
+  methods: (path) => path === links.METHODS_PATH,
+});
 // A program site's five page predicates, from its links module: PROGRAM_PATH, METHODS_PATH, DICTIONARY_PAGE,
 // HOSPITALS_PATH, hospitalPath, KINDS and placePath.
 const programPages = (links) => {
   const kindOf = placeKindIn(links.PROGRAM_PATH, links.KINDS, links.placePath);
   return {
-    program: (path) => path === links.PROGRAM_PATH,
-    methods: (path) => path === links.METHODS_PATH,
+    ...twoPages(links),
     dictionary: (path) => path === links.DICTIONARY_PAGE,
     hospital: hospitalPageBy(links.HOSPITALS_PATH, links.hospitalPath),
     place: (path) => kindOf(path) !== null,
@@ -66,10 +71,10 @@ export const PROGRAM_SITES = [
     pages: { program: (path) => path === PROGRAM_PATH, methods: (path) => path === METHODS_PATH, dictionary: (path) => path === DICTIONARY_PAGE, hospital: isHospital, place: (path) => placeKind(path) !== null },
   },
   { id: 'hrrp', pages: programPages(hrrp) },
-  // A scenario's site: a program page and Methods, no hospital, place or dictionary pages.
-  { id: 'work-requirement', pages: { program: (path) => path === wr.PROGRAM_PATH, methods: (path) => path === wr.METHODS_PATH } },
+  // A scenario's site: a program page and Methods.
+  { id: 'work-requirement', pages: twoPages(wr) },
   // TEAM, a payment model: a program page and Methods (each hospital's TEAM numbers live on its hub page).
-  { id: 'team', pages: { program: (path) => path === team.PROGRAM_PATH, methods: (path) => path === team.METHODS_PATH } },
+  { id: 'team', pages: twoPages(team) },
 ];
 // The program-keyed types: those of a program's own pages, budgeted per program.
 export const PROGRAM_TYPES = ['program', 'hospital', 'place', 'methods', 'dictionary'];
