@@ -22,17 +22,15 @@ import { escapeHtml } from '../../../web/render/html.js';
 import { loadAtlas, loadMaster, loadSharedSources, loadSources, loadTeam } from '../web/data.js';
 import { TEAM, generateTeam, lookupMissing } from '../web/generate.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../web/links.js';
-import { programPage } from '../web/pages/program.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { mapCounts } from '../web/program/who.js';
+import { LOOKUP_URL, programFor, searchFile } from './helpers.js';
 
 const team = loadTeam();
 const master = loadMaster();
 const atlas = loadAtlas();
 const assets = testAssets();
-const LOOKUP_URL = '/assets/team-lookup.test.json';
-const CALC_URL = '/assets/team-calc.test.json';
-const program = programPage({ team, master, atlas, robots: 'noindex', assets, lookupUrl: LOOKUP_URL, calcUrl: CALC_URL, search: { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [[team.defaultCcn, 'Example Hospital', null, 'KY', 'acute']], states: {} } });
+const program = programFor(team);
 const methods = methodsPage({ team, sources: loadSources(team), shared: loadSharedSources(), robots: 'noindex', assets });
 const words = (html) => textOf(html).replace(/\s+/g, ' ').trim();
 const main = (page) => /<main[\s\S]*?<\/main>/.exec(page)[0];
@@ -118,7 +116,7 @@ test('Parts 1, 2, 3, 4, 6 and 7 each set a figure beside their words', () => {
 });
 
 // A family search file holding these CCNs (the coverage check reads only the CCNs and names).
-const searchOf = (rows) => ({ cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: rows.map(([ccn]) => [ccn, 'Example Hospital', null, 'AL', 'acute']), states: {} });
+const searchOf = (rows) => searchFile(rows.map(([ccn]) => [ccn, 'Example Hospital', null, 'AL', 'acute']));
 
 // The coverage check: every CCN the lookup's codes place is in the family search's file (only those can be listed), or
 // the build stops, saying how many are missing, never which.

@@ -7,17 +7,15 @@ import assert from 'node:assert/strict';
 import { DIVISIONS } from '../../../engine/js/divisions.js';
 import { CATEGORIES } from '../../../engine/js/team/params.js';
 import { textOf } from '../../../pipeline/site/html.js';
-import { testAssets } from '../../../pipeline/test/helpers.js';
 import { roundedDollars } from '../../../web/render/format.js';
 import { BAR_DRG } from '../web/constants.js';
-import { loadAtlas, loadMaster, loadTeam } from '../web/data.js';
-import { programPage } from '../web/pages/program.js';
+import { loadTeam } from '../web/data.js';
 import { drgsByCategory, readerDivision } from '../web/program/bar.js';
 import { extremes } from '../web/program/bar-data.js';
+import { programFor } from './helpers.js';
 
 const team = loadTeam();
-const search = { cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: [[team.defaultCcn, 'Example Hospital', null, 'KY', 'acute']], states: {} };
-const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets(), lookupUrl: '/assets/team-lookup.test.json', calcUrl: '/assets/team-calc.test.json', search });
+const program = programFor(team);
 // The text as a reader sees it: inline spans (the parts the script rewrites) add no space.
 const words = (html) => textOf(html.replace(/<\/?span\b[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
 const at = program.indexOf('<section class="tm-part" id="bar"');

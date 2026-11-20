@@ -11,7 +11,6 @@ import { CATEGORIES, MEASURES, TRACKS } from '../../../engine/js/team/params.js'
 import { compositeQuality } from '../../../engine/js/team/quality.js';
 import { reconcile } from '../../../engine/js/team/reconcile.js';
 import { mulberry32 } from '../../../engine/js/test/prng.js';
-import { testAssets } from '../../../pipeline/test/helpers.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
@@ -22,15 +21,13 @@ import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf, whoByCcn, who
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
 import { initialState, inputsOf } from '../../../web/team/opening.js';
-import { loadAtlas, loadMaster, loadTeam } from '../web/data.js';
-import { programPage } from '../web/pages/program.js';
+import { loadTeam } from '../web/data.js';
+import { CALC_URL, programFor, searchFile } from './helpers.js';
 
 const team = loadTeam();
 const meta = calcMeta(team);
 const WHO = { name: 'Example Hospital', city: 'Springfield', state: 'KY' };
-const searchOf = (ccns) => ({ cols: ['ccn', 'name', 'city', 'state', 'kind'], rows: ccns.map((ccn) => [ccn, WHO.name, WHO.city, WHO.state, 'acute']), states: {} });
-const CALC_URL = '/assets/team-calc.test.json';
-const program = programPage({ team, master: loadMaster(), atlas: loadAtlas(), robots: 'noindex', assets: testAssets(), lookupUrl: '/assets/team-lookup.test.json', calcUrl: CALC_URL, search: searchOf([team.defaultCcn]) });
+const program = programFor(team, searchFile([[team.defaultCcn, WHO.name, WHO.city, WHO.state, 'acute']]));
 const same = (a, b, words) => assert.ok(a === b, words);
 const hospWhere = (pick) => hospOf(calcRow(team.participants.find(pick)), WHO);
 const viewOf = (hosp, state = initialState(hosp)) => calcView({ hosp, state, team: meta });

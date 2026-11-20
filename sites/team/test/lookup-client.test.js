@@ -14,10 +14,10 @@ import { COPY as SEARCH } from '../../../hub/search/copy.js';
 import { loadTeam } from '../web/data.js';
 import { lookupFile } from '../web/lookup-copy.js';
 import { SHOWN, mountLookup } from '../client/lookup.js';
+import { LOOKUP_URL as CODES, searchFile } from './helpers.js';
 
 const FILE = lookupFile(loadTeam());
 const SRC = '/assets/hub-search.test.json';
-const CODES = '/assets/team-lookup.test.json';
 const FAILED = 'The list did not load.';
 
 // The first CCN in the codes whose status passes ok(code, arg).
@@ -33,7 +33,6 @@ const OUTSIDE = ccnWhere((code, arg) => code === 'outside' && arg === 'acute');
 const CAH_OUTSIDE = ccnWhere((code, arg) => code === 'outside' && arg === 'critical_access');
 
 // The family search's file, made up: [ccn, name, city, state, kind].
-const searchFile = (rows) => ({ cols: ['ccn', 'name', 'city', 'state', 'kind'], rows, states: {} });
 const ROWS = [
   [IN, 'Example Valley Medical Center', 'Exampleton', 'AL', 'acute'],
   [CAH, 'Example Prairie Hospital', 'Plainsville', 'KS', 'critical_access'],
