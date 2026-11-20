@@ -2,6 +2,8 @@
 then the whole build from the pins, recounted rule by rule here. Failure messages name no hospital, CCN or dollar
 figure."""
 import functools
+import math
+import operator
 import unittest
 from collections import Counter
 
@@ -63,6 +65,21 @@ class Episodes(unittest.TestCase):
         prices = {"447": {"1": 100.0}, "450": {"1": 200.0}}
         self.assertAlmostEqual(episodes.category_price({"447": 3, "450": 1}, prices, "1", 999.0), 125.0)
         self.assertEqual(episodes.category_price({}, prices, "1", 999.0), 999.0)
+
+    def test_sums_are_correctly_rounded_so_every_python_version_agrees(self):
+        # Python 3.12 made the builtin sum() compensate float rounding; 3.9's adds left to right. Half-episode counts
+        # put products on half cents, where those last bits decide the rounding: on this case a plain left-to-right
+        # sum rounds a cent higher than the correctly rounded one (math.fsum), which the build must use.
+        prices = {"447": {"1": 78.35}, "450": {"1": 57.39}, "451": {"1": 15.81}}
+        alloc = {"447": 0.5, "450": 0.5, "451": 1.5}
+        terms = [k * prices[d]["1"] for d, k in alloc.items()]
+        exact = math.fsum(terms)
+        self.assertNotEqual(round(functools.reduce(operator.add, terms), 2), round(exact, 2), "the case is adversarial")
+        backwards = dict(reversed(list(alloc.items())))
+        for a in (alloc, backwards):
+            self.assertEqual(episodes.target_amount({"SPINAL": a}, prices, "1"), round(exact, 2))
+            self.assertEqual(episodes.category_price(a, prices, "1", 0.0),
+                             round(exact / math.fsum(alloc.values()), episodes.CATEGORY_PRICE_PLACES))
 
     def test_price_tables_keep_cms_averages_and_derive_a_missing_one(self):
         rows = price_rows([("LEJR", "469", "1", "100.004", "0"), ("LEJR", "470", "1", "50", "0"),

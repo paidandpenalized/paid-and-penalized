@@ -6,8 +6,13 @@ episode-weighted mean of CMS's preliminary target prices for those DRGs in the h
 target amount is episodes times price, summed. These are estimates: the file omits any hospital-DRG cell under 11
 discharges, has no outpatient cases (TEAM also covers outpatient joint replacement and spinal fusion), and counts
 discharges, not CMS's attributed episodes.
+
+Every float sum is math.fsum, which is correctly rounded on every Python version: the builtin sum() compensates
+float rounding from Python 3.12 on and adds left to right before it, and half-episode counts put products on half
+cents, where those last bits move a rounded target by a cent.
 """
 from collections import defaultdict
+from math import fsum
 
 # Display order of the five episode categories (the price pin's codes).
 CATEGORIES = ("LEJR", "SHFFT", "SPINAL", "CABG", "BOWEL")
@@ -59,7 +64,7 @@ def price_tables(rows):
             if c == cat:
                 for div, p in prices[drg].items():
                     by_div[div].append(p)
-        avg[cat] = {div: round(sum(ps) / len(ps), PRICE_PLACES) for div, ps in sorted(by_div.items())}
+        avg[cat] = {div: round(fsum(ps) / len(ps), PRICE_PLACES) for div, ps in sorted(by_div.items())}
     return dict(prices), dict(avg), drg_category, derived
 
 
@@ -80,13 +85,13 @@ def source_drgs(drg_category):
 def allocate(cells, drg_category):
     """{category: {FY2027 DRG: episodes}} from one hospital's {drg: discharges} in a data year: direct DRGs as they
     are, retired ones through REMAPS (fractional where a split is assumed). DRGs outside TEAM are ignored."""
-    out = defaultdict(lambda: defaultdict(float))
+    out = defaultdict(lambda: defaultdict(list))
     for drg, n in cells.items():
         for target, share in (REMAPS.get(drg) or {drg: 1}).items():
             cat = drg_category.get(target)
             if cat is not None:
-                out[cat][target] += n * share
-    return {cat: {d: _number(n) for d, n in alloc.items()} for cat, alloc in out.items()}
+                out[cat][target].append(n * share)
+    return {cat: {d: _number(fsum(parts)) for d, parts in alloc.items()} for cat, alloc in out.items()}
 
 
 def _number(x):
@@ -95,7 +100,7 @@ def _number(x):
 
 
 def episode_count(alloc):
-    return _number(sum(alloc.values()))
+    return _number(fsum(alloc.values()))
 
 
 def hidden_cells(cells, sources):
@@ -112,12 +117,12 @@ def is_low_volume(n_prior, n_latest):
 def category_price(alloc, prices, division, average):
     """The episode-weighted mean of the division's DRG prices over `alloc` ({drg: episodes}); `average` (the category
     average) when there are no episodes."""
-    n = sum(alloc.values())
+    n = fsum(alloc.values())
     if not n:
         return average
-    return round(sum(k * prices[d][division] for d, k in alloc.items()) / n, CATEGORY_PRICE_PLACES)
+    return round(fsum(k * prices[d][division] for d, k in alloc.items()) / n, CATEGORY_PRICE_PLACES)
 
 
 def target_amount(allocs, prices, division):
     """Σ episodes x price over every category's DRGs ({category: {drg: episodes}}), to the cent."""
-    return round(sum(k * prices[d][division] for alloc in allocs.values() for d, k in alloc.items()), PRICE_PLACES)
+    return round(fsum(k * prices[d][division] for alloc in allocs.values() for d, k in alloc.items()), PRICE_PLACES)
