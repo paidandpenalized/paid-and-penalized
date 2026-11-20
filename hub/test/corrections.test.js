@@ -90,18 +90,22 @@ const ENTRIES = [
   { date: '2026-10-30', slug: 'b', body: 'The second correction.' },
 ];
 
-test('a site whose numbers appear on released pages has a line (TEAM\'s, on the hub\'s hospital pages, before its own site is released); one whose numbers appear nowhere public has none; a site built from several CMS files says so', () => {
+test('a site whose numbers appear on released pages has a line (TEAM\'s, released, and before its release a synthetic unreleased one on the hub\'s hospital pages); one whose numbers appear nowhere public has none; a site built from several CMS files says so', () => {
   const dates = { cmsReleased: '2026-11-12', changed: '2026-11-19' };
   const updated = new Map([...SITE_DATES, ['team', dates]]);
-  assert.equal(SITE.sites.team.released, false);
+  assert.equal(SITE.sites.team.released, true);
   assert.equal(SITE.hub.released, true);
   const list = (text) => /<ul class="pol__list">[\s\S]*?<\/ul>/.exec(text)[0];
-  // TEAM's site is unreleased, but its numbers are on the released hub's hospital pages, so its dates are listed now.
+  // TEAM's site is released: its line has the multi-file wording.
   const now = list(page({ updated }));
   assert.ok(now.includes('Surgical episodes: built from several CMS files; the newest it uses is dated <time datetime="2026-11-12">'), 'the multi-file wording');
   assert.match(now, /Hospital-Acquired Conditions: CMS/, 'the released site keeps its line');
+  // A site not yet released but on the hub's hospital pages (synthetic: TEAM before its release) still has its line.
+  const unreleased = { ...SITE.sites.team, released: false };
+  const onHub = list(page({ updated, sites: { ...SITE.sites, team: unreleased } }));
+  assert.ok(onHub.includes('Surgical episodes: built from several CMS files; the newest it uses is dated <time datetime="2026-11-12">'), 'unreleased but on the hub: its line');
   // An unreleased site whose numbers no released page shows: no line.
-  const hidden = list(page({ updated, sites: { ...SITE.sites, team: { ...SITE.sites.team, onHub: false } } }));
+  const hidden = list(page({ updated, sites: { ...SITE.sites, team: { ...unreleased, onHub: false } } }));
   assert.doesNotMatch(hidden, /Surgical episodes/, 'unreleased and on no released page: no line');
   // Only unreleased sites drop out: none of the others do.
   const all = page({ updated: new Map([...SITE_DATES, ['hrrp', dates], ['work-requirement', dates]]) });

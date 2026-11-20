@@ -54,9 +54,9 @@ test('the sections, in order, each with its heading, beside a contents list that
   assert.equal(page.match(/<h1[ >]/g).length, 1);
 });
 
-test('noindex while the site is unreleased; never "penalty"', () => {
-  assert.equal(SITE.sites.team.released, false);
-  assert.ok(page.includes('<meta name="robots" content="noindex">'));
+test('indexable in production now the site is released; never "penalty"', () => {
+  assert.equal(SITE.sites.team.released, true);
+  assert.ok(!page.includes('<meta name="robots" content="noindex">'));
   assert.doesNotMatch(words(main), /penalt/i);
 });
 

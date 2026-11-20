@@ -1,6 +1,6 @@
 // The TEAM site's page build: its manifest (pipeline/site/build.js lists it) and the generator that writes the program
-// page and Methods. TEAM is a payment model, not a penalty program; the site stays unreleased (noindex, out of the
-// sitemap) until its released flag turns true.
+// page and Methods. TEAM is a payment model, not a penalty program; the site is released (indexed, in the
+// sitemap) as its released flag says.
 import { join } from 'node:path';
 import { builtOn } from '../../../engine/js/dates.js';
 import { readJson } from '../../../pipeline/files.js';

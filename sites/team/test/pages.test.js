@@ -1,5 +1,5 @@
-// The TEAM program page (7a: the scaffold, the registration and the static Parts): its generator (two pages, unreleased:
-// noindex and out of the sitemap), the section menu, each Part's figure beside its words, the copy's rules (no digits,
+// The TEAM program page (7a: the scaffold, the registration and the static Parts): its generator (two pages, released:
+// indexable and in the sitemap in production), the section menu, each Part's figure beside its words, the copy's rules (no digits,
 // claims that resolve, never a penalty), "standardized dollars" beside every dollar figure, and the counts it states,
 // each from the emitted file. Rows are picked by property; failures print counts, never a hospital.
 import { test } from 'node:test';
@@ -49,20 +49,25 @@ test('the manifest: id, the kit\'s styles then the site\'s own, the program page
   assert.ok(program.includes(`<script type="module" src="${assets.js['team-page']}"></script>`), 'the program page loads it');
 });
 
-test('the site is registered unreleased: a live program, noindex and out of the sitemap even in production', () =>
+// The generator in production: both pages and the files it writes; released is the site's flag unless a case sets it.
+const buildTeam = (dir, released) => {
+  const ctx = createContext({ outDir: dir, env: 'production', assets });
+  const lines = [];
+  const result = generateTeam(ctx, { team, master, atlas, search: searchOf(lookupFile(team).rows), log: (l) => lines.push(l), ...(released === undefined ? {} : { released }) });
+  assert.ok(lines.some((l) => /every one of [\d,]+ hospitals the lookup places can be found/.test(l)), 'the coverage line');
+  assert.equal(ctx.pages, 2);
+  return { ctx, result };
+};
+const robotsOf = (dir, path) => readFileSync(join(dir, path, 'index.html'), 'utf8').includes('<meta name="robots" content="noindex">');
+
+test('the site is registered released: a live program, indexable and in the sitemap in production', () =>
   withTemp('pp-team-', async (dir) => {
-    assert.equal(SITE.sites.team.released, false);
+    assert.equal(SITE.sites.team.released, true);
     assert.equal(SITE.sites.team.path, PROGRAM_PATH);
     assert.equal(programById('team').stage, 'live');
-    const ctx = createContext({ outDir: dir, env: 'production', assets });
-    const lines = [];
-    const result = generateTeam(ctx, { team, master, atlas, search: searchOf(lookupFile(team).rows), log: (l) => lines.push(l) });
-    assert.ok(lines.some((l) => /every one of [\d,]+ hospitals the lookup places can be found/.test(l)), 'the coverage line');
-    assert.equal(ctx.pages, 2);
-    assert.deepEqual([...ctx.indexable], [], 'nothing in the sitemap');
-    for (const path of [PROGRAM_PATH, METHODS_PATH]) {
-      assert.ok(readFileSync(join(dir, path, 'index.html'), 'utf8').includes('<meta name="robots" content="noindex">'), path);
-    }
+    const { ctx, result } = buildTeam(dir);
+    assert.deepEqual([...ctx.indexable].sort(), [PROGRAM_PATH, METHODS_PATH].sort(), 'both pages in the sitemap');
+    for (const path of [PROGRAM_PATH, METHODS_PATH]) assert.ok(!robotsOf(dir, path), `${path}: no noindex`);
     // The lookup's codes: one hashed file, named on the program page, holding lookupFile's object.
     const named = /data-codes="(\/assets\/team-lookup\.[0-9a-f]{8}\.json)"/.exec(readFileSync(join(dir, PROGRAM_PATH, 'index.html'), 'utf8'));
     assert.ok(named, 'the program page names the lookup\'s file');
@@ -70,6 +75,13 @@ test('the site is registered unreleased: a live program, noindex and out of the 
     // The newest date of CMS's among the inputs the page shows, and the day the file was built.
     const dates = [team.meta.listAsOf, team.meta.cjrxAsOf, team.meta.pricesDated, team.meta.qualityReleased].sort();
     assert.deepEqual(result, { updated: { cmsReleased: dates.at(-1), changed: team.built_at.slice(0, 10) } });
+  }));
+
+test('a site not released (the generator told so): noindex and out of the sitemap even in production', () =>
+  withTemp('pp-team-unreleased-', async (dir) => {
+    const { ctx } = buildTeam(dir, false);
+    assert.deepEqual([...ctx.indexable], [], 'nothing in the sitemap');
+    for (const path of [PROGRAM_PATH, METHODS_PATH]) assert.ok(robotsOf(dir, path), `${path}: noindex`);
   }));
 
 test('the program page: one h1, the TEAM tab current, the section menu (seven Parts, then Methods)', () => {
