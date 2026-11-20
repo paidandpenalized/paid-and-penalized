@@ -6,6 +6,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { SHOWN } from '../../sites/team/client/lookup.js';
+import { loadTeam } from '../../sites/team/web/data.js';
 import { PROGRAM_PATH } from '../../sites/team/web/links.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, eventually, settle, useBrowser, useContext, withPage } from './lib.js';
@@ -304,6 +305,9 @@ describe('TEAM Part 1\'s lookup without JavaScript', () => {
 // what was typed goes back and says so; the address carries public inputs only; axe finds nothing; the page never
 // scrolls sideways. Hospitals are picked from the calculator's file by property; no CCN is printed.
 const MOCKUP_HEIGHT = 860;
+// A hospital on Medicare's list that isn't in TEAM (outside every selected area), picked by its status: a followed ?h= the
+// calculator doesn't have.
+const NOT_IN_TEAM = Object.entries(loadTeam().status).find(([, [code]]) => code === 'outside')[0];
 const calcFiles = (page) => page.evaluate(() => [document.getElementById('calc').dataset.src, document.getElementById('calc').dataset.search]);
 const calcSays = (page) => page.evaluate(() => {
   const calc = document.getElementById('calc');
@@ -343,6 +347,13 @@ for (const width of [1280, 390]) {
         assert.equal(typed.srcN, 'your number');
         assert.equal(typed.tag, 'includes your numbers');
         assert.equal(await page.locator('[data-v="tag"]').evaluate((el) => getComputedStyle(el).fontStyle), 'italic');
+        // The ledger's foot and "What would it take?" say it too, in the same style.
+        for (const key of ['tag.l', 'tag.ww']) {
+          const tag = page.locator(`[data-v="${key}"]`);
+          assert.ok(await tag.isVisible(), `${key} shows once a number is typed`);
+          assert.equal(await tag.textContent(), 'includes your numbers');
+          assert.equal(await tag.evaluate((el) => getComputedStyle(el).fontStyle), 'italic');
+        }
         // What a box can't take goes back, said beside it.
         await page.locator('#tc-p-CABG').fill('abc');
         await page.locator('#tc-p-CABG').press('Tab');
@@ -500,6 +511,51 @@ describe('TEAM Part 5: reverts, the address, fetches, the banner, links, frames'
     await eventually(async () => (await page.locator('[data-v="l.s"]').textContent()) === '+5%', 'the link\'s spending applied');
     assert.ok(await page.evaluate((c) => document.querySelector('#calc [data-v="where"]').textContent.includes(c), ccn), 'still the hospital showing');
     await assertQuiet(seen, 'TEAM Part 5 banner and links');
+  }));
+
+  it('Back to an older address on the same hospital keeps the reader\'s own numbers', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    // A public scenario in the address, then the reader's own count, then an in-page link (a history entry of its own),
+    // then a change (the address rewritten in place), then Back to the older public-only address.
+    await page.locator('#tc-s').focus();
+    await page.keyboard.press('ArrowRight');
+    await page.locator('#tc-n-LEJR').fill('120');
+    await page.locator('#tc-n-LEJR').press('Tab');
+    await eventually(async () => page.evaluate(() => /&s=0\.5/.test(location.hash)), 'the slider in the address');
+    await page.evaluate(() => { location.hash = '#calc'; });
+    await page.locator('#tc-s').focus();
+    await page.keyboard.press('ArrowRight');
+    await eventually(async () => page.evaluate(() => /&s=1(&|$)/.test(location.hash)), 'the change written in place');
+    await page.goBack();
+    await eventually(async () => (await page.locator('[data-v="l.s"]').textContent()) === '+0.5%', 'the older address applied');
+    const s = await calcSays(page);
+    assert.equal(s.srcN, 'your number', 'the typed count is still the reader\'s');
+    assert.equal(await page.locator('#tc-n-LEJR').inputValue(), '120');
+    assert.equal(s.tag, 'includes your numbers');
+    await assertQuiet(seen, 'TEAM Part 5 Back');
+  }));
+
+  it('a followed hospital (?h=) outside TEAM: the banner says so, on its own line, and nothing else', () => withPage(tabs, { path: `${PROGRAM_PATH}?h=${NOT_IN_TEAM}#calc`, watched: true }, async (page, { seen }) => {
+    await eventually(async () => (await calcSays(page)).banner, 'the banner');
+    const b = await page.evaluate(() => ({ away: !document.querySelector('[data-calc-away]').hidden, scen: !document.querySelector('[data-calc-scen]').hidden, text: document.querySelector('[data-calc-away]').textContent }));
+    assert.deepEqual(b, { away: true, scen: false, text: 'The hospital you’re following isn’t in TEAM, so the calculator shows one that is. The lookup above says why.' });
+    // A move to another hospital clears it.
+    await page.locator('[data-calc-random]').click();
+    await eventually(async () => !(await calcSays(page)).banner, 'the banner goes with the move');
+    await assertQuiet(seen, 'TEAM Part 5 with a ?h= outside TEAM');
+  }));
+
+  it('a link\'s rejected keys: decoded, as text, on a line of their own under the reset link', () => withPage(tabs, { path: `${PROGRAM_PATH}#team&%3Cimg%20src=x%20onerror=alert(1)%3E=1&s=2`, watched: true }, async (page, { seen }) => {
+    await eventually(async () => (await calcSays(page)).banner, 'the banner');
+    const b = await page.evaluate(() => {
+      const scen = document.querySelector('[data-calc-scen]');
+      const rejected = document.querySelector('[data-calc-rejected]');
+      return { rejected: rejected.textContent, below: rejected.getBoundingClientRect().top >= scen.getBoundingClientRect().bottom - 1, imgs: document.querySelectorAll('[data-calc-banner] img').length, scenEnds: scen.textContent.trim().endsWith('Start from the public numbers.') };
+    });
+    assert.equal(b.rejected, 'Parts of the link this page doesn’t use were left out: <img src.');
+    assert.ok(b.below, 'the rejected keys under the reset link');
+    assert.equal(b.imgs, 0, 'a key is text, never markup');
+    assert.ok(b.scenEnds, 'the reset link ends its sentence');
+    await assertQuiet(seen, 'TEAM Part 5 rejected keys');
   }));
 
   it('a burst of slider input in one frame makes one patch', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {

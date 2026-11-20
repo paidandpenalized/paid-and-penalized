@@ -132,6 +132,13 @@ export function fillAround(make, parts) {
 // link) that stands there, values fills the plain ones.
 export const sentenceOf = (fill) => (key, parts = {}, values = {}) => fillAround((marks) => fill(key, { ...values, ...marks }), parts);
 
+// Text (escaped) with each signed dollar figure or percent ("−$2.3M", "+$110K", "−5%") kept on one line in a .nw span: a
+// browser may break a line between a minus or plus and a dollar sign (both prefix characters to its line breaker), which
+// leaves a sign alone at a line's end. each(piece) formats every piece of the text, inside a span or not (default: as is).
+const SIGNED = /([−+](?:\$[\d,.]+[KMB]?|[\d,.]+%))/;
+export const keepSigned = (text, each = (piece) => piece) =>
+  html`${String(text).split(SIGNED).map((part, i) => (i % 2 ? html`<span class="nw">${each(part)}</span>` : part && each(part)))}`;
+
 // text (escaped) with the first occurrence of each part kept on one line (a .nw span), e.g. a dataset id that would
 // otherwise break at its hyphen. A part not in text throws.
 export function keepWhole(text, parts) {

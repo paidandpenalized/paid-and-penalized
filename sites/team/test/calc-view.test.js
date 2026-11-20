@@ -13,14 +13,15 @@ import { reconcile } from '../../../engine/js/team/reconcile.js';
 import { mulberry32 } from '../../../engine/js/test/prng.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
-import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
+import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
 import { isoDate } from '../../../web/render/format.js';
 import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf, whoByCcn, whoOf } from '../../../web/team/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
-import { initialState, inputsOf } from '../../../web/team/opening.js';
+import { flagsNote } from '../../../web/team/copy.js';
+import { engineInput, initialState, inputsOf } from '../../../web/team/opening.js';
 import { loadTeam } from '../web/data.js';
 import { CALC_URL, programFor, searchFile } from './helpers.js';
 
@@ -38,6 +39,7 @@ const type = (state, hosp, key, text) => {
   return r.state;
 };
 
+const engineInputOf = (hosp) => engineInput(inputsOf(hosp, initialState(hosp)));
 const deflt = hospOf(calcRow(team.participants.find((p) => p.ccn === team.defaultCcn)), WHO);
 
 test('the default hospital\'s server render equals the client\'s first render', () => {
@@ -57,7 +59,8 @@ test('the default hospital\'s server render equals the client\'s first render', 
   assert.ok(!/claim|How each line works/.test(client), 'the browser\'s markup holds none of the build-only words');
   assert.ok(section.includes(`data-src="${CALC_URL}"`), 'the participants\' file is named, not loaded');
   assert.ok(!/NaN|undefined|\[object/.test(section), 'no hole in the markup');
-  assert.ok(section.includes('<a href="/team/methods/#band">how it was counted is in Methods</a>'), 'the "why?" links its method');
+  assert.ok(section.includes('<a href="/team/methods/#band">Methods explains it</a>'), 'the "why?" links its method');
+  assert.ok(section.includes('follows the spread of results hospitals had in Medicare’s joint-replacement bundle (CJR) and in BPCI Advanced'), 'the "why?" names CJR and BPCI Advanced, with no figure');
 });
 
 // A phone hides the table's head (styles.css), so each row's boxes and results carry their columns' names, from the
@@ -130,7 +133,7 @@ test('"What would it take?" sets each answer\'s lead figure in bold', () => {
     const markup = calcMarkup(viewOf(deflt, state), { fig: false }).text;
     return Object.fromEntries([...markup.matchAll(/<td data-v="(ww\.\w+)">([\s\S]*?)<\/td>/g)].map((m) => [m[1], m[2]]));
   };
-  const bold = (cell) => [...cell.matchAll(/<strong>([^<]*)<\/strong>/g)].map((m) => m[1]);
+  const bold = (cell) => [...cell.matchAll(/<strong>([\s\S]*?)<\/strong>/g)].map((m) => m[1].replace(/<[^>]*>/g, ''));
   const c = cells(base);
   for (const [key, re] of [['ww.earn', /^[\d.]+% under$/], ['ww.owe', /^[\d.]+% over$/], ['ww.gain', /^[\d.]+% under$/], ['ww.loss', /^[\d.]+% over$/]]) {
     const b = bold(c[key]);
@@ -141,7 +144,12 @@ test('"What would it take?" sets each answer\'s lead figure in bold', () => {
   assert.ok(bold(c['ww.q']).length === 1 && /^[+−]?\$/.test(bold(c['ww.q'])[0]), 'ten points: the amount');
   assert.equal(bold(cells(type(base, deflt, 'earn', '$999M'))['ww.earn']).length, 0, '"Not possible" has no lead figure');
   // The cell's words are the view's, unchanged.
-  same(c['ww.earn'].replace(/<\/?strong>/g, ''), viewOf(deflt, base).wwit.earn.text.replace(/&/g, '&amp;'), 'the words unchanged');
+  same(c['ww.earn'].replace(/<\/?(?:strong|span[^>]*)>/g, ''), viewOf(deflt, base).wwit.earn.text.replace(/&/g, '&amp;'), 'the words unchanged');
+  // A signed amount never breaks from its sign: each sits whole in a .nw span (the browser may break between − and $).
+  for (const [key, cell] of Object.entries(c)) {
+    const loose = cell.replace(/<span class="nw">[^<]*<\/span>/g, '').replace(/<[^>]*>/g, '');
+    assert.doesNotMatch(loose, /[−+]\$/, `${key}: a signed amount outside a .nw span`);
+  }
 });
 
 test('"What would it take?" says "Not possible" past the limit, and why on the repayment side', () => {
@@ -454,4 +462,69 @@ test('"Copy for a slide": the hospital, its track, the band\'s range, this scena
   // A typed count: the result includes it, and the text says so.
   const typed = viewOf(deflt, type(initialState(deflt), deflt, 'n.LEJR', '120'));
   assert.ok(typed.slide().includes(t('tagMine')) && typed.slide().includes(typed.ledger.result), 'typed: "includes your numbers", with the result that has them');
+});
+
+// The calculator's target amount is the file's own: a row carries each category's price as the file has it (no rounding
+// to the cent, which moved a target by up to dollars), so every participant's target reads back to the file's, to the cent.
+test('every participant\'s target in the calculator is the file\'s target amount, to the cent', () => {
+  let off = 0;
+  for (const p of team.participants.filter((x) => x.active)) {
+    const hosp = hospOf(calcRow(p));
+    const target = reconcile(engineInputOf(hosp)).target;
+    if (Math.abs(target - p.target) > 0.01) off += 1;
+  }
+  assert.equal(off, 0, 'participants whose calculator target is off the file\'s by more than a cent');
+});
+
+// Back to an older address on the same hospital (an in-page anchor, then a change, then Back): the older fragment is
+// public inputs only, so it must not wipe the reader's own numbers. keepOwn carries them onto the state the link
+// applies over; a link's own numbers, where it carries some, still win.
+test('a link arriving for the hospital showing keeps the reader\'s own numbers; its own numbers win where it has them', () => {
+  let state = type(initialState(deflt), deflt, 'n.LEJR', '120');
+  state = type(state, deflt, 'q.falls', '90');
+  state = setLowVolume(state, deflt, 'CABG', !deflt.cats.CABG.lowVolume);
+  state = setSlider(state, 7);
+  const older = readLink('#team&s=3');
+  const next = applyLink(keepOwn(initialState(deflt), state), older.values);
+  assert.equal(next.s, 3, 'the link\'s slider');
+  assert.equal(next.ov.n.LEJR, 120);
+  assert.equal(next.q.falls, 90);
+  assert.equal(next.lv.CABG, !deflt.cats.CABG.lowVolume);
+  assert.deepEqual([...next.mine].sort(), ['lv.CABG', 'n.LEJR', 'q.falls']);
+  const theirs = applyLink(keepOwn(initialState(deflt), state), readLink('#team&n.LEJR=40').values);
+  assert.equal(theirs.ov.n.LEJR, 40, 'the link\'s own number wins');
+  // keepOwn takes nothing that isn't the reader's: a row's spending and the slider stay the link's to set.
+  const kept = keepOwn(initialState(deflt), type(state, deflt, 'sk.BOWEL', '-5'));
+  assert.deepEqual(kept.sk, {});
+  assert.equal(kept.s, 0);
+});
+
+// Once the reader has typed a number of their own, every place that restates the result's dollars says so as the result
+// box does: the ledger's foot and "What would it take?"'s heading carry "includes your numbers" in its own style.
+test('"includes your numbers" also on the ledger\'s foot and "What would it take?" once the reader typed one', () => {
+  const tagOf = (markup, key) => new RegExp(`<span class="tc-tag tc-tag--mine" data-v="tag\\.${key}"( hidden)?>([^<]*)</span>`).exec(markup);
+  const before = calcMarkup(viewOf(deflt), { fig: false }).text;
+  for (const key of ['l', 'ww']) assert.ok(tagOf(before, key)?.[1], `${key}: hidden before anything is typed`);
+  const after = calcMarkup(viewOf(deflt, type(initialState(deflt), deflt, 'n.LEJR', '120')), { fig: false }).text;
+  for (const key of ['l', 'ww']) {
+    const m = tagOf(after, key);
+    assert.ok(m && !m[1] && m[2] === t('tagMine'), `${key}: shown, with the result box's words`);
+  }
+  assert.match(after, /<p class="tc-foot">A scenario, in standardized dollars\. <span class="tc-tag tc-tag--mine" data-v="tag\.l">/);
+  assert.match(after, /<h3 class="tc-ww__h">[\s\S]*?data-v="tag\.ww">includes your numbers<\/span><\/h3>/);
+});
+
+test('a box\'s range in the line under it has a true minus; the Medicare-dependent note says when that route counts', () => {
+  assert.deepEqual(rangeWords('sk.LEJR'), { lo: '−60', hi: '60' });
+  assert.deepEqual(rangeWords('n.LEJR'), { lo: '0', hi: '100,000' });
+  assert.ok(flagsNote(['MDH'], '2').includes('the Medicare-dependent route counts only if that program is still in effect when CMS asks hospitals to pick a track'));
+  assert.ok(!flagsNote(['SCH'], '2').includes('Medicare-dependent'));
+});
+
+// The banner's lines, each its own (a link's scenario and reset, ended by a full stop; the keys it couldn't use; the
+// followed hospital outside TEAM), drawn by the build, hidden until the page's script shows one.
+test('the banner: the link\'s scenario line ends before the rejected keys\' line; the followed-hospital note is its own line', () => {
+  const banner = /<div class="wi-banner tc__banner" data-calc-banner hidden>([\s\S]*?)<\/div>/.exec(program)?.[1];
+  assert.ok(banner, 'the banner');
+  assert.match(banner, /^<p data-calc-scen>[^<]*<a [^>]*data-calc-reset>Start from the public numbers<\/a>\.<\/p><p data-calc-rejected><\/p><p data-calc-away hidden>The hospital you’re following isn’t in TEAM, so the calculator shows one that is\. The lookup above says why\.<\/p>$/);
 });

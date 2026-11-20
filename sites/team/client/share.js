@@ -21,8 +21,18 @@ const CCN = /^[0-9A-Z]{6}$/;
 export const MAX_EPISODES = 100000;
 export const MAX_PRICE = 10000000;
 const PCT_SPAN = SOLVE_SPAN * 100;
-// Rejected key names are echoed back by the page; keep a hostile one short.
+// Rejected key names are echoed back by the page (as text); keep a hostile one short. Each is shown as the reader would
+// have typed it, percent-decoded, or as it came where it doesn't decode.
 const KEY_SHOWN = 40;
+function shownKey(key) {
+  let text = key;
+  try {
+    text = decodeURIComponent(key);
+  } catch {
+    // A malformed escape: the key as it came.
+  }
+  return text.slice(0, KEY_SHOWN);
+}
 
 // -0 prints as "0" but equals 0 only loosely; normalize so no state or link carries it.
 const clean = (x) => (x === 0 ? 0 : x);
@@ -64,7 +74,7 @@ export function decodeTeam(hash) {
 
   const rejected = new Set();
   for (const [key, value] of seen) {
-    if (!accept(state, key, value)) rejected.add(key.slice(0, KEY_SHOWN));
+    if (!accept(state, key, value)) rejected.add(shownKey(key));
   }
   return { state, rejected: [...rejected] };
 }

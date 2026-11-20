@@ -24,7 +24,7 @@ import { CALC_COLS, ccnSet, hospOf, whoByCcn } from '../../../web/team/calc-data
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
 import { initialState } from '../../../web/team/opening.js';
-import { BOXES, addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, randomPick, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
+import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
 import { hospitalEntry, loadSearch } from './files.js';
 
 // How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
@@ -59,6 +59,11 @@ export function mountCalc(section) {
   const tpl = document.createElement('template');
   const sayEl = section.querySelector('[data-calc-say]');
   const banner = section.querySelector('[data-calc-banner]');
+  // The banner's three lines: a scenario from a link (and its reset), the keys the link couldn't use, and the note that the
+  // followed hospital (?h=) isn't in TEAM.
+  const scenLine = banner.querySelector('[data-calc-scen]');
+  const rejectedLine = banner.querySelector('[data-calc-rejected]');
+  const awayLine = banner.querySelector('[data-calc-away]');
   const msg = Object.assign(document.createElement('p'), { className: 'tc-msg' });
   msg.setAttribute('role', 'status');
 
@@ -181,7 +186,8 @@ export function mountCalc(section) {
     view = calcView({ hosp, state, team: meta });
     // Another hospital: a link's banner and the keys it couldn't use were about the last one (an arrival sets its own).
     banner.hidden = true;
-    section.querySelector('[data-calc-rejected]').textContent = '';
+    awayLine.hidden = true;
+    rejectedLine.textContent = '';
     // The parts the same for every hospital are the build's: kept, moved into the new markup's empty boxes.
     const statics = new Map([...body.querySelectorAll('[data-static]')].map((el) => [el.dataset.static, [...el.childNodes]]));
     body.replaceChildren(...parsed(calcMarkup(view)).childNodes);
@@ -212,8 +218,7 @@ export function mountCalc(section) {
 
   // A box that can't take what was typed: it goes back to its value before the edit, and the line under it says so.
   const kept = (input) => {
-    const box = BOXES[input.dataset.in.split('.')[0]];
-    msg.textContent = fill('kept', { lo: count(box.lo), hi: count(box.hi), value: input.value });
+    msg.textContent = fill('kept', { ...rangeWords(input.dataset.in), value: input.value });
     input.closest('td, p, th')?.append(msg);
   };
 
@@ -348,7 +353,11 @@ export function mountCalc(section) {
       }
     }
     const to = arrival({ link, query, defaultCcn: base, current, known: (ccn) => Boolean(f?.rows.has(ccn)) });
-    if (to.ccn !== hosp.ccn || to.values) {
+    // A link for the hospital already showing (one pasted into this tab, or Back to an older address): its values apply
+    // over the reader's own numbers, which an older, public-only fragment never carries.
+    if (current !== null && to.ccn === hosp.ccn) {
+      if (to.values) update(applyLink(keepOwn(initialState(hosp), state), to.values), { force: true, now: true });
+    } else if (to.ccn !== hosp.ccn || to.values) {
       const home = hospOf(first.row, first.who);
       if (to.ccn === base) show(home, to.values ? applyLink(initialState(home), to.values) : initialState(home), { quiet: true });
       else await load(to.ccn, { values: to.values, quiet: true });
@@ -356,9 +365,13 @@ export function mountCalc(section) {
     // One sentence: a file that didn't load is what matters (it is also why a link was dropped).
     if (failed) sayEl.textContent = t('calcFailed');
     else if (to.dropped) sayEl.textContent = t('calcDropped');
-    const rejected = section.querySelector('[data-calc-rejected]');
-    rejected.textContent = link?.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
-    banner.hidden = !isScenario(state, hosp);
+    rejectedLine.textContent = link?.rejected.length ? fill('calcRejected', { keys: link.rejected.join(', ') }) : '';
+    // The followed hospital (?h=) isn't one the calculator has (not in TEAM for the year): say why another shows.
+    const away = Boolean(query) && query !== base && !participants.has(query);
+    awayLine.hidden = !away;
+    const scenario = isScenario(state, hosp);
+    scenLine.hidden = !scenario;
+    banner.hidden = !(scenario || away);
     if (link) section.scrollIntoView({ block: 'start' });
   }
 
@@ -368,7 +381,7 @@ export function mountCalc(section) {
     e.preventDefault();
     update(initialState(hosp), { force: true, now: true });
     banner.hidden = true;
-    section.querySelector('[data-calc-rejected]').textContent = '';
+    rejectedLine.textContent = '';
     writeAddress();
     section.scrollIntoView({ block: 'start' });
   });

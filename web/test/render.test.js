@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
-import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
+import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepSigned, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
@@ -308,8 +308,11 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   const items = /<ul class="ft__list" role="list">([\s\S]*?)<\/ul>/.exec(foot)[1].match(/<li[^>]*>[\s\S]*?<\/li>/g);
   assert.equal(items.length, 5);
   // TEAM's figure: the hospitals on CMS's list, never a dollar figure; what it is in full is its title and hidden words.
-  const teamFull = "Hospitals on CMS\u2019s TEAM list. Its dollar figures on this site are scenarios, never part of the family\u2019s estimates.";
-  assert.ok(foot.includes(`<li><a href="/team/">Surgical episodes\u00a0<span class="ft__ab">TEAM</span></a> <span class="ft__v" title="${teamFull}">3 hospitals<span class="vh">, ${teamFull}</span></span></li>`), 'TEAM\'s count and its full meaning');
+  const teamRest = "on CMS\u2019s TEAM list; its dollar figures on this site are scenarios, never part of the family\u2019s estimates.";
+  assert.ok(foot.includes(`<li><a href="/team/">Surgical episodes\u00a0<span class="ft__ab">TEAM</span></a> <span class="ft__v" title="3 hospitals ${teamRest}">3 hospitals<span class="vh"> ${teamRest}</span></span></li>`), 'TEAM\'s count and its full meaning');
+  // A screen reader hears the row once through: "hospitals" said once, never twice.
+  const teamItem = items.find((item) => item.includes('href="/team/"'));
+  assert.equal((textOf(teamItem).match(/hospitals/gi) ?? []).length, 1, 'TEAM\'s row says "hospitals" once');
   for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+\u00a0<span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
   assert.equal(items.filter((item) => item.includes(' title=')).length, 2, 'two rows with a title: the scenario\'s and TEAM\'s');
   assert.doesNotMatch(foot, /ft__scen|scen-tag|could be lost/, 'no tag box and no old wording');
@@ -570,6 +573,15 @@ test('lastCall returns its last result for the same key (by identity) and calls 
   assert.equal(f({ fy: 2, source }), 'fy2');
   assert.equal(f({ fy: 2, source: { id: 'x' } }), 'fy2');
   assert.equal(calls, 3, 'a new value or a new object: called again');
+});
+
+// A line never breaks between a sign and its amount ("(−" / "$2.3M)"): the browser may break between a minus or a plus
+// and a dollar sign, both prefix characters to the line breaker.
+test('keepSigned holds each signed dollar figure or percent on one line, escapes the rest, and formats each piece', () => {
+  assert.equal(String(keepSigned('Spend 21.2% over target (−$2.3M) & +$110K under · −5%')),
+    'Spend 21.2% over target (<span class="nw">−$2.3M</span>) &amp; <span class="nw">+$110K</span> under · <span class="nw">−5%</span>');
+  assert.equal(String(keepSigned('$0 and 5% and 3-4')), '$0 and 5% and 3-4', 'unsigned figures are left as they are');
+  assert.equal(String(keepSigned('−$1,154,516 to +$552K', (s) => s.toUpperCase())), '<span class="nw">−$1,154,516</span> TO <span class="nw">+$552K</span>', 'each piece formatted, inside its span too');
 });
 
 test('keepWhole wraps a part of escaped text in one .nw span, and refuses a part that is not there', () => {

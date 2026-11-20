@@ -2,9 +2,11 @@
 // applies over a hospital's numbers, what a typed box does, the link the page writes and shares, and the hospital "Show
 // one at random" draws. No DOM: client/calc.js runs these against the page, and the tests run them alone. The state's
 // shape is calc-view.js's.
+import { has } from '../../../engine/js/has.js';
 import { clamp } from '../../../engine/js/stats.js';
 import { BAND_DEFAULT, MISSING_QUALITY } from '../../../engine/js/team/params.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
+import { decimal } from '../../../web/render/format.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { initialState } from '../../../web/team/opening.js';
 import { CALC, DEFAULT_TRACK } from '../web/constants.js';
@@ -40,6 +42,13 @@ export const BOXES = Object.freeze({
   earn: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
   owe: { parse: parseMoney, lo: 0, hi: MAX_AMOUNT, decimals: 0, path: null },
 });
+// A box's range as the line under it says it when the box can't take what was typed ("from −60 to 60"): the family's
+// numbers, with a true minus.
+export function rangeWords(key) {
+  const box = BOXES[key.split('.')[0]];
+  return { lo: decimal(box.lo, 0), hi: decimal(box.hi, 0) };
+}
+
 // The reader's own numbers: typed (or carried by a link), each shown as "your number" and named in state.mine. A row's
 // spending (sk) is a scenario input, as the slider is: never one.
 const OWN = new Set(['n', 'p', 'q']);
@@ -142,6 +151,22 @@ export function setLowVolume(state, hosp, cat, checked) {
 // The state another hospital opens with when the reader moves to it: its own opening state, keeping the reader's "all
 // five" spending and band (they were comparing); its rows' spending is its own, so "set" is the slider's alone.
 export const carryOver = (state, hosp) => ({ ...initialState(hosp), s: state.s, band: state.band, moved: state.s !== 0 });
+
+// The reader's own numbers in state (each key in state.mine: n, p, q and lv), carried onto next, another state of the same
+// hospital: what a link arriving for the hospital showing applies over, so an older fragment (public inputs only: Back
+// after an in-page link) never wipes what the reader typed. Their spending, slider, track and band are not carried.
+export function keepOwn(next, state) {
+  const out = copyState(next);
+  for (const key of state.mine) {
+    const [group, name] = key.split('.');
+    const from = group === 'n' || group === 'p' ? state.ov[group] : state[group];
+    const to = group === 'n' || group === 'p' ? out.ov[group] : out[group];
+    if (!has(from, name)) continue;
+    to[name] = from[name];
+    out.mine.add(key);
+  }
+  return out;
+}
 
 // A shared link's values (decodeTeam's partial state) over a hospital's opening state: every own number it carries is the
 // reader's ("your number"), its spending counts as set, and its "all five" spending is held to the slider's reach.

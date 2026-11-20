@@ -219,6 +219,10 @@
   .tc-wwt th { white-space: normal; }
 }
 .tc__banner { margin: 10px 14px 0; }
+/* The banner's lines: the link's scenario and its reset, the keys it couldn't use, the followed hospital outside TEAM;
+   each its own line, an empty one gone. */
+.tc__banner p + p { margin-top: 4px; }
+.tc__banner p:empty { display: none; }
 .tc__nojs { padding: 10px 14px 0; color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
 /* On a phone the result column dissolves into the grid (display: contents), so only its result box moves up, into the
    "out" area above the inputs; the figure, "What would it take?" and the share line stay after them. */
@@ -268,7 +272,7 @@
 .tc-ep abbr { text-decoration: none; }
 .tc-ep .num, .tc-qt .num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
 .tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
-.tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); }
+.tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); white-space: nowrap; }
 .tc-lvc { width: 2.4rem; text-align: center !important; }
 /* The checkboxes (a row's low-volume box, "include my numbers"), drawn: open, a 1.5px border in the text ink, so an
    unticked box never reads as disabled in either theme; ticked, filled in the ink with the tick in the paper. Focus rings
@@ -277,6 +281,8 @@
 .tc-lvc input:checked, .tc-incl input:checked { border-color: var(--ink); background: var(--ink); }
 .tc-lvc input:checked::before, .tc-incl input:checked::before { content: ""; width: 10px; height: 10px; background: var(--paper); clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
 @media (forced-colors: active) { .tc-lvc input, .tc-incl input { -webkit-appearance: auto; appearance: auto; } }
+/* The low-volume box's label holds it: a 24px target round the 18px box (WCAG 2.5.8), the box drawn as before. */
+.tc-lvhit { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; cursor: pointer; }
 .tc-in { width: 5.2rem; min-height: 28px; height: 28px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; background: var(--paper-2); font: 400 var(--fs-sm)/1 var(--font-type); font-variant-numeric: tabular-nums; }
 .tc-in--p { width: 6.4rem; }
 .tc-in--q { width: 3.6rem; }
@@ -307,13 +313,15 @@
 .tc-op { font-family: var(--font-type); }
 .tc-line .tc-src:not([hidden]) { display: inline; }
 .tc-v { font: 700 var(--fs-sm)/1.2 var(--font-type); text-align: right; white-space: nowrap; }
-.tc-open { min-height: 0; padding: 0; border: 0; background: none; color: var(--pen-ink); font: 700 var(--fs-cap)/1.2 var(--font-type); text-decoration: underline; text-transform: uppercase; cursor: pointer; }
+.tc-open { min-height: 0; margin-block: -5px; padding: 5px 0; border: 0; background: none; color: var(--pen-ink); font: 700 var(--fs-cap)/1.2 var(--font-type); text-decoration: underline; text-transform: uppercase; cursor: pointer; }
 .tc-range { --thumb: 20px; width: 100%; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
 .tc-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
 .tc-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -8px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); -webkit-appearance: none; appearance: none; }
 .tc-range::-moz-range-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
 .tc-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
 .tc-foot { color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-body); }
+/* A note's citation on a line of its own, so a number ending the note never runs into it ("at 50. 42 CFR"). */
+.tc-foot > .tm-cite { display: block; }
 
 /* Quality by measure and "How each line works": disclosures, closed by default. */
 .tc-more { font-size: var(--fs-xs); color: var(--ink-2); }
@@ -387,6 +395,8 @@
   .tc-cl--in { display: inline; margin: 0; font-weight: 400; }
   .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
   .tc-line--s .tc-range { grid-column: 2 / -1; grid-row: 2; }
+  /* Quality by measure: its value head and each box's source wrap, so all four columns, Weight too, fit a phone. */
+  .tc-qt thead th.num, .tc-qt .tc-src { white-space: normal; }
 }
 /* A phone with large text (a default font of 20px or more on a 320px screen: under 18em): a row's boxes two to a line,
    "What would it take?"'s labels and tag free to wrap, so every box shows its whole value and nothing runs past the edge.

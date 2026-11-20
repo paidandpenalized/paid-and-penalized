@@ -254,6 +254,25 @@ describe('TEAM Part 5 at 390 px: the quality table opened', () => {
     assert.equal(s.shown, true, 'the quality table shows');
     assert.equal(s.framed, true, 'the table sits in its .tc-scroll frame');
     assert.equal(s.inColumn, true, 'the frame keeps to the calculator\'s column');
+    // Every column, Weight too, fits the frame: nothing of the table waits off-screen to be scrolled to.
+    const fit = await page.evaluate(() => {
+      const frame = document.querySelector('#tc-q .tc-scroll');
+      const cite = document.querySelector('#tc-q .tc-foot > .tm-cite');
+      return { over: frame.scrollWidth - frame.clientWidth, cite: cite && getComputedStyle(cite).display };
+    });
+    assert.ok(fit.over <= 1, `the quality table is ${fit.over} px wider than its frame`);
+    // The note's citation on its own line, so the note's last number ("at 50.") never reads into it.
+    assert.equal(fit.cite, 'block');
+    // Tap targets (WCAG 2.5.8): each low-volume box's label at least 24 by 24, and "by measure" at least 24 high.
+    const targets = await page.evaluate(() => ({
+      lv: [...document.querySelectorAll('#calc .tc-lvhit')].map((l) => l.getBoundingClientRect()).map((r) => Math.min(r.width, r.height)),
+      open: document.querySelector('#calc [data-calc-open]').getBoundingClientRect().height,
+    }));
+    assert.ok(targets.lv.length === 5 && targets.lv.every((x) => x >= 24), `low-volume targets: ${targets.lv.join(', ')} px`);
+    assert.ok(targets.open >= 24, `"by measure" is ${targets.open} px high`);
+    // A signed amount never splits from its sign at a line's end: each .nw figure in the calculator sits on one line.
+    const split = await page.evaluate(() => [...document.querySelectorAll('#calc .nw')].filter((el) => el.checkVisibility() && new Set([...el.getClientRects()].map((r) => Math.round(r.top))).size > 1).map((el) => el.parentElement.dataset.v ?? el.parentElement.className));
+    assert.deepEqual(split, [], 'signed amounts broken across lines');
     await assertNoSideways(page, 'the TEAM program page with the quality table open at 390 px');
     await assertQuiet(seen, 'the TEAM program page with the quality table open');
   }));

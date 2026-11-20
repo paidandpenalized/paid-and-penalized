@@ -51,6 +51,16 @@ test('junk keys rejected, valid kept', () => {
   assert.ok(!JSON.stringify(r.rejected).includes('abc'));
 });
 
+// A rejected key is named as a reader typed it: percent-decoded where it decodes (the page sets it as text), as it came
+// where it doesn't, and never longer than forty characters.
+test('rejected keys are shown decoded, raw where they don\'t decode, and capped', () => {
+  assert.deepEqual(decodeTeam('#team&%3Cimg%20src=1&s=2').rejected, ['<img src']);
+  assert.deepEqual(decodeTeam('#team&%E0%A4%A=1').rejected, ['%E0%A4%A'], 'a broken escape: as it came');
+  const long = `${'%41'.repeat(30)}`;
+  assert.deepEqual(decodeTeam(`#team&${long}=1`).rejected, ['A'.repeat(30)], 'decoded before the cap');
+  assert.equal(decodeTeam(`#team&${'b'.repeat(60)}=1`).rejected[0].length, 40);
+});
+
 test('grammar: no plus, blank, exponent, trailing dot or hex', () => {
   for (const v of ['+5', ' 5', '5 ', '1e3', '5.', '.5', '0x10', '--5', '', 'NaN', 'Infinity']) {
     assert.deepEqual(decodeTeam(`#team&s=${v}`), { state: {}, rejected: ['s'] }, JSON.stringify(v));

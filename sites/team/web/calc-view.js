@@ -20,6 +20,7 @@ import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../.
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
 import { count, isoDate, money, moneyShown, moneyTick, pct, placeText, roundedDollars, signedMoney as signed, spelled } from '../../../web/render/format.js';
+import { keepSigned } from '../../../web/render/components.js';
 import { Safe, html } from '../../../web/render/html.js';
 import { flagsNote } from '../../../web/team/copy.js';
 import { engineInput, inputsOf } from '../../../web/team/opening.js';
@@ -278,6 +279,9 @@ const vh = (id, text) => html`<label class="vh" for="${id}">${text}</label>`;
 const textIn = ({ id, key, value, mode = 'decimal', cls = '' }) => html`<input class="tc-in${cls}" id="${id}" data-in="${key}" type="text" inputmode="${mode}" autocomplete="off" spellcheck="false" value="${value}">`;
 const box = ({ mine, label, cls = '', ...rest }) => html`${vh(rest.id, label)}${textIn({ ...rest, cls: `${cls}${mine ? ' is-mine' : ''}` })}`;
 const scenTag = (tags) => html`<span class="tc-tag${tags.mine ? ' tc-tag--mine' : ''}" data-v="tag">${tags.text}</span>`;
+// "includes your numbers" again where the result's dollars are restated (the ledger's foot, "What would it take?"), shown
+// once the reader's own numbers are in: the result box's tag in its "yours" style.
+const mineTag = (key, tags) => html` <span class="tc-tag tc-tag--mine" data-v="tag.${key}"${tags.mine ? '' : html` hidden`}>${t('tagMine')}</span>`;
 
 // A column's name over its box, shown only where the table's head is hidden (a phone: styles.css), so each box keeps its
 // column's meaning there. Hidden from screen readers: each box's own label already names it.
@@ -289,7 +293,7 @@ function rowMarkup(row) {
 <td>${colLabel(t('colYear'))}${box({ id: `tc-n-${k}`, key: `n.${k}`, value: row.n.value, mine: row.n.mine, label: row.n.label, mode: 'numeric' })}${tag(`src.n.${k}`, row.n)}</td>
 <td>${colLabel(t('colPrice'))}${box({ id: `tc-p-${k}`, key: `p.${k}`, value: row.p.value, mine: row.p.mine, label: row.p.label, cls: ' tc-in--p' })}${tag(`src.p.${k}`, row.p)}</td>
 <td>${colLabel(t('colSpend'))}${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: false, label: row.s.label, cls: row.s.own ? ' is-own' : '' })}${tag(`src.s.${k}`, row.s)}</td>
-<td class="tc-lvc">${vh(`tc-lv-${k}`, row.lv.label)}<input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}>${colLabel(fill('colLvPhone', { lv: String(LOW_VOLUME) }), ' tc-cl--lv')}</td>
+<td class="tc-lvc"><label class="tc-lvhit"><span class="vh">${row.lv.label}</span><input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}></label>${colLabel(fill('colLvPhone', { lv: String(LOW_VOLUME) }), ' tc-cl--lv')}</td>
 <td class="num">${colLabel(`${t('colTarget')} `, ' tc-cl--in')}<span data-v="target.${k}">${row.target}</span></td>
 <td class="num">${colLabel(`· ${t('colResultPhone')} `, ' tc-cl--in')}<small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
 }
@@ -310,7 +314,7 @@ ${line(6, html`<span data-v="l.limitsLabel">${l.limitsLabel}</span>`, l.limits, 
 ${line(7, html`${t('l7')} <span class="tc-src">${t('l7Tag')}</span>`, l.post, { op: '−', key: 'l.post' })}
 ${line(8, html`${t('l8')} <span class="tc-src" data-v="l.capped"${l.capped ? '' : html` hidden`}>${t('atLimit')}</span>`, l.result, { op: '=', key: 'l.result', cls: ' tc-line--res' })}
 </ol>
-<p class="tc-foot">${t('ledgerCalcFoot')}</p>`;
+<p class="tc-foot">${t('ledgerCalcFoot')}${mineTag('l', v.tags)}</p>`;
 }
 
 function qualityMarkup(v, statics) {
@@ -330,7 +334,7 @@ function resultMarkup(v, statics) {
   return html`<div class="tc-out">
 <p class="tc-out__lab"><span data-v="out.label">${r.label}</span> ${scenTag(v.tags)}</p>
 <p class="tc-out__v"><span data-v="out.range">${tight(r.range)}</span> <span class="tc-out__yr">${t('outYear')}</span></p>
-<p class="tc-out__at" data-v="out.at">${r.at}</p>
+<p class="tc-out__at" data-v="out.at">${keepSigned(r.at)}</p>
 <p class="tc-out__none" data-v="out.none"${r.none ? '' : html` hidden`}>${t('outNone')}</p>
 <div class="tc-out__hyp"><p>${t('outHyp')}</p>
 <p class="tc-band"><label for="tc-band">${t('bandLabel')}<span class="vh"> ${t('bandFull')}</span></label>${textIn({ id: 'tc-band', key: 'band', value: v.band.value, cls: ' tc-in--band' })}<span aria-hidden="true">%</span></p>
@@ -338,17 +342,17 @@ ${staticBox('why', statics)}</div>
 </div>`;
 }
 
-// An answer's words with its lead figures in bold, each found after the last.
+// An answer's words with its lead figures in bold, each found after the last; a signed figure never breaks from its sign.
 function bolded(text, leads) {
   const parts = [];
   let rest = text;
   for (const lead of leads) {
     const at = rest.indexOf(lead);
     if (at < 0) continue;
-    parts.push(rest.slice(0, at), html`<strong>${lead}</strong>`);
+    parts.push(keepSigned(rest.slice(0, at)), html`<strong>${keepSigned(lead)}</strong>`);
     rest = rest.slice(at + lead.length);
   }
-  return html`${parts}${rest}`;
+  return html`${parts}${keepSigned(rest)}`;
 }
 
 function wwitMarkup(v) {
@@ -356,7 +360,7 @@ function wwitMarkup(v) {
   const L = w.leads;
   const row = (label, key, text, leads) => html`<tr><th scope="row">${label}</th><td data-v="${key}">${bolded(text, leads)}</td></tr>`;
   const ask = (label, id, key, value, full) => html`<label for="${id}">${label}<span class="vh"> ${full}</span></label> ${textIn({ id, key, value, cls: ' tc-in--m' })}`;
-  return html`<section class="tc-ww" aria-labelledby="tc-ww-h"><h3 class="tc-ww__h"><span id="tc-ww-h">${t('wwHeading')}</span> <span class="tc-src" data-v="ww.tag">${w.tag}</span></h3>
+  return html`<section class="tc-ww" aria-labelledby="tc-ww-h"><h3 class="tc-ww__h"><span id="tc-ww-h">${t('wwHeading')}</span> <span class="tc-src" data-v="ww.tag">${w.tag}</span>${mineTag('ww', v.tags)}</h3>
 <table class="tc-wwt"><tbody>
 <tr><th scope="row">${ask(t('wwEarn'), 'tc-earn', 'earn', w.earn.value, t('wwEarnFull'))}</th><td data-v="ww.earn">${bolded(w.earn.text, L.earn)}</td></tr>
 <tr><th scope="row">${ask(t('wwOwe'), 'tc-owe', 'owe', w.owe.value, t('wwOweFull'))}</th><td data-v="ww.owe">${bolded(w.owe.text, L.owe)}</td></tr>
