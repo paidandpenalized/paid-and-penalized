@@ -19,11 +19,11 @@
 // The numbers are the calculator's opening ones for the hospital, to the cent, from the family's TEAM modules the
 // calculator reads too: its row as the calculator reads it (web/team/calc-data.js calcRow then hospOf) and its opening
 // view (web/team/opening.js openingOf: the opening state, the engine's input, bandOf at the state's band and reconcile's
-// limits). The Track 2 note is the calculator's own sentence (web/team/copy.js flagsNote). The hub imports no site's code.
-import { PY2_START, TRACKS } from '../../engine/js/team/params.js';
+// limits), each signed amount held whole on its line (components.js keepSigned). The Track 2 note is the calculator's own sentence (web/team/copy.js flagsNote). The hub imports no site's code.
+import { PY2_START, SUPPRESSED_MAX, TRACKS } from '../../engine/js/team/params.js';
 import { drawn, imagePair } from '../../web/charts/figure.js';
 import { limitRuler } from '../../web/charts/limitRuler.js';
-import { fillCopy, stamp } from '../../web/render/components.js';
+import { fillCopy, keepSigned, stamp } from '../../web/render/components.js';
 import { count, isoMonth, money, pct, shortIsoDate, signedMoney as signed } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE } from '../../web/site.js';
@@ -92,7 +92,7 @@ ${right}
 
   // One that left before performance year 2: the stamp and its end date, no dollars and no calculator (it has none).
   if (!p.active) {
-    return section(head('tmKickerEnded', html`<p class="hh__wbnote">${asOf}</p>`),
+    return section(head('tmKickerPlain', html`<p class="hh__wbnote">${asOf}</p>`),
       html`<div class="hh__wbr">${stamp({ label: fill('tmEndedStamp'), ink: true })}<p class="hh__why">${fill('tmEnded', { date: shortIsoDate(p.end) })}</p></div>`);
   }
 
@@ -105,19 +105,21 @@ ${right}
   });
   const track = fill('tmTrack', { date: shortIsoDate(PY2_START), n: String(s.track) });
   const flags = s.hosp.flags.length ? html` ${flagsNote(s.hosp.flags, TRACK2)}` : '';
-  const left = head('tmKicker', html`<p class="hh__wbnote">${status}. ${track}${flags}</p>
+  // "(a scenario)" only where there is one: a participant with no public episodes has none to show.
+  const none = s.r.target === 0;
+  const left = head(none ? 'tmKickerPlain' : 'tmKicker', html`<p class="hh__wbnote">${status}. ${track}${flags}</p>
 <p class="hh__wbnote">${fill(net ? 'tmNote' : 'tmNoteAlone')} ${asOf}</p>`);
 
   // No public episodes: nothing to draw; the calculator takes the hospital's own counts.
-  if (s.r.target === 0) return section(left, html`<p class="hh__why">${fill('tmNone')}</p>\n${calcLink(p.ccn)}`);
+  if (none) return section(left, html`<p class="hh__why">${fill('tmNone')}</p>\n${calcLink(p.ccn)}`);
 
   const n = String(s.track);
   const right = html`<p class="hh__wblab">${fill('tmLabel', { year: isoMonth(PY2_START).year, band: `±${pct(s.width, 0)}` })} <span class="scen-tag">${fill('tmTag')}</span></p>
-<p class="hh__wbv">${fill('tmRange', { lo: signed(s.band.low), hi: signed(s.band.high) })}</p>
+<p class="hh__wbv">${keepSigned(fill('tmRange', { lo: signed(s.band.low), hi: signed(s.band.high) }))}</p>
 <p class="hh__wbd">${fill('tmDollars', { n, episodes: count(s.episodes), target: money(s.r.target) })}</p>
 ${ruler(s)}
-<p class="hh__wbscale">${fill('tmHatched', { n, loss: money(-s.r.limits.loss), gain: signed(s.r.limits.gain) })}</p>
-<p class="hh__why">${fill('tmHow', { year: String(team.dataYear), py: isoMonth(PY2_START).year })}</p>
+<p class="hh__wbscale">${keepSigned(fill('tmHatched', { n, loss: money(-s.r.limits.loss), gain: signed(s.r.limits.gain) }))}</p>
+<p class="hh__why">${fill('tmHow', { year: String(team.dataYear), min: count(SUPPRESSED_MAX + 1), py: isoMonth(PY2_START).year })}</p>
 ${calcLink(p.ccn)}`;
   return section(left, right);
 }

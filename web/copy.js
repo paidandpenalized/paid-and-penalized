@@ -38,8 +38,9 @@ export const COPY = typesetCopy({
   footScenario: '{range} scenario',
   footScenarioFull: 'Medicaid revenue hospitals could lose a year, a scenario in {year} dollars',
   // TEAM's figure (a payment model whose dollars here are scenarios, never part of the family's estimates): the hospitals
-  // on CMS's list, on one line (footHospitals); what it is in full is its title and hidden words.
-  footTeamFull: "Hospitals on CMS's TEAM list. Its dollar figures on this site are scenarios, never part of the family's estimates.",
+  // on CMS's list, on one line (footHospitals); the rest of what it is, after that figure, is its title and hidden words
+  // (so a screen reader says "hospitals" once).
+  footTeamRest: "on CMS's TEAM list; its dollar figures on this site are scenarios, never part of the family's estimates.",
   // The tag every scenario number carries (the base year of its dollars).
   scenarioTag: 'SCENARIO · {year} $',
   footConsidered: 'Under consideration:',

@@ -24,6 +24,8 @@ const TEAM = HUB.team;
 const META = calcMeta(loadTeam());
 const ALL = [...TEAM.participants.values()];
 const signed = (x) => money(x, { sign: true });
+// A signed amount as the section prints it: whole on one line, in a .nw span (an unsigned $0 needs none).
+const whole = (text) => (/^[−+]/.test(text) ? `<span class="nw">${text}</span>` : text);
 const esc = (text) => escapeHtml(text);
 const pick = (pred, what) => {
   const p = ALL.find(pred);
@@ -46,7 +48,7 @@ const PLAIN = pick((p) => p.active && p.target > 0 && p.track2Flags.length === 0
 const VOLUNTARY = pick((p) => p.active && p.participation === 'voluntary', 'a voluntary participant');
 
 // The band computed here from the rule, not the section's code: each category on target with its public episodes and
-// prices (to the cent, as the calculator's row carries them), the quality percentiles the file has (missing: CMS's
+// prices (as the calculator's row carries them, unrounded), the quality percentiles the file has (missing: CMS's
 // missing-data score, the engine's), Track 3 and the default band.
 function ruleBand(p) {
   const hosp = hospOf(calcRow(p));
@@ -81,7 +83,7 @@ test('range equals bandOf at Track 3, BAND_DEFAULT, and the calculator\'s openin
     const b = band(p);
     const { low, high, r, hosp } = ruleBand(p);
     assert.ok(low <= 0 && high > 0, 'a range from at most $0 to above it');
-    assert.ok(b.includes(`<p class="hh__wbv">${signed(low)} to ${signed(high)}</p>`), 'the range, low to high');
+    assert.ok(b.includes(`<p class="hh__wbv">${whole(signed(low))} to ${whole(signed(high))}</p>`), 'the range, low to high, each amount whole');
     const calc = calcView({ hosp, state: initialState(hosp), team: meta });
     assert.equal(textOf(b).includes(calc.result.range), true, 'the calculator\'s opening range');
     assert.ok(b.includes(plotted(low, high)), 'the ruler\'s range is the same two numbers');
@@ -121,7 +123,7 @@ test('a 2027 starter: "In TEAM from" its start, and its band (the file\'s starte
   const b = String(teamBand({ ccn: made.ccn }, { ...TEAM, participants: new Map([[made.ccn, made]]) }, { net: true }));
   assert.ok(textOf(b).includes(`In TEAM from ${shortIsoDate(PY2_START)} · `), 'from, not since');
   const { low, high } = ruleBand(made);
-  assert.ok(b.includes(`<p class="hh__wbv">${signed(low)} to ${signed(high)}</p>`), 'the band');
+  assert.ok(b.includes(`<p class="hh__wbv">${whole(signed(low))} to ${whole(signed(high))}</p>`), 'the band');
   assert.ok(b.includes('<svg'), 'the ruler');
 });
 
@@ -131,6 +133,15 @@ test('a participant with no public episodes: the status, the sentence sending th
   assert.ok(b.includes(esc(COPY.tmNone)), 'no public episode counts; enter its own');
   assert.doesNotMatch(b, /\$|<svg|hh__wbv|scen-tag/, 'no dollars, ruler or range');
   assert.ok(b.includes(`href="/team/?h=${ZERO.ccn}#calc"`), 'the link into the calculator');
+  // No scenario to show, so its kicker doesn't promise one; a participant with episodes keeps "(a scenario)".
+  const kicker = (markup) => textOf(/<p class="cap kicker">[\s\S]*?<\/p>/.exec(markup)[0]).trim();
+  assert.equal(kicker(b), 'Surgical episodes');
+  for (const p of FIVE) assert.equal(kicker(band(p)), 'Surgical episodes (a scenario)');
+});
+
+test('where the numbers come from: the counts a floor, for both reasons (hidden small counts, no outpatient cases)', () => {
+  const words = textOf(band(FIVE[0]));
+  assert.ok(words.includes('a floor (counts under 11 are hidden, and the public file has no outpatient cases)'), 'both reasons');
 });
 
 test('never a forecast or a penalty: "would" and "scenario", never "will", "loses", "should" or "penalty"; the note keeps it out of the net', () => {
@@ -151,7 +162,7 @@ test('every participant with public episodes: the section\'s range is the calcul
     const b = band(p);
     const { low, high, hosp } = ruleBand(p);
     const calc = calcView({ hosp, state: initialState(hosp), team: meta });
-    if (!b.includes(`<p class="hh__wbv">${calc.result.range}</p>`) || !b.includes(plotted(low, high))) differ += 1;
+    if (textOf(/<p class="hh__wbv">[\s\S]*?<\/p>/.exec(b)?.[0] ?? '').trim() !== calc.result.range || !b.includes(plotted(low, high))) differ += 1;
   }
   assert.equal(differ, 0, 'participants whose section and calculator disagree');
   assert.ok(DRAWN.length > 0);

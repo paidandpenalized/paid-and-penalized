@@ -105,8 +105,8 @@ export const scenarioTag = (year) => html`<span class="scen-tag">${fill('scenari
 // base year, is its title and, for a screen reader, hidden words after it.
 function figureOf({ dollars, moved, scenario, listed }, estimated) {
   if (listed !== undefined) {
-    const full = COPY.footTeamFull;
-    return html`<span class="ft__v" title="${full}">${fill('footHospitals', { n: count(listed) })}<span class="vh">, ${full}</span></span>`;
+    const figure = fill('footHospitals', { n: count(listed) });
+    return html`<span class="ft__v" title="${figure} ${COPY.footTeamRest}">${figure}<span class="vh"> ${COPY.footTeamRest}</span></span>`;
   }
   if (scenario) {
     const full = fill('footScenarioFull', { year: String(scenario.year) });

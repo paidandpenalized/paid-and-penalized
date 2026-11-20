@@ -257,7 +257,7 @@ export function directory({ programs, figures = {}, facts, hospitals, fy, hrrpFy
   const groups = soonGroups.map((group) => [GROUP_WORDS[group], soon.filter((p) => p.group === group)]);
   return html`<section class="bsec" id="programs" aria-labelledby="programs-h">
 <div class="bsec__head"><div><p class="cap kicker">${COPY.dirKicker}</p><h2 id="programs-h">${building ? fill('dirHead', { live: capitalize(numberWord(opened)), building: numberWord(building), more: numberWord(soon.length) }) : fill('dirHeadAll', { live: capitalize(numberWord(opened)), more: numberWord(soon.length) })}</h2></div>
-<p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { count: numberWord(live.length), fy: fyText })}</p></div>
+<p class="bsec__lede">${sentence('dirLede', { gross: html`<b>${money(facts.gross)}</b>` }, { fy: fyText })}</p></div>
 <p class="grp cap"><span>${GROUP_WORDS.quality}</span><span>${fill('dirGroupNote', { fy: fyText })}</span></p>
 <div class="dir">${live.map((p) => card(p, { hospitals, facts, fy: fyText, hrrpFy, domain }))}</div>
 ${models.map((p) => html`<p class="grp cap"><span>${GROUP_WORDS[p.group]}</span></p>

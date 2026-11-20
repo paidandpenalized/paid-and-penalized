@@ -227,11 +227,11 @@ export const COPY = typesetCopy({
   // The TEAM section (team.js), the Medicaid band's twin: a scenario of a payment model's reconciliation, never a penalty,
   // never part of the net. Its heading; the status line (its start, mandatory or voluntary, and its place as CMS's list
   // names it: "area" only for a mandatory participant, whose area CMS selected), the track it would be in, the note and
-  // the list's date. For a participant with public episodes: the label (the scenario tag follows), the range (printed as
+  // the list's date (the kicker says "a scenario" only over one). For a participant with public episodes: the label (the scenario tag follows), the range (printed as
   // the calculator prints its own), the line under it, the ruler's words, the hatched walls' note, where the numbers come from and the link into the calculator. One with none: a
   // sentence and the link. One that left: the stamp and its end date, no dollars.
   tmKicker: 'Surgical episodes (a scenario)',
-  tmKickerEnded: 'Surgical episodes',
+  tmKickerPlain: 'Surgical episodes',
   tmHeading: { text: "TEAM, Medicare's surgical episode model", claim: ['HUB-11', 'HUB-25'] },
   tmSince: { text: 'In TEAM since {date} · {kind} · {place}', claim: 'TEAM-09' },
   tmFrom: { text: 'In TEAM from {date} · {kind} · {place}', claim: 'TEAM-09' },
@@ -254,8 +254,8 @@ export const COPY = typesetCopy({
   tmWallLoss: { text: "Track {n}'s stop-loss: {amount}", claim: 'TEAM-14' },
   tmHatched: { text: "Hatched: past Track {n}'s limits, {loss} and {gain}", claim: 'TEAM-14' },
   tmHow: {
-    text: "Episodes: its Medicare inpatient discharges in {year} for each episode type, a floor (the public file has no outpatient cases). Prices: CMS's preliminary target prices for {py} in its region.",
-    claim: ['TEAM-57', 'TEAM-52'],
+    text: "Episodes: its Medicare inpatient discharges in {year} for each episode type, a floor (counts under {min} are hidden, and the public file has no outpatient cases). Prices: CMS's preliminary target prices for {py} in its region.",
+    claim: ['TEAM-57', 'TEAM-52', 'TEAM-79'],
   },
   tmLink: 'This hospital in the TEAM calculator',
   tmNone: 'No public episode counts for this hospital: enter its own in the calculator and the scenario follows.',

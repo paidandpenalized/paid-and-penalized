@@ -28,7 +28,9 @@ export const SITE = {
     'work-requirement': { path: '/work-requirement/', released: true, title: 'Medicaid work requirement', subtitle: 'Scenario' },
     // A payment model, not a penalty program; unreleased (noindex, out of the sitemap) until its pages are whole.
     // manyFiles: built from several CMS files, so /corrections/ gives the newest date CMS put on one of them.
-    team: { path: '/team/', released: false, title: 'Surgical episodes', subtitle: 'TEAM', manyFiles: true },
+    // onHub: its numbers also appear on the hub's hospital pages (TEAM's band), so /corrections/ lists its dates once the
+    // hub is released, whether or not the site is.
+    team: { path: '/team/', released: false, title: 'Surgical episodes', subtitle: 'TEAM', manyFiles: true, onHub: true },
   },
   // Every program, live and under consideration, in the order the shell's tabs and the home page's directory show them.
   // Separate from `sites` (the sites built in this repo): a program here may have no site.

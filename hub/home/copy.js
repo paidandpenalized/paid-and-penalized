@@ -120,12 +120,13 @@ export const COPY = typesetCopy({
   // ---------- below the story (below.js) ----------
   // The program directory: its heading ({live}: the programs with pages here, {building}: those with data whose pages
   // are not built, {more}: the programs under consideration, in words; it promises no site and no date), the lede
-  // ({count}: the programs with data; {gross}: what they move in FY{fy}), the group over the cards.
+  // ({gross}: what the quality programs, the ones in the estimates, move in FY{fy}; it counts no programs and leaves out
+  // the cards below theirs, whose dollars are not estimates), the group over the cards.
   dirKicker: 'The programs',
   dirHead: '{live} live, {building} under construction, {more} under consideration.',
   // With none under construction.
   dirHeadAll: '{live} live, {more} under consideration.',
-  dirLede: 'Each card puts its program’s hospitals on one shared scale. Together these {count} move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
+  dirLede: 'Each quality program’s card puts its hospitals on one shared scale. Together the quality programs move about {gross} of FY{fy} Medicare inpatient pay, estimated.',
   dirGroup: 'Quality programs',
   dirGroupNote: 'Estimated FY{fy}',
   // Each card's takeaway over its histogram. Readmissions: the share of its hospitals at {zero}, as one in {whole} when a

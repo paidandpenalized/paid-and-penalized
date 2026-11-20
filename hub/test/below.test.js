@@ -54,6 +54,13 @@ test('the directory: #programs with its kicker, a heading that counts the progra
   const lede = words(element(section, '<p class="bsec__lede"', 'p'));
   assert.ok(lede.includes(money(facts.gross)), lede);
   assert.ok(lede.includes(`FY${fy}`) && lede.includes('estimated'), lede);
+  // The estimate is the quality programs' alone (TEAM, live here, is outside it): the lede names their group, never a
+  // count of programs (a count goes stale, and "three" next to "four live" reads as taking TEAM in), and never TEAM.
+  const number = '(?:one|two|three|four|five|six|seven|eight|nine|ten|\\d+)';
+  assert.doesNotMatch(lede, new RegExp(`\\bthese\\s+${number}\\b|\\b(?:${number}|both)\\s+(?:\\w+\\s+)?(?:programs|cards)\\b`, 'i'), `the lede counts no programs: ${lede}`);
+  assert.doesNotMatch(lede, /TEAM|surgical|episode/i, 'TEAM is outside the estimate sentence');
+  assert.match(lede, /quality programs/i, 'the estimate is the quality programs\'');
+  assert.ok(SITE.programs.some((p) => !p.inData && p.stage === 'live' && !p.scenario), 'a live program outside the estimates (TEAM) is on the page');
   // It sits below the story, in the page's main.
   assert.ok(out.indexOf('id="programs"') > out.indexOf('<div class="story" data-story>'));
   assert.ok(out.indexOf('id="programs"') < out.indexOf('</main>'));
