@@ -61,8 +61,8 @@ const titleLines = (title) => title.split(' ').flatMap((word) => word.split(/(?<
 
 // Each card's words and its dots' rule. lines: the big type, a line each, the last in the penalty red (and the kickers in
 // the red's text ink) unless penWords is false, when every word is in ink; size its font size and top the words' top
-// edge, in px. tone({ ccn, net }, { cut }): a dot's ink, 'pen', 'rew' or null (gray), from
-// the hospital's net dollars in the hub asset or its CCN among HACRP's cut hospitals (cut, a Set).
+// edge, in px. tone({ ccn, net }, inputs): a dot's ink, 'pen', 'rew', 'ink' or null (gray), from the hospital's net
+// dollars in the hub asset or its CCN in one of the inputs' sets (cardHtml's inputs: cut, hrrpCut, teamIn).
 export const CARDS = {
   family: {
     kicker: null,
@@ -121,17 +121,18 @@ export const CARDS = {
 };
 for (const id of Object.keys(SHARE_CARDS)) if (!Object.hasOwn(CARDS, id)) throw new Error(`tools/og/card.js: no card design for "${id}"`);
 
-// A card's dots from the hub asset (hub: { mapW, mapH, cols, rows }) and HACRP's cut hospitals (cut: a Set of CCNs):
-// [x, y, tone] on the map, the gray ones first so the colored ones sit on top; a hospital with no place on the map is
-// left out.
-export function cardDots(id, { hub: { cols, rows }, cut, hrrpCut, teamIn }) {
+// A card's dots from the hub asset (inputs.hub: { mapW, mapH, cols, rows }), each toned by the card's rule, which reads
+// what it needs of the inputs (cardInputs': cut, hrrpCut, teamIn): [x, y, tone] on the map, the gray ones first so the
+// colored ones sit on top; a hospital with no place on the map is left out.
+export function cardDots(id, inputs) {
+  const { cols, rows } = inputs.hub;
   const at = (name) => {
     const i = cols.indexOf(name);
     if (i < 0) throw new RangeError(`share card: the hub asset has no "${name}" column`);
     return i;
   };
   const [ccn, x, y, net] = [at('ccn'), at('x'), at('y'), at('net')];
-  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, { cut, hrrpCut, teamIn })]);
+  const dots = rows.filter((r) => r[x] !== null && r[y] !== null).map((r) => [r[x], r[y], CARDS[id].tone({ ccn: r[ccn], net: r[net] }, inputs)]);
   return [...dots.filter((d) => d[2] === null), ...dots.filter((d) => d[2] !== null)];
 }
 
@@ -167,7 +168,7 @@ function mapSvg(dots, { mapW, mapH }) {
 // penalized hospitals and summary; team and teamIn: the TEAM file and its performance year 2 participants (a Set of
 // CCNs). Everything is inline, so the HTML alone decides the picture, with RENDER in a comment.
 export function cardHtml(id, inputs) {
-  const { tokens, fonts, hub, cut, hrrpCut, teamIn } = inputs;
+  const { tokens, fonts, hub } = inputs;
   if (!Object.hasOwn(CARDS, id)) throw new RangeError(`share card: no card "${id}"`);
   const card = CARDS[id];
   const faces = Object.entries(CARD_FONTS).map(([file, [family, weight]]) => {
@@ -217,7 +218,7 @@ ${card.kicker ? html`<div class="kick" data-fit>${card.kicker}</div>
 ${card.fields ? html`<div class="stats">${card.fields(inputs).map(([value, label]) => html`<div class="stat"><span class="num">${value}</span><span class="lab" data-fit>${label}</span></div>`)}</div>
 ` : ''}<div class="rule">${card.tagline ? html`<div class="kick" data-fit>${card.tagline}</div>` : ''}<div class="addr" data-fit>${card.address}</div></div>
 </div>
-<div class="mapbox">${mapSvg(cardDots(id, { hub, cut, hrrpCut, teamIn }), hub)}</div>
+<div class="mapbox">${mapSvg(cardDots(id, inputs), hub)}</div>
 <div class="dbl dbl--bottom"></div>
 </body></html>
 `.toString();
