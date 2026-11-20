@@ -97,6 +97,7 @@ test('reasonText: dates and kinds come from the args', () => {
   assert.match(reasonText('cjrx', ['outside', 'acute']).text, /Jan 1, 2028/);
   assert.match(reasonText('cjrx', ['outside', 'acute']).text, new RegExp(reasonText('outside', 'acute').text.slice(0, 20)));
   assert.equal(reasonText('cjrx', ['unlisted', null]).tag, 'NO');
+  assert.match(reasonText('unlisted', null).text, /a hospital new to an area takes part from the start of the performance year after its first full one\./);
   const left = reasonText('cjrx', ['ended', '2026-02-15']);
   assert.equal(left.tag, 'NO');
   assert.match(left.text, /^Left TEAM\..*Feb 15, 2026.* In CJR\u2011X from Jan 1, 2028\.$/);
@@ -199,10 +200,15 @@ test('outside: a kind other than acute leads with its kind; acute and unknown ke
     const r = reasonText('outside', kind);
     assert.equal(r.tag, 'NO', kind);
     if (kind === 'acute' || kind === 'unknown') continue;
-    assert.ok(r.text.startsWith(`${SEARCH['hospitalKind.' + kind]}, outside the areas CMS selected for TEAM, so not in TEAM.`), kind);
+    assert.ok(r.text.startsWith(`${SEARCH['hospitalKind.' + kind]}, not in an area with a hospital CMS requires to take part in TEAM, so not in TEAM.`), kind);
   }
   assert.ok(reasonText('outside', 'critical_access').text.startsWith('Critical access hospital, '));
   assert.deepEqual(COPY.outsideKind.claim, COPY.outside.claim, 'the same claims as the area sentence');
+  // True by construction: this site's selected areas are the CBSAs CMS's list gives a mandatory participant, so the
+  // sentence says that, never that CMS selected no area around it.
+  assert.ok(plain.startsWith('Not in an area with a hospital CMS requires to take part in TEAM'), 'the area sentence');
+  // The program page's card and Part 1's words name the areas the same way: by the hospitals that must take part.
+  assert.match(SITE_COPY.cardAreasNote.text, /hospitals that must take part/);
   assert.throws(() => reasonText('outside', 'no-such-kind'), RangeError);
 });
 

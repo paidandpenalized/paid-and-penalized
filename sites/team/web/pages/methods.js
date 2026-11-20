@@ -9,18 +9,18 @@
 // and constants.js's.
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES } from '../../../../engine/js/team/params.js';
 import { docSections, printout, sentenceOf } from '../../../../web/render/components.js';
-import { count, decimal, fractionWord, isoDate, isoMonth, listText, money, numberWord, ordinal, pct } from '../../../../web/render/format.js';
+import { count, decimal, isoDate, isoMonth, listText, money, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
 import {
-  BAND_ANCHOR, BASELINE_YEARS, CITES, CJR_BAND, CQS_CAPS, CQS_SCALE, DEFAULT_TRACK, ERROR_DAYS, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME,
+  BAND_ANCHOR, BASELINE_YEARS, CITES, CQS_CAPS, CQS_SCALE, DEFAULT_TRACK, ERROR_DAYS, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME,
   MEASURES, MISSING_QUALITY, OUTLIER_PERCENTILE, PY2_PERIODS, PY2_START, RECON_MONTHS, SUPPRESSED_MAX, TARGET_CAPS, TRACKS, yearOf,
 } from '../constants.js';
 import { METHODS_PATH, PROGRAM_PATH, SOURCE_LINKS } from '../links.js';
 import { HASH_NAME, METHODS_CITES as C } from '../methods/cites.js';
 import { fill, t } from '../methods/copy.js';
-import { methodsFacts } from '../methods/facts.js';
+import { methodsFacts, reasonCounts } from '../methods/facts.js';
 import { PY2_NUMBER, cite, labelOf, shellOf } from './parts.js';
 
 const sentence = sentenceOf(fill);
@@ -110,6 +110,7 @@ function lowVolumeSection(team) {
   return {
     id: 'low-volume', heading: t('lvHeading'), body: html`${para(fill('lvRule', { lv, years }), C.lowVolume)}
 ${para(fill('lvHere', { n: numberWord(data.length), list: listText(data.map(String)), scale: decimal(team.method.baselineScale, 1), years, lv }))}
+${para(fill('lvLean', { lv }), C.lowWhere)}
 ${para(t('lvScope'), C.lowVolumeFaq)}`,
   };
 }
@@ -149,15 +150,15 @@ ${para(sentence('cqsSource', { sheet }))}`,
   };
 }
 
-// The band's evidence: this site's own count, so no claim; Track 2's limit only when the default band equals it.
+// The band's evidence, in words (no figure of this site's own counting): CJR's and BPCI Advanced's spread, the extremes past
+// Track 3's limits, and Track 2's limit only when the default band equals it.
 function bandSection() {
   const band = `±${pct(BAND_DEFAULT, 0)}`;
   const track2 = TRACKS[TB].gain === BAND_DEFAULT && TRACKS[TB].loss === BAND_DEFAULT;
   return {
     id: BAND_ANCHOR, heading: t('bandHeading'), body: html`${para(fill('bandWhat', { band, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) }))}
-${para(sentence('bandCount', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, {
-    band, share: fractionWord(CJR_BAND.share, 'about'), within: pct(CJR_BAND.within, 0), wideShare: fractionWord(CJR_BAND.wideShare), wideWithin: pct(CJR_BAND.wideWithin, 0),
-  }))}
+${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, { band }))}
+${para(fill('bandExtremes', { limit: pct(TRACKS[TC].gain, 0), tc: TC }), C.track2)}
 ${para(sentence('bandBpci', { eval: externalLink(SOURCE_LINKS.bpciEval, t('bandEval')) }))}
 ${track2 ? para(fill('bandTrack2', { band, tb: TB }), C.track2) : ''}
 ${para(fill('bandCaveat', { n: numberWord(CATEGORIES.length) }), C.categories)}`,
@@ -208,8 +209,8 @@ ${item('unkOwnHead', [t('unkOwnAssume')], [sentence('unkOwnWhere', { find })])}
 
 function areaSection(team, delineation) {
   const { mandatory, placed, mismatched } = team.method.areaCheck;
-  const codes = Object.values(team.status).map(([code]) => code);
-  const n = (code) => count(codes.filter((c) => c === code).length);
+  const reasons = reasonCounts(team.status);
+  const n = (code) => count(reasons[code] ?? 0);
   const month = isoMonth(`${delineation}-01`);
   const check = mismatched === 0
     ? fill('areaCheckAll', { mandatory: count(mandatory), placed: count(placed) })

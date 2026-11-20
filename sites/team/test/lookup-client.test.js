@@ -147,7 +147,7 @@ test('a "no" for a critical access hospital names its kind, and CJR-X when liste
   await s.type('mesa');
   const [away] = s.answer().rows;
   assert.equal(away.tag, FILE.words.no);
-  assert.ok(away.line.includes(`. ${SEARCH['hospitalKind.critical_access']}, outside the areas`), 'outside the areas, the kind leads');
+  assert.ok(away.line.includes(`. ${SEARCH['hospitalKind.critical_access']}, not in an area with a hospital CMS requires`), 'outside the areas, the kind leads');
   await s.type('coast');
   const [listed] = s.answer().rows;
   assert.equal(listed.tag, FILE.words.no);

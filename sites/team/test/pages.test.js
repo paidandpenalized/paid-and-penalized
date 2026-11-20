@@ -186,7 +186,7 @@ test('standardized dollars are stated beside every dollar figure', () => {
   // would it take?"'s amounts sit under them), and the three places say it themselves.
   const left = rest.slice(rest.indexOf('<div class="tc-left">'), rest.indexOf('<div class="tc-right">'));
   const right = rest.slice(rest.indexOf('<div class="tc-right">'), rest.indexOf('<script type="application/json" id="tc-data">'));
-  for (const [what, re] of [['the result box', /<div class="tc-out">[\s\S]*?<\/div>\n<\/div>/], ['the payoff', /<figure class="tc-fig">[\s\S]*?<\/figure>/], ['the ledger', /<ol class="tc-lines"[\s\S]*?<p class="tc-foot">[^<]*<\/p>/]]) {
+  for (const [what, re] of [['the result box', /<div class="tc-out">[\s\S]*?<\/div>\n<\/div>/], ['the payoff', /<figure class="tc-fig">[\s\S]*?<\/figure>/], ['the ledger', /<ol class="tc-lines"[\s\S]*?<p class="tc-foot">[\s\S]*?<\/p>/]]) {
     assert.match(words((re.exec(left + right) ?? [''])[0]), /[Ss]tandardized dollars/, what);
   }
   blocks.push(left, right);
@@ -281,7 +281,19 @@ test('no word repeats back to back anywhere in the rendered TEAM copy', () => {
   for (const [name, page] of [['program', program], ['methods', methods]]) {
     assert.deepEqual(repeatedWords(readerWords(main(page)).replace(/\s+/g, ' ')), [], name);
   }
-  // The calculator's "why?" and Methods' #band say "about half" once.
-  assert.ok(words(program).includes("In this site\u2019s count from CMS\u2019s CJR reconciliation file, about half of hospitals"), 'the why');
-  assert.ok(words(methods).includes('In those years, about half of hospitals ended a year within 5% of their target, and about three-quarters'), 'Methods #band');
+  // The calculator's "why?" and Methods' #band, in words.
+  assert.ok(words(program).includes('The \u00b15% default follows the spread of results hospitals had'), 'the why');
+  assert.ok(words(methods).includes('most hospitals ended a year near their target'), 'Methods #band');
+});
+
+// The final review's wording: the dek says the result is adjusted for quality; "How each line works" names each track's
+// cap on a repayment; CJR-X's line says the lookup shows only the list's hospitals Medicare's hospital list has.
+test('the dek names the quality adjustment; line five names each two-sided track\'s cap; the CJR-X line is exact about the lookup', () => {
+  const text = words(program);
+  assert.match(text, /and is paid what they come in under, adjusted for quality, up to /);
+  const [, tb, tc] = Object.keys(TRACKS);
+  const cut = (n) => `${Math.round(TRACKS[n].qLoss * 100)}%`;
+  assert.ok(text.includes(`a repayment shrinks by up to ${cut(tb)} in Track ${tb} and ${cut(tc)} in Track ${tc}.`), 'both tracks\' caps');
+  assert.ok(text.includes('The lookup above shows each one on Medicare’s hospital list.'), 'the lookup shows the CJR-X hospitals the master has');
+  assert.ok(team.a4.cjrxMissing > 0, 'the master lacks some of the CJR-X list, so "shows them" would overstate');
 });

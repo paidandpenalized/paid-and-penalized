@@ -94,6 +94,10 @@ export const COPY = {
     text: "The baseline years' counts aren't public. This site adds the file's {n} data years, {list}, multiplies the sum by {scale} to stand in for {years} years, and ticks the category when the result is under {lv}. The calculator lets you change any tick.",
     claim: null,
   },
+  lvLean: {
+    text: "The tick is built on the public counts, where each hidden cell counts as none, so it leans toward low volume. Untick a category when the baseline data CMS sends the hospital shows {lv} or more episodes for it.",
+    claim: ['TEAM-56', 'TEAM-16'],
+  },
   lvScope: {
     text: "CMS's FAQ applies the cap to each episode's amount before it sums them for the hospital. The calculator applies it to the category's total, which comes to the same only when the category's episodes all land on the same side of target.",
     claim: 'TEAM-75',
@@ -121,7 +125,7 @@ export const COPY = {
     claim: ['TEAM-66', 'TEAM-67', 'TEAM-68'],
   },
   qHere: {
-    text: "This site prefills the two measures Care Compare publishes for each hospital: {hwrName} ({hwr} hospitals with a value) and {iscmrName} ({iscmr}). Its cohort is every hospital the inpatient system pays that has a value. That stands in for CMS's cohort, so the percentiles are near CMS's, not the same.",
+    text: "This site prefills the two measures Care Compare publishes for each hospital: {hwrName} ({hwr} hospitals with a value) and {iscmrName} ({iscmr}). Its cohort is every open hospital the inpatient system pays that has a value, outside Maryland and other than Indian Health Service and tribal hospitals. That stands in for CMS's cohort, so the percentiles are near CMS's, not the same.",
     claim: null,
   },
   qPeriods: {
@@ -141,7 +145,7 @@ export const COPY = {
   },
   cqsSum: { text: "The score is the sum of each measure's percentile times its weight, from zero to {max}.", claim: 'TEAM-74' },
   cqsAdjust: {
-    text: "CMS then adjusts the hospital's reconciliation amount by the score. A gain gives up as much as {gain} of itself: all {gain} at a score of zero, none at {max}, in a straight line between. A repayment shrinks by as much as {lossB} in Track {tb} and {lossC} in Track {tc}: not at all at zero, by the whole amount at {max}.",
+    text: "CMS then adjusts the hospital's reconciliation amount by the score. A gain gives up as much as {gain} of itself: all {gain} at a score of zero, none at {max}, in a straight line between. A repayment shrinks with the score: not at all at zero, and by the full {lossB} (Track {tb}) or {lossC} (Track {tc}) at a score of {max}, in a straight line between.",
     claim: ['TEAM-74', 'TEAM-15'],
   },
   cqsSource: { text: "CMS's {sheet} gives the formula with worked examples.", claim: null },
@@ -153,9 +157,13 @@ export const COPY = {
     text: "The calculator draws its result {band} of target either way by default, and you can set it from {lo} to {hi}. The band is this site's choice, not a rule.",
     claim: null,
   },
-  bandCount: {
-    text: "Why {band}: this site's own count from {file}, which sets each hospital's final reconciliation amount per episode, in each of CJR's full-risk performance years, against CJR's average target price for that year. In those years, {share} of hospitals ended a year within {within} of their target, and about {wideShare} within {wideWithin}.",
+  bandWhy: {
+    text: "Why {band}: in the full-risk years of Medicare's joint-replacement bundle (CJR), most hospitals ended a year near their target, some under it and some over, in this site's reading of {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
     claim: null,
+  },
+  bandExtremes: {
+    text: "The extremes ran farther, past {limit} either way, which is where Track {tc}'s limits would stop a TEAM hospital's result.",
+    claim: 'TEAM-14',
   },
   bandFile: { text: "CMS's CJR final reconciliation file", claim: null },
   bandBpci: {

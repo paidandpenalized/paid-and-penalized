@@ -10,3 +10,15 @@ export function methodsFacts(team) {
     noEpisodes: active.filter((p) => cats(p).every((c) => c.n === 0)).length,
   };
 }
+
+// How many hospitals carry each status reason (the TEAM file's status: { ccn: [code, arg] }), a CJR-X hospital counted
+// by the reason its status wraps (or `ended`), so a count of hospitals in an area but not listed takes in those CJR-X
+// covers too. Pure.
+export function reasonCounts(status) {
+  const out = {};
+  for (const [code, arg] of Object.values(status)) {
+    const reason = code === 'cjrx' ? arg[0] : code;
+    out[reason] = (out[reason] ?? 0) + 1;
+  }
+  return out;
+}

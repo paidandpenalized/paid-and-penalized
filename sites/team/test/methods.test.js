@@ -15,14 +15,14 @@ import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES } from '../../../engine/js
 import { count, decimal, isoDate, money, ordinal, pct } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import {
-  BASELINE_YEARS, CITES, CJR_BAND, CQS_CAPS, CQS_SCALE, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME, MEASURES, MISSING_QUALITY, OUTLIER_PERCENTILE,
+  BASELINE_YEARS, CITES, CQS_CAPS, CQS_SCALE, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME, MEASURES, MISSING_QUALITY, OUTLIER_PERCENTILE,
   PY2_PERIODS, PY2_START, RECON_MONTHS, ERROR_DAYS, SUPPRESSED_MAX, TARGET_CAPS, TRACKS, DEFAULT_TRACK, yearOf,
 } from '../web/constants.js';
 import { loadSharedSources, loadSources, loadTeam } from '../web/data.js';
 import { SOURCE_LINKS } from '../web/links.js';
 import { HASH_NAME, METHODS_CITES } from '../web/methods/cites.js';
 import { COPY } from '../web/methods/copy.js';
-import { methodsFacts } from '../web/methods/facts.js';
+import { methodsFacts, reasonCounts } from '../web/methods/facts.js';
 import { methodsPage } from '../web/pages/methods.js';
 import { PY2_NUMBER } from '../web/pages/parts.js';
 
@@ -38,6 +38,9 @@ const sectionMarkup = (id) => {
   return m[0];
 };
 const sectionOf = (id) => words(sectionMarkup(id));
+// Each hospital's reason, counted here on its own: the status code, or for a CJR-X hospital the code it wraps.
+const reasonOf = ([code, arg]) => (code === 'cjrx' ? arg[0] : code);
+const reasonCount = (code) => Object.values(team.status).filter((s) => reasonOf(s) === code).length;
 const IDS = ['sources', 'episodes', 'low-volume', 'prices', 'quality', 'cqs', 'band', 'moves', 'left-out', 'unknowns', 'area', 'other', 'code'];
 
 test('the sections, in order, each with its heading, beside a contents list that links each', () => {
@@ -63,7 +66,6 @@ const digitRuns = (text) => text.match(/\d+(?:[.,]\d+)*/g) ?? [];
 test('every Methods number is from data or a constant', () => {
   const m = team.method;
   const facts = methodsFacts(team);
-  const status = Object.values(team.status).map(([code]) => code);
   const manifestDates = sources.flatMap((e) => [e.asOf, e.pdcReleased, e.pdcModified, e.datasetModified, e.derivedFrom?.lastModified, e.retrieved]).filter(Boolean).map(isoDate);
   const shown = [
     ...team.meta.mupYears.map(String), yearOf(PY2_START), PY2_NUMBER, String(team.fy), String(team.methods_version),
@@ -72,11 +74,11 @@ test('every Methods number is from data or a constant', () => {
     ...Object.values(PY2_PERIODS).flatMap(({ start, end }) => [isoDate(start), isoDate(end)]), FALLS_PRF_CFR_YEAR,
     ...Object.values(TARGET_CAPS).map((x) => pct(x, 0)), ...Object.values(CQS_CAPS).flatMap((c) => [pct(c.gain, 0), pct(c.loss, 0)]),
     ...Object.keys(TRACKS), String(DEFAULT_TRACK), String(MISSING_QUALITY), String(RECON_MONTHS), String(ERROR_DAYS),
-    pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0), pct(CJR_BAND.within, 0), pct(CJR_BAND.wideWithin, 0),
+    pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0),
     money(EXAMPLE.target), pct(-EXAMPLE.spend, 0), String(EXAMPLE.cqs), String(EXAMPLE.track),
     ...Object.entries(m.remaps).flatMap(([from, to]) => [from, ...Object.entries(to).flatMap(([d, share]) => [d, pct(share, 0)])]),
     ...Object.values(m.areaCheck).map(count), count(team.counts.selectedAreas),
-    count(status.filter((c) => c === 'area_unknown').length), count(status.filter((c) => c === 'unlisted').length),
+    count(reasonCount('area_unknown')), count(reasonCount('unlisted')),
     count(facts.active), count(facts.noEpisodes),
     ...manifestDates, ...sources.map((e) => e.title), ...sources.map((e) => e.delineated).filter(Boolean),
     CITES.subpart, HASH_NAME, // a citation in a sentence, and the hash's name
@@ -137,6 +139,8 @@ test('the episode floor (C16): hidden cells under the file\'s cut-off, no outpat
 
 test('low volume: the rule, the approximation (two public years times the file\'s scale against the threshold), and its scope', () => {
   const s = sectionOf('low-volume');
+  // The tick leans toward low volume (hidden cells count as none): the reader unticks it from CMS's baseline data.
+  assert.ok(s.includes(`so it leans toward low volume. Untick a category when the baseline data CMS sends the hospital shows ${LOW_VOLUME} or more episodes`));
   const [from, to] = team.meta.mupYears;
   assert.ok(s.includes(`fewer than ${LOW_VOLUME} episodes`));
   assert.ok(s.includes(`${from} and ${to}, multiplies the sum by ${decimal(team.method.baselineScale, 1)}`));
@@ -155,6 +159,7 @@ test('quality: CMS\'s cohort and this site\'s, the cohort sizes and periods from
     assert.ok(s.includes(`${isoDate(start)} to ${isoDate(end)}`), 'a period');
   }
   assert.ok(s.includes(`counts at ${MISSING_QUALITY}`));
+  assert.match(s, /outside Maryland and other than Indian Health Service and tribal hospitals/, 'the cohort the file\'s sizes count');
   assert.equal(Object.values(MEASURES).filter((x) => x.public).length, 2);
 });
 
@@ -162,15 +167,22 @@ test('the composite score: the weights, the sum, the adjustment with each track\
   const s = sectionOf('cqs');
   assert.ok(s.includes(`from zero to ${CQS_SCALE}`));
   assert.ok(s.includes(`gives up as much as ${pct(CQS_CAPS[1].gain, 0)} of itself`));
-  assert.ok(s.includes(`as much as ${pct(CQS_CAPS[2].loss, 0)} in Track 2 and ${pct(CQS_CAPS[3].loss, 0)} in Track 3`));
+  // The repayment's cap at the top score, each track's own (never "the whole amount", which reads as all of it).
+  assert.ok(s.includes(`by the full ${pct(CQS_CAPS[2].loss, 0)} (Track 2) or ${pct(CQS_CAPS[3].loss, 0)} (Track 3) at a score of ${CQS_SCALE}, in a straight line between`));
+  assert.doesNotMatch(s, /whole amount/);
   assert.ok(sectionMarkup('cqs').includes(`href="${SOURCE_LINKS.qualityScoring}"`));
 });
 
-test('the band (#band, the calculator\'s "why?"): this site\'s own count, linked to CMS\'s CJR file, BPCI Advanced beside it, Track 2\'s limit', () => {
+test('the band (#band, the calculator\'s "why?"): CJR\'s spread in words, linked to CMS\'s CJR file, BPCI Advanced beside it, the extremes past Track 3\'s limits, Track 2\'s limit', () => {
   const s = sectionOf('band');
   const m = sectionMarkup('band');
-  assert.ok(s.includes('In those years, about half of hospitals ended a year within 5% of their target, and about three-quarters within 10%.'));
-  assert.match(s, /this site’s own count/);
+  // No figure of this site's own counting (a hand-typed statistic): the band's only numbers are the band's, the
+  // tracks' limits and the categories' count.
+  const allowed = new Set([pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0), pct(TRACKS[3].gain, 0), ...Object.keys(TRACKS)].flatMap(digitRuns));
+  assert.deepEqual(digitRuns(words(m.replace(/<span class="tm-cite">[^<]*<\/span>/g, ''))).filter((n) => !allowed.has(n)), [], 'numbers in #band (citations aside)');
+  assert.match(s, /most hospitals ended a year near their target/);
+  assert.match(s, /the same under as over/);
+  assert.ok(s.includes(`past ${pct(TRACKS[3].gain, 0)} either way, which is where Track 3’s limits`));
   assert.ok(m.includes(`href="${SOURCE_LINKS.cjrRecon}"`));
   assert.ok(m.includes(`href="${SOURCE_LINKS.bpciEval}"`));
   assert.equal(BAND_DEFAULT === TRACKS[2].gain && BAND_DEFAULT === TRACKS[2].loss, s.includes('Track 2’s limit on a gain and on a repayment'));
@@ -208,9 +220,10 @@ test('the area test: the delineation decides, the list-CBSA check\'s counts, are
   assert.ok(s.includes(`${count(mandatory)} mandatory participants`) && s.includes(`places ${count(placed)} of them`));
   assert.equal(mismatched === 0, s.includes('every one of those counties'));
   assert.match(s, /follows it for nearly every county but not all, so the delineation decides/);
-  const n = (code) => count(Object.values(team.status).filter(([c]) => c === code).length);
-  assert.ok(s.includes(`Area unknown: ${n('area_unknown')} hospitals`));
-  assert.ok(s.includes(`In an area, not on the list: ${n('unlisted')} acute hospitals`));
+  // Each count takes in the hospitals CJR-X's status wraps: the file has some of each inside it.
+  assert.ok(Object.values(team.status).some(([c, arg]) => c === 'cjrx' && arg[0] === 'unlisted'), 'an unlisted hospital inside a CJR-X status');
+  assert.ok(s.includes(`Area unknown: ${count(reasonCount('area_unknown'))} hospitals`));
+  assert.ok(s.includes(`In an area, not on the list: ${count(reasonCount('unlisted'))} acute hospitals`));
 });
 
 test('the sources: every pin the TEAM file names, by title, publisher, date and link, TEAM\'s own first; each hash\'s start is the manifest\'s', () => {
@@ -239,4 +252,21 @@ test('methodsFacts counts the participants still in TEAM and those of them with 
   ] };
   assert.deepEqual(methodsFacts(synth), { active: 2, noEpisodes: 1 });
   assert.equal(CATEGORIES.length, 5);
+});
+
+test('reasonCounts counts each reason a hospital is off the list, a CJR-X hospital by the reason its status wraps', () => {
+  const status = {
+    990001: ['unlisted', null], 990002: ['cjrx', ['unlisted', null]], 990003: ['cjrx', ['area_unknown', null]],
+    990004: ['area_unknown', null], 990005: ['cjrx', ['ended', '2026-02-01']], 990006: ['in', 'mandatory'],
+  };
+  const n = reasonCounts(status);
+  assert.equal(n.unlisted, 2);
+  assert.equal(n.area_unknown, 2);
+  assert.equal(n.ended, 1);
+  assert.equal(n.in, 1);
+  assert.equal(n.cjrx, undefined, 'CJR-X is never a reason of its own');
+  // The file's own: every hospital counted once, by the reason a recount here finds.
+  const all = reasonCounts(team.status);
+  assert.equal(Object.values(all).reduce((a, b) => a + b, 0), Object.keys(team.status).length);
+  for (const code of ['unlisted', 'area_unknown', 'outside', 'ihs']) assert.equal(all[code] ?? 0, reasonCount(code), code);
 });

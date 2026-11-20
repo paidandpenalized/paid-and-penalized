@@ -12,7 +12,7 @@ export const COPY = {
     claim: 'TEAM-26',
   },
   noteFlagsMdh: {
-    text: "Medicare's hospital list marks it {kinds}, so it may be eligible for Track {tb}; safety-net status isn't public, and the Medicare-dependent route holds only while that program hasn't expired when selections are due.",
+    text: "Medicare's hospital list marks it {kinds}, so it may be eligible for Track {tb}; safety-net status isn't public; the Medicare-dependent route counts only if that program is still in effect when CMS asks hospitals to pick a track.",
     claim: 'TEAM-26',
   },
   flagSCH: { text: 'a sole community hospital', claim: null },

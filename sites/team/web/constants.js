@@ -3,10 +3,10 @@
 // constant named here. The method constants are the engine's (engine/js/team/params.js), re-exported so the gate sees
 // them; the band's constants are this site's own choices, not rules, so they are not here. The dates below are rules of
 // CMS's, dated and sourced in the register.
-import { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, TRACKS } from '../../../engine/js/team/params.js';
+import { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, SUPPRESSED_MAX, TRACKS } from '../../../engine/js/team/params.js';
 
-// PY2_START and DEFAULT_TRACK are the engine's (the hub's TEAM section reads them too); their claims are below.
-export { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, TRACKS };
+// PY2_START, DEFAULT_TRACK and SUPPRESSED_MAX are the engine's (the hub's TEAM section reads them too); their claims are below.
+export { CQS_CAPS, DEFAULT_TRACK, EPISODE_DAYS, LOW_VOLUME, MEASURES, MISSING_QUALITY, PY2_START, SUPPRESSED_MAX, TRACKS };
 export const CLAIM_PREFIX = 'TEAM';
 export const METHOD_CONSTANTS = Object.freeze({ TRACKS: 'object', CQS_CAPS: 'object', LOW_VOLUME: 'number', EPISODE_DAYS: 'number', MISSING_QUALITY: 'number', MEASURES: 'object' });
 
@@ -73,11 +73,8 @@ export const CITES = Object.freeze({
   cqs: `${CFR} 512.547(b)`,
 });
 
-// This site's own count, not a CMS rule (no claim): in CJR's full-risk performance years, about `share` of hospitals ended
-// a year within `within` of their target, and about `wideShare` within `wideWithin`, counted from CMS's CJR final
-// reconciliation file (SOURCE_LINKS.cjrRecon). The calculator's band "why?" says the first; Methods (BAND_ANCHOR) gives
-// both and how they were counted.
-export const CJR_BAND = Object.freeze({ share: 0.5, within: 0.05, wideShare: 0.75, wideWithin: 0.10 });
+// Methods' section on the calculator's band, which the band's "why?" links: why the default is what it is, in words (the
+// spread of CJR's and BPCI Advanced's results), with no figure of this site's own counting.
 export const BAND_ANCHOR = 'band';
 
 // The rules' and CMS's other numbers the Methods page states (each with its claim below):
@@ -89,7 +86,8 @@ export const BAND_ANCHOR = 'band';
 //   PY2_PERIODS        performance year 2's measurement periods for the two measures the site prefills (§ 512.547(a)(2))
 //   FALLS_PRF_CFR_YEAR the calendar year the eCFR's text still gives as performance year 2's baseline for the falls and
 //                      respiratory failure measures (§ 512.547(a)(2)(ii)–(iii)); CMS's own table gives PY2_START's year
-//   SUPPRESSED_MAX     CMS's Medicare inpatient file leaves out any hospital-DRG row from this many discharges or fewer
+//   SUPPRESSED_MAX     CMS's Medicare inpatient file leaves out any hospital-DRG row from this many discharges or fewer: the
+//                      engine's (engine/js/team/params.js), since the hub's TEAM section says it too
 //   CQS_SCALE          the composite quality score's top (it runs from zero to this)
 export const BASELINE_YEARS = 3;
 export const TARGET_CAPS = Object.freeze({ trend: 0.03, normalization: 0.05 });
@@ -99,7 +97,6 @@ export const PY2_PERIODS = Object.freeze({
   iscmr: Object.freeze({ start: '2024-07-01', end: '2026-06-30' }),
 });
 export const FALLS_PRF_CFR_YEAR = '2026';
-export const SUPPRESSED_MAX = 10;
 export const CQS_SCALE = 100;
 
 export const CLAIMS = Object.freeze({

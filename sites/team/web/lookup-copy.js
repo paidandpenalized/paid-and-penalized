@@ -19,9 +19,9 @@ export const COPY = {
     text: 'A Maryland hospital. Maryland hospitals aren\'t paid under the inpatient system TEAM uses, and CMS left out areas lying wholly in Maryland. Not in TEAM.',
     claim: ['TEAM-01', 'TEAM-03', 'TEAM-04'],
   },
-  outside: { text: 'Not in an area CMS selected for TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
+  outside: { text: 'Not in an area with a hospital CMS requires to take part in TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
   // The same, led by the hospital's kind, for a kind other than acute care (the kind is the hospital list's, not a rule).
-  outsideKind: { text: '{kind}, outside the areas CMS selected for TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
+  outsideKind: { text: '{kind}, not in an area with a hospital CMS requires to take part in TEAM, so not in TEAM. CMS chose the areas by random sampling.', claim: ['TEAM-01', 'TEAM-02'] },
   inAreaKind: {
     text: '{kind}. In a TEAM area, but a hospital of this kind isn\'t paid under the inpatient system TEAM uses, so not in TEAM.',
     claim: ['TEAM-01', 'TEAM-11'],
@@ -29,7 +29,7 @@ export const COPY = {
   ihs: { text: 'An Indian Health Service or tribal hospital in a TEAM area. It isn\'t on CMS\'s list of TEAM participants.', claim: 'TEAM-09' },
   inAreaListed: { text: 'In a TEAM area, but not on CMS\'s list of TEAM participants.', claim: 'TEAM-09' },
   unlisted: {
-    text: 'In a TEAM area and paid under the inpatient system, but not on CMS\'s list of participants. CMS updates the list each quarter, and a new hospital must take part from the start of the performance year after one full performance year.',
+    text: 'In a TEAM area and paid under the inpatient system, but not on CMS\'s list of participants. CMS updates the list each quarter, and a hospital new to an area takes part from the start of the performance year after its first full one.',
     claim: ['TEAM-01', 'TEAM-08', 'TEAM-09'],
   },
   areaUnknown: { text: 'Not on CMS\'s list of TEAM participants. We couldn\'t place its county in or out of a TEAM area.', claim: 'TEAM-09' },

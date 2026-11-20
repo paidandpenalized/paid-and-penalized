@@ -37,8 +37,8 @@ export const COPY = {
   // Part 1, who's in: the line over the title, the dek, the button to the calculator, the record card.
   kicker: { text: 'Medicare · mandatory model · {from} to {to}', claim: ['TEAM-02', 'TEAM-20'] },
   dek: {
-    text: "Medicare's mandatory payment model for surgical episodes. For {n} kinds of surgery, CMS sets each hospital target prices that cover the stay and the {days} days after it. From {date}, a hospital in Track {track} pays Medicare back what its episodes cost over target, and is paid what they come in under, up to {limit} of its yearly target either way.",
-    claim: ['TEAM-02', 'TEAM-21', 'TEAM-19', 'TEAM-24', 'TEAM-14'],
+    text: "Medicare's mandatory payment model for surgical episodes. For {n} kinds of surgery, CMS sets each hospital target prices that cover the stay and the {days} days after it. From {date}, a hospital in Track {track} pays Medicare back what its episodes cost over target, and is paid what they come in under, adjusted for quality, up to {limit} of its yearly target either way.",
+    claim: ['TEAM-02', 'TEAM-21', 'TEAM-19', 'TEAM-24', 'TEAM-15', 'TEAM-14'],
   },
   toCalc: { text: 'Go to the calculator', claim: null },
   cardTitle: { text: 'TEAM at a glance', claim: null },
@@ -219,6 +219,7 @@ export const COPY = {
   },
   calcBanner: { text: 'Reader-made scenario from a link, not CMS data.', claim: null },
   calcBannerLink: { text: 'Start from the public numbers', claim: null },
+  calcAway: { text: "The hospital you're following isn't in TEAM, so the calculator shows one that is. The lookup above says why.", claim: null },
   howSummary: { text: 'How each line works', claim: null },
   howEpisodes: {
     text: "Episodes: the hospital's Medicare inpatient discharges in {year} for each type, a floor. The public file hides an episode type with too few discharges at a hospital (a hidden cell), and it has no outpatient cases, which TEAM also counts for joint replacement and spinal fusion.",
@@ -233,22 +234,22 @@ export const COPY = {
     claim: 'TEAM-16',
   },
   howSpend: { text: 'Spending: type a percent on any row to set that row alone; the slider on line two moves the rest.', claim: null },
-  howQuality: { text: 'Line five: a gain keeps {keep} or more of itself, by quality score; a repayment shrinks by up to {cut} in Track {n}.', claim: 'TEAM-15' },
+  howQuality: { text: 'Line five: a gain keeps {keep} or more of itself, by quality score; a repayment shrinks by up to {cutB} in Track {tb} and {cutC} in Track {tc}.', claim: 'TEAM-15' },
   howLimits: { text: 'Line six: the track\'s limits, a share of line one.', claim: 'TEAM-14' },
   howPost: {
     text: "Line seven: only for a hospital whose spending after its episodes runs far above its region's, outside the limits. It needs CMS's own data, so it is zero here.",
     claim: 'TEAM-62',
   },
   qFoot: {
-    text: "A percentile is where the hospital's Care Compare value falls among every hospital the inpatient system pays that has one, lower values better: this site's arithmetic, near CMS's. CMS weights each measure by the hospital's episodes it covers, and scores a measure with no value at {missing}.",
+    text: "A percentile is where the hospital's Care Compare value falls among the values of the open hospitals the inpatient system pays, outside Maryland and other than Indian Health Service and tribal ones; lower values are better. This site's arithmetic, near CMS's. CMS weights each measure by the hospital's episodes it covers, and scores a measure with no value at {missing}.",
     claim: ['TEAM-61', 'TEAM-17'],
   },
   whySummary: { text: 'why?', claim: null },
   whyText: {
-    text: "In this site's count from CMS's CJR reconciliation file, {share} of hospitals ended a full-risk year within {band} of target; {methods}. Set the band from {lo} to {hi}.",
+    text: "The {band} default follows the spread of results hospitals had in Medicare's joint-replacement bundle (CJR) and in BPCI Advanced; {methods}. Set the band from {lo} to {hi}.",
     claim: null,
   },
-  whyMethods: { text: 'how it was counted is in Methods', claim: null },
+  whyMethods: { text: 'Methods explains it', claim: null },
 
   // Part 6, what a hospital has to do: the checklist by phase, beside Figure 5, TEAM's clock.
   doHeading: { text: 'Before, during and after the year', claim: null },
@@ -340,7 +341,7 @@ export const COPY = {
 
   // After Part 7: CJR-X, and the close (Methods, the as-of line).
   cjrx: {
-    text: "From {date}, CJR\u2011X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows them.",
+    text: "From {date}, CJR\u2011X, Medicare's nationwide joint-replacement model, makes hip, knee and ankle replacements a {days}-day episode for hospitals paid under both of Medicare's hospital payment systems that aren't in TEAM or in Maryland. CMS's list names {n}. The lookup above shows each one on Medicare's hospital list.",
     claim: ['TEAM-12', 'TEAM-55', 'TEAM-13'],
   },
   nextHeading: { text: 'Next: CJR\u2011X', claim: null },
