@@ -20,7 +20,7 @@ import { html } from '../render/html.js';
 import { evenSteps, STEPS } from './evenSteps.js';
 import { WIDE } from './figure.js';
 import { stateShapes, usMesh, usPaths } from './geo.js';
-import { frame, isNarrow, mark, r2, text } from './svg.js';
+import { frame, isNarrow, mark, monoWidth, r2, text } from './svg.js';
 
 // A label's chip (the paper under its lines, so it reads on any step in either theme): this far past its words, and wide
 // enough for a price of CHIP_PRICE characters, so a page script that writes a longer price than the build's (another
@@ -28,9 +28,8 @@ import { frame, isNarrow, mark, r2, text } from './svg.js';
 const CHIP_PAD = 2;
 const CHIP_PRICE = 8;
 // The labels' type sizes, in viewBox units, set on each label (the site's sheet sets the face): the value in bold over the
-// name, a size smaller. The face is monospaced, so a line's width is its length times ADVANCE ems.
+// name, a size smaller. The face is monospaced (svg.js monoWidth).
 const TYPE = Object.freeze({ narrow: { price: 11, name: 9, gap: 2 }, wide: { price: 12, name: 10, gap: 2 } });
-const ADVANCE = 0.6;
 // A name longer than this many characters takes two lines on a phone (split at its last space: "East North" / "Central").
 const NARROW_NAME = 12;
 // Labels moved off their division's middle, in viewBox units, where the middle is crowded: New England's set against the
@@ -55,7 +54,6 @@ const GEOMETRY = WIDE;
 // states).
 const INSETS = new Set(['AK', 'HI']);
 
-const widthOf = (s, size) => s.length * size * ADVANCE;
 const nameLines = (name, split) => (split && name.length > NARROW_NAME ? [name.slice(0, name.lastIndexOf(' ')), name.slice(name.lastIndexOf(' ') + 1)] : [name]);
 
 function checked(values, reader) {
@@ -103,11 +101,11 @@ export function divisionLabels({ topo, width, name, priceText }) {
       y += type.gap;
       return out;
     });
-    const wide = Math.max(...lines.map((l) => widthOf(l.text, l.size)));
+    const wide = Math.max(...lines.map((l) => monoWidth(l.text, l.size)));
     const x0 = edge ? x - wide : x - wide / 2;
     const [y0, y1] = [my + dy - tall / 2, my + dy + tall / 2];
     // The chip under the block: CHIP_PAD past its words, and at least a CHIP_PRICE-character price wide.
-    const chipWide = Math.max(wide, widthOf('0'.repeat(CHIP_PRICE), type.price));
+    const chipWide = Math.max(wide, monoWidth('0'.repeat(CHIP_PRICE), type.price));
     const cx0 = (edge ? x0 + wide - chipWide : x0 + wide / 2 - chipWide / 2) - CHIP_PAD;
     const chip = { x0: cx0, x1: cx0 + chipWide + 2 * CHIP_PAD, y0: y0 - CHIP_PAD, y1: y1 + CHIP_PAD };
     return { div, x, anchor, lines, x0, x1: x0 + wide, y0, y1, chip };

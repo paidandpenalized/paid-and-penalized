@@ -16,13 +16,13 @@
 // in whole dollars (the words give each amount; the marks only pair with a table): limitRulerValues lists the four, for
 // the figure's table.
 import { html } from '../render/html.js';
-import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, r2, text } from './svg.js';
+import { checkId, frame, hatchDefs, hatchFill, isNarrow, mark, monoWidth, r2, text } from './svg.js';
 
 // The axis runs this far past the larger limit either way, so each wall has room to read as a wall.
 const WALL = 1.2;
 const SIDE = 4;
-// The tick type's advance (11-unit IBM Plex Mono: 0.6 em a character), to keep two labels on one row apart.
-const CHAR = 6.6;
+// The type size the labels' widths are estimated at (svg.js monoWidth), to keep two labels on one row apart.
+const TYPE = 11;
 const EPS = 0.5;
 // A mark's value: whole dollars, never -0.
 const dollars = (v) => Math.round(v) + 0;
@@ -66,9 +66,9 @@ export function limitRuler({ id, low, high, limits, words, width }) {
   // The range's ends over the bar, each set outward from its end (so the two never meet), kept inside the frame; $0 over
   // its tick where it clears them both.
   const [lowText, highText, zeroText] = [words.money(low), words.money(high), words.money(0)];
-  const lowRight = Math.max(x(low) - 2, lowText.length * CHAR + SIDE);
-  const highLeft = Math.min(x(high) + 2, width - SIDE - highText.length * CHAR);
-  const zeroHalf = (zeroText.length * CHAR) / 2;
+  const lowRight = Math.max(x(low) - 2, monoWidth(lowText, TYPE) + SIDE);
+  const highLeft = Math.min(x(high) + 2, width - SIDE - monoWidth(highText, TYPE));
+  const zeroHalf = monoWidth(zeroText, TYPE) / 2;
   const zeroClear = low === 0 || high === 0 ? false : lowRight + 3 < x0 - zeroHalf && x0 + zeroHalf < highLeft - 3;
   const values = html`${text({ x: lowRight, y: valueY, anchor: 'end', cls: 'chart-value chart-ruler__end', body: lowText })}${text({ x: highLeft, y: valueY, anchor: 'start', cls: 'chart-value chart-ruler__end', body: highText })}${zeroClear ? text({ x: x0, y: valueY, cls: 'chart-tick', body: zeroText }) : ''}`;
 
