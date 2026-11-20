@@ -19,7 +19,7 @@ import { BAND_DEFAULT, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLV
 import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, isoDate, money, moneyShown, moneyTick, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
+import { count, isoDate, money, moneyShown, moneyTick, pct, placeText, roundedDollars, signedMoney as signed, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
 import { flagsNote } from '../../../web/team/copy.js';
 import { engineInput, inputsOf } from '../../../web/team/opening.js';
@@ -29,7 +29,6 @@ import { tight } from './tight.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
 const TRACK_NUMBERS = Object.keys(TRACKS).map(Number);
-const signed = (x) => money(x, { sign: true });
 // A percent the reader set (5 is 5%), at one decimal only when it has one: "0%", "+2.5%", "−3%".
 const pctOf = (p, { sign = true } = {}) => pct(p / 100, Number.isInteger(Math.round(p * 10) / 10) ? 0 : 1, { sign });
 // A share as "4.5%", unsigned (the solver's answers say under or over in words).

@@ -5,7 +5,7 @@ import { BAND_DEFAULT } from '../../../../engine/js/team/params.js';
 import { reconcile, resultAt } from '../../../../engine/js/team/reconcile.js';
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { payoff, payoffPoints } from '../../../../web/charts/payoff.js';
-import { money, moneyTick, pct } from '../../../../web/render/format.js';
+import { money, moneyTick, pct, signedMoney as signed } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { CITES, EPISODE_DAYS, EXAMPLE, PAYOFF } from '../constants.js';
 import { fill, t } from '../copy.js';
@@ -13,7 +13,6 @@ import { cited, partOf } from '../pages/parts.js';
 
 // The example as the engine takes it: one category holding the whole year.
 const INPUT = Object.freeze({ cats: [{ key: 'ALL', target: EXAMPLE.target, spend: EXAMPLE.spend, lowVolume: false }], cqs: EXAMPLE.cqs, track: EXAMPLE.track });
-const signed = (x) => money(x, { sign: true });
 // A spending level's label: "on target", or the share over (+) or under (−) it.
 const spendLabel = (s) => (s === 0 ? t('payoffOn') : pct(s, 0, { sign: true }));
 

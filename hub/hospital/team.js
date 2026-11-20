@@ -24,7 +24,7 @@ import { PY2_START, TRACKS } from '../../engine/js/team/params.js';
 import { drawn, imagePair } from '../../web/charts/figure.js';
 import { limitRuler } from '../../web/charts/limitRuler.js';
 import { fillCopy, stamp } from '../../web/render/components.js';
-import { count, isoMonth, money, pct, shortIsoDate } from '../../web/render/format.js';
+import { count, isoMonth, money, pct, shortIsoDate, signedMoney as signed } from '../../web/render/format.js';
 import { html } from '../../web/render/html.js';
 import { SITE } from '../../web/site.js';
 import { calcRow, hospOf } from '../../web/team/calc-data.js';
@@ -34,7 +34,6 @@ import { arrow } from '../parts.js';
 import { COPY } from './copy.js';
 
 const fill = (key, values) => fillCopy(COPY, key, values);
-const signed = (x) => money(x, { sign: true });
 
 // The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it.
 export function teamScenario(p) {
