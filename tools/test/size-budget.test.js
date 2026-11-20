@@ -202,8 +202,10 @@ test('pageWeight: measured at brotli quality 5, the quality the budgets were set
 
 test('the work requirement\'s data files: each kind has a budget; a file is weighed at quality 5 against its kind\'s; a new kind throws', () =>
   withTemp('size-', (dir) => {
-    assert.deepEqual(Object.keys(JSON_BUDGETS).sort(), ['wr-base', 'wr-both', 'wr-hosp', 'wr-states', 'wr-strips']);
+    assert.deepEqual(Object.keys(JSON_BUDGETS).sort(), ['team-calc', 'team-lookup', 'wr-base', 'wr-both', 'wr-hosp', 'wr-states', 'wr-strips']);
     assert.deepEqual(['wr-strips.0123abcd.json', 'wr-hosp-ca.0123abcd.json', 'wr-page.0123abcd.js', 'hub-hospitals.0123abcd.json', 'wr-states.json'].map(jsonKind), ['wr-strips', 'wr-hosp', null, null, null]);
+    // TEAM's two data files, fetched on the reader's first move: each a kind with its budget; its page script is no data file.
+    assert.deepEqual(['team-calc.0123abcd.json', 'team-lookup.89abcdef.json', 'team-page.0123abcd.js', 'team-new.0123abcd.json'].map(jsonKind), ['team-calc', 'team-lookup', null, 'team-new']);
     assert.deepEqual(measureJson(dir), [], 'a build with no assets folder has no data files');
     const small = JSON.stringify({ a: noise(1000) });
     const big = noise(45 * 1024);
@@ -211,6 +213,8 @@ test('the work requirement\'s data files: each kind has a budget; a file is weig
     const rows = measureJson(dir);
     assert.deepEqual(rows, [{ file: 'wr-both.89abcdef.json', kind: 'wr-both', bytes: br(big) }, { file: 'wr-states.0123abcd.json', kind: 'wr-states', bytes: br(small) }]);
     assert.deepEqual(jsonOverBudget(rows).map((r) => [r.file, r.budget]), [['wr-both.89abcdef.json', JSON_BUDGETS['wr-both']]], 'random text past 40 KB is over wr-both\'s budget');
+    writeTree(dir, { 'assets/team-calc.0123abcd.json': big });
+    assert.deepEqual(jsonOverBudget(measureJson(dir)).map((r) => r.file), ['team-calc.0123abcd.json', 'wr-both.89abcdef.json'], 'random text past 30 KB is over team-calc\'s budget');
     writeTree(dir, { 'assets/wr-new.0123abcd.json': small });
     assert.throws(() => measureJson(dir), /a new kind needs one/);
   }));

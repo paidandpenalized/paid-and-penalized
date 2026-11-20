@@ -1,5 +1,5 @@
-// CI size budget: no page may weigh more than its page type's budget, and no work-requirement data file more than its
-// kind's (JSON_BUDGETS, below). A page's weight is what a first visit loads,
+// CI size budget: no page may weigh more than its page type's budget, and no work-requirement or TEAM data file more than
+// its kind's (JSON_BUDGETS, below). A page's weight is what a first visit loads,
 // brotli-compressed at quality 5: the page's HTML (its inline data scripts included), each stylesheet it links and
 // each script it loads (module or not), every file counted once per page. Not counted: fonts (already compressed
 // WOFF2), the favicon, and the JSON data files that scripts fetch later. Two more limits on every page: its scripts
@@ -86,18 +86,23 @@ export const PROGRAM_BUDGETS = {
 // the heaviest file of each kind + 15%, rounded up to the next 10 KB, after steps 3 and 5 moved into files of their own:
 // wr-strips 109.8 KB (step 1's, fetched with the page), wr-states 11.1 KB and wr-both 29.0 KB (fetched as their step
 // nears), wr-base 117.3 KB (the what-if's, fetched as the reader reaches for the slider), wr-hosp 23.1 KB (California's).
-// A new kind of wr- file needs a budget here.
+// TEAM's two data files, fetched on the reader's first move (the lookup's on its box's first focus, the calculator's on a
+// move to another hospital), set 2026-11-19 by the same rule: team-calc 21.3 KB (every participant's row, its prices
+// unrounded) + 15% (24.5 KB), rounded up to 30 KB; team-lookup 15.0 KB + 15% (17.3 KB), rounded up to 20 KB.
+// A new kind of wr- or team- file needs a budget here.
 export const JSON_BUDGETS = {
   'wr-strips': 130 * KB,
   'wr-states': 20 * KB,
   'wr-both': 40 * KB,
   'wr-base': 140 * KB,
   'wr-hosp': 30 * KB,
+  'team-calc': 30 * KB,
+  'team-lookup': 20 * KB,
 };
-// A built data file's kind (wr-strips.0123abcd.json: 'wr-strips'; wr-hosp-ca.0123abcd.json: 'wr-hosp'), or null for a
-// file that is not a work-requirement data file.
+// A built data file's kind (wr-strips.0123abcd.json: 'wr-strips'; wr-hosp-ca.0123abcd.json: 'wr-hosp';
+// team-calc.0123abcd.json: 'team-calc'), or null for a file that is not a work-requirement or TEAM data file.
 export function jsonKind(file) {
-  const m = /^(wr-[a-z0-9-]+?)\.[0-9a-f]{8}\.json$/.exec(file);
+  const m = /^((?:wr|team)-[a-z0-9-]+?)\.[0-9a-f]{8}\.json$/.exec(file);
   if (!m) return null;
   return /^wr-hosp-[a-z]{2}$/.test(m[1]) ? 'wr-hosp' : m[1];
 }
