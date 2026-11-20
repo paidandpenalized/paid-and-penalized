@@ -62,7 +62,6 @@ export const COPY = {
   colLv: { text: '<{lv}', claim: null },
   colLvFull: { text: 'Fewer than {lv} episodes in the baseline years: the type can\'t add to a repayment', claim: 'TEAM-16' },
   colTarget: { text: 'Target', claim: null },
-  colResult: { text: 'before quality', claim: null },
   // A phone's labels for a row's low-volume box and its two results, where the table's head is hidden.
   colLvPhone: { text: 'Fewer than {lv} baseline episodes', claim: 'TEAM-16' },
   colResultPhone: { text: 'Before quality', claim: null },

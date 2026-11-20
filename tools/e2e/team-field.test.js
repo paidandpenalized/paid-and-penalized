@@ -1,7 +1,8 @@
 // The TEAM pages against the field's bar, in a real browser: the calculator's "Copy for a slide"; a Windows contrast
 // theme (forced colors) on the program page and a participant's hub page; a larger default font (20px and 24px, set as
-// the browser's own setting, so the pages' em breakpoints follow it) on a 320px phone and a 1280px laptop; and the
-// calculator's slider under a 4x CPU throttle. Runs against dist/ (make build) or any URL; see site.js. The participant
+// the browser's own setting, so the pages' em breakpoints follow it) on a 320px phone and a 1280px laptop, and 20px and
+// 22px on a 390px phone; the quality table opened on a 390px phone; and the calculator's slider under a 4x CPU
+// throttle. Runs against dist/ (make build) or any URL; see site.js. The participant
 // is picked by property; failures name elements by tag and class, never a hospital or a dollar figure.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -130,10 +131,13 @@ describe('the TEAM pages in a contrast theme (forced colors)', () => {
     for (const [mark, ok] of Object.entries(s)) assert.equal(ok, true, `${mark} visible under forced colors`);
     const cues = await page.evaluate(() => ({
       tag: getComputedStyle(document.querySelector('#calc [data-v="tag"]')).fontStyle,
+      tagLine: getComputedStyle(document.querySelector('#calc [data-v="tag"]')).textDecorationLine,
+      boxLine: getComputedStyle(document.querySelector('#calc .tc-src--mine')).textDecorationLine,
       on: getComputedStyle(document.querySelector('.tc-track__opt:has(input:checked)')).backgroundColor,
       off: getComputedStyle(document.querySelector('.tc-track__opt:not(:has(input:checked))')).backgroundColor,
     }));
     assert.equal(cues.tag, 'italic', '"your number" keeps a cue that is not color');
+    assert.ok(cues.tagLine.includes('underline') && cues.boxLine.includes('underline'), '"your number" underlined, a cue beyond italic');
     assert.notEqual(cues.on, cues.off, 'the chosen track stands apart from the others');
     await assertQuiet(seen, 'the TEAM program page in forced colors');
   }));
@@ -207,27 +211,82 @@ async function assertCalcUsable(page, what) {
 }
 
 const SCALED = [['the TEAM program page', PROGRAM_PATH], ['the TEAM Methods page', METHODS_PATH], ['a TEAM participant\'s hub page', HUB_PATH]];
-for (const px of [20, 24]) {
-  for (const width of [320, 1280]) {
-    describe(`the TEAM pages with a ${px}px default font at ${width} px`, { concurrency: CONCURRENCY }, () => {
-      const tabs = useContext(shared, { width, height: 900 });
-      for (const [what, path] of SCALED) {
-        it(`${what}: nothing clipped or run past its box, no sideways scroll${path === PROGRAM_PATH ? '; the calculator usable' : ''}`, (t) => {
-          if (ENGINE !== 'chromium') return t.skip(CHROMIUM_ONLY);
-          return withPage(tabs, { path, watched: true, prepare: fontSize(px) }, async (page, { seen }) => {
-            assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize), `${px}px`, 'the default font took');
-            const s = await clipping(page);
-            assert.deepEqual(s.clipped, [], `${what}: clipped`);
-            assert.deepEqual(s.spilled, [], `${what}: words past their box`);
-            await assertNoSideways(page, `${what} at ${px}px`);
-            if (path === PROGRAM_PATH) await assertCalcUsable(page, `the calculator at ${px}px`);
-            await assertQuiet(seen, `${what} at ${px}px`);
-          });
+// Each default font size with each width: the small phone and the laptop at 20px and 24px, and a common phone (390px)
+// at 20px and 22px, where the 18em large-text rules do not apply.
+const SCALES = [[20, 320], [20, 1280], [24, 320], [24, 1280], [20, 390], [22, 390]];
+for (const [px, width] of SCALES) {
+  describe(`the TEAM pages with a ${px}px default font at ${width} px`, { concurrency: CONCURRENCY }, () => {
+    const tabs = useContext(shared, { width, height: 900 });
+    for (const [what, path] of SCALED) {
+      it(`${what}: nothing clipped or run past its box, no sideways scroll${path === PROGRAM_PATH ? '; the calculator usable' : ''}`, (t) => {
+        if (ENGINE !== 'chromium') return t.skip(CHROMIUM_ONLY);
+        return withPage(tabs, { path, watched: true, prepare: fontSize(px) }, async (page, { seen }) => {
+          assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).fontSize), `${px}px`, 'the default font took');
+          const s = await clipping(page);
+          assert.deepEqual(s.clipped, [], `${what}: clipped`);
+          assert.deepEqual(s.spilled, [], `${what}: words past their box`);
+          await assertNoSideways(page, `${what} at ${px}px`);
+          if (path === PROGRAM_PATH) await assertCalcUsable(page, `the calculator at ${px}px`);
+          await assertQuiet(seen, `${what} at ${px}px`);
         });
-      }
-    });
-  }
+      });
+    }
+  });
 }
+
+// At a phone's width and the default font, "Quality score…" opened: its table stays in its own .tc-scroll frame, which
+// keeps to the calculator's column, and the page never scrolls sideways.
+describe('TEAM Part 5 at 390 px: the quality table opened', () => {
+  const tabs = useContext(shared, { width: 390, height: 844 });
+  it('the quality table held in its frame, the frame inside its column, no sideways scroll', () => withPage(tabs, { path: PROGRAM_PATH, watched: true }, async (page, { seen }) => {
+    await page.locator('#tc-q > summary').click();
+    const s = await page.evaluate(() => {
+      const table = document.querySelector('#tc-q .tc-qt');
+      const frame = table?.parentElement;
+      const column = frame?.closest('.tc-left, .tc-right, .tc-grid');
+      const [f, c] = [frame?.getBoundingClientRect(), column?.getBoundingClientRect()];
+      return {
+        shown: Boolean(table?.checkVisibility()),
+        framed: Boolean(frame?.classList.contains('tc-scroll')),
+        inColumn: Boolean(f && c && f.left >= c.left - 1 && f.right <= c.right + 1),
+      };
+    });
+    assert.equal(s.shown, true, 'the quality table shows');
+    assert.equal(s.framed, true, 'the table sits in its .tc-scroll frame');
+    assert.equal(s.inColumn, true, 'the frame keeps to the calculator\'s column');
+    await assertNoSideways(page, 'the TEAM program page with the quality table open at 390 px');
+    await assertQuiet(seen, 'the TEAM program page with the quality table open');
+  }));
+});
+
+// The Methods page's sources on a phone: each source a card (nothing of either table cut off by its frame), and on a
+// laptop the two tables ruled alike (hairlines, no banding on the longer one); the head clear of the sub-nav.
+describe('the TEAM Methods page\'s sources', () => {
+  for (const width of [390, 1280]) {
+    const tabs = useContext(shared, { width, height: 900 });
+    it(`at ${width} px: every source table fits its frame; both tables ruled alike; the head clear of the sub-nav`, () => withPage(tabs, { path: METHODS_PATH, watched: true }, async (page, { seen }) => {
+      const s = await page.evaluate(() => {
+        const tables = [...document.querySelectorAll('.tm-meth__pins')];
+        const frames = tables.map((tb) => tb.closest('.printout__scroll'));
+        const fills = tables.flatMap((tb) => [...tb.tBodies[0].rows].map((tr) => getComputedStyle(tr).backgroundColor));
+        const nav = document.querySelector('nav.nav')?.getBoundingClientRect();
+        const head = document.querySelector('.page__head').getBoundingClientRect();
+        return {
+          tables: tables.length,
+          cut: frames.filter((f) => f.scrollWidth > f.clientWidth + 1).length,
+          fills: [...new Set(fills)],
+          gap: nav ? head.top - nav.bottom : null,
+        };
+      });
+      assert.equal(s.tables, 2, 'two source tables');
+      assert.equal(s.cut, 0, 'source tables cut off by their frame');
+      assert.equal(s.fills.length, 1, 'one row treatment for both tables');
+      assert.ok(s.gap !== null && s.gap >= 20, `the head ${s.gap} px under the sub-nav`);
+      await assertNoSideways(page, `the TEAM Methods page at ${width} px`);
+      await assertQuiet(seen, 'the TEAM Methods page');
+    }));
+  }
+});
 
 // ---------- the slider under a CPU throttle ----------
 

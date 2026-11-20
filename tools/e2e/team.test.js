@@ -80,8 +80,8 @@ for (const width of [1280, 390]) {
 // The layout the first critic round asked for, read in the page at each width: on a laptop the Track 3 stamp sits
 // beside its caption at about 15rem, and Figures 1, 3 and 5 stay in view beside their words as the words scroll; on a
 // phone nothing of that sticks, each calculator box carries its column's name and every row's two results their own,
-// the stamp-framed headline's numerals stand straight and unmasked clear of the scenario tag, and Part 7's caption runs
-// the table's width.
+// the stamp-framed headline's numerals stand straight and unmasked clear of the scenario tag, numerals and frame in the
+// ink (the range spans a payment and a repayment; red means owes), and Part 7's caption runs the table's width.
 const layout = (page) => page.evaluate(async () => {
   const box = (el) => el.getBoundingClientRect();
   const shown = (el) => el.checkVisibility();
@@ -108,6 +108,18 @@ const layout = (page) => page.evaluate(async () => {
     labels: labels.length,
     labelsShown: labels.filter(shown).length,
     outTransform: getComputedStyle(out).transform,
+    // The stamp's numerals and frame against the page's ink and pen (read off probes set in each token).
+    ...(() => {
+      const probe = (token) => {
+        const el = document.createElement('span');
+        el.style.color = `var(${token})`;
+        document.body.append(el);
+        const c = getComputedStyle(el).color;
+        el.remove();
+        return c;
+      };
+      return { outColor: getComputedStyle(out).color, outFrame: getComputedStyle(out, '::before').borderTopColor, ink: probe('--ink'), pen: probe('--pen') };
+    })(),
     outMask: getComputedStyle(out).maskImage || getComputedStyle(out).webkitMaskImage,
     clearOfTag: box(out).top - box(tag).bottom,
     captionWidth: Math.round(box(cap).width),
@@ -133,6 +145,7 @@ describe('the TEAM program page\'s layout at 390 px', () => {
       const s = await layout(page);
       assert.ok(s.labels >= 30 && s.labelsShown === s.labels, `${s.labelsShown} of ${s.labels} labels shown`);
       assert.equal(s.outTransform, 'none', 'the numerals not rotated');
+      assert.ok(s.outColor === s.ink && s.outFrame === s.ink && s.outFrame !== s.pen, 'the stamp\'s numerals and frame in the ink, not the pen');
       assert.ok(!s.outMask || s.outMask === 'none', 'the numerals not masked');
       assert.ok(s.clearOfTag >= 8, `${s.clearOfTag} px between the tag and the stamp`);
       assert.ok(s.captionWidth >= s.tableWidth - 1, `the caption ${s.captionWidth} px of the table's ${s.tableWidth}`);

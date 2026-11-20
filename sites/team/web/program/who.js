@@ -13,6 +13,7 @@ import { html } from '../../../../web/render/html.js';
 import { CITES, DEFAULT_TRACK, EPISODE_DAYS, MODEL_END, MODEL_START, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { PY2_NUMBER, cite, partOf } from '../pages/parts.js';
+import { tight } from '../tight.js';
 
 // The map's drawn width (the figure column's, about, beside the words on a wide screen; it scales down on a phone), and
 // its dots' diameters: a hospital in TEAM, and the ring and hole of a hollow one (a thin, small ring in the context ink,
@@ -115,7 +116,7 @@ function card(team, counts) {
   ];
   return html`<div class="form tm-card">
 ${formTitle(t('cardTitle'), fill('cardRight', { n: PY2_NUMBER, year: yearOf(PY2_START) }))}
-${fields.map((f, i) => formField({ no: i + 1, label: f.label, value: f.value, note: f.note, size: 'big' }))}
+${fields.map((f, i) => formField({ no: i + 1, label: f.label, value: tight(f.value), note: f.note, size: 'big' }))}
 </div>`;
 }
 

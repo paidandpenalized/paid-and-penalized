@@ -10,6 +10,7 @@ import { COPY as LOOKUP } from '../lookup-copy.js';
 
 export const COPY = {
   // The top.
+  methodsKicker: { text: 'TEAM · Methods', claim: null },
   methodsTitle: { text: 'TEAM: methods and sources', claim: null },
   methodsDescription: {
     text: "How the TEAM page and its calculator are built: every source and its date, how each number is made, what the calculator leaves out and where a hospital finds its real values.",

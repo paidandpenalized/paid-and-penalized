@@ -1,5 +1,5 @@
 // The TEAM Methods page (/team/methods/): for hospital staff, how every number on the program page and in its
-// calculator is made. The head (title and lede), then beside a contents column the sections: the sources and their
+// calculator is made. The head (kicker, title and lede), then beside a contents column the sections: the sources and their
 // dates (every pin the TEAM file names, TEAM's own first, then the hospital list's), the episode counts as a floor (with
 // the DRG remaps), low volume, prices and the target amount, quality percentiles, the composite quality score, the
 // calculator's band (#band, which the calculator's "why?" links), standardized dollars and what can still move the
@@ -50,13 +50,14 @@ function publisherOf(e) {
 // file (linked), who publishes it, the source's date, the day it was fetched and its hash's start, labeled by its
 // heading; then the published sources the page cites.
 function sourcesSection(team, sources, shared) {
+  const hashHead = fill('srcColHash', { hash: HASH_NAME });
   const table = (key, rows) => (rows.length ? html`<h3 class="tm-meth__sub" id="tm-src-${key}">${t(key)}</h3>
 ${printout(html`<table class="gb tm-meth__pins" aria-labelledby="tm-src-${key}">
-<thead><tr><th scope="col">${t('srcColFile')}</th><th scope="col">${t('srcColBy')}</th><th scope="col">${t('srcColDate')}</th><th scope="col">${t('srcColGot')}</th><th scope="col">${fill('srcColHash', { hash: HASH_NAME })}</th></tr></thead>
+<thead><tr><th scope="col">${t('srcColFile')}</th><th scope="col">${t('srcColBy')}</th><th scope="col">${t('srcColDate')}</th><th scope="col">${t('srcColGot')}</th><th scope="col">${hashHead}</th></tr></thead>
 <tbody>${rows.map((e) => {
     const href = hrefOf(e);
     const date = dateOf(e);
-    return html`<tr><th scope="row">${href ? externalLink(href, e.title) : e.title}</th><td>${publisherOf(e)}</td><td class="nw">${date ? isoDate(date.slice(0, 10)) : t('srcNoDate')}</td><td class="nw">${isoDate(e.retrieved)}</td><td><code>${e.sha256.slice(0, 16)}</code></td></tr>`;
+    return html`<tr><th scope="row">${href ? externalLink(href, e.title) : e.title}</th><td>${publisherOf(e)}</td><td class="nw" data-label="${t('srcColDate')}">${date ? isoDate(date.slice(0, 10)) : t('srcNoDate')}</td><td class="nw" data-label="${t('srcColGot')}">${isoDate(e.retrieved)}</td><td data-label="${hashHead}"><code>${e.sha256.slice(0, 16)}</code></td></tr>`;
   })}</tbody>
 </table>`)}` : '');
   const published = [
@@ -248,6 +249,7 @@ export function methodsPage({ team, sources, shared, robots, assets }) {
   ];
   const body = html`<article class="wrap page tm tm-meth">
 <header class="page__head">
+<p class="cap kicker">${t('methodsKicker')}</p>
 <h1>${t('methodsTitle')}</h1>
 <p class="tm-meth__lede">${fill('methodsIntro', { cite: CITES.subpart })}</p>
 </header>

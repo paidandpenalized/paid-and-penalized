@@ -5,7 +5,7 @@ import { BAND_DEFAULT } from '../../../../engine/js/team/params.js';
 import { reconcile, resultAt } from '../../../../engine/js/team/reconcile.js';
 import { drawn, figure, num } from '../../../../web/charts/figure.js';
 import { payoff, payoffPoints } from '../../../../web/charts/payoff.js';
-import { money, pct } from '../../../../web/render/format.js';
+import { money, moneyTick, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { CITES, EPISODE_DAYS, EXAMPLE, PAYOFF } from '../constants.js';
 import { fill, t } from '../copy.js';
@@ -52,7 +52,7 @@ function payoffFigure(n) {
     under: t('payoffUnder'), over: t('payoffOver'), band: fill('payoffBand', { band: `±${pct(BAND_DEFAULT, 0)}` }),
     stopGain: fill('payoffStopGain', { pct: share(limits.gain), amount: signed(limits.gain) }),
     stopLoss: fill('payoffStopLoss', { pct: share(-limits.loss), amount: signed(-limits.loss) }),
-    x: spendLabel, y: signed,
+    x: spendLabel, y: moneyTick,
     tip: (s, v) => fill('payoffTip', { s: spendLabel(s), amount: signed(v) }),
   };
   const opts = { at, limits, span: PAYOFF.span, step: PAYOFF.step, band: BAND_DEFAULT, marker: EXAMPLE.spend, words };

@@ -19,12 +19,13 @@ import { BAND_DEFAULT, LOW_VOLUME, MEASURES, MISSING_QUALITY, QUALITY_STEP, SOLV
 import { bandOf, marginal, reconcile, resultAt, snap, solveSpend } from '../../../engine/js/team/reconcile.js';
 import { payoff } from '../../../web/charts/payoff.js';
 import { WIDTH } from '../../../web/charts/svg.js';
-import { count, isoDate, money, moneyShown, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
+import { count, isoDate, money, moneyShown, moneyTick, pct, placeText, roundedDollars, spelled } from '../../../web/render/format.js';
 import { Safe, html } from '../../../web/render/html.js';
 import { flagsNote } from '../../../web/team/copy.js';
 import { engineInput, inputsOf } from '../../../web/team/opening.js';
 import { CALC, PAYOFF, PY2_START, TRACK1_LAST, yearOf } from './constants.js';
 import { fill, t } from './calc-copy.js';
+import { tight } from './tight.js';
 
 const MEASURE_KEYS = Object.keys(MEASURES);
 const TRACK_NUMBERS = Object.keys(TRACKS).map(Number);
@@ -54,7 +55,16 @@ function noteOf(hosp, track) {
   return parts.join(' ');
 }
 
-// "What would it take?": each row's words. input: the engine's; limits: reconcile's; band: bandOf's.
+// An answer's lead figure, to set in bold: the value as the text has it, and with its next word too (a share "under" or
+// "over" target) when withWord. null when the text doesn't hold the value.
+function leadOf(text, value, withWord = false) {
+  const at = text.indexOf(value);
+  if (at < 0) return null;
+  return withWord ? /^\S+\s\S+/.exec(text.slice(at))?.[0] ?? value : value;
+}
+
+// "What would it take?": each row's words, and each answer's lead figures (leads). input: the engine's; limits:
+// reconcile's; band: bandOf's.
 function wwitOf({ input, inputs, state, r, band }) {
   const { track } = state;
   const canLose = TRACKS[track].loss > 0;
@@ -70,23 +80,31 @@ function wwitOf({ input, inputs, state, r, band }) {
 
   const sEarn = none ? null : solve(earn);
   const earnText = none ? need : sEarn === null ? fill('wwNoGain', { n, amount: signed(r.limits.gain) }) : fill('wwUnder', { pct: shareOf(sEarn), per: per(sEarn) });
+  const leads = { earn: sEarn === null || none ? [] : [leadOf(earnText, shareOf(sEarn), true)] };
   let oweText = need;
+  leads.owe = [];
   if (!canLose) oweText = fill('wwNever', { n });
   else if (!none) {
     // Past the most it could owe (the stop-loss, or less where low-volume types can't add to a repayment), any spending
     // keeps it within the ask.
     const s = mostOwed <= owe ? null : solve(-owe);
-    if (s !== null) oweText = fill('wwOver', { pct: shareOf(s), per: per(s) });
+    if (s !== null) {
+      oweText = fill('wwOver', { pct: shareOf(s), per: per(s) });
+      leads.owe = [leadOf(oweText, shareOf(s), true)];
+    }
     else if (owe >= r.limits.loss) oweText = fill('wwAnyStop', { n, amount: money(-r.limits.loss) });
     else oweText = fill('wwAnyLow', { amount: money(-mostOwed) });
   }
   const sGain = none ? null : solve(r.limits.gain);
   const gainText = none ? need : sGain === null ? fill('wwNoGain', { n, amount: signed(r.limits.gain) }) : fill('wwGainAt', { pct: shareOf(sGain), amount: signed(r.limits.gain) });
+  leads.gain = sGain === null || none ? [] : [leadOf(gainText, shareOf(sGain), true)];
   let lossText = need;
+  leads.loss = [];
   if (!canLose) lossText = fill('wwNever', { n });
   else if (!none) {
     const s = solve(-r.limits.loss);
     lossText = s === null ? fill('wwLossNot', { amount: money(-mostOwed) }) : fill('wwLossAt', { pct: shareOf(s), amount: money(-r.limits.loss) });
+    if (s !== null) leads.loss = [leadOf(lossText, shareOf(s), true)];
   }
 
   // Ten more points (to 100 at most): marginal's, at the reader's scenario once they have set any spending, else at the
@@ -112,14 +130,20 @@ function wwitOf({ input, inputs, state, r, band }) {
     else if (over && snap(before) === 0) quality.text = fill('wwQLowVolume', { amount });
     else quality.text = fill('wwQOnTarget', { amount });
   }
+  const [under, over] = [signed(m.perPctUnder), signed(-m.perPctOver)];
+  const perPct = none ? need : fill('wwPctValue', { under, over });
+  leads.pct = none ? [] : [leadOf(perPct, under), leadOf(perPct, over)];
+  leads.q = none ? [] : [leadOf(quality.text, amount)];
   return {
     tag: fill('wwTag', { cqs: scoreText(inputs.cqs) }),
     earn: { value: money(earn), text: earnText },
     owe: { value: money(owe), text: oweText, canLose },
     gain: gainText,
     loss: lossText,
-    perPct: none ? need : fill('wwPctValue', { under: signed(m.perPctUnder), over: signed(-m.perPctOver) }),
+    perPct,
     quality,
+    // Each answer's lead figures, in the order its text has them (wwitMarkup sets them in bold).
+    leads: Object.fromEntries(Object.entries(leads).map(([k, v]) => [k, v.filter(Boolean)])),
   };
 }
 
@@ -132,7 +156,7 @@ function figureOf({ input, r, state }) {
     under: t('payoffUnder'), over: t('payoffOver'), band: '',
     stopGain: fill('payoffStopGain', { pct: pct(gain, 0, { sign: true }), amount: signed(r.limits.gain) }),
     stopLoss: fill('payoffStopLoss', { pct: pct(-loss, 0), amount: signed(-r.limits.loss) }),
-    x: (s) => (s === 0 ? t('payoffOn') : pct(s, 0, { sign: true })), y: signed,
+    x: (s) => (s === 0 ? t('payoffOn') : pct(s, 0, { sign: true })), y: moneyTick,
     tip: (s, v) => fill('payoffTip', { s: s === 0 ? t('payoffOn') : pct(s, 0, { sign: true }), amount: signed(v) }),
   };
   const alt = fill('figAlt', { lo: pct(PAYOFF.span, 0), hi: pct(PAYOFF.span, 0), n: String(state.track) });
@@ -267,7 +291,8 @@ function rowMarkup(row) {
 <td>${colLabel(t('colPrice'))}${box({ id: `tc-p-${k}`, key: `p.${k}`, value: row.p.value, mine: row.p.mine, label: row.p.label, cls: ' tc-in--p' })}${tag(`src.p.${k}`, row.p)}</td>
 <td>${colLabel(t('colSpend'))}${box({ id: `tc-s-${k}`, key: `sk.${k}`, value: row.s.value, mine: false, label: row.s.label, cls: row.s.own ? ' is-own' : '' })}${tag(`src.s.${k}`, row.s)}</td>
 <td class="tc-lvc">${vh(`tc-lv-${k}`, row.lv.label)}<input type="checkbox" id="tc-lv-${k}" data-in="lv.${k}"${row.lv.checked ? html` checked` : ''}${row.lv.mine ? html` class="is-mine"` : ''}>${colLabel(fill('colLvPhone', { lv: String(LOW_VOLUME) }), ' tc-cl--lv')}</td>
-<td class="num">${colLabel(`${t('colTarget')} `, ' tc-cl--in')}<span data-v="target.${k}">${row.target}</span>${colLabel(` · ${t('colResultPhone')} `, ' tc-cl--in')}<small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
+<td class="num">${colLabel(`${t('colTarget')} `, ' tc-cl--in')}<span data-v="target.${k}">${row.target}</span></td>
+<td class="num">${colLabel(`· ${t('colResultPhone')} `, ' tc-cl--in')}<small class="tc-row-res" data-v="result.${k}">${row.result}</small></td></tr>`;
 }
 
 const line = (no, label, value, { op = '', key, cls = '', extra = '' } = {}) => html`<li class="tc-line${cls}"><span class="tc-no">${String(no)}</span><span class="tc-k">${op ? html`<span class="tc-op" aria-hidden="true">${op}</span> ` : ''}${label}</span>${extra}<b class="tc-v" data-v="${key}">${value}</b></li>`;
@@ -305,7 +330,7 @@ function resultMarkup(v, statics) {
   const r = v.result;
   return html`<div class="tc-out">
 <p class="tc-out__lab"><span data-v="out.label">${r.label}</span> ${scenTag(v.tags)}</p>
-<p class="tc-out__v"><span data-v="out.range">${r.range}</span> <span class="tc-out__yr">${t('outYear')}</span></p>
+<p class="tc-out__v"><span data-v="out.range">${tight(r.range)}</span> <span class="tc-out__yr">${t('outYear')}</span></p>
 <p class="tc-out__at" data-v="out.at">${r.at}</p>
 <p class="tc-out__none" data-v="out.none"${r.none ? '' : html` hidden`}>${t('outNone')}</p>
 <div class="tc-out__hyp"><p>${t('outHyp')}</p>
@@ -314,18 +339,32 @@ ${staticBox('why', statics)}</div>
 </div>`;
 }
 
+// An answer's words with its lead figures in bold, each found after the last.
+function bolded(text, leads) {
+  const parts = [];
+  let rest = text;
+  for (const lead of leads) {
+    const at = rest.indexOf(lead);
+    if (at < 0) continue;
+    parts.push(rest.slice(0, at), html`<strong>${lead}</strong>`);
+    rest = rest.slice(at + lead.length);
+  }
+  return html`${parts}${rest}`;
+}
+
 function wwitMarkup(v) {
   const w = v.wwit;
-  const row = (label, key, text) => html`<tr><th scope="row">${label}</th><td data-v="${key}">${text}</td></tr>`;
+  const L = w.leads;
+  const row = (label, key, text, leads) => html`<tr><th scope="row">${label}</th><td data-v="${key}">${bolded(text, leads)}</td></tr>`;
   const ask = (label, id, key, value, full) => html`<label for="${id}">${label}<span class="vh"> ${full}</span></label> ${textIn({ id, key, value, cls: ' tc-in--m' })}`;
   return html`<section class="tc-ww" aria-labelledby="tc-ww-h"><h3 class="tc-ww__h"><span id="tc-ww-h">${t('wwHeading')}</span> <span class="tc-src" data-v="ww.tag">${w.tag}</span></h3>
 <table class="tc-wwt"><tbody>
-<tr><th scope="row">${ask(t('wwEarn'), 'tc-earn', 'earn', w.earn.value, t('wwEarnFull'))}</th><td data-v="ww.earn">${w.earn.text}</td></tr>
-<tr><th scope="row">${ask(t('wwOwe'), 'tc-owe', 'owe', w.owe.value, t('wwOweFull'))}</th><td data-v="ww.owe">${w.owe.text}</td></tr>
-${row(t('wwGain'), 'ww.gain', w.gain)}
-${row(t('wwLoss'), 'ww.loss', w.loss)}
-${row(fill('wwPct', { one: pct(0.01, 0) }), 'ww.pct', w.perPct)}
-<tr><th scope="row" data-v="ww.qLabel">${w.quality.label}</th><td data-v="ww.q">${w.quality.text}</td></tr>
+<tr><th scope="row">${ask(t('wwEarn'), 'tc-earn', 'earn', w.earn.value, t('wwEarnFull'))}</th><td data-v="ww.earn">${bolded(w.earn.text, L.earn)}</td></tr>
+<tr><th scope="row">${ask(t('wwOwe'), 'tc-owe', 'owe', w.owe.value, t('wwOweFull'))}</th><td data-v="ww.owe">${bolded(w.owe.text, L.owe)}</td></tr>
+${row(t('wwGain'), 'ww.gain', w.gain, L.gain)}
+${row(t('wwLoss'), 'ww.loss', w.loss, L.loss)}
+${row(fill('wwPct', { one: pct(0.01, 0) }), 'ww.pct', w.perPct, L.pct)}
+<tr><th scope="row" data-v="ww.qLabel">${w.quality.label}</th><td data-v="ww.q">${bolded(w.quality.text, L.q)}</td></tr>
 </tbody></table></section>`;
 }
 
@@ -344,7 +383,7 @@ export function calcMarkup(v, { fig = true, statics = null } = {}) {
 <fieldset class="tc-track"><legend class="vh">${t('trackLegend')}</legend>${v.tracks.map((k) => html`<label class="tc-track__opt"><input type="radio" name="tc-track" value="${String(k.n)}" data-in="t.${String(k.n)}"${k.checked ? html` checked` : ''}><span>${k.name} <small>${k.sub}</small></span></label>`)}</fieldset>
 <p class="tc-note" data-v="note"${v.note ? '' : html` hidden`}>${v.note}</p>
 <div class="tc-scroll"><table class="tc-ep">
-<thead><tr><th scope="col">${t('colEpisode')}</th><th scope="col">${t('colYear')}</th><th scope="col">${t('colPrice')}</th><th scope="col">${t('colSpend')}</th><th scope="col" class="tc-lvc"><abbr title="${fill('colLvFull', { lv: String(LOW_VOLUME) })}">${fill('colLv', { lv: String(LOW_VOLUME) })}</abbr></th><th scope="col" class="num">${t('colTarget')}<small>${t('colResult')}</small></th></tr></thead>
+<thead><tr><th scope="col">${t('colEpisode')}</th><th scope="col">${t('colYear')}</th><th scope="col">${t('colPrice')}</th><th scope="col">${t('colSpend')}</th><th scope="col" class="tc-lvc"><abbr title="${fill('colLvFull', { lv: String(LOW_VOLUME) })}">${fill('colLv', { lv: String(LOW_VOLUME) })}</abbr></th><th scope="col" class="num">${t('colTarget')}</th><th scope="col" class="num tc-ep__res">${t('colResultPhone')}</th></tr></thead>
 <tbody>${v.rows.map(rowMarkup)}</tbody>
 </table></div>
 ${ledgerMarkup(v)}

@@ -15,6 +15,7 @@ import { html } from '../../../../web/render/html.js';
 import { BAR_DRG, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { partOf } from '../pages/parts.js';
+import { tight } from '../tight.js';
 import { DIVISION_NUMBERS, divisionName, extremes } from './bar-data.js';
 
 const sentence = sentenceOf(fill);
@@ -48,7 +49,7 @@ const picker = (team) => html`<p class="tm-pick" data-bar-picker hidden><label f
 // read out again, whole and once, when the pick changes (aria-atomic: the script rewrites it a span at a time).
 function now(team, reader) {
   const cat = team.drgCategory[BAR_DRG];
-  return html`<p class="tm-now" aria-live="polite" aria-atomic="true"><span class="tm-now__price">${live('price', roundedDollars(team.prices[BAR_DRG][reader]))}</span>
+  return html`<p class="tm-now" aria-live="polite" aria-atomic="true"><span class="tm-now__price">${live('price', tight(roundedDollars(team.prices[BAR_DRG][reader])))}</span>
 <span class="tm-now__says">${sentence('barSays', { drg: live('drg', BAR_DRG), cat: live('cat', catWords(cat)), division: live('division', divisionName(reader)) }, { year: yearOf(PY2_START) })}</span></p>`;
 }
 

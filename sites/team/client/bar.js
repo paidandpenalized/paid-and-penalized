@@ -12,6 +12,7 @@
 import { evenSteps } from '../../../web/charts/evenSteps.js';
 import { roundedDollars } from '../../../web/render/format.js';
 import { DIVISION_NUMBERS, divisionName, extremes } from '../web/program/bar-data.js';
+import { tight } from '../web/tight.js';
 
 const STEP = /\bchart-div--s\d\b/;
 const SVG = 'http://www.w3.org/2000/svg';
@@ -95,13 +96,19 @@ export function mountBar(root = document) {
   const say = (key, text) => {
     for (const el of part.querySelectorAll(`[data-bar="${key}"]`)) el.textContent = text;
   };
+  // The large price, its separators held close as the build set them (tight.js: the kit's escaped markup).
+  const sayFigure = (key, text) => {
+    const made = document.createElement('template');
+    made.innerHTML = String(tight(text));
+    for (const el of part.querySelectorAll(`[data-bar="${key}"]`)) el.replaceChildren(made.content.cloneNode(true));
+  };
   const show = () => {
     const values = pricesOf(table, pick.value);
     if (!values) return;
     const { lo, hi } = extremes(values);
     say('drg', pick.value);
     say('cat', pick.selectedOptions[0].parentElement.dataset.cat);
-    say('price', roundedDollars(values[reader]));
+    sayFigure('price', roundedDollars(values[reader]));
     say('lo', roundedDollars(values[lo]));
     say('loName', divisionName(lo));
     say('hi', roundedDollars(values[hi]));

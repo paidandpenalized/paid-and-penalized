@@ -77,6 +77,21 @@ test('each row carries its columns\' names for a phone, from the head\'s words, 
   }
 });
 
+// On a wider screen the table's head names each result over its own column: the row's target and its result before
+// quality each sit under a head of their own, never two figures under one.
+test('the episode table heads each result\'s own column: target, then before quality', () => {
+  const markup = calcMarkup(viewOf(deflt), { fig: false }).text;
+  const table = /<table class="tc-ep"[\s\S]*?<\/table>/.exec(markup)[0];
+  const heads = [...table.matchAll(/<th scope="col"[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, '').trim());
+  assert.deepEqual(heads.slice(-2), [word('colTarget'), word('colResultPhone')]);
+  const rows = [...table.matchAll(/<tr><th scope="row">[\s\S]*?<\/tr>/g)].map((m) => m[0]);
+  for (const row of rows) {
+    const cells = [...row.matchAll(/<td class="num">([\s\S]*?)<\/td>/g)].map((m) => m[1]);
+    assert.equal(cells.length, 2, 'two result cells');
+    assert.ok(cells[0].includes('data-v="target.') && cells[1].includes('data-v="result.'), 'the target, then the result before quality');
+  }
+});
+
 test('typing a number marks it "your number" and the tag reads "includes your numbers"', () => {
   const before = viewOf(deflt);
   assert.ok(!before.tags.mine && before.tags.text === word('tagPublic'));
@@ -108,6 +123,28 @@ test('a row\'s spending overrides the "all five" slider for that row only', () =
   same(v.ledger.result, (engine.result < 0 ? '−' : '+') + v.ledger.result.slice(1), 'line 8 is the engine\'s');
   // Moving the slider leaves the row's own alone.
   assert.equal(inputsOf(deflt, setSlider(state, -2)).cats.find((c) => c.key === 'CABG').spend, -0.06);
+});
+
+// Each computed answer's lead figure in bold, as the approved mockup sets them: the spending change with its direction,
+// each 1%'s two amounts, the ten points' amount. An answer that is a sentence of words ("Not possible: …") has none.
+test('"What would it take?" sets each answer\'s lead figure in bold', () => {
+  const base = initialState(deflt);
+  const cells = (state) => {
+    const markup = calcMarkup(viewOf(deflt, state), { fig: false }).text;
+    return Object.fromEntries([...markup.matchAll(/<td data-v="(ww\.\w+)">([\s\S]*?)<\/td>/g)].map((m) => [m[1], m[2]]));
+  };
+  const bold = (cell) => [...cell.matchAll(/<strong>([^<]*)<\/strong>/g)].map((m) => m[1]);
+  const c = cells(base);
+  for (const [key, re] of [['ww.earn', /^[\d.]+% under$/], ['ww.owe', /^[\d.]+% over$/], ['ww.gain', /^[\d.]+% under$/], ['ww.loss', /^[\d.]+% over$/]]) {
+    const b = bold(c[key]);
+    assert.ok(b.length === 1 && re.test(b[0]), `${key}: one lead figure, with its direction`);
+  }
+  assert.equal(bold(c['ww.pct']).length, 2, 'each 1%: both amounts');
+  assert.ok(bold(c['ww.pct']).every((b) => /^[+−]\$/.test(b)), 'each 1%: the amounts');
+  assert.ok(bold(c['ww.q']).length === 1 && /^[+−]?\$/.test(bold(c['ww.q'])[0]), 'ten points: the amount');
+  assert.equal(bold(cells(type(base, deflt, 'earn', '$999M'))['ww.earn']).length, 0, '"Not possible" has no lead figure');
+  // The cell's words are the view's, unchanged.
+  same(c['ww.earn'].replace(/<\/?strong>/g, ''), viewOf(deflt, base).wwit.earn.text.replace(/&/g, '&amp;'), 'the words unchanged');
 });
 
 test('"What would it take?" says "Not possible" past the limit, and why on the repayment side', () => {

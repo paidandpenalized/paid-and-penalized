@@ -64,7 +64,7 @@
 .tm-key__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; }
 .tm-key__dot--team { background: var(--ink); }
 .tm-key__dot--other { border: 1px solid var(--dot); }
-.tm-patient { display: grid; gap: 4px; max-width: 62ch; padding: 10px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); font-size: var(--fs-sm); line-height: 1.55; }
+.tm-patient { display: grid; gap: 4px; padding: 10px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); font-size: var(--fs-sm); line-height: 1.55; }
 .tm-patient__h { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
 
 /* Part 2: the Track 3 stamp beside what its limit is a share of. A wrapping row, so the caption keeps a readable width
@@ -182,9 +182,10 @@
 .chart-div__reader--moved { stroke-width: 5px; }
 .chart-mark.is-active .chart-div { stroke: var(--ink); stroke-width: 2.5px; }
 /* Each label on a small chip of the paper, so it reads on any step of the ramp in either theme (in dark the strongest
-   step is near the ink's own light). */
+   step is near the ink's own light). The reader's outline is drawn over the chips and under the words, which keep a
+   halo of the chip's paper, so the outline shows whole and breaks only around a letter it crosses. */
 .chart-div__chip { fill: var(--paper); fill-opacity: 0.86; }
-.chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--paper); stroke-opacity: 0.86; stroke-width: 3px; stroke-linejoin: round; }
 .chart-div__price { font-weight: 700; }
 .chart-div__name { fill: var(--ink-2); }
 .tm-bar .chart--division-map { max-width: none; }
@@ -192,7 +193,7 @@
   .chart-div { fill: Canvas; stroke: CanvasText; }
   .chart-div__borders { stroke: CanvasText; }
   .chart-div__reader { stroke: Highlight; }
-  .chart-div__price, .chart-div__name { fill: CanvasText; }
+  .chart-div__price, .chart-div__name { fill: CanvasText; stroke: Canvas; stroke-opacity: 1; }
   .chart-div__chip { fill: Canvas; fill-opacity: 1; }
 }
 
@@ -239,9 +240,6 @@
   .tc-left { border-top: 0; border-right: 1px solid var(--pen); }
   .tc-right { grid-area: right; position: sticky; top: calc(var(--sticky-top, 0px) + 8px); align-self: start; }
 }
-/* Two columns only just wide enough for the text (up to 70em: a laptop with a larger default font): the episode table's
-   last head wraps, so the table keeps to its column. */
-@media (min-width: 62em) and (max-width: 70em) { .tc-ep thead th.num { white-space: normal; } }
 
 /* The track: a radio group drawn as one segmented control (arrow keys move it, as any radio group). */
 .tc-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; border: var(--rule) solid var(--ink); }
@@ -264,8 +262,9 @@
 .tc-ep, .tc-qt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .tc-ep th, .tc-ep td, .tc-qt th, .tc-qt td { padding: 3px 4px; border-bottom: 1px dotted var(--line); text-align: left; vertical-align: middle; }
 .tc-ep thead th, .tc-qt thead th { border-bottom: 1.5px solid var(--ink); font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: bottom; }
-.tc-ep thead small { display: block; font-weight: 400; text-transform: none; }
 .tc-ep tbody th { font-weight: 600; white-space: nowrap; }
+/* The last head, "Before quality", on two lines at its column's least width, so it reads apart from "Target" beside it. */
+.tc-ep thead th.tc-ep__res { width: 1%; white-space: normal; }
 .tc-ep abbr { text-decoration: none; }
 .tc-ep .num, .tc-qt .num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
 .tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
@@ -285,8 +284,19 @@
 .tc-in--band { width: 3.2rem; height: 26px; min-height: 26px; }
 .tc-in.is-mine, .tc-in.is-own { border: 1.5px solid var(--ink); background: var(--paper); font-weight: 700; }
 .tc-src { display: block; margin-top: 1px; color: var(--ink-3); font: 400 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
-.tc-src.tc-src--mine, .tc-tag.tc-tag--mine { color: var(--pen-ink); font-style: italic; font-weight: 700; letter-spacing: 0; text-transform: none; }
+/* "Your number": red, italic, bold and underlined, so it reads apart from a public source without its color (a contrast
+   theme drops the red). */
+.tc-src.tc-src--mine, .tc-tag.tc-tag--mine { color: var(--pen-ink); font-style: italic; font-weight: 700; letter-spacing: 0; text-transform: none; text-decoration: underline 1px; text-underline-offset: 0.2em; }
 .tc-msg { margin-top: 2px; color: var(--pen-ink); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
+/* Two columns only just wide enough for the table (up to 70em: a small laptop, or a laptop with a larger default font):
+   the result heads, the episodes' names and the boxes' sources may wrap, and the boxes are a little narrower (still
+   wider than any value they hold), so the table keeps to its column. */
+@media (min-width: 62em) and (max-width: 70em) {
+  .tc-ep thead th.num, .tc-ep .tc-src { white-space: normal; }
+  .tc-ep tbody th { white-space: normal; line-height: 1.25; }
+  .tc-ep .tc-in { width: 4.6rem; }
+  .tc-ep .tc-in--p { width: 5.6rem; }
+}
 
 /* The ledger, lines one to eight: a number, the line's name, line two's slider, the amount. */
 .tc-lines { margin: 0; padding: 0; list-style: none; }
@@ -326,12 +336,13 @@
 .tc-why > summary { min-height: var(--target-min); display: inline-flex; align-items: center; color: var(--ink); text-decoration: underline dotted; cursor: pointer; }
 .tc-why[open] { flex-basis: 100%; }
 @media (max-width: 61.99em) {
-  /* The F3 stamp, the headline on a phone: the family's rubber-stamp frame (rotated, grain-masked, in the pen) drawn
-     behind the range, whose numerals stay straight, unmasked and at the desktop's weight and size, so they read; the
-     frame sits clear of the scenario tag above it. */
+  /* The F3 stamp, the headline on a phone: the family's rubber-stamp frame (rotated, grain-masked) drawn behind the
+     range, whose numerals stay straight, unmasked and at the desktop's weight and size, so they read; the frame sits
+     clear of the scenario tag above it. Numerals and frame in the ink, not the pen: red says "owes" on this site, and the
+     range runs from a repayment to a payment. */
   .tc-out { justify-items: start; border: 0; padding: 4px 0; }
-  .tc-out__v { position: relative; isolation: isolate; margin-top: 10px; padding: 8px 14px 6px; color: var(--pen-ink); }
-  .tc-out__v::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 3px solid var(--pen); border-radius: 4px; transform: rotate(-1.5deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+  .tc-out__v { position: relative; isolation: isolate; margin-top: 10px; padding: 8px 14px 6px; color: var(--ink); }
+  .tc-out__v::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 3px solid var(--ink); border-radius: 4px; transform: rotate(-1.5deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
   .tc-out__yr { color: inherit; font-family: var(--font-type); }
 }
 @media (forced-colors: active) { .tc-out__v::before { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
@@ -359,17 +370,19 @@
 @media (max-width: 36em) {
   /* A phone: each episode row a small card. Its three boxes side by side, each under its column's name in the head's
      small capitals and over its source (which wraps rather than run into the next); then the low-volume box with its
-     words, and the row's two results on one labeled line. The ledger's slider under its name. */
+     words, and the row's two results together at the right on one labeled line (a wrapping row: the two result cells
+     sit side by side). The ledger's slider under its name. */
   .tc-ep thead { display: none; }
-  .tc-ep tbody tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px 10px; padding: 10px 0; border-bottom: 1px dotted var(--line); }
-  .tc-ep tbody th { grid-column: 1 / -1; }
-  .tc-ep tbody td { grid-column: span 2; min-width: 0; padding: 0; border: 0; }
+  .tc-ep tbody tr { display: flex; flex-wrap: wrap; align-items: start; gap: 6px 10px; padding: 10px 0; border-bottom: 1px dotted var(--line); }
+  .tc-ep tbody th { flex: 1 1 100%; }
+  .tc-ep tbody td { flex: 1 1 0; min-width: 0; padding: 0; border: 0; }
   .tc-ep .tc-in { width: 100%; }
   .tc-cl { display: block; margin-bottom: 2px; color: var(--ink-2); font: 700 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; }
   .tc-ep .tc-src { white-space: normal; overflow-wrap: break-word; }
-  .tc-ep td.tc-lvc { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; width: auto; text-align: left !important; }
+  .tc-ep td.tc-lvc { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; width: auto; text-align: left !important; }
   .tc-cl--lv { display: inline; margin: 0; font: 400 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0; text-transform: none; }
-  .tc-ep td.num { grid-column: 1 / -1; text-align: right; font-size: var(--fs-xs); }
+  .tc-ep td.num { flex: 0 1 auto; text-align: right; font-size: var(--fs-xs); }
+  .tc-ep td.num:nth-last-child(2) { margin-left: auto; }
   .tc-ep td.num > [data-v] { display: inline; font: 700 var(--fs-xs)/1.3 var(--font-type); }
   .tc-cl--in { display: inline; margin: 0; font-weight: 400; }
   .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
@@ -379,15 +392,14 @@
    "What would it take?"'s labels and tag free to wrap, so every box shows its whole value and nothing runs past the edge.
    At the default size none of this applies. */
 @media (max-width: 18em) {
-  .tc-ep tbody td { grid-column: span 3; }
+  .tc-ep tbody td:not(.tc-lvc, .num) { flex: 0 1 calc(50% - 5px); }
   .tc-ep td.num, .tc-wwt th, .tc-ww__h .tc-src, .tc-qt .tc-src, .tc-qt thead th.num { white-space: normal; }
 }
 
-/* Part 6: the duties by phase (the phase's name beside its list from 36em), and Figure 5, the clock: a dated line,
-   darker from the day the page is about on. */
+/* Part 6: the duties by phase (the phase's name on its own row over its list, at every width, so the list has the
+   column's full measure), and Figure 5, the clock: a dated line, darker from the day the page is about on. */
 .tm-check { display: grid; gap: 0; }
 .tm-phase { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 20px; padding-top: 14px; border-top: 1px solid var(--line); }
-@media (min-width: 36em) { .tm-phase { grid-template-columns: 8.5rem minmax(0, 1fr); } }
 .tm-phase__h { color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
 .tm-phase__list { display: grid; margin: 0; padding: 0; list-style: none; }
 .tm-duty { padding-bottom: 14px; }
@@ -430,10 +442,15 @@
 .tm-methods { margin-block: 16px 0; }
 .tm-end { display: grid; gap: 6px; }
 .tm-end .asof { margin: 0; padding-top: 8px; }
+/* The dates fill their rows: as many columns as fit at 11rem or more each (one on a phone), so the five sit on one row on a
+   laptop with no empty cell after them. */
+.tm-end .asof--grid .asof__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
 
 /* The Methods page: the family's contents-and-sections layout (pages.css .doc), its paragraphs and lists at the reading
    measure; the sources' and the remaps' tables in the printout frame; the unknowns as ruled items, each a heading over
    what the calculator assumes and where the real value lives. */
+/* The head starts as far under the sub-nav as the program page's first Part does (.tm's 8px and the Part's 20px). */
+.tm.tm-meth { padding-top: 28px; }
 .tm-meth__lede { max-width: 60ch; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.45; color: var(--ink-2); }
 .tm-meth .doc__sec > p, .tm-meth__list, .tm-meth__links, .tm-meth__unknowns { max-width: var(--measure); }
 .tm-meth__list, .tm-meth__links { display: grid; gap: 10px; margin: 0; padding-left: 1.1em; }
@@ -443,7 +460,34 @@
 .tm-meth__pins th[scope="row"] { min-width: 16rem; font-weight: 400; }
 .tm-meth__pins code { font: 400 var(--fs-xs)/1.35 var(--font-type); }
 .tm-meth__remap caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+/* One treatment for every Methods table, short or long: hairline rows, never the green-bar banding the kit gives a
+   table of more than ten rows (the two sources tables would otherwise differ). */
+.tm-meth .gb tbody:has(> tr:nth-child(11)) > tr { background: none; }
+.tm-meth .gb tbody > tr + tr { border-top: 1px solid var(--line); }
+/* Where its frame is narrower than the table's columns need (a phone, a narrow window), each source is a card, as Part
+   7's table and HACRP Methods' receipts stack: the file's link across the top, then in the type face who publishes it
+   and the source's date, the day it was fetched, and the hash's start, each value named by its column (the three would
+   not fit one line at a phone's width). A container query, so the frame's own width decides. The column heads leave
+   the layout and the names go before the values instead, read aloud with them; the dot between is not. */
+.tm-meth .printout:has(> .printout__scroll > .tm-meth__pins) { container-type: inline-size; }
+@container (width < 46em) {
+  .tm-meth .printout__scroll:has(> .tm-meth__pins) { overflow-x: visible; }
+  .tm-meth__pins, .tm-meth__pins tbody { display: block; }
+  .tm-meth__pins thead { display: none; }
+  .tm-meth__pins tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; padding: 10px 0; }
+  .tm-meth__pins tbody :is(th, td) { display: block; padding: 0; }
+  .tm-meth__pins th[scope="row"] { flex: 1 1 100%; min-width: 0; margin-bottom: 2px; line-height: 1.35; }
+  .tm-meth__pins td { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
+  .tm-meth__pins td.nw { white-space: normal; }
+  .tm-meth__pins td:nth-child(2)::after { content: "\00a0·\00a0"; content: "\00a0·\00a0" / ""; }
+  .tm-meth__pins td[data-label]::before { content: attr(data-label) "\00a0"; }
+  .tm-meth__pins td:nth-child(n+4) { flex: 1 1 100%; }
+}
 .tm-meth__unknowns { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
 .tm-meth__unknowns > li { display: grid; gap: 6px; padding-block: 14px; border-top: 1px solid var(--line); }
 .tm-meth__unknowns .tm-meth__sub { margin-top: 0; }
 .tm-meth__k { color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* A display figure's comma or point (tight.js): the type face gives it a digit's whole cell, so large figures pull it in
+   from both sides, by about half the room the mark leaves (this face's comma and point are about a quarter of a cell). */
+.tm-sep { margin-inline: -0.17em; }
