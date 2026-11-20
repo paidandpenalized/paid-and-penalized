@@ -1,7 +1,7 @@
 # Paid & Penalized — site monorepo
 
 Code for paidandpenalized.org: a family of explainer sites for CMS hospital payment programs.
-**This repo becomes public.** Write every file, commit message and comment as if the world reads it.
+**This repo is public.** Write every file, commit message and comment as if the world reads it.
 
 ## Never in this repo
 - PHI of any kind. Public, aggregate CMS/federal data only.

@@ -1,2 +1,7 @@
 #!/bin/sh
-exec node tools/hygiene/commit-msg.js "$1"
+# Drop Claude-Session trailers first: a private session URL has no place in public history (decided 2026-10-16).
+f="$1"
+if grep -q '^Claude-Session:' "$f"; then
+  grep -v '^Claude-Session:' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+fi
+exec node tools/hygiene/commit-msg.js "$f"
