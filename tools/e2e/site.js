@@ -16,12 +16,12 @@ import { groupLabel } from '../../sites/hacrp/web/groups.js';
 import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { DICTIONARY_PAGE as HRRP_DICTIONARY_PAGE, KINDS as HRRP_KINDS, METHODS_PATH as HRRP_METHODS_PATH, PROGRAM_PATH as HRRP_PROGRAM_PATH, hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { buildPlaces } from '../../sites/hrrp/web/places.js';
-import { DEFAULT_SKIP_STATE } from '../../sites/work-requirement/web/constants.js';
 import { METHODS_PATH as WR_METHODS_PATH, PROGRAM_PATH as WR_PROGRAM_PATH } from '../../sites/work-requirement/web/links.js';
 import { METHODS_PATH as TEAM_METHODS_PATH, PROGRAM_PATH as TEAM_PROGRAM_PATH } from '../../sites/team/web/links.js';
 import { nearestTo, pointOf } from '../../web/charts/geo.js';
 import { labelAt } from '../../web/whatif/marks.js';
 import { SITE, hospitalPathOf, programById } from '../../web/site.js';
+import { DEFAULT_SKIP_STATE } from '../../web/skip-state.js';
 import { DICTIONARY_PAGE, KINDS, METHODS_PATH, PROGRAM_PATH, hospitalPath, placeKind } from '../ci/page-types.js';
 
 // The browser engines Playwright drives, by the name E2E_ENGINE takes.

@@ -806,7 +806,7 @@ describe('the worksheet on a narrow phone', () => {
 // under consideration, under its group's name.
 const CARDS = SITE.programs.filter((p) => p.inData || p.scenario || p.stage === 'live').length;
 const SOON = SITE.programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
-const SPLIT = { soon: SOON, soonGroups: [...new Set(SOON.map((p) => p.group))] };
+const [SLIPS, GROUPS] = [SOON.length, new Set(SOON.map((p) => p.group)).size];
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
@@ -847,11 +847,11 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
         };
       });
       assert.deepEqual(f.go, Array(CARDS).fill(1), `${width} px: each of the ${CARDS} cards' way to its page on one line, the scenario's too`);
-      assert.equal(f.names, SPLIT.soonGroups.length, `${width} px: ${SPLIT.soonGroups.length} groups`);
+      assert.equal(f.names, GROUPS, `${width} px: ${GROUPS} groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
-      assert.equal(f.bands, SPLIT.soon.length, `${width} px: ${SPLIT.soon.length} slips`);
+      assert.equal(f.bands, SLIPS, `${width} px: ${SLIPS} slips`);
       assert.equal(f.bandsOk, true, `${width} px: each band's words on one line, inside it`);
-      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the ${SPLIT.soon.length} slips share one row`);
+      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the ${SLIPS} slips share one row`);
       assert.ok(f.heightSpread <= 1, `${width} px: slips in one row are one height (spread ${f.heightSpread} px)`);
       assert.ok(f.bandSpread <= 1, `${width} px: bands in one row share a bottom edge (spread ${f.bandSpread} px)`);
     }
