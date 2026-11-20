@@ -72,11 +72,13 @@ export function limitRuler({ id, low, high, limits, words, width }) {
   const zeroClear = low === 0 || high === 0 ? false : lowRight + 3 < x0 - zeroHalf && x0 + zeroHalf < highLeft - 3;
   const values = html`${text({ x: lowRight, y: valueY, anchor: 'end', cls: 'chart-value chart-ruler__end', body: lowText })}${text({ x: highLeft, y: valueY, anchor: 'start', cls: 'chart-value chart-ruler__end', body: highText })}${zeroClear ? text({ x: x0, y: valueY, cls: 'chart-tick', body: zeroText }) : ''}`;
 
-  // The walls' labels under the axis, each inside its limit; a track with no loss side says so under its wall.
+  // The walls' labels under the axis, each held to its end of the frame (the stop-loss from the left end, the stop-gain to
+  // the right end), at every width, so the two sit apart under their walls; a track with no loss side says so under its
+  // wall.
   const lossLabel = limits.loss > 0
-    ? text({ x: xLoss + 4, y: wallsY, anchor: 'start', cls: 'chart-tick', body: words.stopLoss(limits.loss) })
+    ? text({ x: SIDE, y: wallsY, anchor: 'start', cls: 'chart-tick', body: words.stopLoss(limits.loss) })
     : text({ x: x0 - 4, y: wallsY, anchor: 'end', cls: 'chart-tick', body: words.noLoss });
-  const gainLabel = text({ x: xGain - 4, y: wallsY, anchor: 'end', cls: 'chart-tick', body: words.stopGain(limits.gain) });
+  const gainLabel = text({ x: width - SIDE, y: wallsY, anchor: 'end', cls: 'chart-tick', body: words.stopGain(limits.gain) });
 
   return frame({
     kind: 'ruler', width, height: wallsY + 5, body: html`${hatchDefs(id)}

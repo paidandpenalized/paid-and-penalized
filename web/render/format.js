@@ -175,6 +175,10 @@ export function money(x, { sign = false } = {}) {
   return `${body === '0' ? '' : x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${body}`;
 }
 
+// An axis tick's round amount, signed, as money() writes it but without a ".0" before its unit ("+$1M", "−$2M",
+// "+$1.5M"): a gridline's label, where the ticks are round by construction.
+export const moneyTick = (x) => money(x, { sign: true }).replace(/\.0(?=[MB]$)/, '');
+
 // The amount money() prints for x, as a number of dollars ("−$1.2M" is -1200000, "$41K" 41000), for checking whether
 // printed figures add up as printed.
 const MONEY_UNIT = { '': 1, K: 1e3, M: 1e6, B: 1e9 };

@@ -14,6 +14,7 @@
 //              x(s) (a tick's label), y(v) (a gridline's label), tip(s, result) (a point's tooltip) }
 //   width    the viewBox's width
 // Each tabled point (payoffPoints) is a mark carrying its result, so figure() can hold the table to the chart.
+import { ticks } from 'd3-array';
 import { html } from '../render/html.js';
 import { frame, isNarrow, mark, r1, r2, text } from './svg.js';
 
@@ -75,11 +76,13 @@ export function payoff({ at, limits, span, step, band = 0, marker = null, words,
   const tickS = Array.from({ length: Math.round((2 * span) / 0.1) + 1 }, (_, i) => tidy(-span + i * 0.1)).filter((s) => Math.abs(s) <= span + EPS);
   // A phone's drawing labels every other gridline (each fifth of the spending axis), so no two labels touch.
   const labeled = (s) => !narrow || Math.abs(Math.round(s * 10)) % 2 === 0;
-  const ticksY = [...new Set([limits.gain, limits.gain / 2, 0, -limits.loss / 2, -limits.loss])];
+  // The dollar gridlines on round amounts (d3's nice ticks over the drawn range, about four on a phone and five wide),
+  // highest first; the limits' own amounts are on their dashed lines' names.
+  const ticksY = ticks(d0, d1, narrow ? 4 : 5).reverse().map((v) => v + 0);
   const grid = html`${ticksY.map((v) => html`<line class="chart-grid" x1="${left}" x2="${width - right}" y1="${y(v)}" y2="${y(v)}"/>${text({ x: left - 5, y: y(v) + 4, anchor: 'end', cls: 'chart-tick', body: words.y(v) })}`)}
 ${tickS.map((s) => html`<line class="chart-grid" x1="${x(s)}" x2="${x(s)}" y1="${top}" y2="${bottom}"/>${labeled(s) ? text({ x: x(s), y: bottom + 14, cls: 'chart-tick', body: words.x(s) }) : ''}`)}`;
   const shade = band > 0 ? html`<rect class="chart-payoff__band" x="${x(-band)}" y="${top}" width="${r2(x(band) - x(-band))}" height="${plotH}"/>${narrow || !words.band ? '' : text({ x: x(0), y: top + 12, cls: 'chart-payoff__band-label', body: words.band })}` : '';
-  const limitLine = (v, label, anchor) => html`<line class="chart-payoff__limit" x1="${left}" x2="${width - right}" y1="${y(v)}" y2="${y(v)}"/>${text({ x: anchor === 'end' ? width - right : left + 4, y: v > 0 ? y(v) - 4 : y(v) + 12, anchor, cls: 'chart-tick chart-label--halo', body: label })}`;
+  const limitLine = (v, label, anchor) => html`<line class="chart-payoff__limit" x1="${left}" x2="${width - right}" y1="${y(v)}" y2="${y(v)}"/>${text({ x: anchor === 'end' ? width - right : left + 4, y: y(v) - 4, anchor, cls: 'chart-tick chart-label--halo', body: label })}`;
   const limitsDrawn = html`${limits.gain > 0 ? limitLine(limits.gain, words.stopGain, 'end') : ''}${limits.loss > 0 ? limitLine(-limits.loss, words.stopLoss, 'start') : ''}`;
   const lines = html`<path class="chart-payoff__gain" d="${path(corners(at, -span, 0))}"/><path class="chart-payoff__loss" d="${path(corners(at, 0, span))}"/>`;
   const points = payoffPoints({ at, span, step }).map(({ s, result }) => mark({

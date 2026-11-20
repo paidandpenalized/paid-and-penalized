@@ -12,7 +12,8 @@
 //             legend: { title, low, high } (the legend's title, and the words after the lowest and the highest value) }
 //   width   the viewBox's width: the kit's WIDTH on a phone, or a wide one beside the words
 // Each division is a mark (data-div, its value as data-value) whose path holds its states' outlines; its labels carry
-// data-div too, so a script finds the text it rewrites.
+// data-div too, so a script finds the text it rewrites. Drawn in layers: the shapes and borders, the labels' chips, the
+// reader's outline (so a chip never hides it), then the labels' words over all.
 import { geoPath } from 'd3-geo';
 import { DIVISIONS, divisionOf } from '../../engine/js/divisions.js';
 import { html } from '../render/html.js';
@@ -35,12 +36,12 @@ const NARROW_NAME = 12;
 // Labels moved off their division's middle, in viewBox units, where the middle is crowded: New England's set against the
 // frame's right edge (edge: its last character there) over Maine, and a few others nudged clear of their neighbors (dx, dy).
 // A division not listed sits on its middle, centered. split: its name on two lines on the wide drawing too, so its label
-// keeps inside the division (East South Central's, which the reader's outline would cross). A test holds the labels
-// apart at the widest price.
+// keeps inside the division (East South Central's, which the reader's outline would cross). A test holds the labels'
+// chips 6 units apart at the widest price.
 const EDGE = 2;
 const NUDGE = Object.freeze({
-  narrow: { 1: { edge: true, dy: -27 }, 2: { dx: 6 }, 3: { dx: 2 }, 4: { dx: -12 }, 5: { dx: 20, dy: 18 }, 8: { dy: 8 }, 9: { dx: -4 } },
-  wide: { 1: { edge: true, dy: -30 }, 2: { dx: 8, dy: -6 }, 3: { dx: 3 }, 4: { dx: -24 }, 5: { dx: 6, dy: 40 }, 6: { dx: -2, dy: 4, split: true } },
+  narrow: { 1: { edge: true, dy: -25 }, 2: { dx: 7 }, 3: { dx: -6 }, 4: { dx: -21 }, 5: { dx: 20, dy: 38 }, 6: { dy: -7 }, 7: { dy: 22 }, 8: { dy: 26 }, 9: { dx: -4 } },
+  wide: { 1: { edge: true, dy: -30 }, 2: { dx: 18, dy: -6 }, 3: { dx: 3 }, 4: { dx: -24 }, 5: { dx: 6, dy: 46 }, 6: { dx: -2, dy: 4, split: true } },
 });
 // The legend under the map: its title, then the steps as one bar of swatches, the lowest and highest values under its two
 // ends.
@@ -104,7 +105,12 @@ export function divisionLabels({ topo, width, name, priceText }) {
     });
     const wide = Math.max(...lines.map((l) => widthOf(l.text, l.size)));
     const x0 = edge ? x - wide : x - wide / 2;
-    return { div, x, anchor, lines, x0, x1: x0 + wide, y0: my + dy - tall / 2, y1: my + dy + tall / 2 };
+    const [y0, y1] = [my + dy - tall / 2, my + dy + tall / 2];
+    // The chip under the block: CHIP_PAD past its words, and at least a CHIP_PRICE-character price wide.
+    const chipWide = Math.max(wide, widthOf('0'.repeat(CHIP_PRICE), type.price));
+    const cx0 = (edge ? x0 + wide - chipWide : x0 + wide / 2 - chipWide / 2) - CHIP_PAD;
+    const chip = { x0: cx0, x1: cx0 + chipWide + 2 * CHIP_PAD, y0: y0 - CHIP_PAD, y1: y1 + CHIP_PAD };
+    return { div, x, anchor, lines, x0, x1: x0 + wide, y0, y1, chip };
   });
 }
 
@@ -139,18 +145,16 @@ export function divisionMap({ topo, values, reader = null, words, width }) {
   });
   const borders = usMesh(topo, GEOMETRY, (a, b) => a !== b && divisionOf(a) !== divisionOf(b));
   const outline = reader === null ? '' : html`<path class="chart-div__reader" d="${outlineOf(topo, GEOMETRY, reader)}"/>`;
-  const type = TYPE[narrow ? 'narrow' : 'wide'];
-  const labels = divisionLabels({ topo, width, name: words.name, priceText: (div) => words.price(values[div]) }).map((l) => {
-    const wide = Math.max(l.x1 - l.x0, widthOf('0'.repeat(CHIP_PRICE), type.price));
-    const x0 = l.anchor === 'end' ? l.x1 - wide : (l.x0 + l.x1) / 2 - wide / 2;
-    const chip = html`<rect class="chart-div__chip" x="${r2(x0 - CHIP_PAD)}" y="${r2(l.y0 - CHIP_PAD)}" width="${r2(wide + 2 * CHIP_PAD)}" height="${r2(l.y1 - l.y0 + 2 * CHIP_PAD)}" rx="2"/>`;
-    return html`${chip}${l.lines.map((line) => html`<text class="${line.cls}" data-div="${l.div}" x="${r2(l.x)}" y="${r2(line.y)}" font-size="${line.size}" text-anchor="${l.anchor}">${line.text}</text>`)}`;
-  });
+  const placed = divisionLabels({ topo, width, name: words.name, priceText: (div) => words.price(values[div]) });
+  const chips = placed.map(({ chip: c }) => html`<rect class="chart-div__chip" x="${r2(c.x0)}" y="${r2(c.y0)}" width="${r2(c.x1 - c.x0)}" height="${r2(c.y1 - c.y0)}" rx="2"/>`);
+  const texts = placed.map((l) => l.lines.map((line) => html`<text class="${line.cls}" data-div="${l.div}" x="${r2(l.x)}" y="${r2(line.y)}" font-size="${line.size}" text-anchor="${l.anchor}">${line.text}</text>`));
   const legend = legendOf({ steps, words, top: r2(height * k), narrow });
   return frame({
     kind: 'division-map', width, height: legend.bottom, body: html`<g${scaled}><g class="chart-div__shapes">${marks}</g>
-<path class="chart-div__borders" d="${borders}"/>${outline}</g>
-<g class="chart-div__labels" aria-hidden="true">${labels}</g>
+<path class="chart-div__borders" d="${borders}"/></g>
+<g class="chart-div__chips" aria-hidden="true">${chips}</g>${outline ? html`
+<g${scaled}>${outline}</g>` : ''}
+<g class="chart-div__labels" aria-hidden="true">${texts}</g>
 ${legend.body}`,
   });
 }
