@@ -67,12 +67,21 @@ def other_ipps(hospitals, codes):
                   and codes[h["ccn"]][0] not in IN_TEAM)
 
 
+def in_quality_cohort(h):
+    """Whether a master hospital counts in the quality cohort: an open IPPS hospital outside Maryland that is neither an
+    Indian Health Service nor a tribal hospital, so the hospitals TEAM's rules could include (§ 512.505, 512.515), which
+    is closer to CMS's cohort of TEAM-eligible hospitals than every IPPS hospital."""
+    return (h["ipps"] and not h.get("inactive") and h["state"] != MARYLAND
+            and "IHS" not in h["types"] and h.get("ownDetail") != status.TRIBAL)
+
+
 def quality_tables(quality_values, hospitals):
-    """{measure: (sorted cohort values, {ccn: percentile})}: the cohort is every IPPS master hospital with a value."""
-    ipps = {h["ccn"] for h in hospitals if h["ipps"]}
+    """{measure: (sorted cohort values, {ccn: percentile})}: the cohort is every master hospital in_quality_cohort with
+    a value. A hospital outside it (participant_quality) is ranked against all of it."""
+    cohort_ccns = {h["ccn"] for h in hospitals if in_quality_cohort(h)}
     out = {}
     for m in MEASURES:
-        values = {c: v for c, v in quality_values[m].items() if c in ipps}
+        values = {c: v for c, v in quality_values[m].items() if c in cohort_ccns}
         cohort = sorted(values.values())
         out[m] = (cohort, quality.percentiles(values, cohort))
     return out
@@ -116,8 +125,8 @@ def participant(entry, h, ctx):
 
 def method(participants, tables, placed, mismatches):
     """What the Methods page states about the build's own choices and checks, so it prints them rather than typing
-    them: the DRG remaps and the low-volume scale (episodes' constants), each measure's cohort size (the IPPS hospitals
-    with a value), and the list-CBSA check: the mandatory participants, how many are placed in a county, and how many of
+    them: the DRG remaps and the low-volume scale (episodes' constants), each measure's cohort size (in_quality_cohort's
+    hospitals with a value), and the list-CBSA check: the mandatory participants, how many are placed in a county, and how many of
     those sit in a county the delineation puts outside their list CBSA (`mismatches`, status.list_cbsa_mismatches)."""
     mandatory = [r for r in participants if r["participation"] == "mandatory"]
     return {"remaps": episodes.REMAPS, "baselineScale": episodes.BASELINE_SCALE,

@@ -51,7 +51,7 @@
       ]
     },
     "measure": {
-      "description": "The hospital's public value (lower is better) and its percentile (0-100, ties take the higher; 42 CFR 512.547(b)(1)(i)(A)) among IPPS hospitals with a value; null when the hospital has no public value or no other hospital in the cohort to rank against (the calculator then uses 50, § 512.547(b)(1)(i)(D)).",
+      "description": "The hospital's public value (lower is better) and its percentile (0-100, ties take the higher; 42 CFR 512.547(b)(1)(i)(A)) among open IPPS hospitals with a value, outside Maryland and other than IHS and tribal hospitals; null when the hospital has no public value or no other hospital in the cohort to rank against (the calculator then uses 50, § 512.547(b)(1)(i)(D)).",
       "type": [
         "object",
         "null"
@@ -83,8 +83,8 @@
       ],
       "properties": {
         "n": {
-          "description": "Episodes: the latest data year's Medicare inpatient discharges under the category's DRGs, retired DRGs moved to their FY2027 successors (an assumed even split makes some counts end in .5). A floor: cells under 11 discharges are hidden and outpatient cases are not public.",
-          "type": "number",
+          "description": "Episodes: the latest data year's Medicare inpatient discharges under the category's DRGs, retired DRGs moved to their FY2027 successors (where an assumed even split divides a DRG's cases, both halves stay in the category, so the count is whole). A floor: cells under 11 discharges are hidden and outpatient cases are not public.",
+          "type": "integer",
           "minimum": 0
         },
         "price": {

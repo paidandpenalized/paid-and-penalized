@@ -3,8 +3,9 @@
 TEAM scales each raw measure score to "the percentile to which the TEAM participant's raw quality measure score would
 have belonged" in the cohort's distribution, and a score that ties others takes the higher percentile
 (42 CFR 512.547(b)(1)(i)(A)). For both measures used here (hybrid hospital-wide readmission and surgical-complication
-mortality) lower is better (§ 512.547(b)(1)(i)(C)). The cohort is an approximation of CMS's: every IPPS hospital with
-a public value for the measure.
+mortality) lower is better (§ 512.547(b)(1)(i)(C)). The cohort is an approximation of CMS's: every open IPPS hospital
+outside Maryland, other than Indian Health Service and tribal hospitals, with a public value for the measure
+(build.in_quality_cohort).
 """
 from bisect import bisect_left, bisect_right
 from math import floor

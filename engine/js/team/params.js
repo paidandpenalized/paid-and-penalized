@@ -30,6 +30,10 @@ export const EPISODE_DAYS = 30;
 // performance-year spending capped at target, so it can add to a gain but not to a loss (§ 512.550(c)(9)).
 export const LOW_VOLUME = 31;
 
+// TEAM-79. CMS's Medicare Inpatient Hospitals file, which the episode counts come from, leaves out any hospital-DRG row
+// built from this many discharges or fewer (CMS's methodology for the file), so the counts are a floor.
+export const SUPPRESSED_MAX = 10;
+
 // TEAM-17. The scaled score CMS gives a measure the hospital has no, or an incomplete, raw score for (§ 512.547(b)(1)(i)(D)).
 export const MISSING_QUALITY = 50;
 
@@ -46,8 +50,9 @@ export const MEASURES = Object.freeze({
 });
 
 // This site's own choices, not CMS rules, so no claim id: the half-width of the range the calculator draws around its
-// estimate, as a share of target price, with the least and most a reader may set. Five percent is the default because
-// that is about where half of CJR's full-risk-year hospitals ended (band-width evidence kept in the planning repo).
+// estimate, as a share of target price, with the least and most a reader may set. The default follows the spread of
+// results hospitals had in CJR and BPCI Advanced, Medicare's earlier surgical bundles, and equals Track 2's limit; the
+// TEAM Methods page (#band) explains it in words.
 export const BAND_DEFAULT = 0.05;
 export const BAND_MIN = 0.01;
 export const BAND_MAX = 0.20;

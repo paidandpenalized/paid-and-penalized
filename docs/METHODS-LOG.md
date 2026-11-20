@@ -549,7 +549,8 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   data year (CMS's Medicare Inpatient Hospitals by Provider and Service file, data year 2024). Discharges under DRGs the
   FY2027 grouper no longer has move to their successors: 453-455 to 426-428 and 456-458 to the new 523-525, all of
   them; 459 and 460 split evenly between 447 and 450, and between 448 and 451 (the public file has no procedure codes to
-  split them as CMS does), so some counts end in .5. The counts are a floor: CMS leaves out any hospital-DRG cell under
+  split them as CMS does). Both halves of each split land in one category, so every category count stays whole; only
+  the mix of DRG prices behind a count is an even guess. The counts are a floor: CMS leaves out any hospital-DRG cell under
   11 discharges (`hidden` counts the category's absent cells), outpatient joint replacement and spinal fusion are not
   in the file, and CMS attributes episodes after exclusions the file cannot apply.
 - Price and target: a category's price is the episode-weighted mean of the hospital's division DRG prices, or the
@@ -559,10 +560,15 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - Quality: Hybrid hospital-wide readmission and surgical-complication mortality (ISCMR) values from the Provider Data
   Catalog. A participant's percentile per measure is the share of the other hospitals in the cohort with a worse
   (higher) value or the same value, floored to a whole percent; ties take the higher percentile (§ 512.547(b)(1)(i)(A)).
-  The cohort, an approximation of CMS's, is every IPPS hospital in the master with a value. No value, or no other
-  hospital in the cohort to rank against: null (the calculator then uses 50, § 512.547(b)(1)(i)(D)).
-- Track 2 flags: SCH, MDH and EACH from the master's special statuses, and `rural` when the impact file does not class
-  the hospital urban. Safety-net status is not public, so an empty list does not rule Track 2 out.
+  The cohort, an approximation of CMS's, is every open IPPS hospital in the master with a value, outside Maryland and
+  leaving out Indian Health Service and tribal hospitals: the hospitals TEAM's rules could include, as CMS's cohort is
+  (`build.in_quality_cohort`). A participant outside it is ranked against all of it. No value, or no other hospital in
+  the cohort to rank against: null (the calculator then uses 50, § 512.547(b)(1)(i)(D)).
+  - 2026-11-19, before release: the cohort was every IPPS hospital with a value; leaving out Maryland, IHS and tribal,
+    and closed hospitals moves it closer to CMS's. 313 of the 720 participants' percentiles moved, each by one point
+    at most (289 on hybrid hospital-wide readmission, 40 on ISCMR); the default hospital is unchanged.
+- Track 2 flags: SCH, MDH and EACH from the master's special statuses, and `rural` when the impact file classes it
+  rural (its urban flag is false; a hospital the file doesn't class gets no `rural`). Safety-net status is not public, so an empty list does not rule Track 2 out.
 - Default hospital: the lower median, by target then CCN, of mandatory participants active in PY2 with no Track 2 flag
   and episodes in 4 or more categories.
 - Status, in rule order: on the TEAM list (`in`; `in27` for a start on or after 2027-01-01; `ended` for an end before
@@ -590,6 +596,6 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   unlisted 8, area_unknown 6 (Connecticut hospitals under an old county name; the crosswalk has the state's planning
   regions), cjrx 2,213 (outside 2,204, in_area_other 5, ihs 2, unlisted 2).
 - `method`: the numbers the Methods page states rather than types: the DRG remaps and the low-volume scale (the engine's
-  `REMAPS` and `BASELINE_SCALE`), each quality measure's cohort size (IPPS hospitals with a value: 2,977 for hybrid
-  hospital-wide readmission, 2,316 for ISCMR) and the period its public values cover (one per measure, or the build
+  `REMAPS` and `BASELINE_SCALE`), each quality measure's cohort size (the cohort above with a value: 2,896 for hybrid
+  hospital-wide readmission, 2,269 for ISCMR) and the period its public values cover (one per measure, or the build
   stops), and the list-CBSA check above (711 mandatory participants, 710 placed, none outside their list CBSA).

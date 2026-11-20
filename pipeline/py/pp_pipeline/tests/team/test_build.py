@@ -90,6 +90,22 @@ class Quality(unittest.TestCase):
     def test_percentiles_for_a_cohort(self):
         self.assertEqual(quality.percentiles({"990001": 5.0, "990002": 5.0}), {"990001": 100, "990002": 100})
 
+    def test_the_cohort_is_the_hospitals_team_could_include(self):
+        # Every open IPPS hospital with a value, outside Maryland and leaving out IHS and tribal hospitals (the hospitals
+        # TEAM's rules could make participants, closer to CMS's cohort); a hospital outside it is still ranked against it.
+        kept = hosp("990001")
+        left_out = [hosp("990002", state="MD"), hosp("990003", types=["IHS"]), hosp("990004", ownDetail="Tribal"),
+                    hosp("990005", inactive=True), hosp("990006", ipps=False)]
+        values = {m: {h["ccn"]: 1.0 + i for i, h in enumerate([kept, *left_out])} for m in MEASURES}
+        values = {m: {**v, "990007": 9.0} for m, v in values.items()}
+        tables = quality_tables(values, [kept, *left_out, hosp("990007")])
+        for m in MEASURES:
+            cohort, pcts = tables[m]
+            self.assertEqual(cohort, [1.0, 9.0])
+            self.assertEqual(set(pcts), {"990001", "990007"})
+        # A hospital outside the cohort is ranked against all of it: 990003's 3.0 beats one of the two.
+        self.assertEqual(participant_quality("990003", values, tables)["hybrid_hwr"], {"value": 3.0, "pct": 50})
+
     def test_a_measure_with_no_other_hospital_to_rank_against_is_null(self):
         # A cohort of one (the hospital itself), or an empty one, leaves no percentile: the measure is null, as for a
         # hospital with no public value, never {value, pct: null}.
@@ -386,9 +402,11 @@ class WholeBuild(unittest.TestCase):
         method = doc["method"]
         self.assertEqual(method["remaps"], episodes.REMAPS)
         self.assertEqual(method["baselineScale"], episodes.BASELINE_SCALE)
-        ipps = {h["ccn"] for h in p.hospitals if h["ipps"]}
+        # The cohort, recounted: open IPPS hospitals outside Maryland, neither IHS nor tribal.
+        cohort = {h["ccn"] for h in p.hospitals if h["ipps"] and not h.get("inactive") and h["state"] != "MD"
+                  and "IHS" not in h["types"] and h.get("ownDetail") != "Tribal"}
         for m in MEASURES:
-            self.assertEqual(method["cohort"][m], sum(c in ipps for c in p.quality[m]), m)
+            self.assertEqual(method["cohort"][m], sum(c in cohort for c in p.quality[m]), m)
             self.assertGreater(method["cohort"][m], 0, m)
         rows = pins_quality_rows()
         for m in MEASURES:

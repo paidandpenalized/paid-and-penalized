@@ -7,7 +7,8 @@
 import { CATEGORIES } from '../../engine/js/team/params.js';
 
 // A row: the CCN, the census division, the Track 2 flags (space-separated, '' for none), the participation start date,
-// then per category (CATEGORIES order) the episodes, the average target price (to the cent), the hidden cells and the
+// then per category (CATEGORIES order) the episodes, the average target price (as the file has it, unrounded, so the
+// calculator's target amount is the file's own to the cent; the pages round only what they print), the hidden cells and the
 // low-volume flag (1 or 0), then each public quality measure's percentile and value (null when it has none).
 const PUBLIC_MEASURES = Object.freeze(['hybrid_hwr', 'iscmr']);
 export const CALC_COLS = Object.freeze(['ccn', 'division', 'flags', 'start',
@@ -16,14 +17,12 @@ export const CALC_COLS = Object.freeze(['ccn', 'division', 'flags', 'start',
 const PER_CAT = 4;
 const HEAD = 4;
 
-const cents = (x) => Math.round(x * 100) / 100;
-
 // One participant of the emitted file (data.js loadTeam: participants[]) as a row.
 export function calcRow(p) {
   return [p.ccn, p.division, p.track2Flags.join(' '), p.start,
     ...CATEGORIES.flatMap((c) => {
       const cat = p.cats[c];
-      return [cat.n, cents(cat.price), cat.hidden, cat.lowVolume ? 1 : 0];
+      return [cat.n, cat.price, cat.hidden, cat.lowVolume ? 1 : 0];
     }),
     ...PUBLIC_MEASURES.flatMap((m) => [p.quality[m]?.pct ?? null, p.quality[m]?.value ?? null])];
 }
