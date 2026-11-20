@@ -162,7 +162,7 @@ export const COPY = {
     claim: null,
   },
   bandExtremes: {
-    text: "The extremes ran farther, past {limit} either way, which is where Track {tc}'s limits would stop a TEAM hospital's result.",
+    text: "Some hospitals' years run well past {band} either way; Track {tc}'s limits stop a TEAM hospital's result at {limit} either way.",
     claim: 'TEAM-14',
   },
   bandFile: { text: "CMS's CJR final reconciliation file", claim: null },

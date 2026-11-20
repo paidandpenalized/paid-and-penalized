@@ -182,7 +182,8 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread in words, linked
   assert.deepEqual(digitRuns(words(m.replace(/<span class="tm-cite">[^<]*<\/span>/g, ''))).filter((n) => !allowed.has(n)), [], 'numbers in #band (citations aside)');
   assert.match(s, /most hospitals ended a year near their target/);
   assert.match(s, /the same under as over/);
-  assert.ok(s.includes(`past ${pct(TRACKS[3].gain, 0)} either way, which is where Track 3’s limits`));
+  assert.ok(s.includes(`Track 3’s limits stop a TEAM hospital’s result at ${pct(TRACKS[3].gain, 0)} either way`));
+  assert.ok(!/extremes ran|past 20/.test(s), 'no claim about CJR\'s tails');
   assert.ok(m.includes(`href="${SOURCE_LINKS.cjrRecon}"`));
   assert.ok(m.includes(`href="${SOURCE_LINKS.bpciEval}"`));
   assert.equal(BAND_DEFAULT === TRACKS[2].gain && BAND_DEFAULT === TRACKS[2].loss, s.includes('Track 2’s limit on a gain and on a repayment'));

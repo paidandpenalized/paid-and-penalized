@@ -168,6 +168,12 @@ export function keepOwn(next, state) {
   return out;
 }
 
+// Whether a link's values carry any of the reader's own numbers (n, p, q or lv): such a link replaces them; one without
+// (an older, public-only fragment: Back) leaves them.
+export function carriesOwn(link) {
+  return ['n', 'p'].some((g) => Object.keys(link.ov?.[g] ?? {}).length > 0) || Object.keys(link.lv ?? {}).length > 0 || Object.keys(link.q ?? {}).length > 0;
+}
+
 // A shared link's values (decodeTeam's partial state) over a hospital's opening state: every own number it carries is the
 // reader's ("your number"), its spending counts as set, and its "all five" spending is held to the slider's reach.
 export function applyLink(state, link) {

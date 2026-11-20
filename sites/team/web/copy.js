@@ -60,8 +60,8 @@ export const COPY = {
 
   // Figure 1, the map of participants: filled dots in TEAM, hollow ones for the other hospitals the inpatient system pays.
   mapTakeaway: {
-    text: "The {n} hospitals in TEAM for {year}, in the areas CMS selected. Hollow: the {other} other hospitals Medicare's inpatient system pays, outside Maryland.",
-    claim: ['TEAM-02', 'TEAM-03'],
+    text: "The {n} hospitals in TEAM for {year}: the mandatory ones in the areas CMS selected, plus {v} that joined voluntarily. Hollow: the {other} other hospitals Medicare's inpatient system pays, outside Maryland.",
+    claim: ['TEAM-01', 'TEAM-02', 'TEAM-03', 'TEAM-06'],
   },
   mapKeyIn: { text: 'In TEAM ({n})', claim: null },
   mapKeyOther: { text: 'Other inpatient-system hospitals, not in TEAM ({n})', claim: null },

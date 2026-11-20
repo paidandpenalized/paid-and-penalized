@@ -24,6 +24,9 @@ const PCT_SPAN = SOLVE_SPAN * 100;
 // Rejected key names are echoed back by the page (as text); keep a hostile one short. Each is shown as the reader would
 // have typed it, percent-decoded, or as it came where it doesn't decode.
 const KEY_SHOWN = 40;
+// C0 and C1 controls and the bidi controls (embeddings, overrides, isolates, marks): nothing a reader should see echoed,
+// as they can reorder or hide the text around them.
+const UNSAFE_SHOWN = /[\u0000-\u001F\u007F-\u009F\u200E\u200F\u202A-\u202E\u2066-\u2069]/g;
 function shownKey(key) {
   let text = key;
   try {
@@ -31,7 +34,7 @@ function shownKey(key) {
   } catch {
     // A malformed escape: the key as it came.
   }
-  return text.slice(0, KEY_SHOWN);
+  return text.replace(UNSAFE_SHOWN, '').slice(0, KEY_SHOWN);
 }
 
 // -0 prints as "0" but equals 0 only loosely; normalize so no state or link carries it.

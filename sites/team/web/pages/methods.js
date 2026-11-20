@@ -150,15 +150,15 @@ ${para(sentence('cqsSource', { sheet }))}`,
   };
 }
 
-// The band's evidence, in words (no figure of this site's own counting): CJR's and BPCI Advanced's spread, the extremes past
-// Track 3's limits, and Track 2's limit only when the default band equals it.
+// The band's evidence, in words (no figure of this site's own counting): CJR's and BPCI Advanced's spread, Track 3's
+// limits (no claim about CJR's tails), and Track 2's limit only when the default band equals it.
 function bandSection() {
   const band = `±${pct(BAND_DEFAULT, 0)}`;
   const track2 = TRACKS[TB].gain === BAND_DEFAULT && TRACKS[TB].loss === BAND_DEFAULT;
   return {
     id: BAND_ANCHOR, heading: t('bandHeading'), body: html`${para(fill('bandWhat', { band, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) }))}
 ${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, { band }))}
-${para(fill('bandExtremes', { limit: pct(TRACKS[TC].gain, 0), tc: TC }), C.track2)}
+${para(fill('bandExtremes', { band, limit: pct(TRACKS[TC].gain, 0), tc: TC }), C.track2)}
 ${para(sentence('bandBpci', { eval: externalLink(SOURCE_LINKS.bpciEval, t('bandEval')) }))}
 ${track2 ? para(fill('bandTrack2', { band, tb: TB }), C.track2) : ''}
 ${para(fill('bandCaveat', { n: numberWord(CATEGORIES.length) }), C.categories)}`,

@@ -61,6 +61,12 @@ test('rejected keys are shown decoded, raw where they don\'t decode, and capped'
   assert.equal(decodeTeam(`#team&${'b'.repeat(60)}=1`).rejected[0].length, 40);
 });
 
+test('rejected keys are shown without control or bidi characters', () => {
+  const bad = ['%00', '%1B', '%7F', '%C2%85', '%C2%9F', '%E2%80%AE', '%E2%80%AA', '%E2%81%A6', '%E2%81%A9', '%E2%80%8E', '%E2%80%8F'].join('');
+  assert.deepEqual(decodeTeam(`#team&a${bad}b=1`).rejected, ['ab']);
+  assert.deepEqual(decodeTeam(`#team&${'%E2%80%AE'.repeat(50)}${'c'.repeat(50)}=1`).rejected, ['c'.repeat(40)], 'stripped before the cap');
+});
+
 test('grammar: no plus, blank, exponent, trailing dot or hex', () => {
   for (const v of ['+5', ' 5', '5 ', '1e3', '5.', '.5', '0x10', '--5', '', 'NaN', 'Infinity']) {
     assert.deepEqual(decodeTeam(`#team&s=${v}`), { state: {}, rejected: ['s'] }, JSON.stringify(v));

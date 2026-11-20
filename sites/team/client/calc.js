@@ -24,7 +24,7 @@ import { CALC_COLS, ccnSet, hospOf, whoByCcn } from '../../../web/team/calc-data
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
 import { initialState } from '../../../web/team/opening.js';
-import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
+import { addressOf, applyLink, arrival, carriesOwn, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from './calc-state.js';
 import { hospitalEntry, loadSearch } from './files.js';
 
 // How long "Link copied." stays before it clears (the copy-button guide's: long enough to read, then no stale words).
@@ -356,7 +356,11 @@ export function mountCalc(section) {
     // A link for the hospital already showing (one pasted into this tab, or Back to an older address): its values apply
     // over the reader's own numbers, which an older, public-only fragment never carries.
     if (current !== null && to.ccn === hosp.ccn) {
-      if (to.values) update(applyLink(keepOwn(initialState(hosp), state), to.values), { force: true, now: true });
+      if (to.values) {
+        // Back (a link with no own numbers) keeps the reader's; a link carrying some replaces them.
+        const base = carriesOwn(to.values) ? initialState(hosp) : keepOwn(initialState(hosp), state);
+        update(applyLink(base, to.values), { force: true, now: true });
+      }
     } else if (to.ccn !== hosp.ccn || to.values) {
       const home = hospOf(first.row, first.who);
       if (to.ccn === base) show(home, to.values ? applyLink(initialState(home), to.values) : initialState(home), { quiet: true });

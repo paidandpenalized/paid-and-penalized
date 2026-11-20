@@ -13,7 +13,7 @@ import { reconcile } from '../../../engine/js/team/reconcile.js';
 import { mulberry32 } from '../../../engine/js/test/prng.js';
 import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
-import { addressOf, applyLink, arrival, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
+import { addressOf, applyLink, arrival, carriesOwn, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
 import { CALC } from '../web/constants.js';
 import { isoDate } from '../../../web/render/format.js';
@@ -493,6 +493,9 @@ test('a link arriving for the hospital showing keeps the reader\'s own numbers; 
   assert.deepEqual([...next.mine].sort(), ['lv.CABG', 'n.LEJR', 'q.falls']);
   const theirs = applyLink(keepOwn(initialState(deflt), state), readLink('#team&n.LEJR=40').values);
   assert.equal(theirs.ov.n.LEJR, 40, 'the link\'s own number wins');
+  // The arrival's choice: keep the reader's numbers only when the link carries none of its own.
+  assert.equal(carriesOwn(older.values), false, 'a public-only link (Back): own numbers kept');
+  for (const frag of ['#team&n.LEJR=40', '#team&p.LEJR=9000', '#team&q.falls=80', `#team&lv.CABG=1`]) assert.equal(carriesOwn(readLink(frag).values), true, frag);
   // keepOwn takes nothing that isn't the reader's: a row's spending and the slider stay the link's to set.
   const kept = keepOwn(initialState(deflt), type(state, deflt, 'sk.BOWEL', '-5'));
   assert.deepEqual(kept.sk, {});

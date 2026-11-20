@@ -38,8 +38,10 @@ export function mapCounts(team, master) {
   };
   inTeam.forEach((ccn) => tally(ccn, 'in'));
   team.otherIpps.forEach((ccn) => tally(ccn, 'other'));
+  const active = new Set(inTeam);
+  const voluntary = team.participants.filter((p) => p.participation === 'voluntary' && active.has(p.ccn)).length;
   return {
-    listed, in: inTeam.length, other: team.otherIpps.length, ended: team.participants.length - inTeam.length, missing,
+    listed, in: inTeam.length, voluntary, other: team.otherIpps.length, ended: team.participants.length - inTeam.length, missing,
     inTeam, byState: [...states.values()].sort((a, b) => a.name.localeCompare(b.name)),
   };
 }
@@ -88,7 +90,7 @@ ${key}
 </div>`;
   return figure({
     n,
-    takeaway: fill('mapTakeaway', { n: count(counts.in), year, other: count(counts.other) }),
+    takeaway: fill('mapTakeaway', { n: count(counts.in), v: count(counts.voluntary), year, other: count(counts.other) }),
     chart,
     note,
     source: fill('mapSource', { date: isoDate(team.meta.listAsOf) }),
