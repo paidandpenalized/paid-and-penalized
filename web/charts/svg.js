@@ -25,6 +25,8 @@ export const isNarrow = (width) => width < 400;
 
 // A caption's width in viewBox units, estimated at the caps' 6.4 units a character.
 export const capsWidth = (text) => String(text).length * 6.4;
+// A label's width in the kit's monospaced type (IBM Plex Mono: 0.6 em a character) at size viewBox units.
+export const monoWidth = (text, size) => String(text).length * size * 0.6;
 
 // A line through points [{ x, y }] as a path's d, at (x(p.x), y(p.y)); a point with y null breaks it.
 export function lineD(points, x, y) {

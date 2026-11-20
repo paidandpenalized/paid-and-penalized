@@ -8,6 +8,7 @@ import { hospitalScenario } from '../../engine/js/medicaid/hospital.js';
 import { median, peerKey } from '../../engine/js/peers.js';
 import { STATE_NAMES } from '../../engine/js/states.js';
 import { cmsNamed } from '../../pipeline/master.js';
+import { build } from '../../pipeline/site/build.js';
 import { createContext } from '../../pipeline/site/context.js';
 import { textOf } from '../../pipeline/site/html.js';
 import { ASSETS, chipOf, headerOf, withTemp } from '../../pipeline/test/helpers.js';
@@ -16,15 +17,16 @@ import { caseShareTexts, shareRange } from '../../web/medicaid/format.js';
 import { HAC_CUT_PCT } from '../../web/programs.js';
 import { decimal, dollars, money, moneyRange, pct } from '../../web/render/format.js';
 import { escapeHtml } from '../../web/render/html.js';
+import { BUDGETS, pageWeight } from '../../tools/ci/size-budget.js';
 import { LISTED_PROGRAMS, SITE, hospitalPathOf } from '../../web/site.js';
 import { hubModel, loadHub } from '../data.js';
 import { COPY } from '../hospital/copy.js';
 import { placeOf, rangeBox, scaleTicks, scaleTop } from '../hospital/medicaid.js';
-import { hospitalPage } from '../hospital/page.js';
+import { hospitalPage, outsidePage } from '../hospital/page.js';
 import { peerFigures, peersOf } from '../hospital/peers.js';
 import { shareText, signedShareText } from '../hospital/text.js';
 import { hubHospitals, storyFacts } from '../model.js';
-import { generateHub } from '../pages.js';
+import { HUB as HUB_SITE, generateHub } from '../pages.js';
 import { mainOf } from './helpers.js';
 
 const HUB = loadHub();
@@ -373,14 +375,18 @@ test('the hub writes a page for every hospital in the master, each at its addres
     assert.equal(ctx.pages - base.pages, HUB.dollars.hospitals.length + OUTSIDE.length, 'one page per hospital in the master');
     let bad = 0;
     let wrongCanonical = 0;
+    // The TEAM section: on every participant's page (CMS's TEAM list, as the TEAM file has it), on no other.
+    let teamWrong = 0;
     for (const h of [...HOSPITALS, ...OUTSIDE]) {
       const path = hospitalPathOf('hub', h.ccn);
       const text = readFileSync(join(dir, 'b', path, 'index.html'), 'utf8');
       if (/NaN|undefined|Infinity/.test(text)) bad += 1;
       if (!text.includes(`<link rel="canonical" href="https://paidandpenalized.org/hospital/${h.ccn.toLowerCase()}/">`)) wrongCanonical += 1;
+      if (text.includes('data-team') !== HUB.team.participants.has(h.ccn)) teamWrong += 1;
     }
     assert.equal(bad, 0, 'pages with NaN, undefined or Infinity');
     assert.equal(wrongCanonical, 0, 'pages without their canonical address');
+    assert.equal(teamWrong, 0, 'pages with the TEAM section that aren\'t a participant\'s, or a participant\'s without it');
     // The hub released: every page is indexed but one with no inputs (it has no figures) and one for a hospital no CMS
     // file names.
     const indexed = ctx.indexable.filter((p) => p.startsWith('/hospital/')).length;
@@ -566,3 +572,69 @@ test('every drawn hospital\'s band: a range whose printed low and high differ, n
   assert.deepEqual(rangeBox(995, 1000), { x: 988, width: 12 });
   assert.deepEqual(rangeBox(100, 300), { x: 100, width: 200 });
 });
+
+// ---------- the TEAM section (hospital/team.js) ----------
+const TEAM = HUB.team;
+const renderTeam = (h, team = TEAM) => hospitalPage({ h, hospitals: HOSPITALS, facts: FACTS, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), hrrp: HUB.hrrp, medicaid: HUB.medicaid, team });
+const renderOutside = (h, team) => outsidePage({ h, assets: ASSETS, robots: null, master: HUB.master.get(h.ccn), medicaid: HUB.medicaid, team, programYears: HUB.programYears });
+const teamOf = (page) => /<section class="hh__wb hh__wb--team"[\s\S]*?<\/section>\n/.exec(page)?.[0] ?? null;
+const inTeam = (h) => TEAM.participants.has(h.ccn);
+const teamRow = (h) => TEAM.participants.get(h.ccn);
+// Five estimated participants with public episodes, spread through the dollar file's order.
+const TEAM_DRAWN = HOSPITALS.filter((h) => h.est && inTeam(h) && teamRow(h).active && teamRow(h).target > 0);
+const TEAM_FIVE = [0, 1, 2, 3, 4].map((i) => TEAM_DRAWN[Math.floor((i * (TEAM_DRAWN.length - 1)) / 4)]);
+
+test('TEAM never enters the net total: a participant\'s page is the page without the section plus the section, byte for byte; its net, stamp and rows unchanged', () => {
+  assert.equal(new Set(TEAM_FIVE.map((h) => h.ccn)).size, 5, 'five different hospitals');
+  for (const h of TEAM_FIVE) {
+    const page = renderTeam(h);
+    const section = teamOf(page);
+    assert.ok(section, 'the section');
+    const without = render(h);
+    assert.equal(page.replace(section, ''), without, 'everything else, the net, its stamp and its rows included, is the page without the section');
+    const net = (x) => /<section class="hh__net"[\s\S]*?<\/section>/.exec(x)[0];
+    assert.equal(net(page), net(without), 'the net and its stamp');
+    assert.ok(page.indexOf(section) > page.indexOf('data-medicaid'), 'after the Medicaid band');
+    assert.ok(page.indexOf(section) < page.indexOf('data-peer-table'), 'before the peer table');
+    assert.ok(section.includes(esc(COPY.tmNote)), 'its note: never added to the net above');
+    assert.doesNotMatch(section, /<script|<button|data-row|data-sum/, 'no script, control or hook the page\'s script reads');
+  }
+});
+
+test('band only on participants: a non-participant\'s page is byte for byte the page without TEAM, on every kind of page', () => {
+  const est = HOSPITALS.filter((h) => h.est && !inTeam(h));
+  for (const h of [0, 1, 2, 3].map((i) => est[Math.floor((i * (est.length - 1)) / 3)])) assert.equal(renderTeam(h), render(h), 'an estimated non-participant');
+  const variant = pick((h) => !h.est && !inTeam(h), 'a hospital with no estimate, not in TEAM');
+  assert.equal(renderTeam(variant), render(variant), 'a non-participant with no estimate');
+  const out = OUTSIDE.find((h) => !inTeam(h));
+  assert.equal(renderOutside(out, TEAM), renderOutside(out, null), 'a hospital outside the penalty programs, not in TEAM');
+});
+
+test('the section on a participant with no estimate and on one outside the penalty programs: after the Medicaid band, no net named', () => {
+  const variant = pick((h) => !h.est && inTeam(h), 'a participant with no estimate');
+  const vs = teamOf(renderTeam(variant));
+  assert.ok(vs && vs.includes(esc(COPY.tmNoteAlone)) && !vs.includes('Medicare net'), 'a participant with no estimate: its section names no net');
+  const out = OUTSIDE.find(inTeam);
+  assert.ok(out, 'a participant outside the penalty programs');
+  const page = renderOutside(out, TEAM);
+  const os = teamOf(page);
+  assert.ok(os && !os.includes('Medicare net'), 'outside the programs: its section names no net');
+  assert.equal(page.replace(os, ''), renderOutside(out, null), 'and is the page without it, plus it');
+  assert.ok(page.indexOf(os) < page.indexOf('class="hh__notes"'), 'before the source line');
+  // The "Not in Medicare's penalty programs" stamp is the master's, not TEAM's: a participant's page shows it or not as
+  // it would without the section (the byte-for-byte check above).
+});
+
+test('the hub hospital page within its 70 KB budget: every participant\'s built page (HTML, CSS and scripts, brotli)', { timeout: 120_000 }, () =>
+  withTemp('pp-hub-team-', async (dir) => {
+    await build({ outDir: join(dir, 'dist'), sites: [HUB_SITE] });
+    const cache = new Map();
+    let heaviest = { total: 0 };
+    for (const ccn of TEAM.participants.keys()) {
+      const w = pageWeight(join(dir, 'dist'), `${hospitalPathOf('hub', ccn).slice(1)}index.html`, cache);
+      if (w.total > heaviest.total) heaviest = w;
+    }
+    // The size, never the hospital: the run's log carries the heaviest participant page against the budget.
+    console.log(`heaviest TEAM participant's hub page: ${(heaviest.total / 1024).toFixed(1)} KB of ${BUDGETS.hubHospital / 1024} KB (HTML ${(heaviest.html / 1024).toFixed(1)} KB)`);
+    assert.ok(heaviest.total <= BUDGETS.hubHospital, 'a participant\'s page over the hub hospital budget');
+  }));

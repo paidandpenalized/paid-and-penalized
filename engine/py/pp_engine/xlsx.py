@@ -51,6 +51,7 @@ def _col_index(ref):
 
 def sheet_rows(data, sheet, label):
     """Rows (lists of strings) of worksheet `sheet` in the .xlsx workbook `data` (bytes); `label` names it in errors.
+    `sheet` None reads the workbook's first sheet (for a file whose sheet name CMS may change).
 
     Shared and inline strings are resolved; a numeric cell keeps its stored text, which Excel writes at full
     double precision ('0.18243374902572096'); a skipped cell is ''.
@@ -62,6 +63,8 @@ def sheet_rows(data, sheet, label):
     with zf:
         zipsafe.check_zip(zf, label)
         rids = {s.get("name"): s.get(_XL_REL) for s in _part(zf, "xl/workbook.xml", label).iter(_XL + "sheet")}
+        if sheet is None and rids:
+            sheet = next(iter(rids))
         if sheet not in rids:
             raise SchemaError(f"{label}: no worksheet named {sheet!r} (found {sorted(rids)})")
         rels = {r.get("Id"): r for r in _part(zf, "xl/_rels/workbook.xml.rels", label)}

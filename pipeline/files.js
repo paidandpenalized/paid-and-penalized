@@ -46,6 +46,8 @@ export const hrrpPath = (fy) => `data/emitted/hrrp/fy${fy}/hrrp.json`;
 export const dollarsPath = (fy) => `data/emitted/dollars/fy${fy}/dollars.json`;
 // The Medicaid work-requirement scenario file for a base fiscal year (the HCRIS year), repo-relative (written by `run.py emit`).
 export const medicaidPath = (fy) => `data/emitted/medicaid/fy${fy}/medicaid.json`;
+// TEAM's emitted file for a fiscal year (written by `run.py emit`; pipeline/py/pp_pipeline/team).
+export const teamPath = (fy) => `data/emitted/team/fy${fy}/team.json`;
 
 export function readManifest() {
   return readJson(PINNED_DIR + 'manifest.json');

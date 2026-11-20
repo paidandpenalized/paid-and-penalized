@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, moneyShown, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
+import { capitalize, cmsDecimal, decimal, dollars, factor, dotList, fractionWord, money, moneyRange, moneyShown, moneyTick, nameText, noun, numberWord, ordinal, pct, pctFloor, placeText, roundedDollars, signed, spelled, unbroken } from '../render/format.js';
 
 test('money shortens dollars as Thirty Day Readmissions does, a true minus for a negative', () => {
   const cases = [
@@ -20,6 +20,15 @@ test('noun puts a count before its noun, singular for exactly one', () => {
   assert.equal(noun(2, 'mile'), '2 miles');
   assert.equal(noun(1, 'child', 'children'), '1 child');
   assert.equal(noun(3, 'child', 'children'), '3 children');
+});
+
+test('moneyTick: a round axis amount as money() writes it, without a ".0" before its unit', () => {
+  assert.equal(moneyTick(1_000_000), '+$1M');
+  assert.equal(moneyTick(-2_000_000), '−$2M');
+  assert.equal(moneyTick(1_500_000), '+$1.5M');
+  assert.equal(moneyTick(1_000_000_000), '+$1B');
+  assert.equal(moneyTick(500_000), '+$500K');
+  assert.equal(moneyTick(0), '$0');
 });
 
 test('money and pct take a sign on request: + before a positive amount, never before one that reads as zero', () => {
@@ -90,9 +99,10 @@ test('spelled writes a whole number from 0 to 99 in words, for a rule\'s number 
   for (const bad of [-1, 100, 2.5, NaN, '30', null, undefined]) assert.throws(() => spelled(bad), RangeError, String(bad));
 });
 
-test('fractionWord writes a share as a quarter or three-quarters, with the determiner a singular fraction takes, and throws on a share it has no word for', () => {
+test('fractionWord writes a share as a quarter, a half or three-quarters, with the determiner a singular fraction takes, and throws on a share it has no word for', () => {
   assert.equal(fractionWord(0.25), 'a quarter');
   assert.equal(fractionWord(0.25, 'the'), 'the quarter');
+  assert.equal(fractionWord(0.5, 'about'), 'about half');
   assert.equal(fractionWord(0.75), 'three-quarters');
   assert.equal(fractionWord(0.75, 'the'), 'three-quarters', 'a plural fraction takes none');
   for (const bad of [0, 0.3, 1, 25, NaN, '0.25', undefined]) assert.throws(() => fractionWord(bad), RangeError, String(bad));

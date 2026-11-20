@@ -4,7 +4,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { REPO_ROOT, filesUnder, readJson, repoFiles } from '../files.js';
-import { buildAssets, hash8, stylesheet } from '../site/assets.js';
+import { COPY_FILE, buildAssets, hash8, stripClaims, stylesheet, withoutClaims } from '../site/assets.js';
+import { build as esbuild } from 'esbuild';
 import { HUB } from '../../hub/pages.js';
 import { loadHub } from '../../hub/data.js';
 import { EXAMPLE_CCN } from '../../hub/model.js';
@@ -13,6 +14,7 @@ import { loadHrrp } from '../../sites/hrrp/web/data.js';
 import { hospitalPath as hrrpHospitalPath } from '../../sites/hrrp/web/links.js';
 import { loadMedicaid } from '../../sites/work-requirement/web/data.js';
 import { WR, generateWr } from '../../sites/work-requirement/web/generate.js';
+import { TEAM, generateTeam } from '../../sites/team/web/generate.js';
 import { METHODS_PATH as WR_METHODS, PROGRAM_PATH as WR_PROGRAM } from '../../sites/work-requirement/web/links.js';
 import { checkLinks } from '../../tools/ci/link-check.js';
 import { sliceBuild } from '../../sites/hacrp/test/fixtures.js';
@@ -163,6 +165,49 @@ test('no browser bundle calls a built-in newer than the ES2020 target', () =>
     }
   }));
 
+// The copy gate's claim ids stay in the source: every copy file a bundle reads reaches it as words only. Each entry is
+// bundled as the build bundles it; every input the metafile lists that the copy filter matches must have gone through
+// the plugin and come out with no claim, and a bundle that imports a copy file still reads its words.
+test('every bundle reads its copy files without their claims, and still reads their words', async () => {
+  const entries = mergeEntries(SHARED_ENTRIES, ...SITES.map((s) => s.entries ?? {}));
+  const loaded = new Map();
+  let copies = 0;
+  for (const [name, path] of Object.entries(entries)) {
+    const result = await esbuild({
+      entryPoints: [join(REPO_ROOT, path)], bundle: true, format: 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
+      absWorkingDir: REPO_ROOT, plugins: [stripClaims((p, contents) => loaded.set(p, contents))],
+    });
+    for (const input of Object.keys(result.metafile.inputs).filter((i) => COPY_FILE.test(i) && !i.includes('node_modules'))) {
+      copies += 1;
+      const contents = loaded.get(join(REPO_ROOT, input));
+      assert.ok(contents !== undefined, `${name}: ${input} went through the claim strip`);
+      assert.ok(!/\bclaim:/.test(contents), `${name}: ${input} keeps a claim`);
+    }
+  }
+  assert.ok(copies > 0, 'the bundles read copy files');
+  // A bundle that imports a copy file reads the same words as the source.
+  await withTemp(async (dir) => {
+    const entry = join(dir, 'entry.js');
+    writeFileSync(entry, `import { fill, t } from ${JSON.stringify(join(REPO_ROOT, 'sites/team/web/calc-copy.js'))};\nexport const words = [t('srcMine'), fill('calcPickCount', { n: '7' })];\n`);
+    const out = await esbuild({ entryPoints: [entry], bundle: true, format: 'esm', write: false, logLevel: 'silent', plugins: [stripClaims()] });
+    const { words } = await import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString('base64')}`);
+    assert.deepEqual(words, ['your number', '7 TEAM hospitals match.']);
+    assert.ok(!/\bclaim:/.test(out.outputFiles[0].text));
+  });
+});
+
+test('a bundle takes copy entries\' claims out, in every form a copy file writes them, and stops on any other', () => {
+  const source = "a: { text: 'x', claim: null },\n  b: { text: 'y', claim: 'TEAM-01' },\n  c: {\n    text: 'z',\n    claim: ['TEAM-01', 'TEAM-02'],\n  },";
+  assert.equal(withoutClaims(source), "a: { text: 'x' },\n  b: { text: 'y' },\n  c: {\n    text: 'z',\n  },");
+  assert.throws(() => withoutClaims("a: { text: 'x', claim: CLAIM }"), RangeError);
+  // Only a property key is a claim: the word in a sentence stays; a claim that is the first key, or in double quotes, goes.
+  assert.equal(withoutClaims("a: { text: 'File a claim: within the month', claim: null },"), "a: { text: 'File a claim: within the month' },");
+  assert.equal(withoutClaims('a: "The claim: words",'), 'a: "The claim: words",');
+  assert.equal(withoutClaims("a: { claim: 'TEAM-01', text: 'x' },"), "a: { text: 'x' },");
+  assert.equal(withoutClaims('a: { claim: "TEAM-01", text: "x" }, b: { text: "y", claim: ["TEAM-01", "TEAM-02"] },'), 'a: { text: "x" }, b: { text: "y" },');
+  assert.throws(() => withoutClaims('a: { claim: TEAM, text: "x" }'), RangeError, 'a first-key claim it can\'t read');
+});
+
 test('build runs the sites in order with one context: assets, env, and what earlier sites emitted', () =>
   withTemp(async (dir) => {
     const seen = [];
@@ -212,7 +257,8 @@ test('build writes the hub\'s asset once and hands every site the shell\'s facts
     assert.equal(shell.fy, asset.fy);
     assert.equal(shell.hospitals, asset.rows.filter((row) => row[asset.cols.indexOf('status')] === 'e').length);
     assert.match(shell.changed, /^\d{4}-\d{2}-\d{2}$/);
-    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
+    assert.deepEqual(Object.keys(shell.programs), ['hrrp', 'hacrp', 'hvbp', 'team', 'work-requirement']);
+    assert.ok(Number.isInteger(shell.programs.team.listed) && shell.programs.team.listed > 0, 'TEAM: the hospitals on CMS\'s list');
     assert.ok(shell.programs.hrrp.dollars < 0 && shell.programs.hrrp.cutN > 0);
     assert.ok(shell.programs.hacrp.dollars < 0 && shell.programs.hacrp.cutN > 0);
     assert.ok(shell.programs.hvbp.moved > 0 && Number.isInteger(shell.programs.hvbp.net));
@@ -332,7 +378,8 @@ const HRRP_DATA = loadHrrp();
 const HRRP_SLICE = { ...HRRP, generate: (ctx) => generateHrrp(ctx, { data: { ...HRRP_DATA, hospitals: HRRP_DATA.hospitals.filter((h) => SLICE_CCNS.has(h.id)) }, log: () => {} }) };
 // The work-requirement site's two pages are built whole: every page's tabs link its folder. Its states step links a
 // hospital's hub page only where one exists, so it is told the slice's.
-const builtSlice = sliceBuild(SLICE, [HRRP_SLICE, { ...WR, generate: (ctx) => generateWr(ctx, { log: () => {}, hubCcns: SLICE_CCNS }) }]);
+// TEAM's two pages are built whole too (every page's tabs link its folder); it links no hospital page yet.
+const builtSlice = sliceBuild(SLICE, [HRRP_SLICE, { ...WR, generate: (ctx) => generateWr(ctx, { log: () => {}, hubCcns: SLICE_CCNS }) }, { ...TEAM, generate: (ctx) => generateTeam(ctx, { log: () => {} }) }]);
 
 // CI's link check (tools/ci/link-check.js) runs over the whole build; this runs it over the slice, with the Readmissions
 // site built too (the hub links to its pages), so a moved anchor or a missing page fails before CI does. The slice's

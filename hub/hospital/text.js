@@ -34,8 +34,8 @@ export const addsAsPrinted = (parts, net) => money(parts.reduce((s, v) => s + mo
 export const outKey = (id, key) => (id === 'hrrp' ? `${key}File` : key);
 // A figure's ink: 'pen' for a cut, 'rew' for a bonus, null for zero.
 export const inkOf = (x) => ({ cut: 'pen', bonus: 'rew', zero: null })[signOf(x)];
-// Dollars with their sign, as the page's figures print them: "−$1.2M", "+$34K".
-export const signedMoney = (dollars) => money(dollars, { sign: true });
+// Dollars with their sign, as the page's figures print them: "−$1.2M", "+$34K" (the family's, format.js).
+export { signedMoney } from '../../web/render/format.js';
 const KEY = { cut: 'Cut', bonus: 'Bonus', zero: 'Zero' };
 
 // The median's phrase: "a 0.57% cut", "a 0.10% bonus" or "no change".

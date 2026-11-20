@@ -85,7 +85,10 @@ test('pageProgram: the program id of a program-keyed page, null for every other 
   // Exactly the program-keyed types have a program.
   for (const path of ['/hacrp/', '/hacrp/methods/', '/hacrp/data/', '/hacrp/hospital/990001/', '/hacrp/state/ca/'])
     assert.ok(['program', 'methods', 'dictionary', 'hospital', 'place'].includes(pageType(path)), path);
-  assert.deepEqual(PROGRAM_SITES.map((s) => s.id), ['hacrp', 'hrrp', 'work-requirement']);
+  assert.deepEqual(PROGRAM_SITES.map((s) => s.id), ['hacrp', 'hrrp', 'work-requirement', 'team']);
+  // TEAM has a program page and Methods, nothing more.
+  assert.deepEqual(['/team/', '/team/methods/'].map((path) => [pageType(path), pageProgram(path)]), [['program', 'team'], ['methods', 'team']]);
+  for (const path of ['/team/data/', '/team/hospital/990001/', '/team/x/']) assert.equal(pageType(path), null, path);
   // The work requirement has a program page and Methods, nothing more.
   assert.deepEqual(['/work-requirement/', '/work-requirement/methods/'].map((path) => [pageType(path), pageProgram(path)]), [['program', 'work-requirement'], ['methods', 'work-requirement']]);
   for (const path of ['/work-requirement/data/', '/work-requirement/hospital/990001/', '/work-requirement/state/ca/', '/work-requirement/x/']) assert.equal(pageType(path), null, path);

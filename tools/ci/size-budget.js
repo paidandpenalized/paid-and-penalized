@@ -1,5 +1,5 @@
-// CI size budget: no page may weigh more than its page type's budget, and no work-requirement data file more than its
-// kind's (JSON_BUDGETS, below). A page's weight is what a first visit loads,
+// CI size budget: no page may weigh more than its page type's budget, and no work-requirement or TEAM data file more than
+// its kind's (JSON_BUDGETS, below). A page's weight is what a first visit loads,
 // brotli-compressed at quality 5: the page's HTML (its inline data scripts included), each stylesheet it links and
 // each script it loads (module or not), every file counted once per page. Not counted: fonts (already compressed
 // WOFF2), the favicon, and the JSON data files that scripts fetch later. Two more limits on every page: its scripts
@@ -68,6 +68,17 @@ export const PROGRAM_BUDGETS = {
   // Methods built (its sections, the sensitivities figure and every pin's SHA-256), 2026-11-10: 41.1 KB + 15% (47.3 KB),
   // rounded up to 50 KB.
   'work-requirement': { program: 150 * KB, methods: 50 * KB },
+  // TEAM (a program page and Methods only), set 2026-11-19 by the rule above from the pages as built then (Parts 1 to 3
+  // and 5 to 7, Part 4's figure and the calculator still to land): the program page 55.2 KB + 15% (63.5 KB), rounded up
+  // to 70 KB, and Methods 25.2 KB + 15% (29.0 KB), rounded up to 30 KB. The figure and the calculator each raise the
+  // program budget as they land, a decision recorded here.
+  // Part 4's figure, the lookup and the calculator (Tasks 7b to 9), 2026-11-19: the program page 94.7 KB + 15% (108.9 KB),
+  // rounded up to 110 KB. The calculator's script is most of the rise (its view, words, engine and the family's search
+  // box, about 19.5 KB); every participant's numbers stay in a hashed file fetched on the reader's first move (not
+  // counted here: team-calc, 19.4 KB brotli). The hub's 70 KB budget is untouched.
+  // Methods built in full (Task 11: its sections, the sources' two tables, the DRG remaps and the unknowns), 2026-11-19:
+  // 34.2 KB + 15% (39.3 KB), rounded up to 40 KB; it was 30 KB, set from the stub page.
+  team: { program: 110 * KB, methods: 40 * KB },
 };
 // The work requirement's data files: the JSON its page script fetches (not counted in a page's weight above), which carry
 // most of what a first visit to its page loads. Each file, brotli at the same quality, against its kind's budget (a kind:
@@ -75,18 +86,23 @@ export const PROGRAM_BUDGETS = {
 // the heaviest file of each kind + 15%, rounded up to the next 10 KB, after steps 3 and 5 moved into files of their own:
 // wr-strips 109.8 KB (step 1's, fetched with the page), wr-states 11.1 KB and wr-both 29.0 KB (fetched as their step
 // nears), wr-base 117.3 KB (the what-if's, fetched as the reader reaches for the slider), wr-hosp 23.1 KB (California's).
-// A new kind of wr- file needs a budget here.
+// TEAM's two data files, fetched on the reader's first move (the lookup's on its box's first focus, the calculator's on a
+// move to another hospital), set 2026-11-19 by the same rule: team-calc 21.3 KB (every participant's row, its prices
+// unrounded) + 15% (24.5 KB), rounded up to 30 KB; team-lookup 15.0 KB + 15% (17.3 KB), rounded up to 20 KB.
+// A new kind of wr- or team- file needs a budget here.
 export const JSON_BUDGETS = {
   'wr-strips': 130 * KB,
   'wr-states': 20 * KB,
   'wr-both': 40 * KB,
   'wr-base': 140 * KB,
   'wr-hosp': 30 * KB,
+  'team-calc': 30 * KB,
+  'team-lookup': 20 * KB,
 };
-// A built data file's kind (wr-strips.0123abcd.json: 'wr-strips'; wr-hosp-ca.0123abcd.json: 'wr-hosp'), or null for a
-// file that is not a work-requirement data file.
+// A built data file's kind (wr-strips.0123abcd.json: 'wr-strips'; wr-hosp-ca.0123abcd.json: 'wr-hosp';
+// team-calc.0123abcd.json: 'team-calc'), or null for a file that is not a work-requirement or TEAM data file.
 export function jsonKind(file) {
-  const m = /^(wr-[a-z0-9-]+?)\.[0-9a-f]{8}\.json$/.exec(file);
+  const m = /^((?:wr|team)-[a-z0-9-]+?)\.[0-9a-f]{8}\.json$/.exec(file);
   if (!m) return null;
   return /^wr-hosp-[a-z]{2}$/.test(m[1]) ? 'wr-hosp' : m[1];
 }

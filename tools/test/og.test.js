@@ -86,6 +86,44 @@ test('cardDots: the Readmissions card colors a hospital in the penalized set red
   assert.deepEqual(cardDots('hrrp', { hub: HUB, cut: new Set(), hrrpCut: new Set(['A2', 'A5']) }), [[1, 1, null], [3, 3, null], [4, 4, null], [5, 5, null], [2, 2, 'pen']]);
 });
 
+test('the TEAM card is dark for every hospital in TEAM in performance year 2 that has a place on the map, gray for the rest, never red or green; its two figures are the TEAM file\'s counts', () => {
+  const page = cardHtml('team', INPUTS);
+  const tones = circles(page);
+  const placed = new Set(placedRows().map((r) => r[col('ccn')]));
+  assert.ok(INPUTS.teamIn.size > 0);
+  assert.equal(count(tones, 'ink'), [...INPUTS.teamIn].filter((c) => placed.has(c)).length);
+  assert.equal(count(tones, 'ink') + count(tones, 'none'), tones.length);
+  assert.ok(page.includes('.map .ink { fill: var(--ink);'));
+  assert.ok(!cardHtml('hacrp', INPUTS).includes('.map .ink'), 'only a card with dark dots carries their rule');
+  const nums = [...page.matchAll(/<span class="num">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(nums, [fmtInt(INPUTS.team.counts.listed), fmtInt(INPUTS.team.counts.selectedAreas)]);
+});
+
+test('the TEAM card\'s words are all in ink (a payment model, never a penalty): no red title line, an ink kicker; the penalty cards keep their red line', () => {
+  const page = cardHtml('team', INPUTS);
+  const big = /<div class="big">([\s\S]*?)<\/div>/.exec(page)[1];
+  assert.doesNotMatch(big, /class="pen"/, 'no title line in the penalty red');
+  assert.ok(page.includes('.kick { color: var(--ink); }'), 'the kicker in ink');
+  for (const id of ['family', 'hacrp', 'hrrp']) {
+    const other = cardHtml(id, INPUTS);
+    assert.match(/<div class="big">([\s\S]*?)<\/div>/.exec(other)[1], /<span class="pen" data-fit>[^<]+<\/span>$/, `${id}: its last title line in the red`);
+    assert.ok(!other.includes('.kick { color: var(--ink); }'), `${id}: its kicker in the red's ink`);
+  }
+});
+
+test('the TEAM card\'s alt text claims no more than its map shows: hospitals with a point on it, the list counted whether placed or not', () => {
+  const placed = new Set(placedRows().map((r) => r[col('ccn')]));
+  const unplaced = INPUTS.team.participants.filter((p) => !placed.has(p.ccn)).length;
+  assert.ok(unplaced > 0, 'some listed hospitals have no point on the map');
+  assert.doesNotMatch(SHARE_CARDS.team, /a map of U\.S\. hospitals, each a dot/, 'not every hospital');
+  assert.match(SHARE_CARDS.team, /hospitals that have a point on it/);
+  assert.match(SHARE_CARDS.team, /on the map or not/);
+});
+
+test('cardDots: the TEAM card colors a hospital in TEAM dark and every other one gray, whatever its dollars', () => {
+  assert.deepEqual(cardDots('team', { hub: HUB, cut: CUT, hrrpCut: new Set(), teamIn: new Set(['A2', 'A3', 'A5']) }), [[1, 1, null], [4, 4, null], [5, 5, null], [2, 2, 'ink'], [3, 3, 'ink']]);
+});
+
 test('the family card is red for a net cut, green for a net bonus and gray for no net change or no estimate', () => {
   const tones = circles(cardHtml('family', INPUTS));
   const nets = placedRows().map((r) => r[col('net')]);

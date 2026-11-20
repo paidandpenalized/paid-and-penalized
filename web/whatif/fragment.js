@@ -14,10 +14,26 @@ export const MAX_FACTOR = 10;
 export const limitOf = (p) => toUnit(MAX_FACTOR * p.cap, p.decimals);
 
 // A scenario link: #whatif&... A bare #whatif is the section's own anchor and carries no scenario.
-export const isScenarioHash = (hash) => typeof hash === 'string' && hash.startsWith(`#${TAG}&`);
+// TEAM's signed-number codec (sites/team/client/share.js) shares this helper's parseParts and isScenarioHash.
+// Other calculators keep the same shape under their own tag (TEAM's #team&...), so the tag is a parameter.
+export const isScenarioHash = (hash, tag = TAG) => typeof hash === 'string' && hash.startsWith(`#${tag}&`);
 // Whether a URL fragment is the what-if's: #whatif or a scenario (a skip link's #main and the heading's #whatif-h
 // are not).
 export const isWhatIfHash = (hash) => hash === `#${TAG}` || isScenarioHash(hash);
+
+// The `key=value&key=value` body as a Map in order of first appearance: a blank part is skipped, a bare key maps to null,
+// and a repeated key is poisoned (undefined) so a caller rejects it whole. Shared with TEAM's codec (sites/team/client/share.js).
+export function parseParts(body) {
+  const seen = new Map();
+  for (const part of body.split('&')) {
+    if (part === '') continue;
+    const eq = part.indexOf('=');
+    const key = eq === -1 ? part : part.slice(0, eq);
+    const value = eq === -1 ? null : part.slice(eq + 1);
+    seen.set(key, seen.has(key) ? undefined : value);
+  }
+  return seen;
+}
 
 // changes: { [id]: number }. Only ids in `ids` are written, in that order.
 export function encode(changes, ids) {
@@ -31,17 +47,9 @@ export function decode(hash, { ids, params }) {
   const changes = {};
   const rejected = new Set();
   const text = typeof hash === 'string' ? hash.replace(/^#/, '') : '';
-  const [tag, ...parts] = text.split('&');
-  if (tag !== TAG) return { changes, rejected: [] };
+  if (text !== TAG && !text.startsWith(`${TAG}&`)) return { changes, rejected: [] };
 
-  const seen = new Map();
-  for (const part of parts) {
-    if (part === '') continue;
-    const eq = part.indexOf('=');
-    const key = eq === -1 ? part : part.slice(0, eq);
-    const value = eq === -1 ? null : part.slice(eq + 1);
-    seen.set(key, seen.has(key) ? undefined : value);
-  }
+  const seen = parseParts(text.slice(TAG.length + 1));
 
   for (const [key, value] of seen) {
     const p = ids.includes(key) ? params[key] : null;

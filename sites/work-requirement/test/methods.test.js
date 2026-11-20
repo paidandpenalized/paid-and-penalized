@@ -213,7 +213,7 @@ test('the as-of line on both pages: the cost reports\' CMS date and settled shar
   const cells = data.pins.find((p) => p.id === `hcris-fy${data.meta.fy}-cells`);
   const cms64 = data.pins.find((p) => p.id.startsWith('cms64-viii'));
   for (const markup of [page, program]) {
-    const bar = /<aside class="asof"[\s\S]*?<\/aside>/.exec(markup);
+    const bar = /<aside class="asof asof--grid"[\s\S]*?<\/aside>/.exec(markup);
     assert.ok(bar, 'an as-of bar');
     const t = words(bar[0]);
     assert.ok(t.includes(isoDate(cells.derivedFrom.lastModified)), 'HCRIS file date');
@@ -228,31 +228,34 @@ test('the as-of line on both pages: the cost reports\' CMS date and settled shar
 });
 
 // Dalton's review 11-11 (D2): the as-of block is a grid, not a narrow column: on both pages, the article's last child of
-// its kind, five sources, each a small label over its value (a <div> holding one <dt> and one <dd>); the site's styles lay
-// them out one column on a phone, two from 560px and three across the page from 900px, label over value, with less air
-// than the family's bar, and change the family's bar on no other site.
+// its kind, five sources, each a small label over its value (a <div> holding one <dt> and one <dd>); the family's as-of
+// grid (asofBar's grid, pages.css .asof--grid) lays them out one column on a phone, two from 560px and three across the
+// page from 900px, label over value; the site's styles give it less air than the family's bar and a wider middle column,
+// and the family's bar without the grid is unchanged.
 test('the as-of block on both pages: five sources, each a label over its value, in a grid of three columns from 900px', () => {
   for (const [markup, article] of [[program, 'wrap page wr'], [page, 'wrap page wr-meth']]) {
     assert.ok(markup.includes(`<article class="${article}">`), article);
-    const bar = /<aside class="asof" aria-label="About this data">\n<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(markup)?.[1];
+    const bar = /<aside class="asof asof--grid" aria-label="About this data">\n<dl class="asof__list">([\s\S]*?)<\/dl>/.exec(markup)?.[1];
     assert.ok(bar, `${article}: the as-of block`);
     const items = bar.match(/<div>[\s\S]*?<\/div>/g);
     assert.equal(items.length, 5, `${article}: five sources`);
     for (const item of items) assert.match(item, /^<div><dt>[^<]+<\/dt><dd>[\s\S]+<\/dd><\/div>$/, `${article}: a label over its value`);
     assert.deepEqual(items.map((item) => /<dt>([^<]+)<\/dt>/.exec(item)[1]), ['Cost reports', 'Expansion share', 'Enrollment declines', 'Medicare penalties', 'Numbers last changed']);
     // The block is the article's direct child, where the site's grid applies.
-    assert.match(markup, new RegExp(`<article class="${article}">[\\s\\S]*\\n<aside class="asof"[\\s\\S]*?</aside>\\n</article>`));
+    assert.match(markup, new RegExp(`<article class="${article}">[\\s\\S]*\\n<aside class="asof asof--grid"[\\s\\S]*?</aside>\\n</article>`));
   }
   const css = readFileSync(`${REPO_ROOT}sites/work-requirement/web/styles.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   for (const [want, what] of [
     [':is(.wr, .wr-meth) > .asof { margin-top: 0; padding-top: 8px; }', 'less air around it'],
-    [':is(.wr, .wr-meth) .asof__list { grid-template-columns: minmax(0, 1fr);', 'one column on a phone'],
-    [':is(.wr, .wr-meth) .asof__list > div { display: block; grid-column: auto; }', 'each label over its value'],
-    ['@media (min-width: 560px) { :is(.wr, .wr-meth) .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }', 'two from 560px'],
-    ['@media (min-width: 900px) { :is(.wr, .wr-meth) .asof__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); } }', 'three from 900px'],
+    ['@media (min-width: 900px) { :is(.wr, .wr-meth) .asof--grid .asof__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); } }', 'three from 900px, the middle wider'],
   ]) assert.ok(css.includes(want), what);
-  // The family's bar is the same for every other site.
-  const family = readFileSync(`${REPO_ROOT}web/styles/pages.css`, 'utf8');
+  const family = readFileSync(`${REPO_ROOT}web/styles/pages.css`, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  for (const [want, what] of [
+    ['.asof--grid .asof__list { grid-template-columns: minmax(0, 1fr);', 'one column on a phone'],
+    ['.asof--grid .asof__list > div { display: block; grid-column: auto; }', 'each label over its value'],
+    ['@media (min-width: 560px) { .asof--grid .asof__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }', 'two from 560px'],
+  ]) assert.ok(family.includes(want), what);
+  // The family's bar without the grid is the same for every other site.
   assert.ok(family.includes('.asof__list { display: grid; grid-template-columns: max-content minmax(0, 1fr);'), 'the family\'s bar unchanged');
 });
 

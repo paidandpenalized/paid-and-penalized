@@ -52,15 +52,12 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 
 /* ---------- the SVG ---------- */
 .chart-axis__line, .chart-axis__tick { stroke: var(--ink-3); stroke-width: 1px; vector-effect: non-scaling-stroke; }
-/* Tick labels in --ink-2: --ink-3 clears 4.5:1 on the grained paper only narrowly, and the axe run cannot judge text in an SVG, so a chart's text keeps the stronger ink. */
-.chart-axis__label, .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
 .chart-grid { stroke: var(--line); stroke-opacity: 0.35; stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-zero { stroke: var(--ink); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .chart-label { fill: var(--ink); font-weight: 600; }
 /* A label set over marks keeps a paper halo, so a column never crosses its letters. */
 .chart-label--halo { paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
 .chart-axis__title { fill: var(--ink-2); font-size: 11px; }
-.chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
 /* A mark's own number (the ruler's ▲), at tick size. */
 .chart-value--mark { font-size: 11px; }
 .chart-legend__label { fill: var(--ink); font-size: 11px; }
@@ -81,7 +78,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 .chart-tile-few { fill: none; stroke: var(--ink); stroke-width: 1px; stroke-dasharray: 2 2; vector-effect: non-scaling-stroke; pointer-events: none; }
 .chart-tile-few--on { stroke: var(--on-mark); }
 .chart-tile-empty { fill: none; stroke: var(--ink-3); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
-.chart-hatch { color: var(--ink-3); }
 /* Values that score the same as CMS's floor or cap: the hatch, with a hairline where it starts. */
 .chart-dead__end { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 /* The median crosses the axis in ink, so it never reads as one of the axis's ticks. */
@@ -150,8 +146,7 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
 /* The state the hospital table lists (sites/hacrp/client/program.js), from a link or a pick. */
 .chart-mark.is-picked .chart-geo-state { stroke-width: 3px; }
 
-/* The hit area is larger than its mark and invisible until the mark is the active one (web/client/figure.js). */
-.chart-hit { fill: transparent; }
+/* The hit area (invisible: charts-map.css) shows once its mark is the active one (web/client/figure.js). */
 .chart-mark.is-active .chart-hit { fill: var(--ink); fill-opacity: 0.07; }
 /* A tile is its own hit area: the active one gets an ink outline. */
 .chart-mark.is-active :is(.chart-tile, .chart-tile-na) { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
@@ -164,7 +159,6 @@ th[aria-sort="descending"] .fig__sort::after { content: " \2193" / ""; color: va
   .fig__swatch--this, .fig__swatch--median::before, .fig__swatch--median::after { forced-color-adjust: none; background: CanvasText; }
   .fig__swatch--bar-dark { forced-color-adjust: none; background: CanvasText; }
   .fig__swatch--bar-light { forced-color-adjust: none; background: Canvas; border-color: CanvasText; }
-  .chart-hatch { color: CanvasText; }
   .chart-bar-na, .chart-tile-na, .chart-tile-empty, .chart-tile-zero, .chart-tile-few, .chart-dead__end { stroke: CanvasText; }
   .chart-tile-zero { fill: Canvas; }
   .chart-tile, .chart-tile__code, .chart-tile__value, .chart-tile-few--on { forced-color-adjust: none; }

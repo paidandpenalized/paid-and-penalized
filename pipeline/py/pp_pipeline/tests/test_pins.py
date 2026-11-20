@@ -7,9 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from pp_pipeline import hai_extract, hcris_extract, pos_extract
+from pp_pipeline import emit_team, hai_extract, hcris_extract, pos_extract
+from pp_pipeline.files import (PINNED_DIR, REPO_ROOT, read_manifest, read_pinned_bytes, read_pinned_csv,
+                               write_derived_pin)
 from pp_pipeline.hcris import pins as hcris_pins
-from pp_pipeline.files import PINNED_DIR, read_manifest, read_pinned_bytes, write_derived_pin
+from pp_pipeline.team import derive as team_derive
 
 
 class Pins(unittest.TestCase):
@@ -37,10 +39,24 @@ class Pins(unittest.TestCase):
                 with self.subTest(entry["id"]):
                     self.assertNotIn("No archive copy", src.get("note", ""))
 
+    def test_a_csv_pin_reads_as_rows_through_one_reader(self):
+        rows = read_pinned_csv("team-participants")
+        self.assertEqual(len(rows), manifest_entry_rows("team-participants"))
+        self.assertIs(emit_team.read_pinned_csv, read_pinned_csv)
+        inline = "DictReader(io.StringIO(read_pinned_bytes"
+        home = {REPO_ROOT / "pipeline/py/pp_pipeline/files.py", Path(__file__).resolve()}
+        offenders = [p.relative_to(REPO_ROOT).as_posix() for p in (REPO_ROOT / "pipeline" / "py").rglob("*.py")
+                     if p not in home and inline in p.read_text(encoding="utf-8")]
+        self.assertEqual(offenders, [], "a pinned CSV parsed inline instead of through files.read_pinned_csv")
+
     def test_no_unlisted_pinned_files(self):
         listed = {e["path"] for e in read_manifest()}
         on_disk = {p.relative_to(PINNED_DIR).as_posix() for p in PINNED_DIR.rglob("*") if p.is_file()}
         self.assertEqual(on_disk - {"manifest.json"}, listed)
+
+
+def manifest_entry_rows(pin_id):
+    return next(e for e in read_manifest() if e["id"] == pin_id)["counts"]["rows"]
 
 
 class DerivedPinWrite(unittest.TestCase):
@@ -77,7 +93,7 @@ class DerivedPinWrite(unittest.TestCase):
             self.assertFalse(path.exists())
 
     def test_every_extractor_writes_through_it(self):
-        for module in (hai_extract, hcris_extract, pos_extract, hcris_pins):
+        for module in (hai_extract, hcris_extract, pos_extract, hcris_pins, team_derive):
             with self.subTest(module.__name__):
                 self.assertIs(module.write_derived_pin, write_derived_pin)
                 self.assertNotIn("write_bytes", Path(module.__file__).read_text(encoding="utf-8"))

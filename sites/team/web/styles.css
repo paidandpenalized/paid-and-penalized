@@ -1,0 +1,503 @@
+/* The TEAM site's own rules, linked after the shared stylesheet (web/styles/) and the chart and what-if kit. The program
+   page (pages/program.js) is seven numbered Parts, each its words beside its figure: one column on a phone, the words at
+   5fr and the figure at 7fr from 62em (a breakpoint in em, so a reader's larger text gets the one column sooner), the
+   figure column sticky where it is shorter than the words. Colors are tokens only; meaning inks (--rew, money paid to a
+   hospital; --pen, money a hospital repays) mark the charts' and the ledger's marks, never text. */
+
+.tm { padding-block: 8px 12px; }
+.tm-part { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px 56px; align-items: start; padding-block: 36px; border-top: 1px dotted var(--line); }
+.tm-part:first-child { padding-top: 20px; border-top: 0; }
+.tm-part__text, .tm-part__fig { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; min-width: 0; }
+.tm-part__fig:empty { display: none; }
+@media (min-width: 62em) {
+  .tm-part { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+  .tm-part__text--wide { grid-column: 1 / -1; }
+  /* The figure column runs the Part's full height, so a figure shorter than the words (the map, the clock) can stay in
+     view beside them as they scroll. Not on a phone, where the column stacks under the words. Nothing animates. */
+  .tm-part__fig { align-self: stretch; }
+  .tm-sticky { position: sticky; top: calc(var(--sticky-top, 0px) + 16px); }
+}
+.tm-sticky { display: grid; gap: 18px; align-content: start; }
+
+/* A Part's head: its number and label in the red type face, Part 1's kicker, the heading in the display face. */
+.tm-part__tag { color: var(--pen-ink); font: 700 var(--fs-sm)/1.2 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+.tm-kicker { margin-top: -8px; color: var(--ink-2); }
+.tm-part__title { max-width: 18em; font: 400 clamp(1.6rem, 1.15rem + 1.5vw, 2.3rem)/1.08 var(--font-display); letter-spacing: 0.005em; text-wrap: balance; }
+.tm-part__title--h1 { font-size: clamp(2.4rem, 1.5rem + 3.2vw, 4rem); line-height: 1; }
+.tm-part__text p { max-width: 62ch; line-height: 1.6; text-wrap: pretty; }
+.tm-dek { color: var(--ink-2); font-size: var(--fs-md); }
+.tm-cite { color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); overflow-wrap: break-word; }
+.tm-aside { color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* A figure's note and its source line share one measure (the figure's caption runs the column). */
+.tm .fig__note, .tm .fig__source { max-width: 40rem; }
+
+/* Part 1: the button to the calculator, the record card (two fields to a row), the lookup box, the map and its key,
+   the note for patients. */
+.tm-go { display: inline-flex; align-items: center; gap: 8px; min-height: var(--control-h); padding: 6px 14px; background: var(--ink); color: var(--paper); font: 600 var(--fs-base)/1.2 var(--font-body); text-decoration: none; }
+.tm-go:hover { background: var(--ink-2); }
+.tm-go:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.tm-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* With large text on a phone (under 18em), each field takes the row, so a label never runs past its box. */
+@media (max-width: 18em) { .tm-card { grid-template-columns: minmax(0, 1fr); } }
+.tm-card .field__value--big { font-family: var(--font-type); font-weight: 700; font-variant-numeric: tabular-nums; }
+.tm-look { display: grid; gap: 8px; padding: 14px 16px; border: var(--rule) solid var(--ink); background: var(--paper); }
+.tm-look__h { font: 700 var(--fs-sm)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-look__nojs, .tm-look__note { color: var(--ink-2); font: 400 var(--fs-xs)/1.45 var(--font-type); }
+/* The lookup (client/lookup.js): the box under its label, then each answer on one line, its tag first (a "yes" filled,
+   a "no" outlined: the tag's word says which, the fill only repeats it). */
+.tm-look__in { width: 100%; min-height: var(--control-h); padding: 0 12px; border: 1px solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 400 max(1rem, 1em)/1.2 var(--font-type); }
+.tm-look__out { display: grid; gap: 6px; font-size: var(--fs-sm); line-height: 1.5; }
+.tm-look__list { margin: 0; padding: 0; list-style: none; }
+.tm-res { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px dotted var(--line); }
+.tm-res__tag { flex: none; min-width: 3.4em; padding: 0 6px; text-align: center; border: 1.5px solid var(--ink); font: 700 var(--fs-xs)/1.5 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-res--yes .tm-res__tag { background: var(--ink); color: var(--paper); }
+.tm-res a::after { content: " \2192"; content: " \2192" / ""; }
+.tm-map .chart--us-map { max-width: none; }
+.tm-map .chart-tile-empty { fill: var(--paper-2); stroke: var(--line); }
+.tm-map .chart-mark.is-active .chart-tile-empty { stroke: var(--ink); stroke-width: 2px; }
+.chart-dots--team { stroke: var(--ink); }
+.chart-dots--other { stroke: var(--dot); stroke-opacity: 0.8; }
+.chart-dots--hole { stroke: var(--paper-2); }
+.tm-key { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 8px 0 0; padding: 0; color: var(--ink-2); font: 400 var(--fs-xs)/1.4 var(--font-type); list-style: none; }
+.tm-key li { display: inline-flex; align-items: center; gap: 6px; }
+.tm-key__dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+.tm-key__dot--team { background: var(--ink); }
+.tm-key__dot--other { border: 1px solid var(--dot); }
+.tm-patient { display: grid; gap: 4px; padding: 10px 14px; border-left: 4px solid var(--ink); background: var(--paper-2); font-size: var(--fs-sm); line-height: 1.55; }
+.tm-patient__h { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+
+/* Part 2: the Track 3 stamp beside what its limit is a share of. A wrapping row, so the caption keeps a readable width
+   (18ch at the least) and drops under the stamp when the two don't fit side by side; the stamp never grows past the
+   column (its words wrap inside it first). */
+.tm-hook { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: center; margin-top: 8px; }
+/* The stamp at the family's stamp size, 15rem at the most (its second line wraps inside it first), with tight
+   padding, so on a laptop the caption sits beside it as in the mockup. */
+.tm-hook .stamp { flex: 0 1 auto; max-width: min(15rem, calc(100% - 6px)); padding: 4px 10px 3px; font-size: clamp(1.2rem, 1rem + 0.5vw, 1.45rem); text-align: center; text-wrap: balance; }
+.tm-stamp__sub { display: block; margin-top: 2px; font: 700 0.55em/1.25 var(--font-type); letter-spacing: 0.03em; }
+.tm-hook p:not(.stamp) { flex: 1 1 18ch; min-width: min(18ch, 100%); font-size: var(--fs-sm); }
+
+/* Figures 2 and 3 (web/charts/trackLimits.js, payoff.js): gains in the money-paid ink, repayments in the repaid ink. */
+.chart-tracks__gain { fill: var(--rew); }
+.chart-tracks__loss { fill: var(--pen); }
+.chart-payoff__gain, .chart-payoff__loss { fill: none; stroke-width: 2.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.chart-payoff__gain { stroke: var(--rew); }
+.chart-payoff__loss { stroke: var(--pen); }
+.chart-payoff__limit { stroke: var(--ink-2); stroke-width: 1px; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+.chart-payoff__band { fill: var(--ink); fill-opacity: 0.07; }
+.chart-payoff__band-label { fill: var(--ink-2); font: 400 10px var(--font-type); }
+.chart-payoff__pt { fill: var(--ink); opacity: 0; }
+.chart-mark.is-active .chart-payoff__pt, .chart-mark:hover .chart-payoff__pt { opacity: 1; }
+.chart-payoff__marker { fill: var(--paper); stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+@media (forced-colors: active) {
+  .chart-dots--team, .chart-payoff__limit, .chart-payoff__marker { stroke: CanvasText; }
+  .chart-dots--other { stroke: GrayText; }
+  .chart-dots--hole { stroke: Canvas; }
+  .chart-tracks__gain, .chart-tracks__loss { fill: CanvasText; }
+  .chart-payoff__gain, .chart-payoff__loss { stroke: CanvasText; }
+  /* The band keeps its place as an edged box (its tint would be painted over), as the kit's tinted bands do. */
+  .chart-payoff__band { fill: Canvas; fill-opacity: 1; stroke: GrayText; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+  .tm-key__dot--team { background: CanvasText; forced-color-adjust: none; }
+}
+
+/* Part 3's ledger: each line numbered in a red box, its words, its amount at the right; the last line, what Medicare
+   would pay (or be repaid), between two rules on the panel tone. */
+.tm-ledger { margin-top: 6px; }
+.tm-ledger__rows { margin: 0; padding: 0; border-top: var(--rule) solid var(--ink); list-style: none; }
+.tm-ledger__row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 14px; align-items: baseline; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+.tm-ledger__no { padding: 1px 4px; border: 1px solid var(--pen); color: var(--pen-ink); font: 400 var(--fs-cap)/1 var(--font-type); }
+.tm-ledger__label { font-weight: 600; }
+.tm-ledger__op { display: inline-block; min-width: 1ch; font-family: var(--font-type); }
+.tm-ledger__note { display: block; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.4; }
+.tm-ledger__v { font: 700 var(--fs-base)/1.2 var(--font-type); font-variant-numeric: tabular-nums; text-align: end; white-space: nowrap; }
+/* The worked example's signed lines in Figures 2 and 3's inks: what would be paid in the paid ink, what would be repaid
+   (or taken off) in the repaid ink. Round numbers, not a hospital (a named hospital's result stays neutral: the
+   calculator's); the sign says it too. */
+/* The paid ink as text is its text token (--rew-ink, tokens.css), which clears 4.5:1 on the paper and the panel tone in
+   both themes (the mark ink alone is about 4:1 on the panel in light); the repaid ink already does. */
+.tm-ledger__v--gain { color: var(--rew-ink); }
+.tm-ledger__v--loss { color: var(--pen); }
+@media (forced-colors: active) { .tm-ledger__v--gain, .tm-ledger__v--loss { color: CanvasText; } }
+.tm-ledger__row--total { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
+.tm-ledger__foot { margin-top: 6px; color: var(--ink-2); font-size: var(--fs-sm); }
+
+/* Part 4's words: the picker (its label over the select, as the lookup box's heading), then the picked episode type's
+   price in the reader's region in large type, and the sentence that says what it is. */
+.tm-pick { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; max-width: 26rem; }
+.tm-pick[hidden] { display: none; }
+.tm-pick label { font: 700 var(--fs-xs)/1.3 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-pick select { width: 100%; min-width: 0; padding: 0 10px; border: var(--rule) solid var(--ink); border-radius: 0; background: var(--paper); color: var(--ink); font: 600 max(1rem, 1em)/1.2 var(--font-body); }
+.tm-now { display: grid; gap: 6px; }
+.tm-now > span { display: block; }
+.tm-now__price { font: 700 clamp(2.4rem, 1.9rem + 1.8vw, 3.4rem)/1 var(--font-type); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.tm-now__says { max-width: 40ch; line-height: 1.6; }
+
+/* Under Figure 4: every episode type in every region, in a disclosure the page's width. The table is at least 60rem wide,
+   so a box narrower than that scrolls it sideways (web/client/figure.js then makes the box a keyboard region), and only
+   then is the box also held to a screen's height, its head and first column staying in view. Hairline rows throughout
+   (the kit bands a tbody of more than ten rows; this table's groups differ in length), each category a heading row, its
+   All row set apart, the reader's region in the pen's tint. */
+.tm-all { grid-column: 1 / -1; }
+.tm-all > summary { display: list-item; min-height: var(--target-min); cursor: pointer; font: 700 var(--fs-base)/1.4 var(--font-body); }
+.tm-all[open] > summary { margin-bottom: 12px; }
+.tm-all__box { container-type: inline-size; }
+.tm-all__table { min-width: 60rem; }
+.tm-all__cap { max-width: 62ch; margin-bottom: 8px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.4; }
+.tm-all__table thead th { white-space: normal; vertical-align: bottom; z-index: 2; }
+.tm-all__table thead th[data-div] { text-align: right; }
+.tm-all__no { display: block; font: 700 var(--fs-xs)/1.2 var(--font-type); }
+#all-prices tbody > tr { background: var(--paper); }
+#all-prices tbody > tr + tr { border-top: 1px solid var(--line); }
+.tm-all__table tbody th { background: inherit; white-space: nowrap; }
+.tm-all__cat > th { padding-top: 16px; border-top: var(--rule) solid var(--ink); font: 700 var(--fs-sm)/1.3 var(--font-body); }
+.tm-all__cat > th > span { position: sticky; left: 10px; }
+.tm-all__avg > * { font-style: italic; }
+.tm-all__avg > th { color: var(--ink-2); font-weight: 600; }
+.tm-all__table .tm-all__mine { background: var(--pen-tint); }
+.tm-all__note { max-width: 62ch; margin-top: 8px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.5; }
+.tm-all__table tbody th[scope="row"], .tm-all__table thead th:first-child { position: sticky; left: 0; }
+.tm-all__table thead th:first-child { z-index: 3; }
+@container (width < 60rem) {
+  .tm-all .printout__scroll { max-block-size: min(36rem, 75dvh); overflow-y: auto; }
+}
+@media (forced-colors: active) {
+  .tm-all__table .tm-all__mine { background: Canvas; outline: 2px solid Highlight; outline-offset: -2px; }
+}
+
+/* Part 4, Figure 4 (web/charts/divisionMap.js): each census division shaded by its price in five steps of the ink, never
+   a meaning ink (a region's price is no one's gain or repayment), each step a stronger tint of --ink over the paper, so
+   the ramp runs light to strong in either theme; the states' borders faint, the divisions' in ink, the reader's division
+   outlined in the pen. Labels keep a paper halo over the shading. */
+.chart-div { stroke: var(--paper); stroke-width: 0.6px; stroke-linejoin: round; vector-effect: non-scaling-stroke; fill: var(--ink); }
+.chart-div--s1 { fill-opacity: 0.17; }
+.chart-div--s2 { fill-opacity: 0.29; }
+.chart-div--s3 { fill-opacity: 0.42; }
+.chart-div--s4 { fill-opacity: 0.56; }
+.chart-div--s5 { fill-opacity: 0.72; }
+.chart-div__legend .chart-div { stroke: none; }
+.chart-div__borders { fill: none; stroke: var(--ink); stroke-width: 1.25px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.chart-div__reader { fill: none; stroke: var(--pen); stroke-width: 2.5px; stroke-linejoin: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+/* The outline the page's script moves to another region (client/bar.js): the region's own shape, clipped to its outside,
+   so twice the width shows as the same line. */
+.chart-div__reader--moved { stroke-width: 5px; }
+.chart-mark.is-active .chart-div { stroke: var(--ink); stroke-width: 2.5px; }
+/* Each label on a small chip of the paper, so it reads on any step of the ramp in either theme (in dark the strongest
+   step is near the ink's own light). The reader's outline is drawn over the chips and under the words, which keep a
+   halo of the chip's paper, so the outline shows whole and breaks only around a letter it crosses. */
+.chart-div__chip { fill: var(--paper); fill-opacity: 0.86; }
+.chart-div__price, .chart-div__name { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--paper); stroke-opacity: 0.86; stroke-width: 3px; stroke-linejoin: round; }
+.chart-div__price { font-weight: 700; }
+.chart-div__name { fill: var(--ink-2); }
+.tm-bar .chart--division-map { max-width: none; }
+@media (forced-colors: active) {
+  .chart-div { fill: Canvas; stroke: CanvasText; }
+  .chart-div__borders { stroke: CanvasText; }
+  .chart-div__reader { stroke: Highlight; }
+  .chart-div__price, .chart-div__name { fill: CanvasText; stroke: Canvas; stroke-opacity: 1; }
+  .chart-div__chip { fill: Canvas; fill-opacity: 1; }
+}
+
+/* Part 5: the calculator (program/calc.js, calc-view.js), the page's width under the Part's words. A worksheet in the
+   family's form: a red frame and title bar, the hospital and the picker, then two columns from 62em, the inputs at 1.3fr
+   and the result at 1fr, sticky beside them; on a phone one column, the result first (the stamp) and nothing sticky.
+   Public values carry their source in small capitals; anything the reader typed says "your number" in red italic. Meaning
+   inks mark the figure's line only, never a result's text. */
+.tc { grid-column: 1 / -1; border: var(--rule) solid var(--pen); background: var(--paper); }
+.tc p, .tc li, .tc figcaption { max-width: none; }
+.tc [hidden] { display: none !important; }
+.tc__title { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 8px 14px; border-bottom: var(--rule) solid var(--pen); background: var(--pen-tint); color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.08em; text-transform: uppercase; }
+.tc__pick { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 14px; padding: 12px 14px; border-bottom: 1px solid var(--pen); }
+.tc__name { flex-basis: 100%; font: 400 var(--fs-lg)/1.1 var(--font-display); }
+.tc__pick .omni { flex: 1 1 18rem; min-width: 0; }
+.tc__random { margin-left: auto; }
+.tc__pick .omni__label { font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+@media (max-width: 36em) {
+  /* A phone: the picker's name over its box, so the box keeps the width to type in. */
+  .tc__pick .omni__field { flex-wrap: wrap; }
+  .tc__pick .omni__label { flex-basis: 100%; padding-block: 4px; border-right: 0; border-bottom: var(--rule) solid var(--ink); }
+  .tc__pick .omni__field input { flex: 1 1 100%; }
+  .tc-wwt th { white-space: normal; }
+}
+.tc__banner { margin: 10px 14px 0; }
+/* The banner's lines: the link's scenario and its reset, the keys it couldn't use, the followed hospital outside TEAM;
+   each its own line, an empty one gone. */
+.tc__banner p + p { margin-top: 4px; }
+.tc__banner p:empty { display: none; }
+.tc__nojs { padding: 10px 14px 0; color: var(--ink-2); font: 400 var(--fs-sm)/1.5 var(--font-type); }
+/* On a phone the result column dissolves into the grid (display: contents), so only its result box moves up, into the
+   "out" area above the inputs; the figure, "What would it take?" and the share line stay after them. */
+.tc-grid { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: "out" "left" "rest"; }
+/* One column that never grows past its box: the quality table, opened, scrolls in its own frame instead of widening it. */
+.tc-left, .tc-right { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; min-width: 0; padding: 12px 14px; }
+.tc-left { grid-area: left; border-top: 1px solid var(--pen); }
+.tc-static { display: contents; }
+@media (max-width: 61.99em) {
+  .tc-right { display: contents; }
+  .tc-right > .tc-out { grid-area: out; margin: 12px 14px 0; }
+  .tc-right > .tc-fig, .tc-right > .tc-ww, .tc-right > .tc-share { margin-inline: 14px; }
+  .tc-right > .tc-fig { margin-top: 12px; }
+  .tc-right > .tc-ww { margin-top: 10px; }
+  .tc-right > .tc-share { margin-block: 10px 14px; }
+}
+@media (min-width: 62em) {
+  .tc-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); grid-template-areas: "left right"; }
+  .tc-left { border-top: 0; border-right: 1px solid var(--pen); }
+  .tc-right { grid-area: right; position: sticky; top: calc(var(--sticky-top, 0px) + 8px); align-self: start; }
+}
+
+/* The track: a radio group drawn as one segmented control (arrow keys move it, as any radio group). */
+.tc-track { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; padding: 0; border: var(--rule) solid var(--ink); }
+.tc-track__opt { position: relative; display: grid; place-items: center; min-height: 36px; padding: 4px 6px; border-left: var(--rule) solid var(--ink); cursor: pointer; font: 700 var(--fs-sm)/1.15 var(--font-body); text-align: center; }
+.tc-track__opt:first-of-type { border-left: 0; }
+.tc-track__opt input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; opacity: 0; cursor: pointer; }
+.tc-track__opt small { color: var(--ink-2); font: 400 var(--fs-cap)/1.2 var(--font-type); }
+.tc-track__opt:has(input:checked) { background: var(--ink); color: var(--paper); }
+.tc-track__opt:has(input:checked) small { color: var(--paper); }
+.tc-track__opt:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; z-index: 1; }
+/* Forced colors would paint the chosen track's ink fill over: it keeps a system color of its own. */
+@media (forced-colors: active) {
+  .tc-track__opt:has(input:checked) { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .tc-track__opt:has(input:checked) small { color: HighlightText; }
+}
+.tc-note { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
+
+/* The episode table and the boxes in it. */
+.tc-scroll { overflow-x: auto; }
+.tc-ep, .tc-qt { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.tc-ep th, .tc-ep td, .tc-qt th, .tc-qt td { padding: 3px 4px; border-bottom: 1px dotted var(--line); text-align: left; vertical-align: middle; }
+.tc-ep thead th, .tc-qt thead th { border-bottom: 1.5px solid var(--ink); font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: bottom; }
+.tc-ep tbody th { font-weight: 600; white-space: nowrap; }
+/* The last head, "Before quality", on two lines at its column's least width, so it reads apart from "Target" beside it. */
+.tc-ep thead th.tc-ep__res { width: 1%; white-space: normal; }
+.tc-ep abbr { text-decoration: none; }
+.tc-ep .num, .tc-qt .num { text-align: right; font-family: var(--font-type); white-space: nowrap; }
+.tc-note-row { display: block; color: var(--ink-2); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
+.tc-row-res { display: block; font: 700 var(--fs-cap)/1.3 var(--font-type); white-space: nowrap; }
+.tc-lvc { width: 2.4rem; text-align: center !important; }
+/* The checkboxes (a row's low-volume box, "include my numbers"), drawn: open, a 1.5px border in the text ink, so an
+   unticked box never reads as disabled in either theme; ticked, filled in the ink with the tick in the paper. Focus rings
+   are the family's (base.css :focus-visible). Forced colors draw the system's own box. */
+.tc-lvc input, .tc-incl input { flex: none; display: inline-grid; place-content: center; width: 18px; height: 18px; min-height: 0; margin: 0; border: 1.5px solid var(--ink-2); border-radius: 2px; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.tc-lvc input:checked, .tc-incl input:checked { border-color: var(--ink); background: var(--ink); }
+.tc-lvc input:checked::before, .tc-incl input:checked::before { content: ""; width: 10px; height: 10px; background: var(--paper); clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); }
+@media (forced-colors: active) { .tc-lvc input, .tc-incl input { -webkit-appearance: auto; appearance: auto; } }
+/* The low-volume box's label holds it: a 24px target round the 18px box (WCAG 2.5.8), the box drawn as before. */
+.tc-lvhit { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; cursor: pointer; }
+.tc-in { width: 5.2rem; min-height: 28px; height: 28px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--ink); border-radius: 0; background: var(--paper-2); font: 400 var(--fs-sm)/1 var(--font-type); font-variant-numeric: tabular-nums; }
+.tc-in--p { width: 6.4rem; }
+.tc-in--q { width: 3.6rem; }
+.tc-in--m { width: 5.4rem; height: 26px; min-height: 26px; }
+.tc-in--band { width: 3.2rem; height: 26px; min-height: 26px; }
+.tc-in.is-mine, .tc-in.is-own { border: 1.5px solid var(--ink); background: var(--paper); font-weight: 700; }
+.tc-src { display: block; margin-top: 1px; color: var(--ink-3); font: 400 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+/* "Your number": red, italic, bold and underlined, so it reads apart from a public source without its color (a contrast
+   theme drops the red). */
+.tc-src.tc-src--mine, .tc-tag.tc-tag--mine { color: var(--pen-ink); font-style: italic; font-weight: 700; letter-spacing: 0; text-transform: none; text-decoration: underline 1px; text-underline-offset: 0.2em; }
+.tc-msg { margin-top: 2px; color: var(--pen-ink); font: 400 var(--fs-cap)/1.3 var(--font-body); white-space: normal; }
+/* Two columns only just wide enough for the table (up to 70em: a small laptop, or a laptop with a larger default font):
+   the result heads, the episodes' names and the boxes' sources may wrap, and the boxes are a little narrower (still
+   wider than any value they hold), so the table keeps to its column. */
+@media (min-width: 62em) and (max-width: 70em) {
+  .tc-ep thead th.num, .tc-ep .tc-src { white-space: normal; }
+  .tc-ep tbody th { white-space: normal; line-height: 1.25; }
+  .tc-ep .tc-in { width: 4.6rem; }
+  .tc-ep .tc-in--p { width: 5.6rem; }
+}
+
+/* The ledger, lines one to eight: a number, the line's name, line two's slider, the amount. */
+.tc-lines { margin: 0; padding: 0; list-style: none; }
+.tc-line { display: grid; grid-template-columns: 1.4rem minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px 2px; border-top: 1px solid var(--line); font: 600 var(--fs-sm)/1.25 var(--font-body); }
+.tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) minmax(0, 1.1fr) auto; }
+.tc-line--res { border-top: var(--rule) solid var(--ink); border-bottom: var(--rule) solid var(--ink); background: var(--paper-2); }
+.tc-no { border: 1px solid var(--pen); color: var(--pen-ink); font: 700 var(--fs-cap)/16px var(--font-type); line-height: max(16px, 1.3em); text-align: center; }
+.tc-op { font-family: var(--font-type); }
+.tc-line .tc-src:not([hidden]) { display: inline; }
+.tc-v { font: 700 var(--fs-sm)/1.2 var(--font-type); text-align: right; white-space: nowrap; }
+.tc-open { min-height: 0; margin-block: -5px; padding: 5px 0; border: 0; background: none; color: var(--pen-ink); font: 700 var(--fs-cap)/1.2 var(--font-type); text-decoration: underline; text-transform: uppercase; cursor: pointer; }
+.tc-range { --thumb: 20px; width: 100%; height: 24px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.tc-range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
+.tc-range::-webkit-slider-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); margin-top: -8px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); -webkit-appearance: none; appearance: none; }
+.tc-range::-moz-range-track { height: 4px; border-radius: 2px; background: var(--ink-3); }
+.tc-range::-moz-range-thumb { box-sizing: border-box; width: var(--thumb); height: var(--thumb); border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.tc-foot { color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-body); }
+/* A note's citation on a line of its own, so a number ending the note never runs into it ("at 50. 42 CFR"). */
+.tc-foot > .tm-cite { display: block; }
+
+/* Quality by measure and "How each line works": disclosures, closed by default. */
+.tc-more { font-size: var(--fs-xs); color: var(--ink-2); }
+.tc-more > summary { min-height: var(--target-min); padding: 3px 0; color: var(--ink); font: 700 var(--fs-sm)/1.3 var(--font-body); cursor: pointer; }
+.tc-q { padding-top: 2px; border-top: var(--rule) solid var(--ink); }
+.tc-more p { margin-top: 6px; line-height: 1.45; }
+.tc-qt { margin-top: 2px; color: var(--ink); }
+
+/* The result box: the band's range large, the scenario tag, this scenario, the band's own box. On a phone, the stamp. */
+.tc-out { display: grid; gap: 3px; padding: 10px 12px; border: var(--rule) solid var(--ink); }
+.tc-out__lab { font: 600 var(--fs-sm)/1.3 var(--font-body); }
+.tc-tag { display: inline-block; padding: 0 4px; border: 1px solid currentColor; color: var(--ink-2); font: 400 var(--fs-cap)/1.5 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 0.1em; }
+.tc-tag--mine { border: 0; padding: 0; }
+.tc-out__v { font: 700 clamp(1.6rem, 1.1rem + 1.4vw, 2.1rem)/1.05 var(--font-type); font-variant-numeric: tabular-nums; }
+.tc-out__yr { color: var(--ink-2); font: 400 var(--fs-sm) var(--font-body); }
+.tc-out__at { font-size: var(--fs-sm); }
+.tc-out__none { color: var(--pen-ink); font-size: var(--fs-sm); }
+.tc-out__hyp { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--ink-2); font-size: var(--fs-xs); }
+.tc-band { display: inline-flex; align-items: center; gap: 4px; font: 700 var(--fs-xs) var(--font-type); color: var(--ink); }
+.tc-why > summary { min-height: var(--target-min); display: inline-flex; align-items: center; color: var(--ink); text-decoration: underline dotted; cursor: pointer; }
+.tc-why[open] { flex-basis: 100%; }
+@media (max-width: 61.99em) {
+  /* The F3 stamp, the headline on a phone: the family's rubber-stamp frame (rotated, grain-masked) drawn behind the
+     range, whose numerals stay straight, unmasked and at the desktop's weight and size, so they read; the frame sits
+     clear of the scenario tag above it. Numerals and frame in the ink, not the pen: red says "owes" on this site, and the
+     range runs from a repayment to a payment. */
+  .tc-out { justify-items: start; border: 0; padding: 4px 0; }
+  .tc-out__v { position: relative; isolation: isolate; margin-top: 10px; padding: 8px 14px 6px; color: var(--ink); }
+  .tc-out__v::before { content: ""; position: absolute; inset: 0; z-index: -1; border: 3px solid var(--ink); border-radius: 4px; transform: rotate(-1.5deg); mix-blend-mode: var(--stamp-blend); -webkit-mask-image: var(--stamp-mask); mask-image: var(--stamp-mask); }
+  .tc-out__yr { color: inherit; font-family: var(--font-type); }
+}
+@media (forced-colors: active) { .tc-out__v::before { -webkit-mask-image: none; mask-image: none; border-color: CanvasText; } }
+
+/* The payoff, "What would it take?", the share line. */
+.tc-fig { margin: 0; }
+.tc-fig .chart { margin-inline: auto; }
+.tc-ww { padding: 8px 10px; border: 1.5px solid var(--ink); }
+.tc-ww__h { margin-bottom: 4px; font: 700 var(--fs-sm)/1.3 var(--font-body); }
+.tc-ww__h .tc-src { display: inline; }
+.tc-fig .chart[data-fit="wide"] { max-width: calc(var(--vb) * 1px); }
+.tc-wwt { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); line-height: 1.35; }
+.tc-wwt th { padding: 4px 8px 4px 0; border-top: 1px dotted var(--line); font-weight: 600; text-align: left; vertical-align: middle; white-space: nowrap; }
+.tc-wwt td { padding: 4px 0; border-top: 1px dotted var(--line); }
+.tc-wwt tr:first-child > * { border-top: 0; }
+.tc-share { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.tc-incl { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); }
+.tc-copied { font-size: var(--fs-xs); }
+.tc-link { flex-basis: 100%; overflow-wrap: anywhere; font: 400 var(--fs-xs)/1.4 var(--font-type); }
+/* The text for a slide, where the browser wouldn't copy it: its lines as the clipboard would have them. */
+.tc-slide { white-space: pre-line; overflow-wrap: break-word; }
+.tc-private { flex-basis: 100%; color: var(--ink-2); font: 400 var(--fs-cap)/1.4 var(--font-type); }
+/* The columns' names a phone sets on each box and result (calc-view.js colLabel); a wider screen has the table's head. */
+.tc-cl { display: none; }
+@media (max-width: 36em) {
+  /* A phone: each episode row a small card. Its three boxes side by side, each under its column's name in the head's
+     small capitals and over its source (which wraps rather than run into the next); then the low-volume box with its
+     words, and the row's two results together at the right on one labeled line (a wrapping row: the two result cells
+     sit side by side). The ledger's slider under its name. */
+  .tc-ep thead { display: none; }
+  .tc-ep tbody tr { display: flex; flex-wrap: wrap; align-items: start; gap: 6px 10px; padding: 10px 0; border-bottom: 1px dotted var(--line); }
+  .tc-ep tbody th { flex: 1 1 100%; }
+  .tc-ep tbody td { flex: 1 1 0; min-width: 0; padding: 0; border: 0; }
+  .tc-ep .tc-in { width: 100%; }
+  .tc-cl { display: block; margin-bottom: 2px; color: var(--ink-2); font: 700 0.625rem/1.3 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; }
+  .tc-ep .tc-src { white-space: normal; overflow-wrap: break-word; }
+  .tc-ep td.tc-lvc { flex: 1 1 100%; display: flex; align-items: center; gap: 8px; width: auto; text-align: left !important; }
+  .tc-cl--lv { display: inline; margin: 0; font: 400 var(--fs-xs)/1.3 var(--font-body); letter-spacing: 0; text-transform: none; }
+  .tc-ep td.num { flex: 0 1 auto; text-align: right; font-size: var(--fs-xs); }
+  .tc-ep td.num:nth-last-child(2) { margin-left: auto; }
+  .tc-ep td.num > [data-v] { display: inline; font: 700 var(--fs-xs)/1.3 var(--font-type); }
+  .tc-cl--in { display: inline; margin: 0; font-weight: 400; }
+  .tc-line--s { grid-template-columns: 1.4rem minmax(0, 1fr) auto; }
+  .tc-line--s .tc-range { grid-column: 2 / -1; grid-row: 2; }
+  /* Quality by measure: its value head and each box's source wrap, so all four columns, Weight too, fit a phone. */
+  .tc-qt thead th.num, .tc-qt .tc-src { white-space: normal; }
+}
+/* A phone with large text (a default font of 20px or more on a 320px screen: under 18em): a row's boxes two to a line,
+   "What would it take?"'s labels and tag free to wrap, so every box shows its whole value and nothing runs past the edge.
+   At the default size none of this applies. */
+@media (max-width: 18em) {
+  .tc-ep tbody td:not(.tc-lvc, .num) { flex: 0 1 calc(50% - 5px); }
+  .tc-ep td.num, .tc-wwt th, .tc-ww__h .tc-src, .tc-qt .tc-src, .tc-qt thead th.num { white-space: normal; }
+}
+
+/* Part 6: the duties by phase (the phase's name on its own row over its list, at every width, so the list has the
+   column's full measure), and Figure 5, the clock: a dated line, darker from the day the page is about on. */
+.tm-check { display: grid; gap: 0; }
+.tm-phase { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 20px; padding-top: 14px; border-top: 1px solid var(--line); }
+.tm-phase__h { color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+.tm-phase__list { display: grid; margin: 0; padding: 0; list-style: none; }
+.tm-duty { padding-bottom: 14px; }
+.tm-duty + .tm-duty { padding-top: 14px; border-top: 1px dotted var(--line); }
+.tm-duty__h { font: 700 var(--fs-base)/1.3 var(--font-body); text-wrap: pretty; }
+.tm-part__text .tm-duty__p { margin-top: 4px; color: var(--ink-2); font-size: var(--fs-sm); line-height: 1.55; }
+.tm-clock { display: grid; margin: 0; padding: 0; list-style: none; }
+.tm-clock__item { display: grid; grid-template-columns: 6rem minmax(0, 1fr); gap: 4px 14px; padding: 10px 0 10px 16px; border-left: 3px solid var(--line); }
+.tm-clock__item--now, .tm-clock__item--now ~ .tm-clock__item { border-left-color: var(--ink); }
+.tm-clock__item--now .tm-clock__what { font-weight: 700; }
+.tm-clock__when { font: 700 var(--fs-xs)/1.5 var(--font-type); }
+.tm-clock__what { font-size: var(--fs-base); line-height: 1.4; }
+/* With large text on a phone (under 18em), each date over its line, so the line keeps the width for its words. */
+@media (max-width: 18em) { .tm-clock__item { grid-template-columns: minmax(0, 1fr); } }
+
+/* Part 7's table: its columns on a wide box, scrolling sideways in its own box in between, and each row a card of
+   labeled cells where the box is narrower than 34em (the column heads then hidden, each cell naming its column). */
+.tm-tablefig { margin: 0; }
+.tm-table { container-type: inline-size; overflow-x: auto; }
+.tm-find { min-width: 0; font-family: var(--font-body); }
+.tm-find caption { padding-bottom: 8px; color: var(--ink-2); font: 600 var(--fs-cap)/1.3 var(--font-body); letter-spacing: 0.1em; text-align: start; text-transform: uppercase; }
+/* The head as the calculator's table sets it: small mono capitals over a 2px rule; the first column wide enough for its
+   names on two lines. */
+.tm-find thead th { white-space: normal; box-shadow: inset 0 calc(-1 * var(--rule)) 0 var(--ink); color: var(--ink); font: 700 var(--fs-cap)/1.2 var(--font-type); letter-spacing: 0.04em; text-transform: uppercase; }
+.tm-find thead th:first-child { width: 28%; }
+.tm-find td, .tm-find tbody th { line-height: 1.45; }
+@container (width < 34em) {
+  .tm-find, .tm-find caption, .tm-find tbody, .tm-find tr, .tm-find th, .tm-find td { display: block; }
+  .tm-find thead { display: none; }
+  .tm-find tr { padding: 10px 0; border-top: 1px solid var(--line); }
+  .tm-find td { padding: 2px 10px; }
+  .tm-find td::before { content: attr(data-label) ": "; color: var(--ink-2); font-weight: 600; }
+}
+
+/* After the Parts: the note on CJR-X (the patient note's callout, at body size), the link to Methods, then the data's
+   dates under their kicker, in the family's as-of grid (pages.css .asof--grid). The page ends close to the footer. */
+.tm-coda { padding-top: 28px; border-top: 1px dotted var(--line); }
+.tm-nextbox { max-width: 62ch; font-size: var(--fs-base); }
+.tm-next { line-height: 1.6; }
+.tm-methods { margin-block: 16px 0; }
+.tm-end { display: grid; gap: 6px; }
+.tm-end .asof { margin: 0; padding-top: 8px; }
+/* The dates fill their rows: as many columns as fit at 11rem or more each (one on a phone), so the five sit on one row on a
+   laptop with no empty cell after them. */
+.tm-end .asof--grid .asof__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
+
+/* The Methods page: the family's contents-and-sections layout (pages.css .doc), its paragraphs and lists at the reading
+   measure; the sources' and the remaps' tables in the printout frame; the unknowns as ruled items, each a heading over
+   what the calculator assumes and where the real value lives. */
+/* The head starts as far under the sub-nav as the program page's first Part does (.tm's 8px and the Part's 20px). */
+.tm.tm-meth { padding-top: 28px; }
+.tm-meth__lede { max-width: 60ch; font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.45; color: var(--ink-2); }
+.tm-meth .doc__sec > p, .tm-meth__list, .tm-meth__links, .tm-meth__unknowns { max-width: var(--measure); }
+.tm-meth__list, .tm-meth__links { display: grid; gap: 10px; margin: 0; padding-left: 1.1em; }
+.tm-meth__links { gap: 4px; }
+.tm-meth__sub { margin-top: 8px; font: 700 var(--fs-md)/1.3 var(--font-body); }
+.tm-meth__pins td, .tm-meth__remap td { font-family: var(--font-type); font-size: var(--fs-sm); }
+.tm-meth__pins th[scope="row"] { min-width: 16rem; font-weight: 400; }
+.tm-meth__pins code { font: 400 var(--fs-xs)/1.35 var(--font-type); }
+.tm-meth__remap caption { text-align: left; font-weight: 700; padding-bottom: 6px; }
+/* One treatment for every Methods table, short or long: hairline rows, never the green-bar banding the kit gives a
+   table of more than ten rows (the two sources tables would otherwise differ). */
+.tm-meth .gb tbody:has(> tr:nth-child(11)) > tr { background: none; }
+.tm-meth .gb tbody > tr + tr { border-top: 1px solid var(--line); }
+/* Where its frame is narrower than the table's columns need (a phone, a narrow window), each source is a card, as Part
+   7's table and HACRP Methods' receipts stack: the file's link across the top, then in the type face who publishes it
+   and the source's date, the day it was fetched, and the hash's start, each value named by its column (the three would
+   not fit one line at a phone's width). A container query, so the frame's own width decides. The column heads leave
+   the layout and the names go before the values instead, read aloud with them; the dot between is not. */
+.tm-meth .printout:has(> .printout__scroll > .tm-meth__pins) { container-type: inline-size; }
+@container (width < 46em) {
+  .tm-meth .printout__scroll:has(> .tm-meth__pins) { overflow-x: visible; }
+  .tm-meth__pins, .tm-meth__pins tbody { display: block; }
+  .tm-meth__pins thead { display: none; }
+  .tm-meth__pins tr { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 0; padding: 10px 0; }
+  .tm-meth__pins tbody :is(th, td) { display: block; padding: 0; }
+  .tm-meth__pins th[scope="row"] { flex: 1 1 100%; min-width: 0; margin-bottom: 2px; line-height: 1.35; }
+  .tm-meth__pins td { color: var(--ink-2); font-size: var(--fs-xs); line-height: 1.45; }
+  .tm-meth__pins td.nw { white-space: normal; }
+  .tm-meth__pins td:nth-child(2)::after { content: "\00a0·\00a0"; content: "\00a0·\00a0" / ""; }
+  .tm-meth__pins td[data-label]::before { content: attr(data-label) "\00a0"; }
+  .tm-meth__pins td:nth-child(n+4) { flex: 1 1 100%; }
+}
+.tm-meth__unknowns { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.tm-meth__unknowns > li { display: grid; gap: 6px; padding-block: 14px; border-top: 1px solid var(--line); }
+.tm-meth__unknowns .tm-meth__sub { margin-top: 0; }
+.tm-meth__k { color: var(--pen-ink); font: 700 var(--fs-xs)/1.4 var(--font-type); letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* A display figure's comma or point (tight.js): the type face gives it a digit's whole cell, so large figures pull it in
+   from both sides, by about half the room the mark leaves (this face's comma and point are about a quarter of a cell). */
+.tm-sep { margin-inline: -0.17em; }

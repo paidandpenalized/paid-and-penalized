@@ -460,12 +460,12 @@
   .ests > .wsx { align-self: start; }
   .dir { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-/* The six slips side by side, a column each, once the page is at its full width (narrower, a column is too tight for a
+/* The slips side by side (--slips of them, below.js), a column each, once the page is at its full width (narrower, a column is too tight for a
    slip's band words on one line and its dek; the groups stack, as on a tablet). Each group spans its columns and both
    rows of one shared grid (subgrid), so the groups' names and rules line up, every slip is the height of the tallest,
    and the bands share one bottom edge. */
 @media (min-width: 1200px) {
-  .soon { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto auto; gap: 12px 16px; }
+  .soon { grid-template-columns: repeat(var(--slips, 6), minmax(0, 1fr)); grid-template-rows: auto auto; gap: 12px 16px; }
   .sg { grid-column: span var(--n); grid-row: span 2; grid-template-columns: subgrid; grid-template-rows: subgrid; }
 }
 
@@ -504,6 +504,8 @@ html:has(.hh__peers) { --peers-h: 49px; scroll-padding-top: calc(var(--sticky-to
 /* The hero: the record card and the money left, the figure right. */
 .hh__hero { display: grid; grid-template-columns: minmax(0, 1fr); gap: 34px; padding-block: 28px 26px; }
 .hh__card { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-self: start; }
+/* With large text on a phone (under 18em), each field takes the row, so a label never runs past its box. */
+@media (max-width: 18em) { .hh__card { grid-template-columns: minmax(0, 1fr); } }
 .hh .hh__name { margin: 4px 0 3px; font: 400 clamp(1.75rem, 3.3vw, 2.625rem)/1.02 var(--font-display); letter-spacing: -0.005em; overflow-wrap: break-word; }
 .hh__card .field__value:not(.hh__name) { font-size: var(--fs-base); }
 .hh__card .field__value.field__value--sm { font-size: var(--fs-sm); line-height: 1.45; }
@@ -769,6 +771,11 @@ svg.st { display: block; width: 100%; height: auto; overflow: visible; }
   .hh__wb-mid { stroke: CanvasText; }
   .hh__wb-grid, .hh__wb-base { stroke: GrayText; }
 }
+
+/* The TEAM section (hub/hospital/team.js), the Medicaid band's twin in every class above: for a participant, its scenario
+   range on its track's limits (web/charts/limitRuler.js, styled by the map kit the hub carries, charts-map.css), the
+   phone's drawing under 560px and the wide one from there (.chart[data-fit]). */
+.hh__tmr { max-width: 40rem; margin-top: 12px; }
 
 /* The peer table's fold, then the source and fairness lines. */
 .hh__tbl { margin-top: 26px; padding-block: 28px 18px; border-top: 1px dotted var(--line); }

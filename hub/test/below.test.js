@@ -46,12 +46,21 @@ test('the directory: #programs with its kicker, a heading that counts the progra
   const withData = SITE.programs.filter((p) => p.inData);
   const building = withData.filter(underConstruction).length;
   assert.ok(building > 0, 'the heading\'s under-construction clause shows (none: dirHeadAll)');
-  // A scenario (no payment) is neither live with data nor under consideration: it has a card of its own.
-  const considered = SITE.programs.filter((p) => !p.inData && !p.scenario).length;
-  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData.length - building).replace(/^./, (c) => c.toUpperCase())} live, ${numberWord(building)} under construction, ${numberWord(considered)} under consideration.`);
+  // A scenario (no payment) is neither live nor under consideration: it has a card of its own. A payment model live here
+  // outside the estimates (TEAM) counts as live; the rest without data are under consideration (stage soon).
+  const models = SITE.programs.filter((p) => !p.inData && !p.scenario && p.stage === 'live').length;
+  const considered = SITE.programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon').length;
+  assert.equal(words(element(section, '<h2 id="programs-h"', 'h2')), `${numberWord(withData.length - building + models).replace(/^./, (c) => c.toUpperCase())} live, ${numberWord(building)} under construction, ${numberWord(considered)} under consideration.`);
   const lede = words(element(section, '<p class="bsec__lede"', 'p'));
   assert.ok(lede.includes(money(facts.gross)), lede);
   assert.ok(lede.includes(`FY${fy}`) && lede.includes('estimated'), lede);
+  // The estimate is the quality programs' alone (TEAM, live here, is outside it): the lede names their group, never a
+  // count of programs (a count goes stale, and "three" next to "four live" reads as taking TEAM in), and never TEAM.
+  const number = '(?:one|two|three|four|five|six|seven|eight|nine|ten|\\d+)';
+  assert.doesNotMatch(lede, new RegExp(`\\bthese\\s+${number}\\b|\\b(?:${number}|both)\\s+(?:\\w+\\s+)?(?:programs|cards)\\b`, 'i'), `the lede counts no programs: ${lede}`);
+  assert.doesNotMatch(lede, /TEAM|surgical|episode/i, 'TEAM is outside the estimate sentence');
+  assert.match(lede, /quality programs/i, 'the estimate is the quality programs\'');
+  assert.ok(SITE.programs.some((p) => !p.inData && p.stage === 'live' && !p.scenario), 'a live program outside the estimates (TEAM) is on the page');
   // It sits below the story, in the page's main.
   assert.ok(out.indexOf('id="programs"') > out.indexOf('<div class="story" data-story>'));
   assert.ok(out.indexOf('id="programs"') < out.indexOf('</main>'));
@@ -150,14 +159,14 @@ test('each card\'s histogram: bins of 0.2 points whose counts add to the program
   }
 });
 
-test('the programs under consideration: six dashed slips in three named groups, each with its abbreviation, name, dek and "under consideration"', () => {
+test('the programs under consideration: five dashed slips in two named groups, each with its abbreviation, name, dek and "under consideration"', () => {
   const section = element(out, '<section class="bsec" id="programs"', 'section');
   const groups = elements(section, '<div class="sg"', 'div');
-  const want = [['price', 'Price adjustments'], ['reporting', 'Reporting rules'], ['episode', 'Episode payment']];
+  const want = [['price', 'Price adjustments'], ['reporting', 'Reporting rules']];
   assert.deepEqual(groups.map((g) => element(g, '<p class="grp cap"', 'p')), want.map(([, name]) => `<p class="grp cap"><span>${name}</span></p>`));
   const slips = [];
   groups.forEach((g, i) => {
-    const members = SITE.programs.filter((p) => p.group === want[i][0] && !p.inData);
+    const members = SITE.programs.filter((p) => p.group === want[i][0] && !p.inData && p.stage === 'soon');
     assert.match(g, new RegExp(`^<div class="sg" style="--n:${members.length}">`));
     const found = elements(g, '<a class="slip"', 'a');
     assert.deepEqual(found.map((s) => /href="([^"]+)"/.exec(s)[1]), members.map((p) => p.path));
@@ -169,7 +178,37 @@ test('the programs under consideration: six dashed slips in three named groups, 
     });
     slips.push(...found);
   });
-  assert.equal(slips.length, 6);
+  assert.equal(slips.length, 5);
+  assert.match(section, /<div class="soon" style="--slips:5">/);
+});
+
+// The home page and the shell agree on every program's stage: a program the footer lists (a tab and a figure) has a card
+// in the directory and no slip; one the footer puts under consideration has a slip and no card.
+test('the directory and the footer agree on every program: listed means a card, under consideration a slip', () => {
+  const section = element(out, '<section class="bsec" id="programs"', 'section');
+  const foot = footerOf(out);
+  const listedInFoot = new Set([...element(foot, '<ul class="ft__list"', 'ul').matchAll(/<a href="([^"]+)">/g)].map((m) => m[1]));
+  const consideredInFoot = new Set([...element(foot, '<p class="ft__soon"', 'p').matchAll(/<a href="([^"]+)"/g)].map((m) => m[1]));
+  const slipHrefs = new Set(elements(section, '<a class="slip"', 'a').map((s) => /href="([^"]+)"/.exec(s)[1]));
+  const cardHrefs = new Set(elements(section, '<article class="pc', 'article').map((c) => /<a class="go" href="([^"]+)"/.exec(c)[1]));
+  for (const p of SITE.programs) {
+    const listed = listedInFoot.has(p.path);
+    assert.equal(listed, !consideredInFoot.has(p.path), `${p.id}: the footer has it once`);
+    assert.equal(cardHrefs.has(p.path), listed, `${p.id}: a card exactly when the footer lists it`);
+    assert.equal(slipHrefs.has(p.path), !listed, `${p.id}: a slip exactly when the footer puts it under consideration`);
+  }
+});
+
+test('a payment model live here outside the estimates (TEAM): a card under its group with the footer\'s count, its dek and the way to its page', () => {
+  const section = element(out, '<section class="bsec" id="programs"', 'section');
+  const block = element(section, '<div class="dir dir--model"', 'div');
+  const card = element(block, '<article class="pc pc--model"', 'article');
+  assert.ok(section.indexOf('<p class="grp cap"><span>Episode payment</span></p>') < section.indexOf(block));
+  assert.ok(card.includes(`<p class="pc__big">${count(assets.shell.programs.team.listed)} hospitals</p>`));
+  assert.ok(words(card).includes(programDek('team')));
+  assert.match(card, /<a class="go" href="\/team\/"/);
+  assert.doesNotMatch(card, /est-tag|histogram|<figure/, 'no estimate and no histogram');
+  assert.throws(() => directory({ programs: SITE.programs, figures: { ...assets.shell.programs, team: undefined }, facts, fy, hospitals }), /team/);
 });
 
 test('the scenarios, not payments: under their own sub-head, a card per scenario with its name, statutory name, dek, national range of revenue lost with its tag, and the way to its page; never a slip', () => {
@@ -190,7 +229,7 @@ test('the scenarios, not payments: under their own sub-head, a card per scenario
   });
   for (const p of scenarios) assert.ok(!elements(section, '<a class="slip"', 'a').some((s) => s.includes(`href="${p.path}"`)), `${p.id}: no slip`);
   // The scenario's figure comes from the shell's facts: a directory without them stops.
-  assert.throws(() => directory({ programs: SITE.programs, facts, fy, hospitals }), /work-requirement/);
+  assert.throws(() => directory({ programs: SITE.programs, figures: { ...assets.shell.programs, 'work-requirement': undefined }, facts, fy, hospitals }), /work-requirement/);
 });
 
 test('methods in brief: its kicker, heading, a paragraph with the back-test from the data, three numbered points and the way to the methods', () => {

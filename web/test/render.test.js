@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { REPO_ROOT } from '../../pipeline/files.js';
 import { LISTED_PROGRAMS, SITE, UNLISTED_PROGRAMS } from '../site.js';
 import { cmsText, count, decimal, isoDate, isoMonth, longDate, pct, shown, signed } from '../render/format.js';
-import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepWhole, lastCall, pill, typeset } from '../render/components.js';
+import { fillAround, fillCopy, fillCopyKeep, footnoteLegend, keepSigned, keepWhole, lastCall, pill, typeset } from '../render/components.js';
 import { Safe, escapeHtml, html, jsonScript, raw } from '../render/html.js';
 import { COPY } from '../copy.js';
 import { externalLink, feedbackFor, feedbackHref, page } from '../render/layout.js';
@@ -184,11 +184,11 @@ test('shell: the program tabs are All programs and the programs with dollar esti
     ['/', 'All programs', 'page', 'tab'],
     ...LISTED_PROGRAMS.map((p) => [p.path, `${p.name} ${p.ab}`, null, 'tab']),
   ]);
-  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
+  assert.deepEqual(LISTED_PROGRAMS.map((p) => p.id), ['hrrp', 'hacrp', 'hvbp', 'team', 'work-requirement']);
   const header = headerOf(page(PAGE));
   assert.ok(header.includes('<nav class="wrap tabs" aria-label="Programs"><div class="tabs__scroll">'));
   assert.ok(header.includes('<a class="tab" href="/hrrp/"><span>Readmissions</span> <span class="tab__ab">HRRP</span></a>'));
-  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, then the scenario');
+  assert.ok(header.includes('<a class="tab" href="/hvbp/"><span>Value-based purchasing</span> <span class="tab__ab">HVBP</span></a><a class="tab" href="/team/"><span>Surgical episodes</span> <span class="tab__ab">TEAM</span></a><a class="tab" href="/work-requirement/">'), 'the programs with estimates, TEAM, then the scenario');
   assert.ok(header.includes('<a class="tab" href="/work-requirement/"><span>Work requirement</span> <span class="tab__ab">Medicaid</span></a></div></nav>'), 'the row ends at the scenario, the last listed program');
   // The programs under consideration have no tab, and the row no gap or label before where they were.
   for (const p of UNLISTED_PROGRAMS) assert.ok(!header.includes(`href="${p.path}"`), `${p.id}: no tab`);
@@ -197,9 +197,11 @@ test('shell: the program tabs are All programs and the programs with dollar esti
   // is (nor All programs), and on one with estimates (HVBP) its tab is.
   const hacrp = tabsOf(page({ ...PAGE, program: 'hacrp' }));
   assert.deepEqual(hacrp.filter(([, , current]) => current).map(([href]) => href), ['/hacrp/']);
-  const team = page({ ...PAGE, path: '/team/', program: 'team' });
-  assert.deepEqual(tabsOf(team).filter(([, , current]) => current), []);
-  assert.doesNotMatch(headerOf(team), /aria-current="page"/);
+  const team = tabsOf(page({ ...PAGE, path: '/team/', program: 'team' }));
+  assert.deepEqual(team.filter(([, , current]) => current).map(([href]) => href), ['/team/']);
+  const pi = page({ ...PAGE, path: '/pi/', program: 'pi' });
+  assert.deepEqual(tabsOf(pi).filter(([, , current]) => current), []);
+  assert.doesNotMatch(headerOf(pi), /aria-current="page"/);
   const hvbp = tabsOf(page({ ...PAGE, path: '/hvbp/', program: 'hvbp' }));
   assert.deepEqual(hvbp.filter(([, , current]) => current).map(([href]) => href), ['/hvbp/']);
   const wr = tabsOf(page({ ...PAGE, path: '/work-requirement/', program: 'work-requirement' }));
@@ -304,9 +306,15 @@ test('shell: the footer is one numbered form row (programs, the site, the family
   // Every program's row is the same shape: a plain item, the name and its code, then one figure; the only scenario
   // markup is that one row's title and hidden words.
   const items = /<ul class="ft__list" role="list">([\s\S]*?)<\/ul>/.exec(foot)[1].match(/<li[^>]*>[\s\S]*?<\/li>/g);
-  assert.equal(items.length, 4);
+  assert.equal(items.length, 5);
+  // TEAM's figure: the hospitals on CMS's list, never a dollar figure; what it is in full is its title and hidden words.
+  const teamRest = "on CMS\u2019s TEAM list; its dollar figures on this site are scenarios, never part of the family\u2019s estimates.";
+  assert.ok(foot.includes(`<li><a href="/team/">Surgical episodes\u00a0<span class="ft__ab">TEAM</span></a> <span class="ft__v" title="3 hospitals ${teamRest}">3 hospitals<span class="vh"> ${teamRest}</span></span></li>`), 'TEAM\'s count and its full meaning');
+  // A screen reader hears the row once through: "hospitals" said once, never twice.
+  const teamItem = items.find((item) => item.includes('href="/team/"'));
+  assert.equal((textOf(teamItem).match(/hospitals/gi) ?? []).length, 1, 'TEAM\'s row says "hospitals" once');
   for (const item of items) assert.match(item, /^<li><a href="[^"]+">[^<]+\u00a0<span class="ft__ab">[^<]+<\/span><\/a> <span class="ft__v"( title="[^"]+")?>(<span class="vh">[^<]+<\/span>)?[^<]+(<span class="vh">[^<]+<\/span>)?<\/span><\/li>$/);
-  assert.equal(items.filter((item) => item.includes(' title=')).length, 1, 'one row with a title');
+  assert.equal(items.filter((item) => item.includes(' title=')).length, 2, 'two rows with a title: the scenario\'s and TEAM\'s');
   assert.doesNotMatch(foot, /ft__scen|scen-tag|could be lost/, 'no tag box and no old wording');
   const considered = /<p class="ft__soon">([\s\S]*?)<\/p>/.exec(foot)[1];
   assert.ok(considered.startsWith('Under consideration: '));
@@ -565,6 +573,15 @@ test('lastCall returns its last result for the same key (by identity) and calls 
   assert.equal(f({ fy: 2, source }), 'fy2');
   assert.equal(f({ fy: 2, source: { id: 'x' } }), 'fy2');
   assert.equal(calls, 3, 'a new value or a new object: called again');
+});
+
+// A line never breaks between a sign and its amount ("(−" / "$2.3M)"): the browser may break between a minus or a plus
+// and a dollar sign, both prefix characters to the line breaker.
+test('keepSigned holds each signed dollar figure or percent on one line, escapes the rest, and formats each piece', () => {
+  assert.equal(String(keepSigned('Spend 21.2% over target (−$2.3M) & +$110K under · −5%')),
+    'Spend 21.2% over target (<span class="nw">−$2.3M</span>) &amp; <span class="nw">+$110K</span> under · <span class="nw">−5%</span>');
+  assert.equal(String(keepSigned('$0 and 5% and 3-4')), '$0 and 5% and 3-4', 'unsigned figures are left as they are');
+  assert.equal(String(keepSigned('−$1,154,516 to +$552K', (s) => s.toUpperCase())), '<span class="nw">−$1,154,516</span> TO <span class="nw">+$552K</span>', 'each piece formatted, inside its span too');
 });
 
 test('keepWhole wraps a part of escaped text in one .nw span, and refuses a part that is not there', () => {

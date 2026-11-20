@@ -67,6 +67,10 @@ class SheetRowsTest(unittest.TestCase):
         wb = make_xlsx({"Notes": [["x"]], "Data": [["y"]]})
         self.assertEqual(xlsx.sheet_rows(wb, "Data", "w"), [["y"]])
 
+    def test_no_sheet_name_reads_the_first_sheet(self):
+        wb = make_xlsx({"Notes": [["x"]], "Data": [["y"]]})
+        self.assertEqual(xlsx.sheet_rows(wb, None, "w"), [["x"]])
+
     def test_refuses_a_dtd(self):
         wb = make_xlsx({"S": [["a"]]}, doctype='<!DOCTYPE x [<!ENTITY a "aaaa">]>')
         with self.assertRaisesRegex(SchemaError, "DTD"):

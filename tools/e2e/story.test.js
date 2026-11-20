@@ -5,6 +5,7 @@
 // (E2E_BASE_URL); see site.js.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { SITE } from '../../web/site.js';
 import { audit } from './axe.js';
 import { CONCURRENCY, ENGINE, SCHEMES, TAB_KEYS, assertNoSideways, assertQuiet, clickInPlace, fetchDecoded, settle, useBrowser, useContext, visit, withPage } from './lib.js';
 
@@ -796,10 +797,16 @@ describe('the worksheet on a narrow phone', () => {
   }));
 });
 
-// Below the story, the directory: each live program's card (the three programs with data, then the scenario's card) ends
-// in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at every layout each group's name sits on one line inside its
-// row, each slip's band holds its words on one line, and slips in one row are one height with their bands on one bottom
-// edge (from 1200 px the six share one row).
+// Below the story, the directory: each card (the programs with data, the payment models live here, then the scenarios')
+// ends in a way to its page whose words sit on one line, as its neighbours' do; and the programs under consideration: at
+// every layout each group's name sits on one line inside its row, each slip's band holds its words on one line, and
+// slips in one row are one height with their bands on one bottom edge (from 1200 px they share one row). The counts come
+// from the registry by the directory's rule, written out here (not hub/home/below.js's own split, so a fault there
+// fails): a card for each program with data, each scenario, and each payment model live here; a slip for each program
+// under consideration, under its group's name.
+const CARDS = SITE.programs.filter((p) => p.inData || p.scenario || p.stage === 'live').length;
+const SOON = SITE.programs.filter((p) => !p.inData && !p.scenario && p.stage === 'soon');
+const [SLIPS, GROUPS] = [SOON.length, new Set(SOON.map((p) => p.group)).size];
 describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
   const tabs = useContext(shared, { width: 1024 });
   it('fit their rows and bands, and line up, at 1024, 1100, 1199, 1200, 1280, 1440 and 390 px', () => withPage(tabs, { path: '/' }, async (page) => {
@@ -839,12 +846,12 @@ describe('the directory\'s slips', { concurrency: CONCURRENCY }, () => {
           bandSpread: Math.max(...rows.map((r) => spread(r.bands))),
         };
       });
-      assert.deepEqual(f.go, [1, 1, 1, 1], `${width} px: each card's way to its page on one line, the scenario's too`);
-      assert.equal(f.names, 3, `${width} px: three groups`);
+      assert.deepEqual(f.go, Array(CARDS).fill(1), `${width} px: each of the ${CARDS} cards' way to its page on one line, the scenario's too`);
+      assert.equal(f.names, GROUPS, `${width} px: ${GROUPS} groups`);
       assert.equal(f.namesOk, true, `${width} px: each group's name on one line, inside its row`);
-      assert.equal(f.bands, 6, `${width} px: six slips`);
+      assert.equal(f.bands, SLIPS, `${width} px: ${SLIPS} slips`);
       assert.equal(f.bandsOk, true, `${width} px: each band's words on one line, inside it`);
-      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the six slips share one row`);
+      if (width >= 1200) assert.equal(f.rows, 1, `${width} px: the ${SLIPS} slips share one row`);
       assert.ok(f.heightSpread <= 1, `${width} px: slips in one row are one height (spread ${f.heightSpread} px)`);
       assert.ok(f.bandSpread <= 1, `${width} px: bands in one row share a bottom edge (spread ${f.bandSpread} px)`);
     }

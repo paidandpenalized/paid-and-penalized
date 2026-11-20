@@ -5,6 +5,7 @@
 // The pick is kept in the page's URL (#ws=<CCN>, figures/worksheet-data.js withPick), so a page loaded again, as Back does when the
 // browser kept no copy of it, shows that hospital again.
 // Without this script the example hospital's sheet and waterfall stay as the page was built.
+import { fetchAsset } from '../../../web/client/fetch-asset.js';
 import { mountFigure, mountScroll, unmountScroll } from '../../../web/client/figure.js';
 import { replaceAddress } from '../../../web/client/follow.js';
 import { mountOmnibox } from '../../../web/client/omnibox.js';
@@ -16,7 +17,6 @@ import { estimateTag } from '../web/estimate-tag.js';
 import { waterfallFigure } from '../web/figures/waterfall.js';
 import { worksheetHtml, worksheetRows } from '../web/worksheet.js';
 import { loadIndex, searchWords } from './search.js';
-import { fetchAsset } from './fetch-asset.js';
 
 const loadSheets = once(async (src) => {
   const { meta, rows } = await fetchAsset(src, 'worksheet data');

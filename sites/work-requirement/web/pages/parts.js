@@ -54,6 +54,7 @@ export function asOf(data) {
   const { cells, spend, declines, table } = asOfPins(data);
   return asofBar({
     label: t('asofHeading'),
+    grid: true,
     items: [
       { label: t('asofCostLabel'), value: fillKeep('asofCost', { fy: String(data.meta.fy), date: isoDate(cells.derivedFrom.lastModified), settled: pct(data.meta.hcris.settled_share, 0) }, ['date']) },
       { label: t('asofSpendLabel'), value: fillKeep('asofSpend', { form: FORM_NAMES.spendForm, fy: String(data.meta.fy), date: isoDate(spend.datasetModified) }, ['date']) },

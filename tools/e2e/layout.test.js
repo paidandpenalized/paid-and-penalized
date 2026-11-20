@@ -102,7 +102,7 @@ describe('at 1280 px', { concurrency: CONCURRENCY }, () => {
     const last = Math.max(...leaves.map((el) => el.getBoundingClientRect().bottom));
     return Math.round(document.querySelector('.foot > .wrap').getBoundingClientRect().top - last);
   });
-  for (const [what, path] of [['a placeholder page', programById('team').path], ['the HVBP placeholder', ofType('coming').path], ['a hospital page', ofType('hub-hospital-cut').path], ['a Readmissions hospital page', ofType('hrrp-hospital-cut').path], ['the Readmissions program page', ofType('hrrp-program').path]]) {
+  for (const [what, path] of [['a placeholder page', programById('pi').path], ['the HVBP placeholder', ofType('coming').path], ['a hospital page', ofType('hub-hospital-cut').path], ['a Readmissions hospital page', ofType('hrrp-hospital-cut').path], ['the Readmissions program page', ofType('hrrp-program').path]]) {
     it(`${what} ends without a wide empty band before the footer`, () => withPage(tabs, { path }, async (page) => {
       const band = await endBand(page);
       assert.ok(band <= FOOT_ROOM + SLACK, `${band} px between its last words and the footer's rule`);

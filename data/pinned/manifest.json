@@ -1657,5 +1657,180 @@
     },
     "derivedBy": "pipeline/py/pp_pipeline/medicaid/safety_net.py",
     "retrieved": "2026-11-04"
+  },
+  {
+    "id": "team-participants",
+    "title": "TEAM participant list (CMS)",
+    "path": "team-py2/participants.csv",
+    "bytes": 78154,
+    "sha256": "2679a284e0998de4453a1e95bf3183593ed1592a1b833480c345abdff0c535f2",
+    "derivedFrom": {
+      "file": "team-participant-list.xlsx",
+      "bytes": 61430,
+      "sha256": "2466478955b9f49642f9676d1d80dc67552c24da294bb89f717ca4cc33317eeb",
+      "downloadUrl": "https://www.cms.gov/team-model-participant-list",
+      "lastModified": "2026-09-22"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model",
+    "retrieved": "2026-11-19",
+    "asOf": "2026-08-18",
+    "counts": {
+      "rows": 721,
+      "byParticipation": {
+        "mandatory": 711,
+        "voluntary": 10
+      },
+      "byStart": {
+        "2026-01-01": 719,
+        "2027-01-01": 2
+      }
+    }
+  },
+  {
+    "id": "team-prices",
+    "title": "TEAM performance year 2 preliminary target prices (CMS)",
+    "path": "team-py2/prices.csv",
+    "bytes": 23743,
+    "sha256": "92db31ce3d5bc1a9efca3277795df12143a8dcd7b5494753ff6a7d2f0b32e2f3",
+    "derivedFrom": {
+      "file": "team-py2-prlim-target-prices.xlsx",
+      "bytes": 52289,
+      "sha256": "c274989ffd7cd3e9539edb05a95aeb609fb8cbee75839279c5b6031790f4df04",
+      "downloadUrl": "https://www.cms.gov/priorities/innovation/files/team-py2-prlim-target-prices.xlsx",
+      "lastModified": "2026-11-06"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/team-model",
+    "retrieved": "2026-11-19",
+    "asOf": "2026-11-04",
+    "counts": {
+      "rows": 324,
+      "averageRows": 36
+    },
+    "spotCheck": {
+      "category": "CABG",
+      "drg": "231",
+      "division": "1",
+      "price": "97102.93474045291"
+    }
+  },
+  {
+    "id": "cjrx-participants",
+    "title": "CJR-X participant list (CMS)",
+    "path": "team-py2/cjrx.csv",
+    "bytes": 89771,
+    "sha256": "ce19da48a0f9a5b95f654a1a4090537808f993922addddb940f5372082dd8b83",
+    "derivedFrom": {
+      "file": "cjrx-participant-list.xlsx",
+      "bytes": 96199,
+      "sha256": "af17224722d50b1b356b039412519fe3649fb9ff93b679e50b7c830fdb72e8ef",
+      "downloadUrl": "https://www.cms.gov/priorities/innovation/files/cjrx-participant-list.xlsx",
+      "lastModified": "2026-10-05"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/cjr-x",
+    "retrieved": "2026-11-19",
+    "asOf": "2026-09-30",
+    "counts": {
+      "rows": 2217
+    }
+  },
+  {
+    "id": "team-mup-dy2023",
+    "title": "Medicare Inpatient Hospitals by Provider and Service, data year 2023: episode and predecessor DRGs",
+    "path": "team-py2/mup-dy2023.csv",
+    "bytes": 187827,
+    "sha256": "3a88ac5cd30d5a13e50087adf9b3bfbe58db5d336afc7a674f36b95f95009f1e",
+    "derivedFrom": {
+      "file": "MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
+      "bytes": 38116558,
+      "sha256": "2cbbf1516951d83c62ca4faafa7fe626fec3be9afb41e1e2129524c81c238632",
+      "downloadUrl": "https://data.cms.gov/sites/default/files/2025-05/ca1c9013-8c7c-4560-a4a1-28cf7e43ccc8/MUP_INP_RY25_P03_V10_DY23_PrvSvc.CSV",
+      "lastModified": "2025-05-14"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/medicare-inpatient-hospitals-by-provider-and-service",
+    "retrieved": "2026-11-19",
+    "counts": {
+      "rows": 13392
+    }
+  },
+  {
+    "id": "team-mup-dy2024",
+    "title": "Medicare Inpatient Hospitals by Provider and Service, data year 2024: episode and predecessor DRGs",
+    "path": "team-py2/mup-dy2024.csv",
+    "bytes": 181190,
+    "sha256": "4f2171515917090eea3ab3be2c9783cb4c08b63d39497027dc0b735090a4575b",
+    "derivedFrom": {
+      "file": "MUP_INP_RY26_P03_V10_DY24_PrvSvc.CSV",
+      "bytes": 37976130,
+      "sha256": "2ab6da15be4cd47c4ecc05e0f54545e4493ee4eea58df626d1aa2e6b19b65e0d",
+      "downloadUrl": "https://data.cms.gov/sites/default/files/2026-04/828defb5-c9e6-4442-8c1b-f27bc0799daf/MUP_INP_RY26_P03_V10_DY24_PrvSvc.CSV",
+      "lastModified": "2026-04-10"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-inpatient-hospitals/medicare-inpatient-hospitals-by-provider-and-service",
+    "retrieved": "2026-11-19",
+    "counts": {
+      "rows": 12923
+    }
+  },
+  {
+    "id": "team-quality",
+    "title": "Hospital-wide readmission (Hybrid_HWR) and surgical complications mortality (ISCMR) scores, Provider Data Catalog",
+    "path": "team-py2/quality.csv",
+    "bytes": 287953,
+    "sha256": "30b627586fc40dcb9baae6691c554ceca9b079309b37e4f62458494a82937561",
+    "derivedFrom": {
+      "file": "Unplanned_Hospital_Visits-Hospital.csv",
+      "bytes": 18761989,
+      "sha256": "c89470bb1fa175dbe4765c4f61609cc02d14bf321006eb2408886a8173b029d7",
+      "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/30edc1d0417a34b58affcc2495a02b0a_1792599927/Unplanned_Hospital_Visits-Hospital.csv",
+      "lastModified": "2026-10-21",
+      "alsoRead": {
+        "file": "Complications_and_Deaths-Hospital.csv",
+        "bytes": 22663173,
+        "sha256": "3cacd2a3b81226b70c72274259a907526588ba558eec5e14fb411553babc735a",
+        "downloadUrl": "https://data.cms.gov/provider-data/sites/default/files/resources/6af7c44d77436e5a1caac3ce39a83fe9_1792599556/Complications_and_Deaths-Hospital.csv",
+        "lastModified": "2026-10-21"
+      }
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://data.cms.gov/provider-data/dataset/632h-zaca",
+    "retrieved": "2026-11-19",
+    "counts": {
+      "byMeasure": {
+        "hybrid_hwr": 4308,
+        "iscmr": 2316
+      }
+    },
+    "pdcReleased": "2026-11-12",
+    "pdcModified": "2026-10-20"
+  },
+  {
+    "id": "omb-delineation-2023",
+    "title": "OMB core-based statistical area delineation, July 2023 (Census Bureau List 1): counties by CBSA and metropolitan division",
+    "path": "omb-delineation-2023/list1-counties.csv",
+    "bytes": 78818,
+    "sha256": "41c1d7d732df5168e0b1f127b72aa7a25ff4da14e09dc78b76f59a5d83c0637d",
+    "derivedFrom": {
+      "file": "list1_2023.xlsx",
+      "bytes": 143798,
+      "sha256": "952c4b1e78acbb54e6ec9412434b7602fedacbf021736351a63c181bdb753629",
+      "downloadUrl": "https://www2.census.gov/programs-surveys/metro-micro/geographies/reference-files/2023/delineation-files/list1_2023.xlsx",
+      "lastModified": "2023-08-04"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/derive.py",
+    "landingPage": "https://www.census.gov/geographies/reference-files/time-series/demo/metro-micro/delineation-files.html",
+    "retrieved": "2026-11-19",
+    "counts": {
+      "rows": 1915,
+      "byArea": {
+        "metro": 1252,
+        "micro": 663
+      }
+    },
+    "delineated": "2023-07"
   }
 ]

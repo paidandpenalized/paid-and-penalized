@@ -4,7 +4,7 @@
 // safety-net flag, the "exposed on both" rule, the sources with each pin's SHA-256, and changes and corrections; then the
 // citation and the as-of line the program page closes on too. Every number comes from the scenario file (data), the
 // manifest's pins it lists, or step 5's model (both); the words are methods/copy.js's.
-import { citation, keepWhole, printout, sentenceOf } from '../../../../web/render/components.js';
+import { citation, docSections, keepWhole, printout, sentenceOf } from '../../../../web/render/components.js';
 import { count, decimal, isoDate, listText, money, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
@@ -26,10 +26,6 @@ const sentence = sentenceOf(fill);
 const lead = (head, body) => html`<p><strong>${t(head)}</strong> ${body}</p>`;
 // A list of lead paragraphs: items [[head key, body]].
 const leadList = (items) => html`<ul class="wr-meth__list">${items.map(([head, body]) => html`<li>${lead(head, body)}</li>`)}</ul>`;
-const sec = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
-<h2 class="doc__h" id="${id}-h">${heading}</h2>
-${body}
-</section>`;
 
 // The file's alternatives (its `sensitivities`, schemas/medicaid.schema.json), in the order the table lists them after
 // the decided method, each with its row's words (labelOf: the row's label, from the file's params where it names one;
@@ -304,15 +300,7 @@ export function methodsPage({ data, robots, assets, sources, both }) {
 <h1>${t('methodsHeading')}</h1>
 <p class="wr-meth__lede">${fill('methodsLede', { fy: String(data.meta.fy) })}</p>
 </header>
-<div class="doc">
-<nav class="doc__toc" aria-labelledby="toc-h">
-<p class="doc__toc-h cap" id="toc-h">${t('contentsHeading')}</p>
-<ol>${sections.map((s, i) => html`<li><a href="#${s.id}"><span class="doc__toc-n">${String(i + 1)}</span>${s.heading}</a></li>`)}</ol>
-</nav>
-<div class="doc__main">
-${sections.map(sec)}
-</div>
-</div>
+${docSections({ contents: t('contentsHeading'), sections })}
 ${citeBlock(data)}
 ${asOf(data)}
 </article>`;

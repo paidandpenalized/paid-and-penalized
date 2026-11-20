@@ -33,9 +33,9 @@ export function spelled(n) {
   return n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? `-${ONES[n % 10]}` : '');
 }
 
-// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"), 0.75 is
-// "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
-const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.75, 'three-quarters']]);
+// A share as the words a sentence uses for it: 0.25 is "a quarter" (determiner 'the': "the quarter"; 'about' with 0.5:
+// "about half"), 0.75 is "three-quarters", which takes no determiner. Any other share throws; add its word here when a sentence needs it.
+const FRACTION_WORDS = new Map([[0.25, 'quarter'], [0.5, 'half'], [0.75, 'three-quarters']]);
 export function fractionWord(share, determiner = 'a') {
   const word = FRACTION_WORDS.get(share);
   if (word === undefined) throw new RangeError(`fractionWord: no words for the share ${String(share)}`);
@@ -174,6 +174,13 @@ export function money(x, { sign = false } = {}) {
   const body = moneyBody(Math.abs(x));
   return `${body === '0' ? '' : x < 0 ? MINUS : sign && x > 0 ? '+' : ''}$${body}`;
 }
+
+// Dollars with their sign, as money() writes them: "−$1.2M", "+$34K", "$0".
+export const signedMoney = (x) => money(x, { sign: true });
+
+// An axis tick's round amount, signed, as money() writes it but without a ".0" before its unit ("+$1M", "−$2M",
+// "+$1.5M"): a gridline's label, where the ticks are round by construction.
+export const moneyTick = (x) => signedMoney(x).replace(/\.0(?=[MB]$)/, '');
 
 // The amount money() prints for x, as a number of dollars ("−$1.2M" is -1200000, "$41K" 41000), for checking whether
 // printed figures add up as printed.

@@ -6,7 +6,8 @@ import { decidedHospitals } from '../engine/js/hacrp/hospital.js';
 import { rowsByCcn } from '../engine/js/medicaid/hospital.js';
 import { existsSync } from 'node:fs';
 import { ATLAS_ID, countyShapes, stateShapes } from '../web/charts/geo.js';
-import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned } from '../pipeline/files.js';
+import { dataYearOf } from '../web/team/calc-data.js';
+import { REPO_ROOT, dollarsPath, hacrpPath, hrrpPath, masterPath, medicaidPath, newestYear, readJson, readPinned, teamPath } from '../pipeline/files.js';
 import { masterByCcn } from '../pipeline/master.js';
 import { hubHospitals, masterRecord, storyFacts } from './model.js';
 import { likeCounts, outsideHospitals } from './outside.js';
@@ -62,6 +63,11 @@ let loaded = null;
 //                 fy is its base year (the year of its dollars), national its low, middle and high roll-ups, columns and
 //                 states as the file gives them, hospitals its rows by CCN (engine/js/medicaid/hospital.js rowsByCcn), which
 //                 a hospital page's Medicaid band reads (hospital/medicaid.js)
+//   team          from the TEAM site's newest emitted file: listed, how many hospitals CMS's TEAM list names (the
+//                 footer's and the directory's figure, the file's counts.listed); meta as the file gives it (the list's
+//                 date, the episodes' data years); dataYear, the year the episode counts come from (web/team/calc-data.js
+//                 dataYearOf, worked out once here, not per page); participants, its participant rows by CCN (one per list
+//                 CCN the hospital master has), which a participant's hospital page's TEAM section reads (hospital/team.js)
 //   shapes        the states' outlines (stateShapes of the atlas), by postal code
 //   counties      every county's outline (countyShapes of the same atlas, parsed once)
 export function loadHub() {
@@ -76,6 +82,7 @@ export function loadHub() {
   const hacrp = readJson(REPO_ROOT + hacrpFile);
   // Read as the hub reads the other sites' emitted files, by path: the hub imports no site's code.
   const medicaid = readJson(REPO_ROOT + medicaidPath(newestYear('data/emitted/medicaid')));
+  const team = readJson(REPO_ROOT + teamPath(newestYear('data/emitted/team')));
   const atlas = JSON.parse(readPinned(ATLAS_ID));
   loaded = {
     fy: dollars.fy,
@@ -86,6 +93,7 @@ export function loadHub() {
     decided: decidedCcns(hacrp, dollars.fy),
     hrrp: { fy: hrrp.fy, hospitals: new Map(hrrp.hospitals.map((r) => [r.id, r])), national: hrrp.history.national },
     medicaid: { fy: medicaid.fy, national: medicaid.national, columns: medicaid.columns, hospitals: rowsByCcn(medicaid.columns, medicaid.hospitals), states: medicaid.states },
+    team: { listed: team.counts.listed, meta: team.meta, dataYear: dataYearOf(team.meta), participants: new Map(team.participants.map((p) => [p.ccn, p])) },
     shapes: stateShapes(atlas),
     counties: countyShapes(atlas),
   };

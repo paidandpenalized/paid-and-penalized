@@ -98,11 +98,16 @@ export const searchForm = ({ id, src, label, find, findRest, placeholder, hero =
 export const scenarioTag = (year) => html`<span class="scen-tag">${fill('scenarioTag', { year: String(year) })}</span>`;
 
 // Each listed program's figure in the footer, from the shell's facts: the estimated dollars (said to a screen reader as
-// an estimate for the fiscal year), or for value-based purchasing the bonuses it moves, or for a scenario its national
+// an estimate for the fiscal year), or for value-based purchasing the bonuses it moves, or for TEAM the hospitals on CMS's
+// list (listed), or for a scenario its national
 // range of Medicaid revenue lost, low to high, and the word "scenario", on the row's one line like the others (Dalton's
 // review 11-11: no tag box here, the one place a scenario number goes without it); what it is in full, in its dollars'
 // base year, is its title and, for a screen reader, hidden words after it.
-function figureOf({ dollars, moved, scenario }, estimated) {
+function figureOf({ dollars, moved, scenario, listed }, estimated) {
+  if (listed !== undefined) {
+    const figure = fill('footHospitals', { n: count(listed) });
+    return html`<span class="ft__v" title="${figure} ${COPY.footTeamRest}">${figure}<span class="vh"> ${COPY.footTeamRest}</span></span>`;
+  }
   if (scenario) {
     const full = fill('footScenarioFull', { year: String(scenario.year) });
     return html`<span class="ft__v" title="${full}">${fill('footScenario', { range: moneyRange(scenario.lost.low, scenario.lost.high) })}<span class="vh">, ${full}</span></span>`;

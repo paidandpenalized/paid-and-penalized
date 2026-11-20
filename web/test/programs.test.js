@@ -18,7 +18,7 @@ test('the registry lists the nine programs and the one scenario in order, each w
     ['ime', 'Teaching', 'IME', 'Indirect Medical Education Adjustment', '/ime/', 'soon', 'price', false, false],
     ['iqr', 'Quality reporting', 'IQR', 'Hospital Inpatient Quality Reporting Program', '/iqr/', 'soon', 'reporting', false, false],
     ['pi', 'Electronic health records', 'PI', 'Medicare Promoting Interoperability Program', '/pi/', 'soon', 'reporting', false, false],
-    ['team', 'Surgical episodes', 'TEAM', 'Transforming Episode Accountability Model', '/team/', 'soon', 'episode', false, false],
+    ['team', 'Surgical episodes', 'TEAM', 'Transforming Episode Accountability Model', '/team/', 'live', 'episode', false, false],
     ['work-requirement', 'Work requirement', 'Medicaid', 'Community Engagement Requirement for Applicable Individuals', '/work-requirement/', 'live', 'scenario', false, true],
   ]);
   // Only a scenario carries the flag; a CMS payment program leaves it out.
@@ -32,21 +32,22 @@ test('every program\'s path is a lowercase folder ending in "/", and no two prog
 
 test('the registry\'s groups: listed (full tabs and the footer\'s figures), unlisted (dashed), and those with a placeholder (still to come)', () => {
   const ids = (list) => list.map((p) => p.id);
-  assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp', 'work-requirement']);
+  assert.deepEqual(ids(LISTED_PROGRAMS), ['hrrp', 'hacrp', 'hvbp', 'team', 'work-requirement']);
   // A scenario (no payment, a page of its own here) is listed: a tab and a footer figure, never a slip or a placeholder.
   for (const p of SITE.programs.filter((q) => q.scenario)) {
     assert.ok(LISTED_PROGRAMS.includes(p), p.id);
     assert.ok(!UNLISTED_PROGRAMS.includes(p) && !PLACEHOLDER_PROGRAMS.includes(p), p.id);
   }
-  assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  assert.deepEqual(ids(UNLISTED_PROGRAMS), ['wage-index', 'dsh', 'ime', 'iqr', 'pi']);
   // Readmissions' folder holds its own site, so only the programs still to come have a placeholder.
-  assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi', 'team']);
+  assert.deepEqual(ids(PLACEHOLDER_PROGRAMS), ['hvbp', 'wage-index', 'dsh', 'ime', 'iqr', 'pi']);
   assert.deepEqual([...new Set(SITE.programs.map((p) => p.stage))].sort(), ['live', 'soon'], 'every program is live or still to come');
   for (const list of [LISTED_PROGRAMS, UNLISTED_PROGRAMS, PLACEHOLDER_PROGRAMS]) assert.ok(Object.isFrozen(list));
 });
 
 test('the registry and SITE.sites agree on each site\'s folder; SITE.sites keeps only the program sites built in this repo', () => {
-  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp', 'work-requirement']);
+  assert.deepEqual(Object.keys(SITE.sites), ['hacrp', 'hrrp', 'work-requirement', 'team']);
+  assert.equal(SITE.sites.team.released, false, 'TEAM stays unreleased (noindex, out of the sitemap) until its pages are whole');
   assert.equal(SITE.sites['work-requirement'].path, programById('work-requirement').path);
   assert.equal(SITE.sites['work-requirement'].released, true, 'the work-requirement site is released (2026-11-17): indexed, in the sitemap');
   assert.equal(SITE.sites['work-requirement'].title, 'Medicaid work requirement', 'the family\'s short name for the site (the page\'s own title is its copy)');

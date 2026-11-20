@@ -292,7 +292,10 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
     for (const { path, stem } of POLICY) {
       const text = read(path);
       const words = textOf(text);
-      const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
+      // The corrections line for a site built from several CMS files shows once such a site is released (none is yet:
+      // TEAM is unreleased); then it must show like every other key.
+      const waiting = (k) => k === 'correctionsSiteMany' && !Object.values(SITE.sites).some((site) => site.manyFiles && site.released);
+      const keys = Object.keys(COPY).filter((k) => k.startsWith(stem) && !waiting(k));
       for (const key of keys) {
         if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(textOfKey(key))), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.

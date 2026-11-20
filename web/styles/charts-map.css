@@ -1,6 +1,7 @@
-/* The map kit: the part of the chart kit (charts.css) that the hub's page of a hospital outside the programs draws
-   (hub/hospital/outside-figures.js): a figure's caption, key and tooltip, the SVG's frame, the area map with its pins and
-   reading aids, the dots, a map's land and the nearest hospitals' table. The hub's sheet carries this file alone; a
+/* The map kit: the part of the chart kit (charts.css) that the hub's hospital pages draw (hub/hospital/outside-figures.js,
+   and the TEAM section's ruler, hub/hospital/team.js): a figure's caption, key and tooltip, the SVG's frame, the kit's
+   tick and value text, hatch and hit areas, the area map with its pins and reading aids, the dots, a map's land, the
+   scenario ruler and the nearest hospitals' table. The hub's sheet carries this file alone; a
    program site's carries it ahead of the rest of the kit (pipeline/site/assets.js KIT_STYLES). Colors come only from
    tokens.css. */
 
@@ -29,6 +30,13 @@
   .chart[data-fit="narrow"] { display: none; }
   .chart[data-fit="wide"] { display: block; }
 }
+/* Tick labels in --ink-2: --ink-3 clears 4.5:1 on the grained paper only narrowly, and the axe run cannot judge text in an SVG, so a chart's text keeps the stronger ink. */
+.chart-axis__label, .chart-tick { fill: var(--ink-2); font-family: var(--font-type); font-size: 11px; font-variant-numeric: tabular-nums; }
+.chart-value { fill: var(--ink); font-family: var(--font-type); font-variant-numeric: tabular-nums; }
+.chart-hatch { color: var(--ink-3); }
+/* The hit area is larger than its mark and invisible (charts.css shows the active one's). */
+.chart-hit { fill: transparent; }
+@media (forced-colors: active) { .chart-hatch { color: CanvasText; } }
 
 /* ---------- the area map ---------- */
 /* The area map: neighboring states as land on a plain ground, numbered pins by decision. */
@@ -76,6 +84,19 @@
 /* A map's land, faint behind its marks (the year map's states, the bubbles map's outline). */
 .chart-land, .chart-land path { fill: var(--paper-2); stroke: var(--line); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
 @media (forced-colors: active) { .chart-land, .chart-land path { fill: Canvas; stroke: GrayText; } }
+
+/* ---------- the scenario ruler ---------- */
+/* A range against its track's limits (limitRuler.js; the hub's TEAM section draws it): the repaid part in the pen, the
+   paid part in the paid ink, the walls hatched past each limit. */
+.chart-ruler__loss { fill: var(--pen); }
+.chart-ruler__gain { fill: var(--rew); }
+.chart-ruler__limit, .chart-ruler__axis { stroke: var(--ink-2); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.chart-ruler__zero { stroke: var(--ink); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
+.chart-ruler__end { font-size: 12px; font-weight: 700; }
+@media (forced-colors: active) {
+  .chart-ruler__loss, .chart-ruler__gain { fill: CanvasText; }
+  .chart-ruler__limit, .chart-ruler__axis, .chart-ruler__zero { stroke: CanvasText; }
+}
 
 /* ---------- the nearest hospitals' table ----------
    HACRP's hospital page (sites/hacrp/web/hospital-figures.js nearbyBlock) and the hub's page of a hospital outside the

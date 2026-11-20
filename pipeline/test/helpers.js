@@ -12,11 +12,11 @@ import { createSiteServer, listen, stop } from '../site/serve.js';
 // Pass css, sheets (the sites' stylesheets of their own, by name: HACRP's, Readmissions', the work requirement's and the hub's, which each site's pages
 // link), js (merged over the head's theme script, the shell, sticky-header and family-search scripts a page can load,
 // and the home page's story) or shell (merged over the facts below) to change a part.
-export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/assets/hacrp.test.css', hrrp: '/assets/hrrp.test.css', 'work-requirement': '/assets/work-requirement.test.css', hub: '/assets/hub.test.css' }, cards = { family: '/assets/og-family.test.png', hacrp: '/assets/og-hacrp.test.png', hrrp: '/assets/og-hrrp.test.png' }, js = {}, shell = {} } = {}) => ({
+export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/assets/hacrp.test.css', hrrp: '/assets/hrrp.test.css', 'work-requirement': '/assets/work-requirement.test.css', team: '/assets/team.test.css', hub: '/assets/hub.test.css' }, cards = { family: '/assets/og-family.test.png', hacrp: '/assets/og-hacrp.test.png', hrrp: '/assets/og-hrrp.test.png', team: '/assets/og-team.test.png' }, js = {}, shell = {} } = {}) => ({
   css,
   sheets,
   cards,
-  js: { theme: '/assets/theme.test.js', shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', 'hrrp-program': '/assets/hrrp-program.test.js', 'hrrp-hospital': '/assets/hrrp-hospital.test.js', 'hrrp-place': '/assets/hrrp-place.test.js', 'hrrp-search': '/assets/hrrp-search.test.js', 'wr-page': '/assets/wr-page.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', ...js },
+  js: { theme: '/assets/theme.test.js', shell: '/assets/shell.test.js', topbar: '/assets/topbar.test.js', 'hub-search': '/assets/hub-search.test.js', 'hub-home': '/assets/hub-home.test.js', 'hub-hospital': '/assets/hub-hospital.test.js', 'hrrp-program': '/assets/hrrp-program.test.js', 'hrrp-hospital': '/assets/hrrp-hospital.test.js', 'hrrp-place': '/assets/hrrp-place.test.js', 'hrrp-search': '/assets/hrrp-search.test.js', 'wr-page': '/assets/wr-page.test.js', 'team-page': '/assets/team-page.test.js', figure: '/assets/figure.test.js', cite: '/assets/cite.test.js', ...js },
   shell: {
     fy: 2026,
     hospitals: 3,
@@ -26,6 +26,7 @@ export const testAssets = ({ css = '/assets/site.test.css', sheets = { hacrp: '/
       hacrp: { dollars: -1000000, cutN: 1 },
       hvbp: { moved: 500000, net: -100000 },
       'work-requirement': { scenario: { year: 2023, lost: { low: 4000000, middle: 6000000, high: 9000000 } } },
+      team: { listed: 3 },
     },
     hubUrl: '/assets/hub-hospitals.test.json',
     searchUrl: '/assets/hub-search.test.json',

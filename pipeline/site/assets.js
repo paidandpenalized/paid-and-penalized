@@ -99,6 +99,35 @@ export function licenseNotice(metafile) {
 // entries: the JS entries, { name: path }, each /assets/<name>.<hash>.js (returned as js[name]): an ES module, or, for
 // a name in classic, a classic script, bundled as one self-contained function call (no import, export or global name).
 // The share cards (web/share-card.js), each committed PNG web/og/<id>.png, are /assets/og-<id>.<hash>.png (cards[id]).
+// A copy file's claim ids are for the copy gate (pipeline/test/copy-gate.test.js reads the source), not the browser: a
+// bundle takes each entry's `claim` property out ({ text, claim: 'X-01' } becomes { text }), so a page script carries
+// only words. Only a property key is a claim: `claim` after a brace or a comma, its value null, a quoted id (single or
+// double quotes) or a list of them; the word in a sentence ("File a claim: …") is words. A claim property in any other
+// form stops the build, so none is left in silently.
+const CLAIM_VALUE = String.raw`(?:null|'[^'\n]*'|"[^"\n]*"|\[[^\]]*\])`;
+const CLAIM_AFTER_COMMA = new RegExp(String.raw`,\s*claim\s*:\s*${CLAIM_VALUE}`, 'g');
+const CLAIM_FIRST = new RegExp(String.raw`(\{\s*)claim\s*:\s*${CLAIM_VALUE}\s*,?\s*`, 'g');
+const CLAIM_KEY_LEFT = /(^|[{,]\s*)claim\s*:/m;
+export const withoutClaims = (source, path = 'a copy file') => {
+  const out = source.replace(CLAIM_AFTER_COMMA, '').replace(CLAIM_FIRST, '$1');
+  if (CLAIM_KEY_LEFT.test(out)) throw new RangeError(`${path}: a claim the bundle can't take out`);
+  return out;
+};
+// The copy files a bundle reads (a copy.js or a <name>-copy.js), outside node_modules. onLoaded(path, contents): told
+// what each one became, for the tests.
+export const COPY_FILE = /(^|[/\\-])copy\.js$/;
+export const stripClaims = (onLoaded = () => {}) => ({
+  name: 'strip-claims',
+  setup(build) {
+    build.onLoad({ filter: COPY_FILE }, (args) => {
+      if (/[/\\]node_modules[/\\]/.test(args.path)) return undefined;
+      const contents = withoutClaims(readFileSync(args.path, 'utf8'), args.path);
+      onLoaded(args.path, contents);
+      return { contents, loader: 'js' };
+    });
+  },
+});
+
 export async function buildAssets({ outDir, entries = {}, classic = [], siteStyles = {} }) {
   for (const name of classic) if (!Object.hasOwn(entries, name)) throw new RangeError(`no classic entry "${name}" in entries`);
   const dir = join(outDir, 'assets');
@@ -116,6 +145,7 @@ export async function buildAssets({ outDir, entries = {}, classic = [], siteStyl
     const result = await esbuild({
       entryPoints: [repoPath(path)],
       bundle: true, format: classic.includes(name) ? 'iife' : 'esm', minify: true, target: 'es2020', write: false, logLevel: 'silent', metafile: true,
+      plugins: [stripClaims()],
       absWorkingDir: REPO_ROOT, // the metafile's input paths (licenseNotice) are then the repository's
     });
     js[name] = writeHashed(dir, name, 'js', licenseNotice(result.metafile) + result.outputFiles[0].text);

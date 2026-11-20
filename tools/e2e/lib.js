@@ -124,10 +124,12 @@ export async function visit(page, base, path, { javaScript = true } = {}) {
 
 // Runs fn(page, { response, seen }) on path, visited in a fresh tab (newPage) of a useContext context in the scheme, and
 // closes the tab; returns what fn returns. watched: the tab is watched from before the visit, and seen is what watch
-// reports (null otherwise).
-export async function withPage({ context, base, javaScript }, { path, scheme = 'light', watched = false }, fn) {
+// reports (null otherwise). prepare: awaited with the tab before the visit, for what must hold from the page's first
+// paint (a browser setting such as the default font size, a CPU throttle).
+export async function withPage({ context, base, javaScript }, { path, scheme = 'light', watched = false, prepare = null }, fn) {
   const page = await newPage(context, scheme, base);
   try {
+    await prepare?.(page);
     const seen = watched ? await watch(page, base) : null;
     const response = await visit(page, base, path, { javaScript });
     return await fn(page, { response, seen });

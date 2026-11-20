@@ -58,19 +58,24 @@ ${sections.map((s) => html`${s.heading ? html`<h4 class="pol__entry-sub" id="${s
 }
 
 // One site's line: its name, the date of the CMS file it uses and the date its numbers last changed. A scenario's site
-// (web/site.js programs: scenario) is built from many files and gives the newest date CMS put on one of them, and says so.
-function siteLine([id, { cmsReleased, changed }]) {
-  if (!has(SITE.sites, id)) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
-  const key = SITE.programs.find((p) => p.id === id)?.scenario ? 'correctionsSiteScenario' : 'correctionsSite';
-  return html`<li>${sentence(key, { cms: time(cmsReleased), changed: time(changed) }, { site: SITE.sites[id].title })}</li>
+// (web/site.js programs: scenario) is built from many files and gives the newest date CMS put on one of them, and says so;
+// so does a site built from several CMS files (web/site.js sites: manyFiles). sites: web/site.js SITE.sites.
+const siteLine = (sites) => ([id, { cmsReleased, changed }]) => {
+  const key = SITE.programs.find((p) => p.id === id)?.scenario ? 'correctionsSiteScenario' : sites[id].manyFiles ? 'correctionsSiteMany' : 'correctionsSite';
+  return html`<li>${sentence(key, { cms: time(cmsReleased), changed: time(changed) }, { site: sites[id].title })}</li>
 `;
-}
+};
 
 // The page's content for the policy template (pages.js lays it out with the other policy pages). feedback: the page's
 // prefilled feedback link. entries: readCorrections' result. updated: the build's map of site id -> { cmsReleased,
-// changed }, in build order (generateHub); with none, the sites section is left out.
-export function correctionsContent({ feedback, entries, updated }) {
-  const sites = [...updated].map(siteLine);
+// changed }, in build order (generateHub); with none, the sites section is left out. A site has a line when its numbers
+// appear on released pages: its own (released), or the hub's hospital pages (onHub, once the hub is released; TEAM's band
+// is there before its own site is). A site whose numbers no released page shows has none. sites: web/site.js SITE.sites
+// (tests pass their own).
+export function correctionsContent({ feedback, entries, updated, sites: siteSettings = SITE.sites }) {
+  for (const [id] of updated) if (!has(siteSettings, id)) throw new RangeError(`corrections: "${id}" is not a site in web/site.js`);
+  const shown = ({ released, onHub }) => released || (onHub && SITE.hub.released);
+  const sites = [...updated].filter(([id]) => shown(siteSettings[id])).map(siteLine(siteSettings));
   return {
     title: SHARED.corrections,
     description: COPY.correctionsDescription,
