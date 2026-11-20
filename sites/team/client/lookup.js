@@ -34,7 +34,7 @@ const fillIn = (text, values) => text.replace(/\{(\w+)\}/g, (all, k) => values[k
 // The two files, joined: { index, standing } with index the matcher's entries (buildIndex) for each hospital the family
 // search names and the codes place, and standing each one's [tag, text, link] by CCN. Throws on a file of another shape
 // (the box then says the list didn't load).
-export function lookupIndex(searchFile, codesFile) {
+function lookupIndex(searchFile, codesFile) {
   const bad = () => new TypeError('lookup: a file is not the one the box reads');
   let who;
   try {

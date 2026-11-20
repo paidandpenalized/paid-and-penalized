@@ -10,8 +10,8 @@ import { BAND_MAX, BAND_MIN, CATEGORIES, MEASURES, SOLVE_SPAN, TRACKS } from '..
 
 const TAG = 'team';
 // A link longer than this is ignored whole: the longest honest one is about 350 characters.
-export const MAX_LENGTH = 1000;
-export const TOO_LONG = '<too long>';
+const MAX_LENGTH = 1000;
+const TOO_LONG = '<too long>';
 // An ASCII minus, digits, an optional fraction: no plus, exponent, hex, unicode minus, currency sign, comma or blank.
 const NUMBER = /^-?\d{1,15}(\.\d{1,9})?$/;
 const CCN = /^[0-9A-Z]{6}$/;

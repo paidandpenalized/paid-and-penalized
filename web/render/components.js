@@ -159,7 +159,7 @@ export const asofBar = ({ label, items, grid = false }) => html`<aside class="as
 // Contents and sections (pages.css .doc, a Methods page's body): a numbered contents column under its heading
 // (contents), each entry a link to its section, beside the sections, each ruled apart under its h2.
 // sections: [{ id, heading, body }] (heading text or Safe, body Safe).
-export const docSection = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
+const docSection = ({ id, heading, body }) => html`<section class="doc__sec" id="${id}" aria-labelledby="${id}-h">
 <h2 class="doc__h" id="${id}-h">${heading}</h2>
 ${body}
 </section>`;

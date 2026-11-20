@@ -60,7 +60,7 @@ const checklist = () => html`<div class="tm-check">${DUTIES().map(([phase, items
 </section>`)}</div>`;
 
 // The clock's dates, in order: { date (ISO), label (the left column), text, now (the day the page is about) }.
-export function clockDates(team) {
+function clockDates(team) {
   const limit = `±${pct(TRACKS[DEFAULT_TRACK].gain, 0)}`;
   return [
     { date: MODEL_START, text: fill('clockStart', { ta: TRACK_NUMBERS.ta }) },

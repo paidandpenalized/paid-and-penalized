@@ -277,7 +277,7 @@ test('the Methods page: one h1, Methods current, noindex, canonical', () => {
 
 // Every TEAM sentence as the pages render it (the copy filled with its numbers, words and parts) has no word twice in a
 // row ("about about half"): the program page's text and its attributes a reader hears, and Methods'.
-export const repeatedWords = (text) => [...text.matchAll(/\b([A-Za-z]+)\s+\1\b/gi)].map((m) => m[0]);
+const repeatedWords = (text) => [...text.matchAll(/\b([A-Za-z]+)\s+\1\b/gi)].map((m) => m[0]);
 test('no word repeats back to back anywhere in the rendered TEAM copy', () => {
   assert.deepEqual(repeatedWords('about about half, and And so; that that'), ['about about', 'and And', 'that that']);
   for (const [name, page] of [['program', program], ['methods', methods]]) {

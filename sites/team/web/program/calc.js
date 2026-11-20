@@ -22,7 +22,7 @@ import { PY2_NUMBER, partOf } from '../pages/parts.js';
 const sentence = sentenceOf(fill);
 
 // The default hospital as the browser will read it: its row (through hospOf, as every other hospital's) and its name.
-export function defaultHosp(team, search) {
+function defaultHosp(team, search) {
   const p = team.participants.find((x) => x.ccn === team.defaultCcn);
   if (!p) throw new RangeError('TEAM: the default hospital is not among the participants');
   const row = calcRow(p);
@@ -50,7 +50,7 @@ export function calcStatics(dataYear) {
 }
 
 // The calculator's section (#calc). search: the family search's file (names); files: { searchUrl, dataUrl }.
-export function calcSection({ team, search, files }) {
+function calcSection({ team, search, files }) {
   const { row, who, hosp } = defaultHosp(team, search);
   const meta = calcMeta(team);
   const view = calcView({ hosp, state: initialState(hosp), team: meta });

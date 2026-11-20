@@ -21,7 +21,7 @@ const toneOf = (x) => (x > 0 ? 'gain' : x < 0 ? 'loss' : null);
 
 // The ledger, line by line: { op, label, note, value, tone } for each, the last one the result. tone: a signed line's
 // (styles.css sets it in Figures 2 and 3's inks), null for the target, the spending and the limits.
-export function ledgerLines() {
+function ledgerLines() {
   const r = reconcile(INPUT);
   const spend = EXAMPLE.target * (1 + EXAMPLE.spend);
   const track = String(EXAMPLE.track);

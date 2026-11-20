@@ -36,7 +36,7 @@ import { COPY } from './copy.js';
 const fill = (key, values) => fillCopy(COPY, key, values);
 
 // The calculator's opening view of a participant (openingOf's numbers) with its hospital as the calculator reads it.
-export function teamScenario(p) {
+function teamScenario(p) {
   const hosp = hospOf(calcRow(p));
   return { hosp, ...openingOf(hosp) };
 }

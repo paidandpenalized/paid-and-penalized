@@ -51,7 +51,7 @@ const copyState = (s) => ({ ...s, sk: { ...s.sk }, ov: { n: { ...s.ov.n }, p: { 
 
 // A box's value read from its text: { value } when the text is a number in the box's range (rounded to its decimals),
 // else null.
-export function readBox(key, text) {
+function readBox(key, text) {
   const box = BOXES[key.split('.')[0]];
   const x = box?.parse(text);
   if (x === null || x === undefined || x < box.lo || x > box.hi) return null;
