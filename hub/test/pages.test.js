@@ -247,7 +247,7 @@ const POLICY = [
 // whatever the repo holds.
 const withHub = (fn) => withTemp('pp-hub-policy-', async (dir) => {
   const ctx = createContext({ outDir: dir, env: 'production', assets: ASSETS });
-  const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['work-requirement', { cmsReleased: '2026-10-05', changed: '2026-11-10' }]]);
+  const updated = new Map([['hacrp', { cmsReleased: '2026-08-13', changed: '2026-10-22' }], ['work-requirement', { cmsReleased: '2026-10-05', changed: '2026-11-10' }], ['team', { cmsReleased: '2026-11-12', changed: '2026-11-19' }]]);
   await generateHub(ctx, { updated, correctionsDir: join(dir, 'no-corrections'), hospitals: [], released: true });
   return fn((f) => readFileSync(join(dir, f, 'index.html'), 'utf8'));
 });
@@ -292,10 +292,8 @@ test('every word of the five pages\' copy shows on its page, and the feedback li
     for (const { path, stem } of POLICY) {
       const text = read(path);
       const words = textOf(text);
-      // The corrections line for a site built from several CMS files shows once such a site is released (none is yet:
-      // TEAM is unreleased); then it must show like every other key.
-      const waiting = (k) => k === 'correctionsSiteMany' && !Object.values(SITE.sites).some((site) => site.manyFiles && site.released);
-      const keys = Object.keys(COPY).filter((k) => k.startsWith(stem) && !waiting(k));
+      // The corrections line for a site built from several CMS files (TEAM, released) shows like every other key.
+      const keys = Object.keys(COPY).filter((k) => k.startsWith(stem));
       for (const key of keys) {
         if (key.endsWith('Description')) { assert.ok(text.includes(escapeHtml(textOfKey(key))), `${path}: ${key}`); continue; }
         // The longest stretch of the sentence between its placeholders is enough to know the key was used.
