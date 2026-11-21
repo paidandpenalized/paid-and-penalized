@@ -195,13 +195,13 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   const years = `performance years ${cjr.years.slice(0, -1).join(', ')}, and ${cjr.years.at(-1)}`;
   assert.ok(s.includes(`${pct(cjr.near.share, 0)} of hospitals’ yearly results in ${years} ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
   assert.ok(s.includes(`leaving ${count(cjr.n)}: ${count(cjr.near.n)} within ${band} and ${count(cjr.far.n)} within ${wide}`), 'the counts behind the shares');
-  assert.ok(s.includes(`The count takes ${years}: of CJR’s years with its widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');
+  assert.ok(s.includes(`The count takes ${years}: of the years in CMS’s file with CJR’s widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');
   assert.ok(!/full-risk|pandemic year/.test(s), 'no label that implies the left-out year lacked the limits');
   assert.ok(s.includes(`${count(cjr.floor)} episodes or more`), 'the episode floor');
   assert.ok(s.includes(`Their average targets were ${cjr.targets.slice(0, -1).map((x) => dollars(x)).join(', ')}, and ${dollars(cjr.targets.at(-1))}`), 'the denominators');
   assert.match(s, /below acceptable on quality could not be paid/, 'the censored zeros, explained');
   assert.match(s, /Each result is approximate: one average target stands in for every hospital’s own/);
-  assert.match(s, /CMS’s amount is more than target less spending: it carries other adjustments too, among them a recoupment where spending in the month after an episode ran far above/, 'the post-episode recoupment, disclosed');
+  assert.match(s, /CMS’s amount is more than target less spending: it carries other adjustments too, among them a recoupment when a hospital’s average spending in the month after its episodes ran far above/, 'the post-episode recoupment, disclosed');
   assert.match(s, /the same under as over/);
   assert.ok(s.includes(`Track 3’s limits stop a TEAM hospital’s result at ${pct(TRACKS[3].gain, 0)} either way`));
   assert.ok(!/extremes ran|past 20/.test(s), 'no claim about CJR\'s tails');

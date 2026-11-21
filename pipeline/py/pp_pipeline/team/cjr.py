@@ -98,9 +98,9 @@ def year_rows(sheet, py):
         if not re.fullmatch(r"[0-9]{5,6}", ccn):
             if ccn == TOTALS_ROW:
                 totals.append((episodes, amount))
-            elif ccn not in SUMMARY_ROWS and (episodes or amount):
-                raise ValueError(f"CJR workbook, {sheet_of(py)}: row {i} under the header has an episode count or an "
-                                 "amount but its first cell is not a CCN (five or six digits)")
+            elif ccn not in SUMMARY_ROWS and (episodes or amount or quality):
+                raise ValueError(f"CJR workbook, {sheet_of(py)}: row {i} under the header has an episode count, an "
+                                 "amount or a quality category but its first cell is not a CCN (five or six digits)")
             continue
         if quality not in QUALITY:
             raise ValueError(f"CJR workbook, {sheet_of(py)}: unknown quality category {quality!r}")
@@ -110,6 +110,9 @@ def year_rows(sheet, py):
                     repr(_number(amount, "a reconciliation amount"))])
     if not out:
         raise ValueError(f"CJR workbook, {sheet_of(py)}: no hospital rows")
+    if len(totals) != 1:
+        raise ValueError(f"CJR workbook, {sheet_of(py)}: expected one Totals row to check the hospital rows against, "
+                         f"found {len(totals)}")
     for episodes, amount in totals:
         if _whole(episodes, "a total episode count") != sum(r[3] for r in out) or abs(
                 _number(amount, "a total amount") - math.fsum(float(r[4]) for r in out)) > TOTAL_TOLERANCE:

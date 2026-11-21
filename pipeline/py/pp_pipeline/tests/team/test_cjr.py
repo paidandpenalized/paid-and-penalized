@@ -87,14 +87,18 @@ HEADERS = {
 
 
 class Derivation(unittest.TestCase):
-    def workbook(self, extra6=()):
+    TOTALS6 = ["Totals row", "blank cell", "TOTALS", "65", "2", "-1134.5"]
+
+    def workbook(self, extra6=(), totals6=TOTALS6):
         return make_xlsx({
             "PY1 CJRREC": [["Table 1"], ["A note"], HEADERS["1"],
                            ["99001", "Invented One", "Good", "Below Acceptable", "90", "93", "500.5", "0"],
+                           ["Totals row", "", "", "", "90", "93", "500.5", "0"],
                            ["*A note under the table"], ["End of worksheet"]],
             "PY6 CJRREC": [["Table 7"], HEADERS["6"],
                            ["990003", "Invented Three", "Excellent", "40", "2", "-1234.5"],
-                           ["990002", "Invented Two", "Good", "25", "0", "100"], *extra6]})
+                           ["990002", "Invented Two", "Good", "25", "0", "100"],
+                           *([totals6] if totals6 else []), *extra6]})
 
     def test_each_years_final_columns_are_read_whatever_their_header_says(self):
         with mock.patch.object(derive_cjr, "YEARS", ("1", "6")):
@@ -111,25 +115,33 @@ class Derivation(unittest.TestCase):
                 derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25.5", "0", "1"]]))
 
     def test_the_summary_rows_are_checked_and_any_other_non_ccn_row_with_figures_is_refused(self):
-        totals = ["Totals row", "blank cell", "TOTALS", "65", "2", "-1134.5"]
+        totals = self.TOTALS6
         average = ["Average row", "blank cell", "blank cell", "-17.45", "blank cell", "blank cell"]
         with mock.patch.object(derive_cjr, "YEARS", ("6",)):
-            text, _ = derive_cjr.reconciliation(self.workbook([totals, average, ["*A note"], ["", "", "", "", "", ""]]))
+            text, _ = derive_cjr.reconciliation(self.workbook([average, ["*A note"], ["", "", "", "", "", ""]]))
             self.assertEqual(len(text.splitlines()), 3, "the two hospital rows, the summary rows and notes skipped")
             off = [*totals[:3], "64", *totals[4:]]
             with self.assertRaisesRegex(ValueError, "PY6 CJRREC: the hospital rows do not add up to its Totals row"):
-                derive_cjr.reconciliation(self.workbook([off]))
+                derive_cjr.reconciliation(self.workbook(totals6=off))
             off = [*totals[:5], "-1134.6"]
             with self.assertRaisesRegex(ValueError, "do not add up"):
-                derive_cjr.reconciliation(self.workbook([off]))
+                derive_cjr.reconciliation(self.workbook(totals6=off))
+            # No Totals row, or two: nothing to check the rows against, so refused.
+            with self.assertRaisesRegex(ValueError, "expected one Totals row to check the hospital rows against, found 0"):
+                derive_cjr.reconciliation(self.workbook(totals6=None))
+            with self.assertRaisesRegex(ValueError, "found 2"):
+                derive_cjr.reconciliation(self.workbook([totals]))
             # A CCN stored as a number, and one with a letter: refused, never skipped as a note.
             for first in ("990004.0", "99000A"):
                 with self.subTest(first=first), self.assertRaisesRegex(
-                        ValueError, r"PY6 CJRREC: row 3 under the header has an episode count or an amount but its "
-                                    r"first cell is not a CCN"):
+                        ValueError, r"PY6 CJRREC: row 4 under the header has an episode count, an amount or a quality "
+                                    r"category but its first cell is not a CCN"):
                     derive_cjr.reconciliation(self.workbook([[first, "Invented Four", "Good", "25", "0", "1"]]))
             with self.assertRaisesRegex(ValueError, "not a CCN"):
                 derive_cjr.reconciliation(self.workbook([["A note", "", "", "", "", "12.5"]]))
+            # A hospital row whose CCN is mis-stored and whose figures are blank still carries its quality category.
+            with self.assertRaisesRegex(ValueError, "not a CCN"):
+                derive_cjr.reconciliation(self.workbook([["990004.0", "Invented Four", "Good", "", "", ""]]))
 
     def test_a_sheet_with_two_of_a_column_is_refused(self):
         two = make_xlsx({"PY6 CJRREC": [HEADERS["6"] + ["PY6 Final CJR Episode Count*"], ["990002", "x", "Good", "25", "0", "1"]]})
@@ -191,6 +203,10 @@ class Emitted(unittest.TestCase):
         self.assertEqual([w["n"] for w in s["within"]], [sum(x <= w["width"] for x in counted) for w in s["within"]])
         self.assertEqual(s["rows"] - s["censored"] - s["small"], s["n"])
         self.assertTrue(0 < s["within"][0]["n"] < s["within"][1]["n"] < s["n"])
+        # Methods calls every zero left out in the counted years a below-acceptable hospital's: hold the pin to that.
+        hidden = {r["quality"] for r in read_pinned_csv(derive_cjr.PIN_ID) if r["py"] in s["years"]
+                  and int(r["episodes"]) > 0 and cjr.censored({**r, "amount": float(r["amount"])})}
+        self.assertLessEqual(hidden, {"Below Acceptable"})
 
 
 if __name__ == "__main__":

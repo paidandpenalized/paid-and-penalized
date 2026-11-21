@@ -17,7 +17,8 @@ category may be a year CMS never reconciled. Each counted row is one hospital's 
 with two rows in a year counts twice).
 """
 
-# CJR's performance years with its widest stop-loss and stop-gain limits, as the pin spells them, leaving out
+# CJR's performance years in CMS's workbook (1 to 7; year 8, its last, is not yet in it) with its widest stop-loss and
+# stop-gain limits, as the pin spells them, leaving out
 # performance year 5 (EUC_YEAR; the pin's 5.1 and 5.2), which had those limits too but which CMS reconciled under its
 # COVID-19 extreme and uncontrollable circumstances policy.
 POOL_YEARS = ("4", "6", "7")

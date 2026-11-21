@@ -617,14 +617,16 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   hospital's own target (its mix of fracture and elective cases, its region), which moves a result most where it sits
   far from target; near target, where the band is, the count holds up.
 - The reconciliation amount is also not target minus spending alone. It carries CMS's other adjustments, among them
-  the recoupment for high post-episode spending (an episode whose spending in the 30 days after it ran more than three
-  standard deviations above the regional average), which CMS applies after the stop-loss limit. A hospital that owed
+  the recoupment for high post-episode spending (42 CFR 510.305(j): when a hospital's average Medicare spending in the 30 days after its
+  episodes runs more than three standard deviations above its region's average, the excess comes off a later
+  reconciliation), which CMS applies after the stop-loss limit. A hospital that owed
   one reads further over target than its episodes put it. The seventh annual report (p. 52; Exhibit D-46 for the share
   of hospitals) puts these recoupments at 0.1% of all repayments in performance year 7, but up to 29.2% of a hospital's
   repayments that year (6.3% on average) and up to 69.2% in performance year 6 (22.8% on average); 3.4%, 2.8% and
   2.5% of hospitals owed one in performance years 4, 6 and 7. Methods #band says this in words, without the figures.
 - Counted: performance years 4, 6 and 7. Years 1 to 3 had lower stop-loss and stop-gain limits (none on a loss in
-  year 1); the limits reached 20% in year 4 and stayed there. Performance year 5 (the pin's 5.1 and 5.2), which had
+  year 1); the limits reached 20% in year 4 and stayed there, through performance year 8 (calendar 2024, CJR's
+  last), which CMS's workbook (years 1 to 7) does not yet cover. Performance year 5 (the pin's 5.1 and 5.2), which had
   the same limits, is left out because CMS reconciled it under its COVID-19 extreme and uncontrollable circumstances
   policy: the workbook's own column of episodes capped at target counts 14% and 19% of the two parts' episodes,
   against 0.4%, 4.3% and 2.5% in years 4, 6 and 7 (capped for an area's disaster, or from year 6 also for a COVID-19
