@@ -47,6 +47,7 @@ export const COPY = {
   srcFinalRule: { text: 'The fiscal year {fy} inpatient final rule (Federal Register)', claim: null },
   srcMup: { text: "CMS's methodology for its Medicare Inpatient Hospitals files", claim: null },
   srcCjr: { text: "CMS's CJR final reconciliation file", claim: null },
+  srcCjrReport: { text: "The CJR evaluation's seventh annual report", claim: null },
   srcBpci: { text: "BPCI Advanced's final evaluation, appendices", claim: null },
 
   // The episode counts (C16).
@@ -158,7 +159,20 @@ export const COPY = {
     claim: null,
   },
   bandWhy: {
-    text: "Why {band}: in the full-risk years of Medicare's joint-replacement bundle (CJR), most hospitals ended a year near their target, some under it and some over, in this site's reading of {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
+    text: "Why {band}: in the full-risk years of Medicare's joint-replacement bundle (CJR), {near} of hospitals' yearly results ended within {band} of target and {far} within {wide}, in this site's count from {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
+    claim: null,
+  },
+  bandHow: {
+    text: "How this site counted: CMS's file gives each hospital's final reconciliation amount and episode count for each performance year, but not its target. So a year's result is its amount per episode over that year's CJR-wide average target per episode, from {report}: a payment to the hospital means spending under target, a repayment spending over it.",
+    claim: null,
+  },
+  bandReport: { text: "the CJR evaluation's seventh annual report", claim: null },
+  bandPool: {
+    text: "The count takes performance years {years}, those with CJR's widest limits on a gain and a repayment, leaving out the pandemic year; their average targets were {targets}. It takes only a hospital's year of {floor} episodes or more, and leaves out a zero that hides a result: a hospital rated below acceptable on quality could not be paid, so its zero may stand for a year under target. Of {rows} results in those years, {censored} such zeros and {small} years under {floor} episodes are left out, leaving {n}: {nearN} within {band} and {farN} within {wide}.",
+    claim: null,
+  },
+  bandApprox: {
+    text: "Each result is approximate: one average target stands in for every hospital's own, which turns on its mix of cases and its region. The error grows with a result's distance from target: small near target, where the band sits, and larger far from it.",
     claim: null,
   },
   bandExtremes: {
