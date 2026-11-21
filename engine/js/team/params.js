@@ -52,7 +52,8 @@ export const MEASURES = Object.freeze({
 // This site's own choices, not CMS rules, so no claim id: the half-width of the range the calculator draws around its
 // estimate, as a share of target price, with the least and most a reader may set. The default follows the spread of
 // results hospitals had in CJR and BPCI Advanced, Medicare's earlier surgical bundles, and equals Track 2's limit; the
-// TEAM Methods page (#band) explains it in words.
+// TEAM Methods page (#band) explains it, with the share of CJR hospitals' yearly results inside it that the emitter
+// counts (engine/py/pp_engine/team/cjr.py WIDTHS, whose first width a test holds equal to this).
 export const BAND_DEFAULT = 0.05;
 export const BAND_MIN = 0.01;
 export const BAND_MAX = 0.20;
