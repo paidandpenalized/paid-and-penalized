@@ -1832,5 +1832,54 @@
       }
     },
     "delineated": "2023-07"
+  },
+  {
+    "id": "cjr-reconciliation",
+    "title": "CJR final reconciliation payments, performance years 1 to 7 (CMS): each participant hospital's final quality category, episode count and reconciliation amount per year",
+    "path": "cjr/reconciliation-py1-7.csv",
+    "bytes": 116834,
+    "sha256": "2dd41e41a0e096a27531150727b2a628fb13ecb4033136a58cd4286dcdce837d",
+    "derivedFrom": {
+      "file": "cjr-final-reconciliation-payments-yrs1-7.xlsx",
+      "bytes": 466083,
+      "sha256": "f41c6ddc30026c1d548975eb31b9313a00b5c5ffe912daf5081f1ee748c66e82",
+      "downloadUrl": "https://www.cms.gov/files/document/cjr-final-reconciliation-payments-yrs1-7.xlsx",
+      "lastModified": "2025-07-16"
+    },
+    "derivedBy": "pipeline/py/pp_pipeline/team/cjr.py",
+    "landingPage": "https://www.cms.gov/priorities/innovation/innovation-models/cjr",
+    "retrieved": "2026-11-20",
+    "counts": {
+      "rows": 3896,
+      "byYear": {
+        "1": 689,
+        "2": 718,
+        "3": 471,
+        "4": 474,
+        "5.1": 466,
+        "5.2": 441,
+        "6": 320,
+        "7": 317
+      }
+    }
+  },
+  {
+    "id": "cjr-target-averages",
+    "title": "CJR evaluation, seventh annual report (The Lewin Group for CMS, 2025), Exhibit IV-9 (p. 48): the CJR-wide average target price per episode in each performance year, its \"Overall Average\" line, in dollars",
+    "path": "cjr/target-averages.csv",
+    "bytes": 94,
+    "sha256": "e11b98d1f1e7eeef6eca9dc0ddfda6a2f9eb0c6d7e1d58f6baffc7145923e7aa",
+    "downloadUrl": "https://www.cms.gov/priorities/innovation/data-and-reports/2025/cjr-py7-annual-report",
+    "landingPage": "https://www.cms.gov/priorities/innovation/data-and-reports/2025/cjr-py7-annual-report",
+    "derivedFrom": {
+      "file": "cjr-annualreport7_12_3_25.pdf",
+      "bytes": 4064686,
+      "sha256": "b7e71f6d527d07c5571761aaf9cedfa631bdf4a71cbcb9158fee8b3ec8037296",
+      "downloadUrl": "https://www.cms.gov/priorities/innovation/data-and-reports/2025/cjr-py7-annual-report",
+      "lastModified": "2025-12-03",
+      "note": "Exhibit IV-9 is a line chart with each point labeled in whole dollars; the eight labels of its \"Overall Average\" line (the fourth-highest label in each performance year's column, PY 1 to PY 7 with PY 5.1 and 5.2) were transcribed by hand and checked against the PDF's text positions (pdftotext -bbox, page 52 of the file). The report PDF is not stored in the repo."
+    },
+    "derivedBy": "transcription of Exhibit IV-9's \"Overall Average\" line",
+    "retrieved": "2026-11-20"
   }
 ]

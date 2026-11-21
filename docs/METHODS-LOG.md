@@ -599,3 +599,23 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `REMAPS` and `BASELINE_SCALE`), each quality measure's cohort size (the cohort above with a value: 2,896 for hybrid
   hospital-wide readmission, 2,269 for ISCMR) and the period its public values cover (one per measure, or the build
   stops), and the list-CBSA check above (711 mandatory participants, 710 placed, none outside their list CBSA).
+
+## team methods_version 2 (2026-11-20)
+- `method.cjrSpread`, new: how far hospitals' years in CJR, Medicare's joint-replacement bundle (2016 to 2024), ended
+  from target, the evidence for the calculator's default band of ±5% (`schema_version` 2: the field is required). The
+  TEAM file gains two inputs: `cjr-reconciliation`, CMS's CJR final reconciliation workbook for performance years 1 to
+  7 (one row per hospital and year: the final quality category, episode count and reconciliation amount; derived by
+  `pp_pipeline/team/cjr.py`, the raw workbook not in git), and `cjr-target-averages`, the CJR-wide average target
+  price per episode in each year, transcribed from the "Overall Average" line of Exhibit IV-9 (p. 48) of the CJR
+  evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
+- CMS published no hospital's target price, so a row's spending against target is approximate: minus its final
+  reconciliation amount per episode, over that year's average target price. One average stands in for every
+  hospital's own target (its mix of fracture and elective cases, its region), which moves a result most where it sits
+  far from target; near target, where the band is, the count holds up.
+- Counted: performance years 4, 6 and 7, the full-risk years (CJR's widest stop-loss and stop-gain limits, and outside
+  performance year 5's COVID-19 policy), and only rows of 20 episodes or more. A zero that hides a result is left out:
+  a hospital rated "Below Acceptable" on quality could not be paid, so its zero may stand for a year under target (and
+  every performance year 1 zero, a year with no repayment; none of those years is counted). In this build: 1,111 rows
+  in those years with an episode, 34 such zeros out, 193 rows under 20 episodes out, 884 counted. Of them, 415 ended
+  within 5% of target either way and 656 within 10%. A hospital with two rows in a year counts twice, as CMS's file
+  has it. The calculator's "why?" and Methods #band print these counts and their shares.

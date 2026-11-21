@@ -26,6 +26,11 @@ Not covered by either license:
   episodes' rows), and the hospital-wide readmission and surgical-death measures from Care Compare's Unplanned
   Hospital Visits and Complications and Deaths files. data/pinned/omb-delineation-2023/list1-counties.csv holds the county rows of the Census
   Bureau's July 2023 CBSA delineation file (OMB's), a U.S. government work.
+  data/pinned/cjr/reconciliation-py1-7.csv is an extract of CMS's CJR final reconciliation workbook (performance years
+  1 to 7: each row's year, CCN, quality category, episode count and reconciliation amount;
+  pipeline/py/pp_pipeline/team/cjr.py). data/pinned/cjr/target-averages.csv holds the eight CJR-wide average target
+  prices of Exhibit IV-9 of the CJR evaluation's seventh annual report (The Lewin Group for CMS, 2025), transcribed by
+  hand; the report itself is not included. Cite the report wherever those figures appear.
 - data/pinned/medicaid/urban-2026-table-a2-work-requirement.csv holds figures from Appendix Table A.2 of the Urban
   Institute and Robert Wood Johnson Foundation report "Projected Reductions in Medicaid Expansion Enrollment Under
   OBBBA's Work Requirements and Six-Month Redeterminations: National and State Estimates for 2028" (Buettgens, Karpman,
