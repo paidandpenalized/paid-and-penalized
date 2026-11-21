@@ -206,7 +206,7 @@ class Emitted(unittest.TestCase):
         # Methods calls every zero left out in the counted years a below-acceptable hospital's: hold the pin to that.
         hidden = {r["quality"] for r in read_pinned_csv(derive_cjr.PIN_ID) if r["py"] in s["years"]
                   and int(r["episodes"]) > 0 and cjr.censored({**r, "amount": float(r["amount"])})}
-        self.assertLessEqual(hidden, {"Below Acceptable"})
+        self.assertLessEqual(hidden, {"Below Acceptable"}, "a hidden zero of another kind: reword Methods bandPool too")
 
 
 if __name__ == "__main__":

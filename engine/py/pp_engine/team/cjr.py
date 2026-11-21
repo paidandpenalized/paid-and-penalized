@@ -9,8 +9,8 @@ target is positive. One average stands in for every hospital's own target, which
 sits far from target. And the amount is not target minus spending alone: it also carries CMS's other adjustments, among
 them the recoupment for high post-episode spending, which makes a hospital that owed one look further over target.
 
-The counted rows are those of POOL_YEARS (CJR's years with its widest limits on a gain and a repayment, less
-performance year 5, EUC_YEAR) and only rows of MIN_EPISODES episodes or more. A zero that hides the result is left out
+The counted rows are those of POOL_YEARS (the years in CMS's workbook with CJR's widest limits on a gain and a
+repayment, less performance year 5, EUC_YEAR) and only rows of MIN_EPISODES episodes or more. A zero that hides the result is left out
 (`censored`): a hospital whose quality was "Below Acceptable" could not be paid, so its zero may stand for a year under
 target; in performance year 1, which had no repayment, a zero may stand for a year over it; and a zero with no quality
 category may be a year CMS never reconciled. Each counted row is one hospital's year as CMS's file has it (a hospital

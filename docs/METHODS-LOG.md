@@ -610,17 +610,17 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
 - The derivation keeps every row whose first cell is a CCN. It checks each year's rows against the workbook's own
   Totals row (the episode count exactly, the amount to half a cent; every year matches) and refuses any other row
-  under the table that carries an episode count or an amount, so a hospital whose CCN is stored some other way can't
+  under the table that carries an episode count, an amount or a quality category (and a sheet without exactly one
+  Totals row), so a hospital whose CCN is stored some other way can't
   drop out unseen. The workbook's "Average row" is skipped.
 - CMS published no hospital's target price, so a row's spending against target is approximate: minus its final
   reconciliation amount per episode, over that year's average target price. One average stands in for every
   hospital's own target (its mix of fracture and elective cases, its region), which moves a result most where it sits
   far from target; near target, where the band is, the count holds up.
 - The reconciliation amount is also not target minus spending alone. It carries CMS's other adjustments, among them
-  the recoupment for high post-episode spending (42 CFR 510.305(j): when a hospital's average Medicare spending in the 30 days after its
-  episodes runs more than three standard deviations above its region's average, the excess comes off a later
-  reconciliation), which CMS applies after the stop-loss limit. A hospital that owed
-  one reads further over target than its episodes put it. The seventh annual report (p. 52; Exhibit D-46 for the share
+  the recoupment for high post-episode spending (42 CFR 510.305(j): when a hospital's average Medicare spending in
+  the 30 days after its episodes runs more than three standard deviations above its region's average, the excess
+  comes off a later reconciliation), which CMS applies after the stop-loss limit. A hospital that owed one reads further over target than its episodes put it. The seventh annual report (p. 52; Exhibit D-46 for the share
   of hospitals) puts these recoupments at 0.1% of all repayments in performance year 7, but up to 29.2% of a hospital's
   repayments that year (6.3% on average) and up to 69.2% in performance year 6 (22.8% on average); 3.4%, 2.8% and
   2.5% of hospitals owed one in performance years 4, 6 and 7. Methods #band says this in words, without the figures.
