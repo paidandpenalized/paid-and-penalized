@@ -6,21 +6,27 @@ and final reconciliation amount (positive when Medicare paid the hospital, negat
 price. So each row's result is approximate: its amount per episode over the CJR-wide average target price per episode
 for that year (the evaluation's "Overall Average", pinned by transcription), with the sign turned so that spending over
 target is positive. One average stands in for every hospital's own target, which moves a hospital's result most where it
-sits far from target.
+sits far from target. And the amount is not target minus spending alone: it also carries CMS's other adjustments, among
+them the recoupment for high post-episode spending, which makes a hospital that owed one look further over target.
 
-The counted rows are the full-risk years (POOL_YEARS) and only rows of MIN_EPISODES episodes or more. A zero that hides
-the result is left out (`censored`): a hospital whose quality was "Below Acceptable" could not be paid, so its zero may
-stand for a year under target; in performance year 1, which had no repayment, a zero may stand for a year over it.
-Each counted row is one hospital's year as CMS's file has it (a hospital with two rows in a year counts twice).
+The counted rows are those of POOL_YEARS (CJR's years with its widest limits on a gain and a repayment, less
+performance year 5, EUC_YEAR) and only rows of MIN_EPISODES episodes or more. A zero that hides the result is left out
+(`censored`): a hospital whose quality was "Below Acceptable" could not be paid, so its zero may stand for a year under
+target; in performance year 1, which had no repayment, a zero may stand for a year over it; and a zero with no quality
+category may be a year CMS never reconciled. Each counted row is one hospital's year as CMS's file has it (a hospital
+with two rows in a year counts twice).
 """
 
-# CJR's performance years with its widest stop-loss and stop-gain limits, leaving out performance year 5 (5.1 and 5.2),
-# which CMS reconciled under its COVID-19 extreme and uncontrollable circumstances policy; as the pin spells them.
+# CJR's performance years with its widest stop-loss and stop-gain limits, as the pin spells them, leaving out
+# performance year 5 (EUC_YEAR; the pin's 5.1 and 5.2), which had those limits too but which CMS reconciled under its
+# COVID-19 extreme and uncontrollable circumstances policy.
 POOL_YEARS = ("4", "6", "7")
+EUC_YEAR = "5"
 # The fewest episodes a row needs to count: a hospital with only a few episodes swings far on one costly case.
 MIN_EPISODES = 20
 # The half-widths counted, as shares of target. The first is the TEAM calculator's default band (engine/js/team/params.js
-# BAND_DEFAULT; a test holds the two equal); the second, twice it, a wider view.
+# BAND_DEFAULT: pp_pipeline/tests/team/test_cjr.py reads it from there and holds the two equal, and the site's
+# sites/team/web/band.js refuses a file without it); the second, twice it, a wider view.
 WIDTHS = (0.05, 0.10)
 
 BELOW_ACCEPTABLE = "Below Acceptable"  # the file's lowest quality category: no reconciliation payment
@@ -29,13 +35,14 @@ NO_REPAYMENT_YEAR = "1"  # performance year 1 had no downside
 
 def spending_vs_target(amount, episodes, target):
     """(actual - target) / target, approximately: a final reconciliation amount is roughly (target - actual) summed over
-    the episodes, so minus the amount per episode over the average target per episode."""
+    the episodes (with the adjustments the module docstring names), so minus the amount per episode over the average
+    target per episode."""
     return -(amount / episodes) / target
 
 
 def censored(row):
     """Whether a row's zero amount hides its result (the module docstring)."""
-    return row["amount"] == 0 and (row["quality"] == BELOW_ACCEPTABLE or row["py"] == NO_REPAYMENT_YEAR)
+    return row["amount"] == 0 and (row["quality"] in (BELOW_ACCEPTABLE, "") or row["py"] == NO_REPAYMENT_YEAR)
 
 
 def spread(rows, targets):
@@ -43,6 +50,7 @@ def spread(rows, targets):
     ([{py, quality, episodes (int), amount (float)}]) and each year's average target price ({py: dollars}):
 
     years, minEpisodes   the method constants (POOL_YEARS, MIN_EPISODES)
+    eucYear              the year with those limits left out (EUC_YEAR)
     targets              the average target price of each counted year
     rows                 the rows of those years with an episode
     censored             of those, the zeros left out
@@ -59,6 +67,7 @@ def spread(rows, targets):
     if not counted:
         raise ValueError("CJR reconciliation: no row to count")
     x = [spending_vs_target(r["amount"], r["episodes"], targets[r["py"]]) for r in counted]
-    return {"years": list(POOL_YEARS), "minEpisodes": MIN_EPISODES, "targets": {py: targets[py] for py in POOL_YEARS},
+    return {"years": list(POOL_YEARS), "eucYear": EUC_YEAR, "minEpisodes": MIN_EPISODES,
+            "targets": {py: targets[py] for py in POOL_YEARS},
             "rows": len(pool), "censored": len(pool) - len(kept), "small": len(kept) - len(counted), "n": len(counted),
             "within": [{"width": w, "n": sum(abs(v) <= w for v in x)} for w in WIDTHS]}

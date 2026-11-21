@@ -4,6 +4,7 @@ and the TEAM file's `method.cjrSpread` recounted here from the pins. Failure mes
 
 To check the reconciliation pin against CMS's raw workbook too, set PP_CJR_RECON_XLSX to the workbook's path."""
 import os
+import re
 import unittest
 from collections import Counter
 from pathlib import Path
@@ -12,7 +13,7 @@ from unittest import mock
 from pp_engine.team import cjr
 from pp_engine.tests.test_xlsx import make_xlsx
 from pp_pipeline import emit_team
-from pp_pipeline.files import manifest_entry, read_pinned_bytes, read_pinned_csv
+from pp_pipeline.files import REPO_ROOT, manifest_entry, read_pinned_bytes, read_pinned_csv
 from pp_pipeline.team import cjr as derive_cjr
 from pp_pipeline.tests.team.helpers import fresh
 
@@ -44,6 +45,8 @@ class Spread(unittest.TestCase):
         self.assertEqual([w["n"] for w in s["within"]], [1, 2])
         self.assertEqual([w["width"] for w in s["within"]], list(cjr.WIDTHS))
         self.assertEqual(s["years"], list(cjr.POOL_YEARS))
+        self.assertEqual(s["eucYear"], cjr.EUC_YEAR)
+        self.assertNotIn(cjr.EUC_YEAR, cjr.POOL_YEARS)
         self.assertEqual(s["targets"], {py: TARGETS[py] for py in cjr.POOL_YEARS})
         self.assertEqual(s["minEpisodes"], floor)
 
@@ -53,6 +56,8 @@ class Spread(unittest.TestCase):
         self.assertTrue(cjr.censored(row("1", floor, 0.0)))  # no repayment that year
         self.assertFalse(cjr.censored(row("4", floor, 0.0)))  # a hospital exactly on target
         self.assertFalse(cjr.censored(row("4", floor, -10.0, cjr.BELOW_ACCEPTABLE)))  # it still repaid
+        self.assertTrue(cjr.censored(row("6", floor, 0.0, "")))  # no quality category: perhaps never reconciled
+        self.assertFalse(cjr.censored(row("6", floor, -10.0, "")))
         s = cjr.spread([row("4", floor, 0.0, cjr.BELOW_ACCEPTABLE), row("6", floor, 0.0)], TARGETS)
         self.assertEqual((s["rows"], s["censored"], s["n"]), (2, 1, 1))
         self.assertEqual([w["n"] for w in s["within"]], [1, 1])
@@ -64,8 +69,11 @@ class Spread(unittest.TestCase):
             cjr.spread([row("4", 1, 1.0)], TARGETS)
 
     def test_the_narrower_width_is_the_calculators_default_band(self):
-        # engine/js/team/params.js BAND_DEFAULT; sites/team/test/methods.test.js checks the JS side against the file.
-        self.assertEqual(cjr.WIDTHS[0], 0.05)
+        # Read from engine/js/team/params.js itself; sites/team/web/band.js also refuses a file without the default band.
+        text = (REPO_ROOT / "engine" / "js" / "team" / "params.js").read_text(encoding="utf-8")
+        found = re.findall(r"^export const BAND_DEFAULT = ([0-9.]+);$", text, re.M)
+        self.assertEqual(len(found), 1, "params.js: one BAND_DEFAULT line")
+        self.assertEqual(cjr.WIDTHS[0], float(found[0]))
         self.assertEqual(cjr.WIDTHS[1], 2 * cjr.WIDTHS[0])
 
 
@@ -102,6 +110,27 @@ class Derivation(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "whole count"):
                 derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25.5", "0", "1"]]))
 
+    def test_the_summary_rows_are_checked_and_any_other_non_ccn_row_with_figures_is_refused(self):
+        totals = ["Totals row", "blank cell", "TOTALS", "65", "2", "-1134.5"]
+        average = ["Average row", "blank cell", "blank cell", "-17.45", "blank cell", "blank cell"]
+        with mock.patch.object(derive_cjr, "YEARS", ("6",)):
+            text, _ = derive_cjr.reconciliation(self.workbook([totals, average, ["*A note"], ["", "", "", "", "", ""]]))
+            self.assertEqual(len(text.splitlines()), 3, "the two hospital rows, the summary rows and notes skipped")
+            off = [*totals[:3], "64", *totals[4:]]
+            with self.assertRaisesRegex(ValueError, "PY6 CJRREC: the hospital rows do not add up to its Totals row"):
+                derive_cjr.reconciliation(self.workbook([off]))
+            off = [*totals[:5], "-1134.6"]
+            with self.assertRaisesRegex(ValueError, "do not add up"):
+                derive_cjr.reconciliation(self.workbook([off]))
+            # A CCN stored as a number, and one with a letter: refused, never skipped as a note.
+            for first in ("990004.0", "99000A"):
+                with self.subTest(first=first), self.assertRaisesRegex(
+                        ValueError, r"PY6 CJRREC: row 3 under the header has an episode count or an amount but its "
+                                    r"first cell is not a CCN"):
+                    derive_cjr.reconciliation(self.workbook([[first, "Invented Four", "Good", "25", "0", "1"]]))
+            with self.assertRaisesRegex(ValueError, "not a CCN"):
+                derive_cjr.reconciliation(self.workbook([["A note", "", "", "", "", "12.5"]]))
+
     def test_a_sheet_with_two_of_a_column_is_refused(self):
         two = make_xlsx({"PY6 CJRREC": [HEADERS["6"] + ["PY6 Final CJR Episode Count*"], ["990002", "x", "Good", "25", "0", "1"]]})
         with mock.patch.object(derive_cjr, "YEARS", ("6",)), self.assertRaisesRegex(ValueError, "expected one column"):
@@ -122,6 +151,9 @@ class Pins(unittest.TestCase):
         self.assertEqual(len(rows), entry["counts"]["rows"])
         self.assertEqual(dict(Counter(r["py"] for r in rows)), entry["counts"]["byYear"])
         self.assertEqual(list(entry["counts"]["byYear"]), list(derive_cjr.YEARS))
+        # Performance year 5, left out of the count, is the pin's two parts of it.
+        self.assertEqual([py for py in derive_cjr.YEARS if py.split(".")[0] == cjr.EUC_YEAR],
+                         [f"{cjr.EUC_YEAR}.1", f"{cjr.EUC_YEAR}.2"])
         self.assertEqual(entry["derivedBy"], "pipeline/py/pp_pipeline/team/cjr.py")
         self.assertEqual(entry["derivedFrom"]["downloadUrl"], derive_cjr.SOURCE["downloadUrl"])
         for r in rows:
@@ -140,6 +172,9 @@ class Pins(unittest.TestCase):
         self.assertRegex(src["sha256"], r"^[0-9a-f]{64}$")
         self.assertTrue(src["downloadUrl"].startswith("https://www.cms.gov/"))
         self.assertIn("not stored in the repo", src["note"])
+        # The landing page is a page about the model, not the report's own address (which serves the PDF).
+        self.assertTrue(entry["landingPage"].startswith("https://www.cms.gov/"))
+        self.assertNotEqual(entry["landingPage"], src["downloadUrl"])
 
 
 class Emitted(unittest.TestCase):
@@ -149,7 +184,7 @@ class Emitted(unittest.TestCase):
         counted = []
         for r in read_pinned_csv(derive_cjr.PIN_ID):
             episodes, amount = int(r["episodes"]), float(r["amount"])
-            hidden = amount == 0 and (r["quality"] == "Below Acceptable" or r["py"] == "1")
+            hidden = amount == 0 and (r["quality"] in ("Below Acceptable", "") or r["py"] == "1")
             if r["py"] in s["years"] and episodes >= s["minEpisodes"] and not hidden:
                 counted.append(abs(amount / episodes / targets[r["py"]]))
         self.assertEqual(s["n"], len(counted))

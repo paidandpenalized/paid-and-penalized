@@ -34,6 +34,11 @@ TARGETS_ID = "cjr-target-averages"
 COLUMNS = ("py", "ccn", "quality", "episodes", "amount")
 YEARS = ("1", "2", "3", "4", "5.1", "5.2", "6", "7")  # the workbook's performance years, in its sheet order
 QUALITY = ("Excellent", "Good", "Acceptable", BELOW_ACCEPTABLE, "")  # the final quality categories; '' for none
+# The summary rows under each year's table, as CMS labels them in the CCN column: the totals of the episode count and
+# amount columns (checked against the hospital rows), and the average amount per episode (in the episode count column).
+TOTALS_ROW = "Totals row"
+SUMMARY_ROWS = (TOTALS_ROW, "Average row")
+TOTAL_TOLERANCE = 0.005  # dollars: half a cent, for the workbook's own summing of the amounts in binary floating point
 SOURCE = {
     "title": "CJR final reconciliation payments, performance years 1 to 7 (CMS): each participant hospital's final "
              "quality category, episode count and reconciliation amount per year",
@@ -74,19 +79,29 @@ def _whole(text, what):
 
 def year_rows(sheet, py):
     """[[py, ccn, quality, episodes, amount]] from one year's sheet rows: every row under the header whose first cell is
-    a CCN (the notes under the table aside)."""
+    a CCN. A row whose first cell is not one is skipped: a note under the table, a blank row, "End of worksheet", and
+    the two summary rows CMS labels in that cell (SUMMARY_ROWS). A summary "Totals row" is checked: its episode count
+    must equal the hospital rows' sum and its amount their sum to within TOTAL_TOLERANCE. Any other skipped row that
+    carries an episode count or an amount is refused, naming its sheet and its place among the rows under the header
+    (the reader drops empty rows, so not the sheet's own row number), so a hospital whose CCN the workbook stores
+    another way (as a number, say) is never dropped unseen."""
     at = next((i for i, r in enumerate(sheet) if r and r[0].strip() == "CCN"), None)
     if at is None:
         raise ValueError(f"CJR workbook, {sheet_of(py)}: no header row starting 'CCN'")
     header = sheet[at]
     cols = [_column(header, py, name) for name in ("Quality Performance Category", "CJR Episode Count",
                                                    "Reconciliation Amount")]
-    out = []
-    for r in sheet[at + 1:]:
+    out, totals = [], []
+    for i, r in enumerate(sheet[at + 1:], start=1):
         ccn = r[0].strip() if r else ""
-        if not re.fullmatch(r"[0-9]{5,6}", ccn):
-            continue  # a note, a blank row, "End of worksheet"
         quality, episodes, amount = ((r[j] if j < len(r) else "").strip() for j in cols)
+        if not re.fullmatch(r"[0-9]{5,6}", ccn):
+            if ccn == TOTALS_ROW:
+                totals.append((episodes, amount))
+            elif ccn not in SUMMARY_ROWS and (episodes or amount):
+                raise ValueError(f"CJR workbook, {sheet_of(py)}: row {i} under the header has an episode count or an "
+                                 "amount but its first cell is not a CCN (five or six digits)")
+            continue
         if quality not in QUALITY:
             raise ValueError(f"CJR workbook, {sheet_of(py)}: unknown quality category {quality!r}")
         # float repr is the shortest text that reads back as the stored double (the workbook stores 0.1 steps as
@@ -95,6 +110,10 @@ def year_rows(sheet, py):
                     repr(_number(amount, "a reconciliation amount"))])
     if not out:
         raise ValueError(f"CJR workbook, {sheet_of(py)}: no hospital rows")
+    for episodes, amount in totals:
+        if _whole(episodes, "a total episode count") != sum(r[3] for r in out) or abs(
+                _number(amount, "a total amount") - math.fsum(float(r[4]) for r in out)) > TOTAL_TOLERANCE:
+            raise ValueError(f"CJR workbook, {sheet_of(py)}: the hospital rows do not add up to its Totals row")
     return out
 
 

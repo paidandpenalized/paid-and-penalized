@@ -164,7 +164,7 @@ function bandSection(team) {
 ${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, shares))}
 ${para(sentence('bandHow', { report: externalLink(SOURCE_LINKS.cjrReport, t('bandReport')) }))}
 ${para(fill('bandPool', {
-    years: listText(e.years), targets: listText(e.targets.map((x) => dollars(x))), floor: count(e.floor), rows: count(e.rows),
+    years: shares.years, euc: e.euc, targets: listText(e.targets.map((x) => dollars(x))), floor: count(e.floor), rows: count(e.rows),
     censored: count(e.censored), small: count(e.small), n: count(e.n), nearN: count(e.near.n), farN: count(e.far.n), band, wide,
   }))}
 ${para(t('bandApprox'))}

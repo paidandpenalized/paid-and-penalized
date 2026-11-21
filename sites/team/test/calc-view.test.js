@@ -64,7 +64,8 @@ test('the default hospital\'s server render equals the client\'s first render', 
   assert.ok(section.includes('follows the spread of results hospitals had in Medicare’s joint-replacement bundle (CJR) and in BPCI Advanced'), 'the "why?" names CJR and BPCI Advanced');
   // CJR's figures are the file's (method.cjrSpread, through band.js), labeled as this site's approximate count.
   const e = bandEvidence(team);
-  assert.ok(section.includes(`${pct(e.near.share, 0)} of hospitals’ yearly results ended within ±${pct(BAND_DEFAULT, 0)} of target and ${pct(e.far.share, 0)} within ±${pct(e.far.width, 0)}: this site’s count from CMS’s file, and approximate`), 'the "why?" gives CJR\'s shares from the file');
+  assert.ok(section.includes(`In CJR, ${pct(e.near.share, 0)} of hospitals’ yearly results in performance years ${e.years.slice(0, -1).join(', ')}, and ${e.years.at(-1)} ended within ±${pct(BAND_DEFAULT, 0)} of target and ${pct(e.far.share, 0)} within ±${pct(e.far.width, 0)}: this site’s count from CMS’s file, and approximate`), 'the "why?" gives CJR\'s shares and counted years from the file');
+  assert.ok(!/full-risk|pandemic/.test(section), 'the "why?" names the years, not a label for them');
 });
 
 // A phone hides the table's head (styles.css), so each row's boxes and results carry their columns' names, from the

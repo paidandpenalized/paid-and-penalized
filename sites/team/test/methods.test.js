@@ -44,7 +44,7 @@ const reasonOf = ([code, arg]) => (code === 'cjrx' ? arg[0] : code);
 const reasonCount = (code) => Object.values(team.status).filter((s) => reasonOf(s) === code).length;
 // CJR's spread as the band section prints it (band.js bandEvidence: the TEAM file's method.cjrSpread), as digit runs' sources.
 const cjr = bandEvidence(team);
-const cjrShown = [pct(cjr.near.share, 0), pct(cjr.far.share, 0), pct(cjr.far.width, 0), ...cjr.years, ...cjr.targets.map((x) => dollars(x)),
+const cjrShown = [pct(cjr.near.share, 0), pct(cjr.far.share, 0), pct(cjr.far.width, 0), ...cjr.years, cjr.euc, ...cjr.targets.map((x) => dollars(x)),
   ...[cjr.floor, cjr.rows, cjr.censored, cjr.small, cjr.n, cjr.near.n, cjr.far.n].map(count)];
 const IDS = ['sources', 'episodes', 'low-volume', 'prices', 'quality', 'cqs', 'band', 'moves', 'left-out', 'unknowns', 'area', 'other', 'code'];
 
@@ -79,7 +79,7 @@ test('every Methods number is from data or a constant', () => {
     ...Object.values(PY2_PERIODS).flatMap(({ start, end }) => [isoDate(start), isoDate(end)]), FALLS_PRF_CFR_YEAR,
     ...Object.values(TARGET_CAPS).map((x) => pct(x, 0)), ...Object.values(CQS_CAPS).flatMap((c) => [pct(c.gain, 0), pct(c.loss, 0)]),
     ...Object.keys(TRACKS), String(DEFAULT_TRACK), String(MISSING_QUALITY), String(RECON_MONTHS), String(ERROR_DAYS),
-    pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0), ...cjrShown,
+    pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0),
     money(EXAMPLE.target), pct(-EXAMPLE.spend, 0), String(EXAMPLE.cqs), String(EXAMPLE.track),
     ...Object.entries(m.remaps).flatMap(([from, to]) => [from, ...Object.entries(to).flatMap(([d, share]) => [d, pct(share, 0)])]),
     ...Object.values(m.areaCheck).map(count), count(team.counts.selectedAreas),
@@ -89,7 +89,8 @@ test('every Methods number is from data or a constant', () => {
     CITES.subpart, HASH_NAME, // a citation in a sentence, and the hash's name
   ];
   const allowed = new Set(shown.flatMap(digitRuns));
-  const reading = main.replace(/<span class="(tm-cite|doc__toc-n)">[^<]*<\/span>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<a [^>]*href="[^"]*"/g, '<a');
+  // #band is left to its own test below, the one place CJR's count may print (cjrShown).
+  const reading = main.replace(sectionMarkup('band'), '').replace(/<span class="(tm-cite|doc__toc-n)">[^<]*<\/span>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<a [^>]*href="[^"]*"/g, '<a');
   const stray = [...new Set(digitRuns(words(reading)))].filter((n) => !allowed.has(n));
   assert.deepEqual(stray, [], 'numbers on the Methods page with no source in the file, the manifest or a constant');
 });
@@ -191,13 +192,16 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   assert.equal(cjr.near.share, spread.within.find((w) => w.width === BAND_DEFAULT).n / spread.n);
   assert.equal(spread.rows - spread.censored - spread.small, spread.n, 'the rows left out add up');
   const [band, wide] = [`±${pct(BAND_DEFAULT, 0)}`, `±${pct(cjr.far.width, 0)}`];
-  assert.ok(s.includes(`${pct(cjr.near.share, 0)} of hospitals’ yearly results ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
+  const years = `performance years ${cjr.years.slice(0, -1).join(', ')}, and ${cjr.years.at(-1)}`;
+  assert.ok(s.includes(`${pct(cjr.near.share, 0)} of hospitals’ yearly results in ${years} ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
   assert.ok(s.includes(`leaving ${count(cjr.n)}: ${count(cjr.near.n)} within ${band} and ${count(cjr.far.n)} within ${wide}`), 'the counts behind the shares');
-  assert.ok(s.includes(`performance years ${cjr.years.slice(0, -1).join(', ')}, and ${cjr.years.at(-1)}`), 'the years counted');
+  assert.ok(s.includes(`The count takes ${years}: of CJR’s years with its widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');
+  assert.ok(!/full-risk|pandemic year/.test(s), 'no label that implies the left-out year lacked the limits');
   assert.ok(s.includes(`${count(cjr.floor)} episodes or more`), 'the episode floor');
-  assert.ok(s.includes(`their average targets were ${cjr.targets.slice(0, -1).map((x) => dollars(x)).join(', ')}, and ${dollars(cjr.targets.at(-1))}`), 'the denominators');
+  assert.ok(s.includes(`Their average targets were ${cjr.targets.slice(0, -1).map((x) => dollars(x)).join(', ')}, and ${dollars(cjr.targets.at(-1))}`), 'the denominators');
   assert.match(s, /below acceptable on quality could not be paid/, 'the censored zeros, explained');
   assert.match(s, /Each result is approximate: one average target stands in for every hospital’s own/);
+  assert.match(s, /CMS’s amount is more than target less spending: it carries other adjustments too, among them a recoupment where spending in the month after an episode ran far above/, 'the post-episode recoupment, disclosed');
   assert.match(s, /the same under as over/);
   assert.ok(s.includes(`Track 3’s limits stop a TEAM hospital’s result at ${pct(TRACKS[3].gain, 0)} either way`));
   assert.ok(!/extremes ran|past 20/.test(s), 'no claim about CJR\'s tails');
@@ -207,6 +211,15 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   const other = { ...team, method: { ...team.method, cjrSpread: { ...spread, within: spread.within.filter((w) => w.width !== BAND_DEFAULT) } } };
   assert.throws(() => bandEvidence(other), /default band/);
   assert.throws(() => bandEvidence({ method: {} }), /no CJR spread/);
+  // The wider width is the widest counted past the default, whatever the array's order.
+  const shuffled = { ...team, method: { ...team.method, cjrSpread: { ...spread, within: [{ width: 0.15, n: spread.n }, ...spread.within, { width: 0.12, n: spread.n }] } } };
+  assert.equal(bandEvidence(shuffled).far.width, 0.15);
+  // A count that doesn't add up is refused, naming the field.
+  const bad = (change) => ({ ...team, method: { ...team.method, cjrSpread: { ...spread, ...change } } });
+  assert.throws(() => bandEvidence(bad({ targets: { ...spread.targets, [spread.years[0]]: 28073.5 } })), /method\.cjrSpread\) has no whole-dollar average target for performance year/);
+  assert.throws(() => bandEvidence(bad({ targets: {} })), /method\.cjrSpread\) has no whole-dollar average target/);
+  assert.throws(() => bandEvidence(bad({ within: spread.within.map((w) => ({ ...w, n: spread.n + 1 })) })), /method\.cjrSpread\) counts .* not a whole number from 0 to its n/);
+  assert.throws(() => bandEvidence(bad({ eucYear: undefined })), /method\.cjrSpread\) does not name the performance year it leaves out/);
 });
 
 test('what can move the target and what the calculator leaves out: trend and normalization caps, risk adjustment, the post-episode adjustment, the high-cost cap', () => {

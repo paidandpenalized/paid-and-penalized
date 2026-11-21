@@ -246,7 +246,7 @@ export const COPY = {
   },
   whySummary: { text: 'why?', claim: null },
   whyText: {
-    text: "The {band} default follows the spread of results hospitals had in Medicare's joint-replacement bundle (CJR) and in BPCI Advanced. In CJR's full-risk years, {near} of hospitals' yearly results ended within {band} of target and {far} within {wide}: this site's count from CMS's file, and approximate, since one CJR-wide average target stands in for each hospital's own. {methods}. Set the band from {lo} to {hi}.",
+    text: "The {band} default follows the spread of results hospitals had in Medicare's joint-replacement bundle (CJR) and in BPCI Advanced. In CJR, {near} of hospitals' yearly results in performance years {years} ended within {band} of target and {far} within {wide}: this site's count from CMS's file, and approximate, since one CJR-wide average target stands in for each hospital's own. {methods}. Set the band from {lo} to {hi}.",
     claim: null,
   },
   whyMethods: { text: 'Methods explains how it was counted', claim: null },

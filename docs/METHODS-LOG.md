@@ -608,14 +608,38 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `pp_pipeline/team/cjr.py`, the raw workbook not in git), and `cjr-target-averages`, the CJR-wide average target
   price per episode in each year, transcribed from the "Overall Average" line of Exhibit IV-9 (p. 48) of the CJR
   evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
+- The derivation keeps every row whose first cell is a CCN. It checks each year's rows against the workbook's own
+  Totals row (the episode count exactly, the amount to half a cent; every year matches) and refuses any other row
+  under the table that carries an episode count or an amount, so a hospital whose CCN is stored some other way can't
+  drop out unseen. The workbook's "Average row" is skipped.
 - CMS published no hospital's target price, so a row's spending against target is approximate: minus its final
   reconciliation amount per episode, over that year's average target price. One average stands in for every
   hospital's own target (its mix of fracture and elective cases, its region), which moves a result most where it sits
   far from target; near target, where the band is, the count holds up.
-- Counted: performance years 4, 6 and 7, the full-risk years (CJR's widest stop-loss and stop-gain limits, and outside
-  performance year 5's COVID-19 policy), and only rows of 20 episodes or more. A zero that hides a result is left out:
-  a hospital rated "Below Acceptable" on quality could not be paid, so its zero may stand for a year under target (and
-  every performance year 1 zero, a year with no repayment; none of those years is counted). In this build: 1,111 rows
-  in those years with an episode, 34 such zeros out, 193 rows under 20 episodes out, 884 counted. Of them, 415 ended
-  within 5% of target either way and 656 within 10%. A hospital with two rows in a year counts twice, as CMS's file
-  has it. The calculator's "why?" and Methods #band print these counts and their shares.
+- The reconciliation amount is also not target minus spending alone. It carries CMS's other adjustments, among them
+  the recoupment for high post-episode spending (an episode whose spending in the 30 days after it ran more than three
+  standard deviations above the regional average), which CMS applies after the stop-loss limit. A hospital that owed
+  one reads further over target than its episodes put it. The seventh annual report (p. 52; Exhibit D-46 for the share
+  of hospitals) puts these recoupments at 0.1% of all repayments in performance year 7, but up to 29.2% of a hospital's
+  repayments that year (6.3% on average) and up to 69.2% in performance year 6 (22.8% on average); 3.4%, 2.8% and
+  2.5% of hospitals owed one in performance years 4, 6 and 7. Methods #band says this in words, without the figures.
+- Counted: performance years 4, 6 and 7. Years 1 to 3 had lower stop-loss and stop-gain limits (none on a loss in
+  year 1); the limits reached 20% in year 4 and stayed there. Performance year 5 (the pin's 5.1 and 5.2), which had
+  the same limits, is left out because CMS reconciled it under its COVID-19 extreme and uncontrollable circumstances
+  policy: the workbook's own column of episodes capped at target counts 14% and 19% of the two parts' episodes,
+  against 0.4%, 4.3% and 2.5% in years 4, 6 and 7 (capped for an area's disaster, or from year 6 also for a COVID-19
+  diagnosis), from each year's Totals row. The file records the year left out (`eucYear`) so the page names it from data. Only rows of 20
+  episodes or more count.
+- A zero that hides a result is left out: a hospital rated "Below Acceptable" on quality could not be paid, so its
+  zero may stand for a year under target; a zero with no quality category may be a year CMS never reconciled (the pin
+  has one, in performance year 1); and every performance year 1 zero, a year with no repayment (none of those years is
+  counted). In this build: 1,111 rows in those years with an episode, 34 such zeros out (all "Below Acceptable"),
+  193 rows under 20 episodes out, 884 counted. Of them, 415 ended within 5% of target either way and 656 within 10%. A
+  hospital with two rows in a year counts twice, as CMS's file has it. The calculator's "why?" and Methods #band print
+  these counts and their shares.
+- "Below Acceptable" is censored on one side only. Its zeros are dropped but its repayments stay: 72 of the 884
+  counted rows are "Below Acceptable", every one a repayment, so that group enters the count only where it ended over
+  target, and the pool leans over target (442 counted rows over target and 442 under; without the group, 370 over and
+  442 under). The shares move little either way: leaving out every "Below Acceptable" row in the counted years leaves
+  812 rows, 378 within 5% of target (46.6%, against 46.9%; 47% either way on the page) and 608 within 10% (74.9%,
+  against 74.2%; 75% against 74%). The page keeps the method above; these figures are recorded here only.

@@ -159,7 +159,7 @@ export const COPY = {
     claim: null,
   },
   bandWhy: {
-    text: "Why {band}: in the full-risk years of Medicare's joint-replacement bundle (CJR), {near} of hospitals' yearly results ended within {band} of target and {far} within {wide}, in this site's count from {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
+    text: "Why {band}: in Medicare's joint-replacement bundle (CJR), {near} of hospitals' yearly results in performance years {years} ended within {band} of target and {far} within {wide}, in this site's count from {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
     claim: null,
   },
   bandHow: {
@@ -168,11 +168,11 @@ export const COPY = {
   },
   bandReport: { text: "the CJR evaluation's seventh annual report", claim: null },
   bandPool: {
-    text: "The count takes performance years {years}, those with CJR's widest limits on a gain and a repayment, leaving out the pandemic year; their average targets were {targets}. It takes only a hospital's year of {floor} episodes or more, and leaves out a zero that hides a result: a hospital rated below acceptable on quality could not be paid, so its zero may stand for a year under target. Of {rows} results in those years, {censored} such zeros and {small} years under {floor} episodes are left out, leaving {n}: {nearN} within {band} and {farN} within {wide}.",
+    text: "The count takes performance years {years}: of CJR's years with its widest limits on a gain and a repayment, all but year {euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic. Their average targets were {targets}. It takes only a hospital's year of {floor} episodes or more, and leaves out a zero that hides a result: a hospital rated below acceptable on quality could not be paid, so its zero may stand for a year under target. Of {rows} results in those years, {censored} such zeros and {small} years under {floor} episodes are left out, leaving {n}: {nearN} within {band} and {farN} within {wide}.",
     claim: null,
   },
   bandApprox: {
-    text: "Each result is approximate: one average target stands in for every hospital's own, which turns on its mix of cases and its region. The error grows with a result's distance from target: small near target, where the band sits, and larger far from it.",
+    text: "Each result is approximate: one average target stands in for every hospital's own, which turns on its mix of cases and its region. The error grows with a result's distance from target: small near target, where the band sits, and larger far from it. And CMS's amount is more than target less spending: it carries other adjustments too, among them a recoupment where spending in the month after an episode ran far above the region's average, so a hospital that owed one reads further over target than its episodes alone put it. The evaluation's report finds those recoupments a small share of repayments overall, though a large one for some hospitals.",
     claim: null,
   },
   bandExtremes: {

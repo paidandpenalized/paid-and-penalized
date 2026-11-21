@@ -295,7 +295,7 @@ test('no word repeats back to back anywhere in the rendered TEAM copy', () => {
   }
   // The calculator's "why?" and Methods' #band, in words.
   assert.ok(words(program).includes('The \u00b15% default follows the spread of results hospitals had'), 'the why');
-  assert.ok(words(methods).includes('of hospitals’ yearly results ended within ±5% of target'), 'Methods #band');
+  assert.ok(words(methods).includes('of hospitals’ yearly results in performance years'), 'Methods #band');
 });
 
 // The final review's wording: the dek says the result is adjusted for quality; "How each line works" names each track's

@@ -447,7 +447,7 @@
       }
     },
     "method": {
-      "description": "The method's own numbers the Methods page states: `remaps`, {data-year MS-DRG the FY2027 grouper no longer has: {FY2027 MS-DRG: share of its cases}}; `baselineScale`, what the two data years' episodes are multiplied by to stand in for the three baseline years; `cohort`, per measure, how many IPPS hospitals have a public value (the percentile cohort); `qualityPeriods`, per measure, the period the public values cover; `areaCheck`, the mandatory participants on CMS's list, how many are placed in a county, and how many of those sit in a county OMB's delineation puts outside their list CBSA; `cjrSpread`, how far hospitals' years in CJR (Medicare's joint-replacement bundle) ended from target, counted from CMS's reconciliation file over the evaluation's CJR-wide average target price per episode: the counted performance years and the episode floor (method constants), each counted year's average target, the rows of those years with an episode, the censored zeros and the rows under the floor left out of them, the rows counted (`n`), and per half-width (a share of target) the counted rows within it.",
+      "description": "The method's own numbers the Methods page states: `remaps`, {data-year MS-DRG the FY2027 grouper no longer has: {FY2027 MS-DRG: share of its cases}}; `baselineScale`, what the two data years' episodes are multiplied by to stand in for the three baseline years; `cohort`, per measure, how many IPPS hospitals have a public value (the percentile cohort); `qualityPeriods`, per measure, the period the public values cover; `areaCheck`, the mandatory participants on CMS's list, how many are placed in a county, and how many of those sit in a county OMB's delineation puts outside their list CBSA; `cjrSpread`, how far hospitals' years in CJR (Medicare's joint-replacement bundle) ended from target, counted from CMS's reconciliation file over the evaluation's CJR-wide average target price per episode: the counted performance years, the year with the same limits left out for CMS's COVID-19 extreme and uncontrollable circumstances policy (`eucYear`) and the episode floor (method constants), each counted year's average target, the rows of those years with an episode, the censored zeros and the rows under the floor left out of them, the rows counted (`n`), and per half-width (a share of target) the counted rows within it.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -562,6 +562,7 @@
           "additionalProperties": false,
           "required": [
             "years",
+            "eucYear",
             "minEpisodes",
             "targets",
             "rows",
@@ -578,6 +579,10 @@
                 "type": "string",
                 "pattern": "^[1-9]$"
               }
+            },
+            "eucYear": {
+              "type": "string",
+              "pattern": "^[1-9]$"
             },
             "minEpisodes": {
               "type": "integer",
