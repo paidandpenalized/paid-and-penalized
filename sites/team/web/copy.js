@@ -85,7 +85,7 @@ export const COPY = {
     claim: ['TEAM-20', 'TEAM-19'],
   },
   patientNotice: {
-    text: 'Before you go home after your surgery, the hospital must give you a written notice that explains TEAM and says your Medicare protections continue.',
+    text: 'Before you leave the hospital after your surgery, the hospital must give you a written notice that explains TEAM and says your Medicare protections continue.',
     claim: 'TEAM-32',
   },
 

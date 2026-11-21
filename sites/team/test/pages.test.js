@@ -274,7 +274,7 @@ test('Part 2 qualifies Track 2 for Medicare-dependent hospitals, and says Track 
 
 test('the patient note cites the notice rule and says it comes before the patient goes home after surgery', () => {
   const note = /<aside class="tm-patient"[\s\S]*?<\/aside>/.exec(program)[0];
-  assert.match(words(note), /Before you go home after your surgery, the hospital must give you a written notice that explains TEAM/);
+  assert.match(words(note), /Before you leave the hospital after your surgery, the hospital must give you a written notice that explains TEAM/);
   assert.match(words(note), /512\.582\(b\)\(1\)/);
 });
 
