@@ -155,11 +155,10 @@ ${para(sentence('cqsSource', { sheet }))}`,
 // method.cjrSpread), how it was counted and why it is approximate; BPCI Advanced's spread in words; Track 3's limits (no
 // claim about CJR's tails); and Track 2's limit only when the default band equals it.
 function bandSection(team) {
-  const band = `±${pct(BAND_DEFAULT, 0)}`;
   const track2 = TRACKS[TB].gain === BAND_DEFAULT && TRACKS[TB].loss === BAND_DEFAULT;
   const e = bandEvidence(team);
-  const wide = `±${pct(e.far.width, 0)}`;
-  const shares = { band, wide, near: pct(e.near.share, 0), far: pct(e.far.share, 0) };
+  const { shares } = e;
+  const { band, wide } = shares;
   return {
     id: BAND_ANCHOR, heading: t('bandHeading'), body: html`${para(fill('bandWhat', { band, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) }))}
 ${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, shares))}
