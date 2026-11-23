@@ -96,7 +96,7 @@ def year_rows(sheet, py):
     cell is a CCN. A row whose first cell is not one is skipped: a note under the table, a blank row, "End of worksheet",
     and the two summary rows CMS labels in that cell (SUMMARY_ROWS). A summary "Totals row" is checked: its episode count
     must equal the hospital rows' sum and its amount their sum to within TOTAL_TOLERANCE. Any other skipped row that
-    carries an episode count, an amount or a quality category is refused (as is a sheet without exactly one Totals row), naming its sheet and its place among the rows under the header
+    carries an episode count, an amount, a quality category or a rural flag is refused (as is a sheet without exactly one Totals row), naming its sheet and its place among the rows under the header
     (the reader drops empty rows, so not the sheet's own row number), so a hospital whose CCN the workbook stores
     another way (as a number, say) is never dropped unseen."""
     at = next((i for i, r in enumerate(sheet) if r and r[0].strip() == "CCN"), None)
@@ -112,9 +112,9 @@ def year_rows(sheet, py):
         if not re.fullmatch(r"[0-9]{5,6}", ccn):
             if ccn == TOTALS_ROW:
                 totals.append((episodes, amount))
-            elif ccn not in SUMMARY_ROWS and (episodes or amount or quality):
+            elif ccn not in SUMMARY_ROWS and (episodes or amount or quality or rural):
                 raise ValueError(f"CJR workbook, {sheet_of(py)}: row {i} under the header has an episode count, an "
-                                 "amount or a quality category but its first cell is not a CCN (five or six digits)")
+                                 "amount, a quality category or a rural flag but its first cell is not a CCN (five or six digits)")
             continue
         if quality not in QUALITY:
             raise ValueError(f"CJR workbook, {sheet_of(py)}: unknown quality category {quality!r}")

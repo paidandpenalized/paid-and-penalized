@@ -198,7 +198,7 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   assert.ok(cjr.rural > 0, 'the file counts the rural years it leaves out');
   // The rural years: left out for their lower repayment limit, cited; the non-rural hospitals with the same limit that
   // CMS's file can't single out, said to remain.
-  assert.match(s, /It also leaves out a year at a rural hospital, which CMS’s file marks year by year\. In these years a rural hospital, like a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals/);
+  assert.match(s, /It also leaves out a year at a rural hospital, which CMS’s file marks year by year\. In these years a rural hospital, as well as a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals/);
   assert.match(s, /A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS’s file does not mark it, so its years remain in the count\./);
   assert.ok(m.includes(`<span class="tm-cite">${METHODS_CITES.cjrRural}</span>`), 'the rural limit cites its rule');
   assert.ok(s.includes(`The count takes ${years}: of the years in CMS’s file with CJR’s widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');

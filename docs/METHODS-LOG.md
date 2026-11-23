@@ -610,7 +610,7 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
 - The derivation keeps every row whose first cell is a CCN. It checks each year's rows against the workbook's own
   Totals row (the episode count exactly, the amount to half a cent; every year matches) and refuses any other row
-  under the table that carries an episode count, an amount or a quality category (and a sheet without exactly one
+  under the table that carries an episode count, an amount, a quality category or a rural flag (and a sheet without exactly one
   Totals row), so a hospital whose CCN is stored some other way can't
   drop out unseen. The workbook's "Average row" is skipped.
 - CMS published no hospital's target price, so a row's spending against target is approximate: minus its final

@@ -159,14 +159,17 @@ class Derivation(unittest.TestCase):
             # A CCN stored as a number, and one with a letter: refused, never skipped as a note.
             for first in ("990004.0", "99000A"):
                 with self.subTest(first=first), self.assertRaisesRegex(
-                        ValueError, r"PY6 CJRREC: row 4 under the header has an episode count, an amount or a quality "
-                                    r"category but its first cell is not a CCN"):
+                        ValueError, r"PY6 CJRREC: row 4 under the header has an episode count, an amount, a quality "
+                                    r"category or a rural flag but its first cell is not a CCN"):
                     derive_cjr.reconciliation(self.workbook([[first, "Invented Four", "Good", "25", "0", "1", "N"]]))
             with self.assertRaisesRegex(ValueError, "not a CCN"):
                 derive_cjr.reconciliation(self.workbook([["A note", "", "", "", "", "12.5"]]))
             # A hospital row whose CCN is mis-stored and whose figures are blank still carries its quality category.
             with self.assertRaisesRegex(ValueError, "not a CCN"):
                 derive_cjr.reconciliation(self.workbook([["990004.0", "Invented Four", "Good", "", "", "", "N"]]))
+            # ...and one with no category and blank figures still carries its rural flag.
+            with self.assertRaisesRegex(ValueError, "not a CCN"):
+                derive_cjr.reconciliation(self.workbook([["990004.0", "Invented Four", "", "", "", "", "Y"]]))
 
     def test_a_sheet_with_two_of_a_column_is_refused(self):
         two = make_xlsx({"PY6 CJRREC": [HEADERS["6"] + ["PY6 Final CJR Episode Count*"],

@@ -172,7 +172,7 @@ export const COPY = {
     claim: null,
   },
   bandRural: {
-    text: "It also leaves out a year at a rural hospital, which CMS's file marks year by year. In these years a rural hospital, like a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals, so a year that ran far over target could still end close to it in CMS's file. A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS's file does not mark it, so its years remain in the count.",
+    text: "It also leaves out a year at a rural hospital, which CMS's file marks year by year. In these years a rural hospital, as well as a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals, so a year that ran far over target could still end close to it in CMS's file. A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS's file does not mark it, so its years remain in the count.",
     claim: null,
   },
   bandCount: {

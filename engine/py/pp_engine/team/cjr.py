@@ -14,8 +14,8 @@ repayment, less performance year 5, EUC_YEAR) and only rows of MIN_EPISODES epis
 (`censored`): a hospital whose quality was "Below Acceptable" could not be paid, so its zero may stand for a year under
 target; in performance year 1, which had no repayment, a zero may stand for a year over it; and a zero with no quality
 category may be a year CMS never reconciled. A rural hospital's year is left out too (`rural`): in these years a hospital
-that met CJR's rural definition (42 CFR 510.2), like a sole community hospital, a Medicare-dependent hospital or a rural
-referral center, had a far lower limit on a repayment (42 CFR 510.305(e)(1)(v)(C), (m)(1)(vii)(C)), so a year far over
+that met CJR's rural definition (42 CFR 510.2), as well as a sole community hospital, a Medicare-dependent hospital or a
+rural referral center, had a far lower limit on a repayment (42 CFR 510.305(e)(1)(v)(C), (m)(1)(vii)(C)), so a year far over
 target could end near it. CMS's file flags only the rural definition, so the other three stay in unless they are rural.
 The exclusions apply in that order, each row left out under the first that fits: a censored zero, then a rural
 hospital's year, then a year under MIN_EPISODES. Each counted row is one hospital's year as CMS's file has it (a hospital
