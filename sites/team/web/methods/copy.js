@@ -159,7 +159,7 @@ export const COPY = {
     claim: null,
   },
   bandWhy: {
-    text: "Why {band}: in Medicare's joint-replacement bundle (CJR), {near} of hospitals' yearly results in performance years {years} ended within {band} of target and {far} within {wide}, in this site's count from {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
+    text: "Why {band}: in Medicare's joint-replacement bundle (CJR), {near} of non-rural hospitals' yearly results in performance years {years} ended within {band} of target and {far} within {wide}, in this site's count from {file}. The band covers the middle of those results, {band} on each side of target, the same under as over: where a year is likely to land, not how far it can go.",
     claim: null,
   },
   bandHow: {
@@ -168,7 +168,15 @@ export const COPY = {
   },
   bandReport: { text: "the CJR evaluation's seventh annual report", claim: null },
   bandPool: {
-    text: "The count takes performance years {years}: of the years in CMS's file with CJR's widest limits on a gain and a repayment, all but year {euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic. Their average targets were {targets}. It takes only a hospital's year of {floor} episodes or more, and leaves out a zero that hides a result: a hospital rated below acceptable on quality could not be paid, so its zero may stand for a year under target. Of {rows} results in those years, {censored} such zeros and {small} years under {floor} episodes are left out, leaving {n}: {nearN} within {band} and {farN} within {wide}.",
+    text: "The count takes performance years {years}: of the years in CMS's file with CJR's widest limits on a gain and a repayment, all but year {euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic. Their average targets were {targets}. It takes only a hospital's year of {floor} episodes or more, and leaves out a zero that hides a result: a hospital rated below acceptable on quality could not be paid, so its zero may stand for a year under target.",
+    claim: null,
+  },
+  bandRural: {
+    text: "It also leaves out a year at a rural hospital, which CMS's file marks year by year. In these years a rural hospital, like a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals, so a year that ran far over target could still end close to it in CMS's file. A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS's file does not mark it, so its years remain in the count.",
+    claim: null,
+  },
+  bandCount: {
+    text: "Of {rows} results in those years, {censored} zeros that hide a result, {rural} years at rural hospitals and {small} years under {floor} episodes are left out, in that order, leaving {n}: {nearN} within {band} and {farN} within {wide}.",
     claim: null,
   },
   bandApprox: {

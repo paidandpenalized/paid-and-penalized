@@ -93,9 +93,15 @@ def quality_periods(rows_):
 
 
 def cjr_rows(rows_):
-    """The CJR reconciliation pin's rows as pp_engine.team.cjr reads them: episodes a whole number, amount a float."""
-    return [{"py": r["py"], "quality": r["quality"], "episodes": int(r["episodes"]), "amount": float(r["amount"])}
-            for r in rows_]
+    """The CJR reconciliation pin's rows as pp_engine.team.cjr reads them: episodes a whole number, amount a float, rural
+    a bool (the pin's Y or N; anything else is refused)."""
+    out = []
+    for r in rows_:
+        if r["rural"] not in ("Y", "N"):
+            raise ValueError("CJR reconciliation: a rural flag other than Y or N")
+        out.append({"py": r["py"], "quality": r["quality"], "episodes": int(r["episodes"]), "amount": float(r["amount"]),
+                    "rural": r["rural"] == "Y"})
+    return out
 
 
 def cjr_targets(rows_):

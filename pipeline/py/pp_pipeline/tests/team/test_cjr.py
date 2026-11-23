@@ -20,8 +20,8 @@ from pp_pipeline.tests.team.helpers import fresh
 TARGETS = {"1": 1000, "4": 1000, "6": 2000, "7": 1000}
 
 
-def row(py, episodes, amount, quality="Good"):
-    return {"py": py, "quality": quality, "episodes": episodes, "amount": amount}
+def row(py, episodes, amount, quality="Good", rural=False):
+    return {"py": py, "quality": quality, "episodes": episodes, "amount": amount, "rural": rural}
 
 
 class Spread(unittest.TestCase):
@@ -41,7 +41,7 @@ class Spread(unittest.TestCase):
             row("4", 0, 0.0),                     # no episode: not a row of the year
         ]
         s = cjr.spread(rows, TARGETS)
-        self.assertEqual((s["rows"], s["censored"], s["small"], s["n"]), (4, 0, 1, 3))
+        self.assertEqual((s["rows"], s["censored"], s["rural"], s["small"], s["n"]), (4, 0, 0, 1, 3))
         self.assertEqual([w["n"] for w in s["within"]], [1, 2])
         self.assertEqual([w["width"] for w in s["within"]], list(cjr.WIDTHS))
         self.assertEqual(s["years"], list(cjr.POOL_YEARS))
@@ -62,6 +62,19 @@ class Spread(unittest.TestCase):
         self.assertEqual((s["rows"], s["censored"], s["n"]), (2, 1, 1))
         self.assertEqual([w["n"] for w in s["within"]], [1, 1])
 
+    def test_a_rural_hospitals_year_is_left_out_after_the_censored_zeros_and_before_the_floor(self):
+        floor = cjr.MIN_EPISODES
+        rows = [
+            row("4", floor, -floor * 500.0, rural=True),               # far over target, as a capped year can't read
+            row("6", floor, 0.0, cjr.BELOW_ACCEPTABLE, rural=True),   # a censored zero first: counted as one
+            row("7", floor - 1, 10.0, rural=True),                    # rural first, though under the floor too
+            row("7", floor - 1, 10.0),                                # under the floor
+            row("4", floor, floor * 10.0),                            # counted: 1% under target
+        ]
+        s = cjr.spread(rows, TARGETS)
+        self.assertEqual((s["rows"], s["censored"], s["rural"], s["small"], s["n"]), (5, 1, 2, 1, 1))
+        self.assertEqual([w["n"] for w in s["within"]], [1, 1])
+
     def test_a_pool_year_without_a_target_and_an_empty_count_are_refused(self):
         with self.assertRaisesRegex(ValueError, "no average target price"):
             cjr.spread([row("4", 30, 1.0)], {"4": 1000, "6": 1000})
@@ -80,43 +93,55 @@ class Spread(unittest.TestCase):
 HEADERS = {
     "1": ["CCN", "HOSP_NAME", "PY1 Initial Quality Performance Category", "PY1 Final Quality Performance Category",
           "PY1 Initial CJR Episode Count (as of March 1, 2017)*", "PY1 Final CJR Episode Count (as of March 1, 2018)*",
-          "PY1 Initial Reconciliation amount ", "PY1 Final Reconciliation Amount"],
+          "PY1 Initial Reconciliation amount ", "PY1 Final Reconciliation Amount",
+          "Meets CJR Rural definition (42 CFR 510.2) for PY1"],
     "6": ["CCN", "HOSP_NAME", "PY6 Quality Performance Category", "PY6 CJR Episode Count*",
-          "Number of PY6 Episodes capped under a policy*", "PY6 Reconciliation Amount Earned or Owed"],
+          "Number of PY6 Episodes capped under a policy*", "PY6 Reconciliation Amount Earned or Owed",
+          "Meets CJR Rural definition (42 CFR 510.2) for PY6"],
 }
 
 
 class Derivation(unittest.TestCase):
-    TOTALS6 = ["Totals row", "blank cell", "TOTALS", "65", "2", "-1134.5"]
+    TOTALS6 = ["Totals row", "blank cell", "TOTALS", "65", "2", "-1134.5", "blank cell"]
 
     def workbook(self, extra6=(), totals6=TOTALS6):
         return make_xlsx({
             "PY1 CJRREC": [["Table 1"], ["A note"], HEADERS["1"],
-                           ["99001", "Invented One", "Good", "Below Acceptable", "90", "93", "500.5", "0"],
-                           ["Totals row", "", "", "", "90", "93", "500.5", "0"],
+                           ["99001", "Invented One", "Good", "Below Acceptable", "90", "93", "500.5", "0", "N"],
+                           ["Totals row", "", "", "", "90", "93", "500.5", "0", ""],
                            ["*A note under the table"], ["End of worksheet"]],
             "PY6 CJRREC": [["Table 7"], HEADERS["6"],
-                           ["990003", "Invented Three", "Excellent", "40", "2", "-1234.5"],
-                           ["990002", "Invented Two", "Good", "25", "0", "100"],
+                           ["990003", "Invented Three", "Excellent", "40", "2", "-1234.5", "N"],
+                           ["990002", "Invented Two", "Good", "25", "0", "100", " Y "],
                            *([totals6] if totals6 else []), *extra6]})
 
     def test_each_years_final_columns_are_read_whatever_their_header_says(self):
         with mock.patch.object(derive_cjr, "YEARS", ("1", "6")):
             text, counts = derive_cjr.reconciliation(self.workbook())
-        self.assertEqual(text.splitlines(), ["py,ccn,quality,episodes,amount", "1,099001,Below Acceptable,93,0.0",
-                                             "6,990002,Good,25,100.0", "6,990003,Excellent,40,-1234.5"])
+        self.assertEqual(text.splitlines(), ["py,ccn,quality,episodes,amount,rural",
+                                             "1,099001,Below Acceptable,93,0.0,N", "6,990002,Good,25,100.0,Y",
+                                             "6,990003,Excellent,40,-1234.5,N"])
         self.assertEqual(counts, {"rows": 3, "byYear": {"1": 1, "6": 2}})
 
     def test_an_unknown_quality_category_or_a_fractional_count_is_refused(self):
         with mock.patch.object(derive_cjr, "YEARS", ("1", "6")):
             with self.assertRaisesRegex(ValueError, "quality category"):
-                derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Superb", "25", "0", "1"]]))
+                derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Superb", "25", "0", "1", "N"]]))
             with self.assertRaisesRegex(ValueError, "whole count"):
-                derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25.5", "0", "1"]]))
+                derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25.5", "0", "1", "N"]]))
+
+    def test_a_rural_flag_other_than_y_or_n_is_refused(self):
+        with mock.patch.object(derive_cjr, "YEARS", ("6",)):
+            for flag in ("", "y", "Yes", "1"):
+                with self.subTest(flag=flag), self.assertRaisesRegex(ValueError, r"PY6 CJRREC: a rural flag of .*, not Y or N"):
+                    derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25", "0", "1", flag]]))
+            # A short row (its rural cell missing) reads as blank, so it is refused too.
+            with self.assertRaisesRegex(ValueError, "not Y or N"):
+                derive_cjr.reconciliation(self.workbook([["990004", "Invented Four", "Good", "25", "0", "1"]]))
 
     def test_the_summary_rows_are_checked_and_any_other_non_ccn_row_with_figures_is_refused(self):
         totals = self.TOTALS6
-        average = ["Average row", "blank cell", "blank cell", "-17.45", "blank cell", "blank cell"]
+        average = ["Average row", "blank cell", "blank cell", "-17.45", "blank cell", "blank cell", "blank cell"]
         with mock.patch.object(derive_cjr, "YEARS", ("6",)):
             text, _ = derive_cjr.reconciliation(self.workbook([average, ["*A note"], ["", "", "", "", "", ""]]))
             self.assertEqual(len(text.splitlines()), 3, "the two hospital rows, the summary rows and notes skipped")
@@ -136,17 +161,31 @@ class Derivation(unittest.TestCase):
                 with self.subTest(first=first), self.assertRaisesRegex(
                         ValueError, r"PY6 CJRREC: row 4 under the header has an episode count, an amount or a quality "
                                     r"category but its first cell is not a CCN"):
-                    derive_cjr.reconciliation(self.workbook([[first, "Invented Four", "Good", "25", "0", "1"]]))
+                    derive_cjr.reconciliation(self.workbook([[first, "Invented Four", "Good", "25", "0", "1", "N"]]))
             with self.assertRaisesRegex(ValueError, "not a CCN"):
                 derive_cjr.reconciliation(self.workbook([["A note", "", "", "", "", "12.5"]]))
             # A hospital row whose CCN is mis-stored and whose figures are blank still carries its quality category.
             with self.assertRaisesRegex(ValueError, "not a CCN"):
-                derive_cjr.reconciliation(self.workbook([["990004.0", "Invented Four", "Good", "", "", ""]]))
+                derive_cjr.reconciliation(self.workbook([["990004.0", "Invented Four", "Good", "", "", "", "N"]]))
 
     def test_a_sheet_with_two_of_a_column_is_refused(self):
-        two = make_xlsx({"PY6 CJRREC": [HEADERS["6"] + ["PY6 Final CJR Episode Count*"], ["990002", "x", "Good", "25", "0", "1"]]})
+        two = make_xlsx({"PY6 CJRREC": [HEADERS["6"] + ["PY6 Final CJR Episode Count*"],
+                                        ["990002", "x", "Good", "25", "0", "1", "N"]]})
         with mock.patch.object(derive_cjr, "YEARS", ("6",)), self.assertRaisesRegex(ValueError, "expected one column"):
             derive_cjr.reconciliation(two)
+
+    def test_the_rural_column_is_found_by_its_year_and_a_sheet_with_none_or_two_is_refused(self):
+        rural = HEADERS["6"][-1]
+        rows = [["990002", "x", "Good", "25", "0", "1", "N"], ["Totals row", "", "", "25", "0", "1", ""]]
+        with mock.patch.object(derive_cjr, "YEARS", ("6",)):
+            # A footnote mark is allowed; another year's column is not this year's.
+            text, _ = derive_cjr.reconciliation(make_xlsx({"PY6 CJRREC": [[*HEADERS["6"][:-1], rural + "*"], *rows]}))
+            self.assertEqual(text.splitlines()[1], "6,990002,Good,25,1.0,N")
+            for header, found in (([*HEADERS["6"][:-1], rural.replace("PY6", "PY7")], 0), (HEADERS["6"][:-1], 0),
+                                  ([*HEADERS["6"], rural], 2)):
+                with self.subTest(found=found, last=header[-1]), self.assertRaisesRegex(
+                        ValueError, rf"PY6 CJRREC: expected one column for CJR's rural definition, found {found}"):
+                    derive_cjr.reconciliation(make_xlsx({"PY6 CJRREC": [header, *rows]}))
 
     @unittest.skipUnless(os.environ.get("PP_CJR_RECON_XLSX"), "set PP_CJR_RECON_XLSX to CMS's raw workbook to rederive")
     def test_the_pin_is_the_workbooks_derivation(self):
@@ -173,6 +212,7 @@ class Pins(unittest.TestCase):
             self.assertIn(r["quality"], derive_cjr.QUALITY)
             self.assertGreaterEqual(int(r["episodes"]), 0)
             float(r["amount"])
+            self.assertIn(r["rural"], derive_cjr.RURAL)
 
     def test_the_transcribed_targets_cover_every_year_in_whole_dollars_and_name_their_report(self):
         entry = manifest_entry(derive_cjr.TARGETS_ID)
@@ -197,11 +237,16 @@ class Emitted(unittest.TestCase):
         for r in read_pinned_csv(derive_cjr.PIN_ID):
             episodes, amount = int(r["episodes"]), float(r["amount"])
             hidden = amount == 0 and (r["quality"] in ("Below Acceptable", "") or r["py"] == "1")
-            if r["py"] in s["years"] and episodes >= s["minEpisodes"] and not hidden:
+            if r["py"] in s["years"] and episodes >= s["minEpisodes"] and not hidden and r["rural"] == "N":
                 counted.append(abs(amount / episodes / targets[r["py"]]))
         self.assertEqual(s["n"], len(counted))
         self.assertEqual([w["n"] for w in s["within"]], [sum(x <= w["width"] for x in counted) for w in s["within"]])
-        self.assertEqual(s["rows"] - s["censored"] - s["small"], s["n"])
+        self.assertEqual(s["rows"] - s["censored"] - s["rural"] - s["small"], s["n"])
+        # The rural rows left out are the counted years' uncensored rows flagged Y, at any episode count.
+        rural = [r for r in read_pinned_csv(derive_cjr.PIN_ID) if r["py"] in s["years"] and int(r["episodes"]) > 0
+                 and r["rural"] == "Y" and not cjr.censored({**r, "amount": float(r["amount"])})]
+        self.assertEqual(s["rural"], len(rural))
+        self.assertGreater(s["rural"], 0)
         self.assertTrue(0 < s["within"][0]["n"] < s["within"][1]["n"] < s["n"])
         # Methods calls every zero left out in the counted years a below-acceptable hospital's: hold the pin to that.
         hidden = {r["quality"] for r in read_pinned_csv(derive_cjr.PIN_ID) if r["py"] in s["years"]

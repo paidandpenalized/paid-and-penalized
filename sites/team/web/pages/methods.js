@@ -163,9 +163,11 @@ function bandSection(team) {
     id: BAND_ANCHOR, heading: t('bandHeading'), body: html`${para(fill('bandWhat', { band, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) }))}
 ${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, shares))}
 ${para(sentence('bandHow', { report: externalLink(SOURCE_LINKS.cjrReport, t('bandReport')) }))}
-${para(fill('bandPool', {
-    years: shares.years, euc: e.euc, targets: listText(e.targets.map((x) => dollars(x))), floor: count(e.floor), rows: count(e.rows),
-    censored: count(e.censored), small: count(e.small), n: count(e.n), nearN: count(e.near.n), farN: count(e.far.n), band, wide,
+${para(fill('bandPool', { years: shares.years, euc: e.euc, targets: listText(e.targets.map((x) => dollars(x))), floor: count(e.floor) }))}
+${para(t('bandRural'), C.cjrRural)}
+${para(fill('bandCount', {
+    rows: count(e.rows), censored: count(e.censored), rural: count(e.rural), small: count(e.small), floor: count(e.floor), n: count(e.n),
+    nearN: count(e.near.n), farN: count(e.far.n), band, wide,
   }))}
 ${para(t('bandApprox'))}
 ${para(fill('bandExtremes', { band, limit: pct(TRACKS[TC].gain, 0), tc: TC }), C.track2)}

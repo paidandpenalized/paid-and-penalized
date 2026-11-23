@@ -27,7 +27,7 @@ Not covered by either license:
   Hospital Visits and Complications and Deaths files. data/pinned/omb-delineation-2023/list1-counties.csv holds the county rows of the Census
   Bureau's July 2023 CBSA delineation file (OMB's), a U.S. government work.
   data/pinned/cjr/reconciliation-py1-7.csv is an extract of CMS's CJR final reconciliation workbook (performance years
-  1 to 7: each row's year, CCN, quality category, episode count and reconciliation amount;
+  1 to 7: each row's year, CCN, quality category, episode count, reconciliation amount and rural flag;
   pipeline/py/pp_pipeline/team/cjr.py). data/pinned/cjr/target-averages.csv holds the eight CJR-wide average target
   prices of Exhibit IV-9 of the CJR evaluation's seventh annual report (The Lewin Group for CMS, 2025), transcribed by
   hand; the report itself is not included. Cite the report wherever those figures appear.

@@ -45,7 +45,7 @@ const reasonCount = (code) => Object.values(team.status).filter((s) => reasonOf(
 // CJR's spread as the band section prints it (band.js bandEvidence: the TEAM file's method.cjrSpread), as digit runs' sources.
 const cjr = bandEvidence(team);
 const cjrShown = [pct(cjr.near.share, 0), pct(cjr.far.share, 0), pct(cjr.far.width, 0), ...cjr.years, cjr.euc, ...cjr.targets.map((x) => dollars(x)),
-  ...[cjr.floor, cjr.rows, cjr.censored, cjr.small, cjr.n, cjr.near.n, cjr.far.n].map(count)];
+  ...[cjr.floor, cjr.rows, cjr.censored, cjr.rural, cjr.small, cjr.n, cjr.near.n, cjr.far.n].map(count)];
 const IDS = ['sources', 'episodes', 'low-volume', 'prices', 'quality', 'cqs', 'band', 'moves', 'left-out', 'unknowns', 'area', 'other', 'code'];
 
 test('the sections, in order, each with its heading, beside a contents list that links each', () => {
@@ -190,11 +190,17 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   assert.ok(cjr.far.width > BAND_DEFAULT);
   const spread = team.method.cjrSpread;
   assert.equal(cjr.near.share, spread.within.find((w) => w.width === BAND_DEFAULT).n / spread.n);
-  assert.equal(spread.rows - spread.censored - spread.small, spread.n, 'the rows left out add up');
+  assert.equal(spread.rows - spread.censored - spread.rural - spread.small, spread.n, 'the rows left out add up');
   const [band, wide] = [`±${pct(BAND_DEFAULT, 0)}`, `±${pct(cjr.far.width, 0)}`];
   const years = `performance years ${cjr.years.slice(0, -1).join(', ')}, and ${cjr.years.at(-1)}`;
-  assert.ok(s.includes(`${pct(cjr.near.share, 0)} of hospitals’ yearly results in ${years} ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
-  assert.ok(s.includes(`leaving ${count(cjr.n)}: ${count(cjr.near.n)} within ${band} and ${count(cjr.far.n)} within ${wide}`), 'the counts behind the shares');
+  assert.ok(s.includes(`${pct(cjr.near.share, 0)} of non-rural hospitals’ yearly results in ${years} ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
+  assert.ok(s.includes(`Of ${count(cjr.rows)} results in those years, ${count(cjr.censored)} zeros that hide a result, ${count(cjr.rural)} years at rural hospitals and ${count(cjr.small)} years under ${count(cjr.floor)} episodes are left out, in that order, leaving ${count(cjr.n)}: ${count(cjr.near.n)} within ${band} and ${count(cjr.far.n)} within ${wide}`), 'the counts behind the shares, each exclusion named');
+  assert.ok(cjr.rural > 0, 'the file counts the rural years it leaves out');
+  // The rural years: left out for their lower repayment limit, cited; the non-rural hospitals with the same limit that
+  // CMS's file can't single out, said to remain.
+  assert.match(s, /It also leaves out a year at a rural hospital, which CMS’s file marks year by year\. In these years a rural hospital, like a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals/);
+  assert.match(s, /A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS’s file does not mark it, so its years remain in the count\./);
+  assert.ok(m.includes(`<span class="tm-cite">${METHODS_CITES.cjrRural}</span>`), 'the rural limit cites its rule');
   assert.ok(s.includes(`The count takes ${years}: of the years in CMS’s file with CJR’s widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');
   assert.ok(!/full-risk|pandemic year/.test(s), 'no label that implies the left-out year lacked the limits');
   assert.ok(s.includes(`${count(cjr.floor)} episodes or more`), 'the episode floor');
@@ -220,6 +226,8 @@ test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site cou
   assert.throws(() => bandEvidence(bad({ targets: {} })), /method\.cjrSpread\) has no whole-dollar average target/);
   assert.throws(() => bandEvidence(bad({ within: spread.within.map((w) => ({ ...w, n: spread.n + 1 })) })), /method\.cjrSpread\) counts .* not a whole number from 0 to its n/);
   assert.throws(() => bandEvidence(bad({ eucYear: undefined })), /method\.cjrSpread\) does not name the performance year it leaves out/);
+  assert.throws(() => bandEvidence(bad({ rural: spread.rural + 1 })), /method\.cjrSpread\) leaves out results that don't add up/);
+  assert.throws(() => bandEvidence(bad({ rural: undefined })), /method\.cjrSpread\) leaves out results that don't add up/);
 });
 
 test('what can move the target and what the calculator leaves out: trend and normalization caps, risk adjustment, the post-episode adjustment, the high-cost cap', () => {

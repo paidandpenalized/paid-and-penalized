@@ -604,8 +604,8 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - `method.cjrSpread`, new: how far hospitals' years in CJR, Medicare's joint-replacement bundle (2016 to 2024), ended
   from target, the evidence for the calculator's default band of ±5% (`schema_version` 2: the field is required). The
   TEAM file gains two inputs: `cjr-reconciliation`, CMS's CJR final reconciliation workbook for performance years 1 to
-  7 (one row per hospital and year: the final quality category, episode count and reconciliation amount; derived by
-  `pp_pipeline/team/cjr.py`, the raw workbook not in git), and `cjr-target-averages`, the CJR-wide average target
+  7 (one row per hospital and year: the final quality category, episode count, reconciliation amount and whether the
+  hospital met CJR's rural definition that year; derived by `pp_pipeline/team/cjr.py`, the raw workbook not in git), and `cjr-target-averages`, the CJR-wide average target
   price per episode in each year, transcribed from the "Overall Average" line of Exhibit IV-9 (p. 48) of the CJR
   evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
 - The derivation keeps every row whose first cell is a CCN. It checks each year's rows against the workbook's own
@@ -635,13 +635,26 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
 - A zero that hides a result is left out: a hospital rated "Below Acceptable" on quality could not be paid, so its
   zero may stand for a year under target; a zero with no quality category may be a year CMS never reconciled (the pin
   has one, in performance year 1); and every performance year 1 zero, a year with no repayment (none of those years is
-  counted). In this build: 1,111 rows in those years with an episode, 34 such zeros out (all "Below Acceptable"),
-  193 rows under 20 episodes out, 884 counted. Of them, 415 ended within 5% of target either way and 656 within 10%. A
-  hospital with two rows in a year counts twice, as CMS's file has it. The calculator's "why?" and Methods #band print
-  these counts and their shares.
-- "Below Acceptable" is censored on one side only. Its zeros are dropped but its repayments stay: 72 of the 884
+  counted).
+- A rural hospital's year is left out (`rural`). In performance years 4 and 6 to 8, a hospital that met CJR's rural
+  definition (42 CFR 510.2), a sole community hospital, a Medicare-dependent hospital and a rural referral center
+  repaid at most 5% of its target, not 20% (42 CFR 510.305(e)(1)(v)(C) and (m)(1)(vii)(C)), so a year far over target
+  can end near it in CMS's file and read as inside the band. The pin carries the workbook's own per-year column
+  "Meets CJR Rural definition (42 CFR 510.2) for PY<n>" (every year's sheet has it, Y or N on every hospital row; the
+  derivation refuses a sheet with none or two, and any other value). CMS's file flags no sole community hospital,
+  Medicare-dependent hospital or rural referral center as such, so those that are not rural had the same 5% limit but
+  remain in the count; Methods #band says so. Of the 133 rural rows of 20 episodes or more left out, 85 (63.9%) ended
+  within 5% of target and 123 (92.5%) within 10%, against 43.9% and 71.0% of the rows counted: the cap's mark.
+- The exclusions apply in this order, each row left out under the first that fits: a zero that hides a result, a rural
+  hospital's year, a year under 20 episodes. In this build: 1,111 rows in those years with an episode, 34 such zeros
+  out (all "Below Acceptable"; 3 of them rural), 138 rural years out, 188 rows under 20 episodes out, 751 counted. Of
+  them, 330 ended within 5% of target either way and 533 within 10% (43.9% and 71.0%; 44% and 71% on the page). Before
+  the rural years were left out (this entry's first version), 884 were counted (193 under 20 episodes out), 415 within
+  5% and 656 within 10% (46.9% and 74.2%; 47% and 74% on the page). A hospital with two rows in a year counts twice, as
+  CMS's file has it. The calculator's "why?" and Methods #band print these counts and their shares.
+- "Below Acceptable" is censored on one side only. Its zeros are dropped but its repayments stay: 58 of the 751
   counted rows are "Below Acceptable", every one a repayment, so that group enters the count only where it ended over
-  target, and the pool leans over target (442 counted rows over target and 442 under; without the group, 370 over and
-  442 under). The shares move little either way: leaving out every "Below Acceptable" row in the counted years leaves
-  812 rows, 378 within 5% of target (46.6%, against 46.9%; 47% either way on the page) and 608 within 10% (74.9%,
-  against 74.2%; 75% against 74%). The page keeps the method above; these figures are recorded here only.
+  target, and the pool leans over target (374 counted rows over target and 377 under; without the group, 316 over and
+  377 under). The shares move little either way: leaving out every "Below Acceptable" row in the counted years leaves
+  693 rows, 304 within 5% of target (43.9%, against 43.9%; 44% either way on the page) and 499 within 10% (72.0%,
+  against 71.0%; 72% against 71%). The page keeps the method above; these figures are recorded here only.

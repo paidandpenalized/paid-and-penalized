@@ -1835,10 +1835,10 @@
   },
   {
     "id": "cjr-reconciliation",
-    "title": "CJR final reconciliation payments, performance years 1 to 7 (CMS): each participant hospital's final quality category, episode count and reconciliation amount per year",
+    "title": "CJR final reconciliation payments, performance years 1 to 7 (CMS): each participant hospital's final quality category, episode count and reconciliation amount per year, and whether it met CJR's rural definition that year",
     "path": "cjr/reconciliation-py1-7.csv",
-    "bytes": 116834,
-    "sha256": "2dd41e41a0e096a27531150727b2a628fb13ecb4033136a58cd4286dcdce837d",
+    "bytes": 124632,
+    "sha256": "2dc36dddcdf9824d2a1bd90aa9abfb1603bbea54bdf12b3e2be26d7a0d807b8f",
     "derivedFrom": {
       "file": "cjr-final-reconciliation-payments-yrs1-7.xlsx",
       "bytes": 466083,
