@@ -5,7 +5,7 @@
 // calculator itself (calc-view.js calcMarkup, the same markup the browser draws first) and the default hospital's row in
 // the page (calc-data.js), so the calculator runs before anything loads. Every other participant's row is in one hashed
 // file (dataUrl), fetched on the reader's first move toward another hospital, with the family search's names (searchUrl).
-import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES, LOW_VOLUME, MISSING_QUALITY, TRACKS } from '../../../../engine/js/team/params.js';
+import { BAND_MAX, BAND_MIN, CATEGORIES, LOW_VOLUME, MISSING_QUALITY, TRACKS } from '../../../../engine/js/team/params.js';
 import { sentenceOf } from '../../../../web/render/components.js';
 import { pct, spelled } from '../../../../web/render/format.js';
 import { html, jsonScript } from '../../../../web/render/html.js';
@@ -14,6 +14,7 @@ import { activeCcns, calcMeta, calcRow, hospOf, whoOf } from '../../../../web/te
 import { t as tCalc } from '../calc-copy.js';
 import { calcMarkup, calcView } from '../calc-view.js';
 import { initialState } from '../../../../web/team/opening.js';
+import { bandEvidence } from '../band.js';
 import { BAND_ANCHOR, CITES, DEFAULT_TRACK, PY2_START, yearOf } from '../constants.js';
 import { fill, t } from '../copy.js';
 import { METHODS_PATH, PROGRAM_PATH } from '../links.js';
@@ -31,13 +32,13 @@ function defaultHosp(team, search) {
 }
 
 // The calculator's parts that are the same for every hospital (calc-view.js staticBox): the quality note, "How each
-// line works" and the band's "why?". The build writes them once; the page's script keeps them as it draws another
-// hospital. dataYear: the year the episode counts come from.
-export function calcStatics(dataYear) {
+// line works" and the band's "why?" (with CJR's spread, band.js bandEvidence). The build writes them once; the page's
+// script keeps them as it draws another hospital. dataYear: the year the episode counts come from; team: the TEAM file.
+export function calcStatics(dataYear, team) {
   const { qGain } = TRACKS[DEFAULT_TRACK];
   const [, tb, tc] = Object.keys(TRACKS);
   const why = sentence('whyText', { methods: html`<a href="${METHODS_PATH}#${BAND_ANCHOR}">${t('whyMethods')}</a>` }, {
-    band: `±${pct(BAND_DEFAULT, 0)}`, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0),
+    ...bandEvidence(team).shares, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0),
   });
   return {
     qFoot: html`<p class="tc-foot">${fill('qFoot', { missing: String(MISSING_QUALITY) })} <span class="tm-cite">${CITES.cqs}</span></p>`,
@@ -55,7 +56,7 @@ function calcSection({ team, search, files }) {
   const { row, who, hosp } = defaultHosp(team, search);
   const meta = calcMeta(team);
   const view = calcView({ hosp, state: initialState(hosp), team: meta });
-  const statics = calcStatics(meta.dataYear);
+  const statics = calcStatics(meta.dataYear, team);
   return html`<section id="calc" class="tc" data-src="${files.dataUrl}" data-search="${files.searchUrl}" data-failed="${tCalc('calcFailed')}">
 <p class="tc__title"><span>${fill('calcTitle', { year: yearOf(PY2_START), py: PY2_NUMBER })}</span><span data-v="where">${view.hosp.where}</span></p>
 <div class="tc__pick"><p class="tc__name" data-v="name">${view.hosp.name}</p>

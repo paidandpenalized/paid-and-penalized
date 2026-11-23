@@ -9,7 +9,7 @@
 // and constants.js's.
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES } from '../../../../engine/js/team/params.js';
 import { docSections, printout, sentenceOf } from '../../../../web/render/components.js';
-import { count, decimal, isoDate, isoMonth, listText, money, numberWord, ordinal, pct } from '../../../../web/render/format.js';
+import { count, decimal, dollars, isoDate, isoMonth, listText, money, numberWord, ordinal, pct } from '../../../../web/render/format.js';
 import { html } from '../../../../web/render/html.js';
 import { externalLink, page } from '../../../../web/render/layout.js';
 import { SITE } from '../../../../web/site.js';
@@ -17,6 +17,7 @@ import {
   BAND_ANCHOR, BASELINE_YEARS, CITES, CQS_CAPS, CQS_SCALE, DEFAULT_TRACK, ERROR_DAYS, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME,
   MEASURES, MISSING_QUALITY, OUTLIER_PERCENTILE, PY2_PERIODS, PY2_START, RECON_MONTHS, SUPPRESSED_MAX, TARGET_CAPS, TRACKS, yearOf,
 } from '../constants.js';
+import { bandEvidence } from '../band.js';
 import { METHODS_PATH, PROGRAM_PATH, SOURCE_LINKS } from '../links.js';
 import { HASH_NAME, METHODS_CITES as C } from '../methods/cites.js';
 import { fill, t } from '../methods/copy.js';
@@ -63,7 +64,7 @@ ${printout(html`<table class="gb tm-meth__pins" aria-labelledby="tm-src-${key}">
   const published = [
     [SOURCE_LINKS.rule, fill('srcRule', { cite: CITES.subpart })], [SOURCE_LINKS.faq, t('srcFaq')], [SOURCE_LINKS.qualityScoring, t('srcQuality')],
     [SOURCE_LINKS.fy2027Rule, fill('srcFinalRule', { fy: String(team.fy) })], [SOURCE_LINKS.mupMethod, t('srcMup')],
-    [SOURCE_LINKS.cjrRecon, t('srcCjr')], [SOURCE_LINKS.bpciEval, t('srcBpci')],
+    [SOURCE_LINKS.cjrRecon, t('srcCjr')], [SOURCE_LINKS.cjrReport, t('srcCjrReport')], [SOURCE_LINKS.bpciEval, t('srcBpci')],
   ];
   return {
     id: 'sources', heading: t('srcHeading'), body: html`${para(fill('srcText', { hash: HASH_NAME }))}
@@ -150,14 +151,25 @@ ${para(sentence('cqsSource', { sheet }))}`,
   };
 }
 
-// The band's evidence, in words (no figure of this site's own counting): CJR's and BPCI Advanced's spread, Track 3's
-// limits (no claim about CJR's tails), and Track 2's limit only when the default band equals it.
-function bandSection() {
-  const band = `±${pct(BAND_DEFAULT, 0)}`;
+// The band's evidence: CJR's spread as this site counted it from CMS's file (band.js bandEvidence: the TEAM file's
+// method.cjrSpread), how it was counted and why it is approximate; BPCI Advanced's spread in words; Track 3's limits (no
+// claim about CJR's tails); and Track 2's limit only when the default band equals it.
+function bandSection(team) {
   const track2 = TRACKS[TB].gain === BAND_DEFAULT && TRACKS[TB].loss === BAND_DEFAULT;
+  const e = bandEvidence(team);
+  const { shares } = e;
+  const { band, wide } = shares;
   return {
     id: BAND_ANCHOR, heading: t('bandHeading'), body: html`${para(fill('bandWhat', { band, lo: pct(BAND_MIN, 0), hi: pct(BAND_MAX, 0) }))}
-${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, { band }))}
+${para(sentence('bandWhy', { file: externalLink(SOURCE_LINKS.cjrRecon, t('bandFile')) }, shares))}
+${para(sentence('bandHow', { report: externalLink(SOURCE_LINKS.cjrReport, t('bandReport')) }))}
+${para(fill('bandPool', { years: shares.years, euc: e.euc, targets: listText(e.targets.map((x) => dollars(x))), floor: count(e.floor) }))}
+${para(t('bandRural'), C.cjrRural)}
+${para(fill('bandCount', {
+    rows: count(e.rows), censored: count(e.censored), rural: count(e.rural), small: count(e.small), floor: count(e.floor), n: count(e.n),
+    nearN: count(e.near.n), farN: count(e.far.n), band, wide,
+  }))}
+${para(t('bandApprox'))}
 ${para(fill('bandExtremes', { band, limit: pct(TRACKS[TC].gain, 0), tc: TC }), C.track2)}
 ${para(sentence('bandBpci', { eval: externalLink(SOURCE_LINKS.bpciEval, t('bandEval')) }))}
 ${track2 ? para(fill('bandTrack2', { band, tb: TB }), C.track2) : ''}
@@ -246,7 +258,7 @@ export function methodsPage({ team, sources, shared, robots, assets }) {
   if (!delineation) throw new RangeError('TEAM Methods: no source gives the CBSA delineation\'s month');
   const sections = [
     sourcesSection(team, sources, shared), episodesSection(team), lowVolumeSection(team), pricesSection(team), qualitySection(team), cqsSection(),
-    bandSection(), movesSection(), leftSection(), unknownsSection(), areaSection(team, delineation), otherSection(), codeSection(team),
+    bandSection(team), movesSection(), leftSection(), unknownsSection(), areaSection(team, delineation), otherSection(), codeSection(team),
   ];
   const body = html`<article class="wrap page tm tm-meth">
 <header class="page__head">

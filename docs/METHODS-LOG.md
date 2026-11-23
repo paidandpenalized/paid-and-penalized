@@ -599,3 +599,62 @@ changes, and a test requires the newest heading to match the emitted `methods_ve
   `REMAPS` and `BASELINE_SCALE`), each quality measure's cohort size (the cohort above with a value: 2,896 for hybrid
   hospital-wide readmission, 2,269 for ISCMR) and the period its public values cover (one per measure, or the build
   stops), and the list-CBSA check above (711 mandatory participants, 710 placed, none outside their list CBSA).
+
+## team methods_version 2 (2026-11-20)
+- `method.cjrSpread`, new: how far hospitals' years in CJR, Medicare's joint-replacement bundle (2016 to 2024), ended
+  from target, the evidence for the calculator's default band of ±5% (`schema_version` 2: the field is required). The
+  TEAM file gains two inputs: `cjr-reconciliation`, CMS's CJR final reconciliation workbook for performance years 1 to
+  7 (one row per hospital and year: the final quality category, episode count, reconciliation amount and whether the
+  hospital met CJR's rural definition that year; derived by `pp_pipeline/team/cjr.py`, the raw workbook not in git), and `cjr-target-averages`, the CJR-wide average target
+  price per episode in each year, transcribed from the "Overall Average" line of Exhibit IV-9 (p. 48) of the CJR
+  evaluation's seventh annual report (The Lewin Group, 2025; the PDF not in git). Method: `pp_engine/team/cjr.py`.
+- The derivation keeps every row whose first cell is a CCN. It checks each year's rows against the workbook's own
+  Totals row (the episode count exactly, the amount to half a cent; every year matches) and refuses any other row
+  under the table that carries an episode count, an amount, a quality category or a rural flag (and a sheet without exactly one
+  Totals row), so a hospital whose CCN is stored some other way can't
+  drop out unseen. The workbook's "Average row" is skipped.
+- CMS published no hospital's target price, so a row's spending against target is approximate: minus its final
+  reconciliation amount per episode, over that year's average target price. One average stands in for every
+  hospital's own target (its mix of fracture and elective cases, its region), which moves a result most where it sits
+  far from target; near target, where the band is, the count holds up.
+- The reconciliation amount is also not target minus spending alone. It carries CMS's other adjustments, among them
+  the recoupment for high post-episode spending (42 CFR 510.305(j): when a hospital's average Medicare spending in
+  the 30 days after its episodes runs more than three standard deviations above its region's average, the excess
+  comes off a later reconciliation), which CMS applies after the stop-loss limit. A hospital that owed one reads further over target than its episodes put it. The seventh annual report (p. 52; Exhibit D-46 for the share
+  of hospitals) puts these recoupments at 0.1% of all repayments in performance year 7, but up to 29.2% of a hospital's
+  repayments that year (6.3% on average) and up to 69.2% in performance year 6 (22.8% on average); 3.4%, 2.8% and
+  2.5% of hospitals owed one in performance years 4, 6 and 7. Methods #band says this in words, without the figures.
+- Counted: performance years 4, 6 and 7. Years 1 to 3 had lower stop-loss and stop-gain limits (none on a loss in
+  year 1); the limits reached 20% in year 4 and stayed there, through performance year 8 (calendar 2024, CJR's
+  last), which CMS's workbook (years 1 to 7) does not yet cover. Performance year 5 (the pin's 5.1 and 5.2), which had
+  the same limits, is left out because CMS reconciled it under its COVID-19 extreme and uncontrollable circumstances
+  policy: the workbook's own column of episodes capped at target counts 14% and 19% of the two parts' episodes,
+  against 0.4%, 4.3% and 2.5% in years 4, 6 and 7 (capped for an area's disaster, or from year 6 also for a COVID-19
+  diagnosis), from each year's Totals row. The file records the year left out (`eucYear`) so the page names it from data. Only rows of 20
+  episodes or more count.
+- A zero that hides a result is left out: a hospital rated "Below Acceptable" on quality could not be paid, so its
+  zero may stand for a year under target; a zero with no quality category may be a year CMS never reconciled (the pin
+  has one, in performance year 1); and every performance year 1 zero, a year with no repayment (none of those years is
+  counted).
+- A rural hospital's year is left out (`rural`). In performance years 4 and 6 to 8, a hospital that met CJR's rural
+  definition (42 CFR 510.2), a sole community hospital, a Medicare-dependent hospital and a rural referral center
+  repaid at most 5% of its target, not 20% (42 CFR 510.305(e)(1)(v)(C) and (m)(1)(vii)(C)), so a year far over target
+  can end near it in CMS's file and read as inside the band. The pin carries the workbook's own per-year column
+  "Meets CJR Rural definition (42 CFR 510.2) for PY<n>" (every year's sheet has it, Y or N on every hospital row; the
+  derivation refuses a sheet with none or two, and any other value). CMS's file flags no sole community hospital,
+  Medicare-dependent hospital or rural referral center as such, so those that are not rural had the same 5% limit but
+  remain in the count; Methods #band says so. Of the 133 rural rows of 20 episodes or more left out, 85 (63.9%) ended
+  within 5% of target and 123 (92.5%) within 10%, against 43.9% and 71.0% of the rows counted: the cap's mark.
+- The exclusions apply in this order, each row left out under the first that fits: a zero that hides a result, a rural
+  hospital's year, a year under 20 episodes. In this build: 1,111 rows in those years with an episode, 34 such zeros
+  out (all "Below Acceptable"; 3 of them rural), 138 rural years out, 188 rows under 20 episodes out, 751 counted. Of
+  them, 330 ended within 5% of target either way and 533 within 10% (43.9% and 71.0%; 44% and 71% on the page). Before
+  the rural years were left out (this entry's first version), 884 were counted (193 under 20 episodes out), 415 within
+  5% and 656 within 10% (46.9% and 74.2%; 47% and 74% on the page). A hospital with two rows in a year counts twice, as
+  CMS's file has it. The calculator's "why?" and Methods #band print these counts and their shares.
+- "Below Acceptable" is censored on one side only. Its zeros are dropped but its repayments stay: 58 of the 751
+  counted rows are "Below Acceptable", every one a repayment, so that group enters the count only where it ended over
+  target, and the pool leans over target (374 counted rows over target and 377 under; without the group, 316 over and
+  377 under). The shares move little either way: leaving out every "Below Acceptable" row in the counted years leaves
+  693 rows, 304 within 5% of target (43.9%, against 43.9%; 44% either way on the page) and 499 within 10% (72.0%,
+  against 71.0%; 72% against 71%). The page keeps the method above; these figures are recorded here only.

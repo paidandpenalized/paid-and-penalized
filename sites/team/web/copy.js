@@ -246,10 +246,10 @@ export const COPY = {
   },
   whySummary: { text: 'why?', claim: null },
   whyText: {
-    text: "The {band} default follows the spread of results hospitals had in Medicare's joint-replacement bundle (CJR) and in BPCI Advanced; {methods}. Set the band from {lo} to {hi}.",
+    text: "The {band} default follows the spread of results hospitals had in Medicare's joint-replacement bundle (CJR) and in BPCI Advanced. In CJR, {near} of non-rural hospitals' yearly results in performance years {years} ended within {band} of target and {far} within {wide}: this site's count from CMS's file, and approximate, since one CJR-wide average target stands in for each hospital's own. {methods}. Set the band from {lo} to {hi}.",
     claim: null,
   },
-  whyMethods: { text: 'Methods explains it', claim: null },
+  whyMethods: { text: 'Methods explains how it was counted', claim: null },
 
   // Part 6, what a hospital has to do: the checklist by phase, beside Figure 5, TEAM's clock.
   doHeading: { text: 'Before, during and after the year', claim: null },

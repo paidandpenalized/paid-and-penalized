@@ -14,10 +14,12 @@ export const SOURCE_LINKS = Object.freeze({
   rule: 'https://www.ecfr.gov/current/title-42/chapter-IV/subchapter-B/part-512/subpart-E',
   // Methods' further sources: CMS's quality scoring fact sheet (the composite score's formula), the fiscal year 2027
   // inpatient final rule (the concurrent quality baseline), CMS's methodology for its Medicare inpatient file, and the
-  // band's evidence: CMS's CJR final reconciliation file and the BPCI Advanced final evaluation's appendix.
+  // band's evidence: CMS's CJR final reconciliation file, the CJR evaluation's seventh annual report (its average target
+  // prices are the count's denominator) and the BPCI Advanced final evaluation's appendix.
   qualityScoring: 'https://www.cms.gov/files/document/team-qualityscoring-fs.pdf',
   fy2027Rule: 'https://www.govinfo.gov/content/pkg/FR-2026-08-04/html/2026-15833.htm',
   mupMethod: 'https://data.cms.gov/sites/default/files/2024-06/MUP_INP_RY24_20240523_Methodology_508.pdf',
   cjrRecon: 'https://www.cms.gov/files/document/cjr-final-reconciliation-payments-yrs1-7.xlsx',
+  cjrReport: 'https://www.cms.gov/priorities/innovation/data-and-reports/2025/cjr-py7-annual-report',
   bpciEval: 'https://www.cms.gov/priorities/innovation/data-and-reports/2026/bpci-adv-ar7-app',
 });

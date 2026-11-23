@@ -379,16 +379,17 @@ def main(argv):
     return write_pins(build_all(args.raw_dir, args.retrieved), args.repin)
 
 
-def write_pins(built, repin=False, root=PINNED_DIR):
+def write_pins(built, repin=False, root=PINNED_DIR, command="derive-team"):
     """Write `built` ({pin id: (CSV bytes, manifest entry)}) to the manifest and the pinned files under `root`. Each
     pin's new bytes are checked against the committed manifest entry's SHA-256 first: a pin that differs, or that the
     manifest lacks, is refused by name and nothing at all is written, unless `repin`. Entries are replaced in place
-    (a new pin is appended). Returns the exit code: 0 written, 1 refused."""
+    (a new pin is appended). `command` names the caller in a refusal (derive-cjr uses this too). Returns the exit code:
+    0 written, 1 refused."""
     manifest = read_manifest(root)
     committed = {e["id"]: e.get("sha256") for e in manifest}
     changed = [pin_id for pin_id, (_, entry) in built.items() if committed.get(pin_id) != entry["sha256"]]
     if changed and not repin:
-        print(f"derive-team: {', '.join(changed)}: the derived bytes differ from the committed manifest entry; nothing "
+        print(f"{command}: {', '.join(changed)}: the derived bytes differ from the committed manifest entry; nothing "
               "written. Check the change, then run again with --repin to re-pin.")
         return 1
     entries = {pin_id: entry for pin_id, (_, entry) in built.items()}

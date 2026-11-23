@@ -7,7 +7,7 @@
 // property; names are made up; failures print no name, CCN or dollar figure (compared in place).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CATEGORIES, MEASURES, TRACKS } from '../../../engine/js/team/params.js';
+import { BAND_DEFAULT, CATEGORIES, MEASURES, TRACKS } from '../../../engine/js/team/params.js';
 import { compositeQuality } from '../../../engine/js/team/quality.js';
 import { reconcile } from '../../../engine/js/team/reconcile.js';
 import { mulberry32 } from '../../../engine/js/test/prng.js';
@@ -15,8 +15,9 @@ import { parseMoney, parsePct } from '../../../web/client/parse-input.js';
 import { DEFAULT_SKIP_STATE } from '../../../web/skip-state.js';
 import { addressOf, applyLink, arrival, carriesOwn, carryOver, commitBox, fragmentOf, isScenario, keepOwn, randomPick, rangeWords, readLink, setLowVolume, setSlider, setTrack, typeInto } from '../client/calc-state.js';
 import { followedCcn } from '../../../web/client/follow-ccn.js';
+import { bandEvidence } from '../web/band.js';
 import { CALC } from '../web/constants.js';
-import { isoDate } from '../../../web/render/format.js';
+import { isoDate, pct } from '../../../web/render/format.js';
 import { activeCcns, calcAsset, calcMeta, calcRow, ccnSet, hospOf, whoByCcn, whoOf } from '../../../web/team/calc-data.js';
 import { fill, t } from '../web/calc-copy.js';
 import { calcMarkup, calcView } from '../web/calc-view.js';
@@ -59,8 +60,12 @@ test('the default hospital\'s server render equals the client\'s first render', 
   assert.ok(!/claim|How each line works/.test(client), 'the browser\'s markup holds none of the build-only words');
   assert.ok(section.includes(`data-src="${CALC_URL}"`), 'the participants\' file is named, not loaded');
   assert.ok(!/NaN|undefined|\[object/.test(section), 'no hole in the markup');
-  assert.ok(section.includes('<a href="/team/methods/#band">Methods explains it</a>'), 'the "why?" links its method');
-  assert.ok(section.includes('follows the spread of results hospitals had in Medicare’s joint-replacement bundle (CJR) and in BPCI Advanced'), 'the "why?" names CJR and BPCI Advanced, with no figure');
+  assert.ok(section.includes('<a href="/team/methods/#band">Methods explains how it was counted</a>'), 'the "why?" links its method');
+  assert.ok(section.includes('follows the spread of results hospitals had in Medicare’s joint-replacement bundle (CJR) and in BPCI Advanced'), 'the "why?" names CJR and BPCI Advanced');
+  // CJR's figures are the file's (method.cjrSpread, through band.js), labeled as this site's approximate count.
+  const e = bandEvidence(team);
+  assert.ok(section.includes(`In CJR, ${pct(e.near.share, 0)} of non-rural hospitals’ yearly results in performance years ${e.years.slice(0, -1).join(', ')}, and ${e.years.at(-1)} ended within ±${pct(BAND_DEFAULT, 0)} of target and ${pct(e.far.share, 0)} within ±${pct(e.far.width, 0)}: this site’s count from CMS’s file, and approximate`), 'the "why?" gives CJR\'s shares and counted years from the file');
+  assert.ok(!/full-risk|pandemic/.test(section), 'the "why?" names the years, not a label for them');
 });
 
 // A phone hides the table's head (styles.css), so each row's boxes and results carry their columns' names, from the

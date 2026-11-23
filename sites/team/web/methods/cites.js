@@ -18,6 +18,7 @@ export const METHODS_CITES = Object.freeze({
   cqs: 'CMS, TEAM Quality Scoring fact sheet; 42 CFR 512.547(b)',
   cqsAdjust: `CMS, TEAM Quality Scoring fact sheet; ${CFR} 512.550(d)`,
   track2: `${CFR} 512.550(e)`,
+  cjrRural: `${CFR} 510.305(e)(1)(v)(C), (m)(1)(vii)(C)`,
   categories: `${CFR} 512.525(d)`,
   standardized: `${CFR} 512.505; CMS, TEAM PY2 preliminary target prices`,
   moves: `${CFR} 512.545(a), (e)(1)(iii), (f)(2)`,

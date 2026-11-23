@@ -12,12 +12,13 @@ import { robotsFor } from '../../../pipeline/site/context.js';
 import { textOf } from '../../../pipeline/site/html.js';
 import { testAssets } from '../../../pipeline/test/helpers.js';
 import { BAND_DEFAULT, BAND_MAX, BAND_MIN, CATEGORIES } from '../../../engine/js/team/params.js';
-import { count, decimal, isoDate, money, ordinal, pct } from '../../../web/render/format.js';
+import { count, decimal, dollars, isoDate, money, ordinal, pct } from '../../../web/render/format.js';
 import { SITE } from '../../../web/site.js';
 import {
   BASELINE_YEARS, CITES, CQS_CAPS, CQS_SCALE, EXAMPLE, FALLS_PRF_CFR_YEAR, LOW_VOLUME, MEASURES, MISSING_QUALITY, OUTLIER_PERCENTILE,
   PY2_PERIODS, PY2_START, RECON_MONTHS, ERROR_DAYS, SUPPRESSED_MAX, TARGET_CAPS, TRACKS, DEFAULT_TRACK, yearOf,
 } from '../web/constants.js';
+import { bandEvidence } from '../web/band.js';
 import { loadSharedSources, loadSources, loadTeam } from '../web/data.js';
 import { SOURCE_LINKS } from '../web/links.js';
 import { HASH_NAME, METHODS_CITES } from '../web/methods/cites.js';
@@ -41,6 +42,10 @@ const sectionOf = (id) => words(sectionMarkup(id));
 // Each hospital's reason, counted here on its own: the status code, or for a CJR-X hospital the code it wraps.
 const reasonOf = ([code, arg]) => (code === 'cjrx' ? arg[0] : code);
 const reasonCount = (code) => Object.values(team.status).filter((s) => reasonOf(s) === code).length;
+// CJR's spread as the band section prints it (band.js bandEvidence: the TEAM file's method.cjrSpread), as digit runs' sources.
+const cjr = bandEvidence(team);
+const cjrShown = [pct(cjr.near.share, 0), pct(cjr.far.share, 0), pct(cjr.far.width, 0), ...cjr.years, cjr.euc, ...cjr.targets.map((x) => dollars(x)),
+  ...[cjr.floor, cjr.rows, cjr.censored, cjr.rural, cjr.small, cjr.n, cjr.near.n, cjr.far.n].map(count)];
 const IDS = ['sources', 'episodes', 'low-volume', 'prices', 'quality', 'cqs', 'band', 'moves', 'left-out', 'unknowns', 'area', 'other', 'code'];
 
 test('the sections, in order, each with its heading, beside a contents list that links each', () => {
@@ -84,7 +89,8 @@ test('every Methods number is from data or a constant', () => {
     CITES.subpart, HASH_NAME, // a citation in a sentence, and the hash's name
   ];
   const allowed = new Set(shown.flatMap(digitRuns));
-  const reading = main.replace(/<span class="(tm-cite|doc__toc-n)">[^<]*<\/span>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<a [^>]*href="[^"]*"/g, '<a');
+  // #band is left to its own test below, the one place CJR's count may print (cjrShown).
+  const reading = main.replace(sectionMarkup('band'), '').replace(/<span class="(tm-cite|doc__toc-n)">[^<]*<\/span>/g, '').replace(/<code>[^<]*<\/code>/g, '').replace(/<a [^>]*href="[^"]*"/g, '<a');
   const stray = [...new Set(digitRuns(words(reading)))].filter((n) => !allowed.has(n));
   assert.deepEqual(stray, [], 'numbers on the Methods page with no source in the file, the manifest or a constant');
 });
@@ -173,20 +179,55 @@ test('the composite score: the weights, the sum, the adjustment with each track\
   assert.ok(sectionMarkup('cqs').includes(`href="${SOURCE_LINKS.qualityScoring}"`));
 });
 
-test('the band (#band, the calculator\'s "why?"): CJR\'s spread in words, linked to CMS\'s CJR file, BPCI Advanced beside it, the extremes past Track 3\'s limits, Track 2\'s limit', () => {
+test('the band (#band, the calculator\'s "why?"): CJR\'s spread as this site counted it, how and why approximate, linked to CMS\'s CJR file and the report behind the denominator, BPCI Advanced beside it, the extremes past Track 3\'s limits, Track 2\'s limit', () => {
   const s = sectionOf('band');
   const m = sectionMarkup('band');
-  // No figure of this site's own counting (a hand-typed statistic): the band's only numbers are the band's, the
-  // tracks' limits and the categories' count.
-  const allowed = new Set([pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0), pct(TRACKS[3].gain, 0), ...Object.keys(TRACKS)].flatMap(digitRuns));
+  // Every number in #band is the band's, the tracks' limits, or the file's CJR count: none typed.
+  const allowed = new Set([pct(BAND_DEFAULT, 0), pct(BAND_MIN, 0), pct(BAND_MAX, 0), pct(TRACKS[3].gain, 0), ...Object.keys(TRACKS), ...cjrShown].flatMap(digitRuns));
   assert.deepEqual(digitRuns(words(m.replace(/<span class="tm-cite">[^<]*<\/span>/g, ''))).filter((n) => !allowed.has(n)), [], 'numbers in #band (citations aside)');
-  assert.match(s, /most hospitals ended a year near their target/);
+  // The narrower width counted is the calculator's default band; the shares are the file's counts over its n.
+  assert.equal(cjr.near.width, BAND_DEFAULT);
+  assert.ok(cjr.far.width > BAND_DEFAULT);
+  const spread = team.method.cjrSpread;
+  assert.equal(cjr.near.share, spread.within.find((w) => w.width === BAND_DEFAULT).n / spread.n);
+  assert.equal(spread.rows - spread.censored - spread.rural - spread.small, spread.n, 'the rows left out add up');
+  const [band, wide] = [`±${pct(BAND_DEFAULT, 0)}`, `±${pct(cjr.far.width, 0)}`];
+  const years = `performance years ${cjr.years.slice(0, -1).join(', ')}, and ${cjr.years.at(-1)}`;
+  assert.ok(s.includes(`${pct(cjr.near.share, 0)} of non-rural hospitals’ yearly results in ${years} ended within ${band} of target and ${pct(cjr.far.share, 0)} within ${wide}, in this site’s count from CMS’s CJR final reconciliation file`));
+  assert.ok(s.includes(`Of ${count(cjr.rows)} results in those years, ${count(cjr.censored)} zeros that hide a result, ${count(cjr.rural)} years at rural hospitals and ${count(cjr.small)} years under ${count(cjr.floor)} episodes are left out, in that order, leaving ${count(cjr.n)}: ${count(cjr.near.n)} within ${band} and ${count(cjr.far.n)} within ${wide}`), 'the counts behind the shares, each exclusion named');
+  assert.ok(cjr.rural > 0, 'the file counts the rural years it leaves out');
+  // The rural years: left out for their lower repayment limit, cited; the non-rural hospitals with the same limit that
+  // CMS's file can't single out, said to remain.
+  assert.match(s, /It also leaves out a year at a rural hospital, which CMS’s file marks year by year\. In these years a rural hospital, as well as a sole community hospital, a Medicare-dependent hospital or a rural referral center, had a far lower limit on a repayment than other hospitals/);
+  assert.match(s, /A sole community hospital, Medicare-dependent hospital or rural referral center that is not rural had the same lower limit, but CMS’s file does not mark it, so its years remain in the count\./);
+  assert.ok(m.includes(`<span class="tm-cite">${METHODS_CITES.cjrRural}</span>`), 'the rural limit cites its rule');
+  assert.ok(s.includes(`The count takes ${years}: of the years in CMS’s file with CJR’s widest limits on a gain and a repayment, all but year ${cjr.euc}, which CMS reconciled under the extreme and uncontrollable circumstances policy it applied for the COVID pandemic`), 'the years counted, and the one left out with the same limits');
+  assert.ok(!/full-risk|pandemic year/.test(s), 'no label that implies the left-out year lacked the limits');
+  assert.ok(s.includes(`${count(cjr.floor)} episodes or more`), 'the episode floor');
+  assert.ok(s.includes(`Their average targets were ${cjr.targets.slice(0, -1).map((x) => dollars(x)).join(', ')}, and ${dollars(cjr.targets.at(-1))}`), 'the denominators');
+  assert.match(s, /below acceptable on quality could not be paid/, 'the censored zeros, explained');
+  assert.match(s, /Each result is approximate: one average target stands in for every hospital’s own/);
+  assert.match(s, /CMS’s amount is more than target less spending: it carries other adjustments too, among them a recoupment when a hospital’s average spending in the month after its episodes ran far above/, 'the post-episode recoupment, disclosed');
   assert.match(s, /the same under as over/);
   assert.ok(s.includes(`Track 3’s limits stop a TEAM hospital’s result at ${pct(TRACKS[3].gain, 0)} either way`));
   assert.ok(!/extremes ran|past 20/.test(s), 'no claim about CJR\'s tails');
-  assert.ok(m.includes(`href="${SOURCE_LINKS.cjrRecon}"`));
-  assert.ok(m.includes(`href="${SOURCE_LINKS.bpciEval}"`));
+  for (const link of ['cjrRecon', 'cjrReport', 'bpciEval']) assert.ok(m.includes(`href="${SOURCE_LINKS[link]}"`), link);
   assert.equal(BAND_DEFAULT === TRACKS[2].gain && BAND_DEFAULT === TRACKS[2].loss, s.includes('Track 2’s limit on a gain and on a repayment'));
+  // A file whose count lacks the default band's width is refused, never printed.
+  const other = { ...team, method: { ...team.method, cjrSpread: { ...spread, within: spread.within.filter((w) => w.width !== BAND_DEFAULT) } } };
+  assert.throws(() => bandEvidence(other), /default band/);
+  assert.throws(() => bandEvidence({ method: {} }), /no CJR spread/);
+  // The wider width is the widest counted past the default, whatever the array's order.
+  const shuffled = { ...team, method: { ...team.method, cjrSpread: { ...spread, within: [{ width: 0.15, n: spread.n }, ...spread.within, { width: 0.12, n: spread.n }] } } };
+  assert.equal(bandEvidence(shuffled).far.width, 0.15);
+  // A count that doesn't add up is refused, naming the field.
+  const bad = (change) => ({ ...team, method: { ...team.method, cjrSpread: { ...spread, ...change } } });
+  assert.throws(() => bandEvidence(bad({ targets: { ...spread.targets, [spread.years[0]]: 28073.5 } })), /method\.cjrSpread\) has no whole-dollar average target for performance year/);
+  assert.throws(() => bandEvidence(bad({ targets: {} })), /method\.cjrSpread\) has no whole-dollar average target/);
+  assert.throws(() => bandEvidence(bad({ within: spread.within.map((w) => ({ ...w, n: spread.n + 1 })) })), /method\.cjrSpread\) counts .* not a whole number from 0 to its n/);
+  assert.throws(() => bandEvidence(bad({ eucYear: undefined })), /method\.cjrSpread\) does not name the performance year it leaves out/);
+  assert.throws(() => bandEvidence(bad({ rural: spread.rural + 1 })), /method\.cjrSpread\) leaves out results that don't add up/);
+  assert.throws(() => bandEvidence(bad({ rural: undefined })), /method\.cjrSpread\) leaves out results that don't add up/);
 });
 
 test('what can move the target and what the calculator leaves out: trend and normalization caps, risk adjustment, the post-episode adjustment, the high-cost cap', () => {
@@ -242,7 +283,7 @@ test('the sources: every pin the TEAM file names, by title, publisher, date and 
   const own = team.sources.filter((id) => !master.sources.includes(id));
   const ownTable = /<table[\s\S]*?<\/table>/.exec(m)[0];
   for (const id of own) assert.ok(ownTable.includes(`<code>${byId.get(id).sha256.slice(0, 16)}</code>`), `${id}: in TEAM's own table`);
-  for (const link of ['rule', 'faq', 'qualityScoring', 'fy2027Rule', 'mupMethod', 'cjrRecon', 'bpciEval']) assert.ok(m.includes(`href="${SOURCE_LINKS[link]}"`), link);
+  for (const link of ['rule', 'faq', 'qualityScoring', 'fy2027Rule', 'mupMethod', 'cjrRecon', 'cjrReport', 'bpciEval']) assert.ok(m.includes(`href="${SOURCE_LINKS[link]}"`), link);
 });
 
 test('methodsFacts counts the participants still in TEAM and those of them with no episodes', () => {

@@ -1,15 +1,18 @@
 """Build the TEAM file, data/emitted/team/fy2027/team.json, from the six TEAM pins (data/pinned/team-py2/), OMB's
-July 2023 CBSA delineation (data/pinned/omb-delineation-2023/), the county-to-CBSA crosswalk and county shapes, and the
+July 2023 CBSA delineation (data/pinned/omb-delineation-2023/), the county-to-CBSA crosswalk and county shapes, the two
+CJR pins (data/pinned/cjr/: CMS's CJR reconciliation results and the evaluation's average target prices), and the
 repo's emitted hospital master.
 
     python3 -I pipeline/py/run.py emit        (runs every emitter; this one last)
 
-The method is pp_engine.team (episodes, quality, status, build); this module reads the pins and lays the result out.
+The method is pp_engine.team (episodes, quality, status, cjr, build); this module reads the pins and lays the result
+out.
 The file holds, for the lookup, the calculator and the hub band: CMS's preliminary performance year 2 target prices by
 DRG and census division, the category averages, each participant's episode estimate, target amount and quality
 percentiles, the default hospital, a status for every master hospital, the list CCNs the master lacks (`a4`), and the
 method's own numbers the Methods page states (`method`: the DRG remaps, the low-volume scale, each quality measure's
-cohort size and public period, the list-CBSA check).
+cohort size and public period, the list-CBSA check, and `cjrSpread`, how far hospitals' years in CJR ended from target:
+the calculator band's evidence).
 
 `fy` is 2027: performance year 2 is calendar 2027, priced with FY2027 MS-DRGs (the repo's emitted files sit at
 <site>/fy<YYYY>/). A new pin or methods version in the hospital master makes this file stale (`require_current`).
@@ -19,24 +22,27 @@ from datetime import datetime, timezone
 
 from pp_engine.contract import envelope
 from pp_engine.parse import SchemaError, rows, table
-from pp_engine.team import build
+from pp_engine.team import build, cjr
 from pp_pipeline import emit_hospital
 from pp_pipeline.files import (EMITTED_DIR, REPO_ROOT, manifest_entry, read_json, read_manifest, read_pinned_csv,
                                read_zip_text_cp1252, require_current, write_emitted)
 
-SCHEMA_VERSION, METHODS_VERSION = 1, 1
+SCHEMA_VERSION, METHODS_VERSION = 2, 2
 SCHEMA = "team.schema.json"
 FY = 2027  # performance year 2 (calendar 2027), FY2027 MS-DRGs
 
 PARTICIPANTS, PRICES, CJRX, QUALITY = "team-participants", "team-prices", "cjrx-participants", "team-quality"
 DELINEATION = "omb-delineation-2023"  # OMB's July 2023 CBSA delineation, by county (pp_pipeline.team.derive)
 MUP = {"team-mup-dy2023": 2023, "team-mup-dy2024": 2024}  # the prior and the latest data year, in that order
-PINS = (PARTICIPANTS, PRICES, CJRX, *MUP, QUALITY, DELINEATION, emit_hospital.CBSA, emit_hospital.COUNTIES)
+CJR_RECON, CJR_TARGETS = "cjr-reconciliation", "cjr-target-averages"  # pp_pipeline.team.cjr; the transcribed targets
+PINS = (PARTICIPANTS, PRICES, CJRX, *MUP, QUALITY, DELINEATION, emit_hospital.CBSA, emit_hospital.COUNTIES, CJR_RECON,
+        CJR_TARGETS)
 
 
 class Inputs:
     """The pins parsed: participants, price rows, the CJR-X CCNs, the two data years' cells, quality values, the
-    master and its hospitals, the crosswalk, the delineation and the county shapes."""
+    master and its hospitals, the crosswalk, the delineation, the county shapes, and CJR's reconciliation rows and
+    average target prices."""
 
     def __init__(self, manifest):
         self.manifest = manifest
@@ -53,6 +59,8 @@ class Inputs:
         self.crosswalk = read_crosswalk()
         self.delineation = read_pinned_csv(DELINEATION)
         self.shapes = emit_hospital.counties()
+        self.cjr_rows = cjr_rows(read_pinned_csv(CJR_RECON))
+        self.cjr_targets = cjr_targets(read_pinned_csv(CJR_TARGETS))
 
 
 def _mup(pin_id):
@@ -84,6 +92,28 @@ def quality_periods(rows_):
     return out
 
 
+def cjr_rows(rows_):
+    """The CJR reconciliation pin's rows as pp_engine.team.cjr reads them: episodes a whole number, amount a float, rural
+    a bool (the pin's Y or N; anything else is refused)."""
+    out = []
+    for r in rows_:
+        if r["rural"] not in ("Y", "N"):
+            raise ValueError("CJR reconciliation: a rural flag other than Y or N")
+        out.append({"py": r["py"], "quality": r["quality"], "episodes": int(r["episodes"]), "amount": float(r["amount"]),
+                    "rural": r["rural"] == "Y"})
+    return out
+
+
+def cjr_targets(rows_):
+    """{py: the CJR-wide average target price per episode, whole dollars}; a year given twice is refused."""
+    out = {}
+    for r in rows_:
+        if r["py"] in out:
+            raise ValueError("CJR targets: a performance year appears twice")
+        out[r["py"]] = int(r["overall_average_target"])
+    return out
+
+
 def read_crosswalk():
     """[{fips, county, state, cbsa}] from CMS's county-to-CBSA crosswalk; `cbsa` is its FY2025 CBSA column (blank for a
     rural county, a metropolitan division's code for a county in a divided metro)."""
@@ -106,6 +136,7 @@ def build_with_notes(built_at):
     body, notes = build.build(p.participants, p.price_rows, p.cjrx, p.prior, p.latest, p.quality, p.hospitals,
                               p.crosswalk, p.delineation, p.shapes)
     body["method"]["qualityPeriods"] = {m: p.quality_periods[m] for m in build.MEASURES}
+    body["method"]["cjrSpread"] = cjr.spread(p.cjr_rows, p.cjr_targets)
     sources = list(dict.fromkeys([*PINS, *p.master["sources"]]))
     doc = {**envelope(SCHEMA_VERSION, METHODS_VERSION, sources, p.manifest, built_at, FY), "meta": meta(p.manifest),
            **body}
